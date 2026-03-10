@@ -84,8 +84,9 @@ function renderChartEspessura(historico) {
     const labels = Object.keys(volumesPorEsp).length > 0 ? Object.keys(volumesPorEsp) : ['Sem dados'];
     const data = Object.keys(volumesPorEsp).length > 0 ? Object.values(volumesPorEsp) : [0];
 
-    if (chartEspessuraInstance) chartEspessuraInstance.destroy();
+    if(chartEspessuraInstance) chartEspessuraInstance.destroy();
 
+    // Criar o gráfico
     chartEspessuraInstance = new Chart(ctx, {
         type: 'bar',
         data: {

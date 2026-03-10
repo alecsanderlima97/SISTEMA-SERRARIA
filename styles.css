@@ -488,7 +488,9 @@ input::placeholder {
 
 .chart-box {
     padding: 1.5rem;
-    min-height: 350px;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
 }
 
 .chart-box h3 {
