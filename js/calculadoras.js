@@ -68,6 +68,25 @@ if (btnCalcCavaco) {
 
         const total = qtd * valorUni;
 
+        // Salvar a venda no Banco de Dados (LocalStorage)
+        const novaVenda = {
+            id: 'CAV-' + Date.now(),
+            data: new Date().toISOString().split('T')[0],
+            romaneio: romaneio,
+            cliente: cliente,
+            motorista: motorista,
+            medidas: medidas,
+            tipo: tipo,
+            unidade: unidade,
+            quantidade: qtd,
+            valorUnitario: valorUni,
+            total: total
+        };
+
+        const vendasSub = DB.get('vendas_subprodutos');
+        vendasSub.push(novaVenda);
+        DB.set('vendas_subprodutos', vendasSub);
+
         // Preencher área de impressão
         document.getElementById('printCavRomaneio').textContent = romaneio;
         document.getElementById('printCavCliente').textContent = cliente;
@@ -84,6 +103,9 @@ if (btnCalcCavaco) {
         // Ocultar tudo na tela exceto a área de impressão
         const originalContent = document.body.innerHTML;
         const printContent = document.getElementById('printAreaSubprodutos').outerHTML;
+
+        // Mostrar alerta de sucesso antes da impressão (opcional, como o print recarrega, alerta pode ser melhor depois se não fosse reload)
+        console.log("Venda salva com sucesso!");
 
         document.body.innerHTML = printContent;
         // Forçar display block para impressão

@@ -125,6 +125,7 @@ body {
     font-size: 2.5rem;
     background: linear-gradient(135deg, #fff, #8ab4f8);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.2rem;
 }
@@ -444,8 +445,8 @@ input::placeholder {
 .kpi-card {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    padding: 1.5rem;
+    gap: 1rem;
+    padding: 1.2rem;
     transition: transform 0.3s ease;
 }
 
@@ -454,20 +455,20 @@ input::placeholder {
 }
 
 .kpi-icon {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-    border-radius: 12px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: #fff;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .kpi-data h3 {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 800;
     margin: 0;
     color: #fff;
@@ -475,7 +476,7 @@ input::placeholder {
 
 .kpi-data p {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
 }
 

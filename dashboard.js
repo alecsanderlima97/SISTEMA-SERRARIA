@@ -5,38 +5,94 @@ document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
 });
 
+// Listener para quando dados mudarem em outras abas
+document.addEventListener('historicoUpdated', initDashboard);
+document.addEventListener('vendasSubprodutosUpdated', initDashboard); // Evento que poderiamos disparar se quiséssemos
+
 function initDashboard() {
-    // Dados Fictícios para demonstração (serão integrados com dados reais futuramente)
-    const stats = {
-        totalCargas: 124,
-        volumeVendido: 1450.5,
-        clientesAtivos: 42,
-        estoqueVolume: 850.2
-    };
+    // Buscar Dados Reais
+    const historico = DB.get('historico') || [];
+    const entradas = DB.get('entradas') || [];
+    const subprodutos = DB.get('vendas_subprodutos') || [];
+    const clientes = DB.get('clientes') || [];
+    const produtos = DB.get('produtos') || [];
 
-    // Atualizar indicadores (KPIs)
-    document.getElementById('dash-total-cargas').textContent = stats.totalCargas;
-    document.getElementById('dash-volume-total').textContent = stats.volumeVendido + ' m³';
-    document.getElementById('dash-total-clientes').textContent = stats.clientesAtivos;
-    document.getElementById('dash-total-estoque').textContent = stats.estoqueVolume + ' m³';
+    // 1. Total de Cargas (Vendas de Madeira)
+    const totalCargas = historico.length;
 
-    // Gráfico de Volume por Espessura
-    renderChartEspessura();
+    // 2. Volume de Madeira Vendida (m³)
+    const volumeVendido = historico.reduce((acc, h) => acc + (h.volumeTotalItem || 0), 0);
 
-    // Gráfico de Vendas por Período
-    renderChartVendas();
+    // 3. Entrada de Toras (m³)
+    const volumeEntrada = entradas.reduce((acc, e) => acc + (e.volume || 0), 0);
+
+    // 4. Faturamento Madeira (R$)
+    const faturamentoMadeira = historico.reduce((acc, h) => acc + (h.valorFinal || 0), 0);
+
+    // 5. Faturamento de Cavaco e Pó de Serra (R$)
+    const faturamentoSub = subprodutos.reduce((acc, s) => acc + (s.total || 0), 0);
+
+    // 6. Volume de Cavaco e Pó de Serra (m³)
+    // Nota: Filtramos apenas os que estão em m³ para este KPI específico ou somamos tudo que for volume
+    const volumeSub = subprodutos.reduce((acc, s) => {
+        if (s.unidade === 'm³') return acc + (s.quantidade || 0);
+        return acc;
+    }, 0);
+
+    // 7. Clientes Ativos
+    const totalClientes = clientes.length;
+
+    // 8. Estoque (Simplificado: Entrada - Saída)
+    const estoqueVolume = volumeEntrada - volumeVendido;
+
+    // Atualizar indicadores (KPIs) na UI
+    const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    if(document.getElementById('dash-total-cargas')) document.getElementById('dash-total-cargas').textContent = totalCargas;
+    if(document.getElementById('dash-volume-total')) document.getElementById('dash-volume-total').textContent = volumeVendido.toFixed(2) + ' m³';
+    if(document.getElementById('dash-entrada-toras')) document.getElementById('dash-entrada-toras').textContent = volumeEntrada.toFixed(2) + ' m³';
+    if(document.getElementById('dash-faturamento-madeira')) document.getElementById('dash-faturamento-madeira').textContent = formatBRL(faturamentoMadeira);
+    if(document.getElementById('dash-faturamento-sub')) document.getElementById('dash-faturamento-sub').textContent = formatBRL(faturamentoSub);
+    if(document.getElementById('dash-volume-sub')) document.getElementById('dash-volume-sub').textContent = volumeSub.toFixed(2) + ' m³';
+    if(document.getElementById('dash-total-clientes')) document.getElementById('dash-total-clientes').textContent = totalClientes;
+    if(document.getElementById('dash-total-estoque')) document.getElementById('dash-total-estoque').textContent = (estoqueVolume > 0 ? estoqueVolume : 0).toFixed(2) + ' m³';
+
+    // Gráficos
+    renderChartEspessura(historico);
+    renderChartVendas(historico);
 }
 
-function renderChartEspessura() {
-    const ctx = document.getElementById('chartVolumeEspessura').getContext('2d');
+let chartEspessuraInstance = null;
+let chartVendasInstance = null;
 
-    new Chart(ctx, {
+function renderChartEspessura(historico) {
+    const canvas = document.getElementById('chartVolumeEspessura');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Agrupar volume por espessura dos dados reais
+    const volumesPorEsp = {};
+    historico.forEach(h => {
+        if (h.itens) {
+            h.itens.forEach(item => {
+                const esp = item.espessura + 'cm';
+                volumesPorEsp[esp] = (volumesPorEsp[esp] || 0) + item.volumeTotal;
+            });
+        }
+    });
+
+    const labels = Object.keys(volumesPorEsp).length > 0 ? Object.keys(volumesPorEsp) : ['Sem dados'];
+    const data = Object.keys(volumesPorEsp).length > 0 ? Object.values(volumesPorEsp) : [0];
+
+    if (chartEspessuraInstance) chartEspessuraInstance.destroy();
+
+    chartEspessuraInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['2.5cm', '3.0cm', '5.0cm', '10cm', '15cm'],
+            labels: labels,
             datasets: [{
                 label: 'Volume (m³)',
-                data: [350, 480, 220, 150, 250],
+                data: data,
                 backgroundColor: 'rgba(230, 126, 34, 0.6)',
                 borderColor: '#e67e22',
                 borderWidth: 2,
@@ -64,21 +120,42 @@ function renderChartEspessura() {
     });
 }
 
-function renderChartVendas() {
-    const ctx = document.getElementById('chartVendasPeriodo').getContext('2d');
+function renderChartVendas(historico) {
+    const canvas = document.getElementById('chartVendasPeriodo');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
 
-    // Gradiente para o gráfico de linha
+    // Agrupar vendas por mês (últimos 6 meses)
+    const ultimosMeses = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        ultimosMeses.push(d.toLocaleString('pt-BR', { month: 'short' }));
+    }
+
+    const vendasMensais = new Array(6).fill(0);
+    historico.forEach(h => {
+        const dataH = new Date(h.data);
+        const mesH = dataH.toLocaleString('pt-BR', { month: 'short' });
+        const idx = ultimosMeses.indexOf(mesH);
+        if (idx !== -1) {
+            vendasMensais[idx] += h.valorFinal;
+        }
+    });
+
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(230, 126, 34, 0.4)');
     gradient.addColorStop(1, 'rgba(230, 126, 34, 0)');
 
-    new Chart(ctx, {
+    if (chartVendasInstance) chartVendasInstance.destroy();
+
+    chartVendasInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+            labels: ultimosMeses,
             datasets: [{
                 label: 'Vendas Mensais',
-                data: [120, 190, 150, 250, 210, 310],
+                data: vendasMensais,
                 fill: true,
                 backgroundColor: gradient,
                 borderColor: '#f1c40f',
