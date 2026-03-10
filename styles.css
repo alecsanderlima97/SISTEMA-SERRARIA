@@ -457,6 +457,27 @@ input::placeholder {
     margin-top: 10px;
 }
 
+.home-logo-img {
+    max-width: 500px;
+    width: 90%;
+    height: auto;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
+    animation: fadeInScale 0.8s ease-out forwards;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+
 /* =========================================
    BOTÕES
    ========================================= */
