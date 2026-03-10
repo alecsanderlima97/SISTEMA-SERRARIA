@@ -153,3 +153,26 @@ if (btnCalcFardo) {
         }
     });
 }
+
+// 5. Calculadora de Frete
+const btnCalcFrete = document.getElementById('btnCalcFrete');
+const resultadoFrete = document.getElementById('resultadoFrete');
+
+if (btnCalcFrete) {
+    btnCalcFrete.addEventListener('click', function () {
+        const vol = parseFloat(document.getElementById('freteVol').value) || 0;
+        const valorM3 = parseFloat(document.getElementById('freteValor').value) || 0;
+        const extra = parseFloat(document.getElementById('freteExtra').value) || 0;
+
+        if (vol === 0 || valorM3 === 0) {
+            resultadoFrete.textContent = "Preencha o volume e valor!";
+            resultadoFrete.style.color = "var(--danger-color)";
+            return;
+        }
+
+        const totalFrete = (vol * valorM3) + extra;
+
+        resultadoFrete.textContent = totalFrete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        resultadoFrete.style.color = "var(--accent-color)";
+    });
+}
