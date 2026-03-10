@@ -12,6 +12,8 @@
     <!-- FontAwesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -62,11 +64,53 @@
 
             <!-- ====== HOME DASHBOARD ====== -->
             <section id="view-dashboard" class="view-section">
-                <div class="home-dashboard">
-                    <h1 class="home-logo-huge">
-                        VANMARTE
-                        <span>Madeiras Serradas</span>
-                    </h1>
+                <div class="main-header">
+                    <h1><i class="fa-solid fa-gauge-high"></i> Painel de Controle</h1>
+                    <p>Visão geral do sistema e indicadores de desempenho</p>
+                </div>
+
+                <!-- Cards de Resumo -->
+                <div class="dashboard-grid">
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon"><i class="fa-solid fa-truck-moving"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="dash-total-cargas">0</h3>
+                            <p>Total de Cargas</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="dash-volume-total">0 m³</h3>
+                            <p>Volume Vendido</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="dash-total-clientes">0</h3>
+                            <p>Clientes Ativos</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="dash-total-estoque">0 m³</h3>
+                            <p>Estoque Disponível</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="charts-container">
+                    <div class="chart-box glass-panel">
+                        <h3><i class="fa-solid fa-chart-bar"></i> Volume por Espessura</h3>
+                        <canvas id="chartVolumeEspessura"></canvas>
+                    </div>
+                    <div class="chart-box glass-panel">
+                        <h3><i class="fa-solid fa-chart-line"></i> Vendas por Período</h3>
+                        <canvas id="chartVendasPeriodo"></canvas>
+                    </div>
                 </div>
             </section>
 
@@ -955,6 +999,7 @@
     <script src="js/historico.js"></script>
     <script src="app.js"></script>
     <script src="calendar.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 
 </html>
