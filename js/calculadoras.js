@@ -119,3 +119,37 @@ if (btnCalcCavaco) {
         window.location.reload(); // Reload necessário para resvincular eventos após substituição brusca de innerHTML.
     });
 }
+
+// 4. Cálculo de Fardo Completo
+const btnCalcFardo = document.getElementById('btnCalcFardo');
+const resFardoQtd = document.getElementById('resFardoQtd');
+const resFardoVol = document.getElementById('resFardoVol');
+
+if (btnCalcFardo) {
+    btnCalcFardo.addEventListener('click', function () {
+        const esp = parseFloat(document.getElementById('fardoEsp').value) || 0;
+        const lar = parseFloat(document.getElementById('fardoLar').value) || 0;
+        const comp = parseFloat(document.getElementById('fardoComp').value) || 0;
+        const altPecas = parseInt(document.getElementById('fardoAltPecas').value, 10) || 0;
+        const larPecas = parseInt(document.getElementById('fardoLarPecas').value, 10) || 0;
+        const amarras = parseInt(document.getElementById('fardoAmarras').value, 10) || 0;
+
+        if (esp === 0 || lar === 0 || comp === 0 || (altPecas === 0 && larPecas === 0)) {
+            resFardoVol.textContent = "Dados incompletos!";
+            resFardoVol.style.color = "var(--danger-color)";
+            if(resFardoQtd) resFardoQtd.textContent = "";
+            return;
+        }
+
+        // Cálculo de Peças e Volume
+        const qtdTotal = (altPecas * larPecas) + amarras;
+        const volUni = (esp / 100) * (lar / 100) * comp;
+        const volTotal = volUni * qtdTotal;
+
+        if(resFardoQtd) resFardoQtd.textContent = `${qtdTotal} peças`;
+        if(resFardoVol) {
+            resFardoVol.textContent = `${volTotal.toFixed(4)} m³`;
+            resFardoVol.style.color = "var(--accent-color)";
+        }
+    });
+}
