@@ -12,8 +12,27 @@ const btnPrint = document.getElementById('btnPrint');
 // Set data de hoje por padrão
 document.getElementById('dataCarga').valueAsDate = new Date();
 
+// Navegação da Sidebar (SPA)
+document.querySelectorAll('.sidebar nav ul li a').forEach(link => {
+    link.addEventListener('click', function (e) {
+        if (this.id === 'btnLogout') return;
+        e.preventDefault();
+
+        // Ativar link
+        document.querySelectorAll('.sidebar nav ul li a').forEach(a => a.classList.remove('active'));
+        this.classList.add('active');
+
+        // Trocar seção
+        const targetId = this.getAttribute('data-target');
+        document.querySelectorAll('.view-section').forEach(sec => {
+            sec.style.display = 'none';
+        });
+        document.getElementById(targetId).style.display = 'block';
+    });
+});
+
 // Event Listener para submeter o formulário
-formItem.addEventListener('submit', function(e) {
+formItem.addEventListener('submit', function (e) {
     e.preventDefault();
 
     // Coletar valores
@@ -25,7 +44,7 @@ formItem.addEventListener('submit', function(e) {
     // Calcular volume de uma unidade
     // Fórmula: (Espessura / 100) * (Largura / 100) * Comprimento
     const volumeUnidade = (espessura / 100) * (largura / 100) * comprimento;
-    
+
     // Volume total da linha
     const volumeTotalLinha = volumeUnidade * quantidade;
 
@@ -45,7 +64,7 @@ formItem.addEventListener('submit', function(e) {
 
     // Atualizar UI
     renderizarTabela();
-    
+
     // Resetar formulário
     formItem.reset();
     document.getElementById('espessura').focus();
@@ -75,7 +94,7 @@ function renderizarTabela() {
 
     itensRomaneio.forEach((item, index) => {
         const tr = document.createElement('tr');
-        
+
         // Formatando o texto de medidas
         const medidasTexto = `${item.espessura} cm x ${item.largura} cm x ${item.comprimento.toFixed(1)} m`;
 
@@ -91,7 +110,7 @@ function renderizarTabela() {
                 </button>
             </td>
         `;
-        
+
         tabelaBody.appendChild(tr);
     });
 
@@ -108,7 +127,7 @@ function atualizarTotais() {
 }
 
 // Função para remover item (exposta no escopo global)
-window.removerItem = function(id) {
+window.removerItem = function (id) {
     itensRomaneio = itensRomaneio.filter(item => item.id !== id);
     renderizarTabela();
 }
