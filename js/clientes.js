@@ -4,30 +4,80 @@ const formCliente = document.getElementById('formCliente');
 const listaClientes = document.getElementById('listaClientes');
 const cepInput = document.getElementById('cliCep');
 const cepStatus = document.getElementById('cepStatus');
+const cnpjInput = document.getElementById('cliCnpj');
+const btnBuscaCnpj = document.getElementById('btnBuscaCnpj');
+const contatoInput = document.getElementById('cliContato');
 
-// Busca de CEP Automática via API Pública (viacep)
-cepInput.addEventListener('blur', function() {
-    let cep = this.value.replace(/\D/g, '');
-    if (cep.length === 8) {
-        cepStatus.textContent = "Buscando...";
-        fetch(`https://viacep.com.br/ws/${cep}/json/`)
-            .then(res => res.json())
-            .then(data => {
-                if(data.erro) {
-                    cepStatus.textContent = "CEP Inválido";
-                    document.getElementById('cliCidade').value = "";
-                } else {
-                    cepStatus.textContent = "✓";
-                    document.getElementById('cliCidade').value = `${data.localidade} / ${data.uf}`;
-                }
+// Aplicar Máscaras
+if (window.maskCnpj) window.maskCnpj(cnpjInput);
+if (window.maskPhone) window.maskPhone(contatoInput);
+
+// Busca de CEP Automática
+if (cepInput) {
+    cepInput.addEventListener('blur', function() {
+        let cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            if (cepStatus) cepStatus.textContent = "Buscando...";
+            fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.erro) {
+                        if (cepStatus) cepStatus.textContent = "CEP Inválido";
+                        document.getElementById('cliCidade').value = "";
+                    } else {
+                        if (cepStatus) cepStatus.textContent = "✓";
+                        document.getElementById('cliCidade').value = `${data.localidade} / ${data.uf}`;
+                        if (data.logradouro) document.getElementById('cliRua').value = data.logradouro;
+                        if (data.bairro) document.getElementById('cliBairro').value = data.bairro;
+                    }
+                })
+                .catch(() => {
+                    if (cepStatus) cepStatus.textContent = "Erro na busca";
+                });
+        }
+    });
+}
+
+// Busca de CNPJ Automática (BrasilAPI)
+if (btnBuscaCnpj) {
+    btnBuscaCnpj.addEventListener('click', function() {
+        let cnpj = cnpjInput.value.replace(/\D/g, '');
+        if (cnpj.length !== 14) {
+            alert("Digite um CNPJ válido (14 dígitos) para buscar.");
+            return;
+        }
+
+        btnBuscaCnpj.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btnBuscaCnpj.disabled = true;
+
+        fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+            .then(res => {
+                if (!res.ok) throw new Error("CNPJ não encontrado");
+                return res.json();
             })
-            .catch(() => {
-                cepStatus.textContent = "Erro na busca";
+            .then(data => {
+                document.getElementById('cliNome').value = data.razao_social || data.nome_fantasia;
+                document.getElementById('cliEmail').value = data.email || '';
+                document.getElementById('cliContato').value = data.ddd_telefone_1 || '';
+                document.getElementById('cliCep').value = data.cep || '';
+                document.getElementById('cliCidade').value = `${data.municipio} / ${data.uf}`;
+                document.getElementById('cliRua').value = data.logradouro || '';
+                document.getElementById('cliNumero').value = data.numero || '';
+                document.getElementById('cliBairro').value = data.bairro || '';
+                
+                // Forçar trigger das máscaras
+                contatoInput.dispatchEvent(new Event('input'));
+                alert("Dados importados com sucesso!");
+            })
+            .catch(err => {
+                alert("Erro ao buscar CNPJ: " + err.message);
+            })
+            .finally(() => {
+                btnBuscaCnpj.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
+                btnBuscaCnpj.disabled = false;
             });
-    } else {
-        cepStatus.textContent = "";
-    }
-});
+    });
+}
 
 // Formatar CEP
 cepInput.addEventListener('input', function(e) {
@@ -50,7 +100,10 @@ formCliente.addEventListener('submit', function(e) {
         contato: document.getElementById('cliContato').value,
         email: document.getElementById('cliEmail').value,
         cep: document.getElementById('cliCep').value,
-        cidade: document.getElementById('cliCidade').value
+        cidade: document.getElementById('cliCidade').value,
+        rua: document.getElementById('cliRua').value,
+        numero: document.getElementById('cliNumero').value,
+        bairro: document.getElementById('cliBairro').value
     };
 
     let clientes = DB.get('clientes');
@@ -86,7 +139,19 @@ formCliente.addEventListener('submit', function(e) {
 window.verCliente = function(id) {
     let c = DB.get('clientes').find(x => x.id === id);
     if(c) {
-        alert(`=== FICHA DO CLIENTE ===\nNome: ${c.nome}\nCNPJ/CPF: ${c.cnpj}\nIE: ${c.ie || 'Isento'}\nContato: ${c.contato}\nE-mail: ${c.email || 'Não inf.'}\nCEP: ${c.cep}\nCidade: ${c.cidade}`);
+        let msg = `=== FICHA DO CLIENTE ===\n\n`;
+        msg += `Nome: ${c.nome}\n`;
+        msg += `CNPJ/CPF: ${c.cnpj}\n`;
+        msg += `IE: ${c.ie || 'Isento'}\n`;
+        msg += `Contato: ${c.contato}\n`;
+        msg += `E-mail: ${c.email || 'Não inf.'}\n\n`;
+        msg += `--- ENDEREÇO ---\n`;
+        msg += `Rua: ${c.rua || '---'}\n`;
+        msg += `Número: ${c.numero || '---'}\n`;
+        msg += `Bairro: ${c.bairro || '---'}\n`;
+        msg += `CEP: ${c.cep}\n`;
+        msg += `Cidade: ${c.cidade}`;
+        alert(msg);
     }
 }
 
@@ -100,6 +165,11 @@ window.editarCliente = function(id) {
         document.getElementById('cliEmail').value = c.email || '';
         document.getElementById('cliCep').value = c.cep;
         document.getElementById('cliCidade').value = c.cidade;
+        
+        // Novos campos
+        if(document.getElementById('cliRua')) document.getElementById('cliRua').value = c.rua || '';
+        if(document.getElementById('cliNumero')) document.getElementById('cliNumero').value = c.numero || '';
+        if(document.getElementById('cliBairro')) document.getElementById('cliBairro').value = c.bairro || '';
 
         clienteEditandoId = c.id;
         
@@ -130,6 +200,9 @@ function renderClientes() {
     }
 
     clientes.forEach(c => {
+        const enderecoCompleto = `${c.rua || ''}, ${c.numero || ''} - ${c.bairro || ''}, ${c.cidade || ''}`;
+        const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${c.nome}</strong></td>
@@ -137,7 +210,12 @@ function renderClientes() {
             <td>${c.cidade}</td>
             <td>${c.contato}</td>
             <td>
-                <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:#fff;" onclick="verCliente(${c.id})" title="Ficha Completa"><i class="fa-solid fa-eye"></i></button>
+                <a href="${googleMapsLink}" target="_blank" class="btn-secondary" style="padding: 5px; text-decoration:none; font-size:0.7rem;" title="Ver no Maps">
+                    <i class="fa-solid fa-location-dot"></i> Abrir Maps
+                </a>
+            </td>
+            <td>
+                <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:#fff;" onclick="verCliente(${c.id})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
                 <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="editarCliente(${c.id})" title="Editar"><i class="fa-solid fa-pencil"></i></button>
                 <button class="btn-danger" style="padding: 5px;" onclick="apagarCliente(${c.id})" title="Excluir"><i class="fa-solid fa-trash"></i></button>
             </td>

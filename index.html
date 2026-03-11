@@ -166,7 +166,10 @@
                         </div>
                         <div class="input-group">
                             <label for="cliCnpj">CNPJ / CPF</label>
-                            <input type="text" id="cliCnpj" required>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="cliCnpj" required style="flex: 1;">
+                                <button type="button" id="btnBuscaCnpj" class="btn-secondary" style="padding: 0 10px;" title="Buscar dados do CNPJ"><i class="fa-solid fa-magnifying-glass"></i></button>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label for="cliIe">Inscrição Estadual</label>
@@ -181,8 +184,16 @@
                             <input type="email" id="cliEmail">
                         </div>
                         <div class="input-group">
-                            <label for="cliCep">CEP <span class="badge" id="cepStatus"></span></label>
-                            <input type="text" id="cliCep" required placeholder="00000-000" maxlength="9">
+                            <label for="cliRua">Logradouro (Rua/Av)</label>
+                            <input type="text" id="cliRua" placeholder="Ex: Av. Brasil">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliNumero">Número</label>
+                            <input type="text" id="cliNumero" placeholder="Ex: 123">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliBairro">Bairro</label>
+                            <input type="text" id="cliBairro" placeholder="Ex: Centro">
                         </div>
                         <div class="input-group">
                             <label for="cliCidade">Cidade / Estado</label>
@@ -204,9 +215,10 @@
                             <thead>
                                 <tr>
                                     <th>Nome</th>
-                                    <th>CNPJ</th>
-                                    <th>Cidade/US</th>
+                                    <th>Documento</th>
+                                    <th>Cid/UF</th>
                                     <th>Contato</th>
+                                    <th>Endereço / Maps</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
