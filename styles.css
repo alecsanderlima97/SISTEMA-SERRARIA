@@ -96,17 +96,18 @@ body {
 }
 
 /* Efeito Marca d'Água Serra */
-body::before {
+.main-content::before {
     content: '';
     position: fixed;
     top: 50%;
-    left: 60%;
-    width: 800px;
-    height: 800px;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="rgba(255,255,255,0.05)"><path d="M256 0c-141.4 0-256 114.6-256 256s114.6 256 256 256 256-114.6 256-256-114.6-256-256-256zm0 432c-97.2 0-176-78.8-176-176s78.8-176 176-176 176 78.8 176 176-78.8 176-176 176zm80-176l-80-80-80 80 80 80 80-80z"/></svg>') no-repeat center center;
+    left: 55%;
+    width: 600px;
+    height: 600px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='white' opacity='0.03'%3E%3Cpath d='M256 0c-141.4 0-256 114.6-256 256s114.6 256 256 256 256-114.6 256-256-114.6-256-256-256zm0 432c-97.2 0-176-78.8-176-176s78.8-176 176-176 176 78.8 176 176-78.8 176-176 176zm80-176l-80-80-80 80 80 80 80-80z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
     transform: translate(-50%, -50%) rotate(-15deg);
-    opacity: 0.15;
-    z-index: -1;
+    z-index: 0;
     pointer-events: none;
 }
 
@@ -1011,18 +1012,18 @@ tfoot td {
     font-weight: 500;
 }
 
-/* Decoração de Rodapé (Eucaliptos) */
-.app-container::after {
+/* Decoração de Rodapé (Eucaliptos e Pinus) */
+.main-content::after {
     content: '';
     position: fixed;
-    bottom: 0;
-    left: 0;
+    bottom: -10px;
+    right: 0;
     width: 100%;
-    height: 100px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" preserveAspectRatio="none"><g fill="%232E3B1F" opacity="0.12"><path d="M50 100 L60 60 L55 60 L65 30 L60 30 L75 10 L90 30 L85 30 L95 60 L90 60 L100 100 Z" /><path d="M150 100 L165 50 L158 50 L175 20 L192 50 L185 50 L200 100 Z" /><path d="M300 100 L315 40 L308 40 L325 10 L342 40 L335 40 L350 100 Z" /><path d="M450 100 L460 70 L455 70 L465 50 L460 50 L475 30 L490 50 L485 50 L495 70 L490 70 L500 100 Z" /><path d="M600 100 L620 50 L610 50 L635 15 L660 50 L650 50 L670 100 Z" /><path d="M750 100 L765 60 L758 60 L775 25 L792 60 L785 60 L800 100 Z" /><path d="M880 100 L895 55 L888 55 L905 25 L922 55 L915 55 L930 100 Z" /></g></svg>');
+    height: 150px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 150' preserveAspectRatio='none'%3E%3Cg fill='%232E3B1F' opacity='0.15'%3E%3Cpath d='M50 150 L60 90 L55 90 L65 50 L60 50 L75 20 L90 50 L85 50 L95 90 L90 90 L100 150 Z' /%3E%3Cpath d='M150 150 L165 80 L158 80 L175 40 L192 80 L185 80 L200 150 Z' /%3E%3Cpath d='M300 150 L320 20 L340 150 Z' /%3E%3Cpath d='M450 150 L465 60 L458 60 L475 20 L492 60 L485 60 L500 150 Z' /%3E%3Cpath d='M600 150 L620 40 L640 150 Z' /%3E%3Cpath d='M750 150 L765 80 L758 80 L775 30 L792 80 L785 80 L800 150 Z' /%3E%3Cpath d='M880 150 L900 10 L920 150 Z' /%3E%3C/g%3E%3C/svg%3E");
     background-repeat: repeat-x;
     background-position: bottom;
-    z-index: -1;
+    z-index: 0;
     pointer-events: none;
 }
 
@@ -1036,8 +1037,10 @@ tfoot td {
     overflow-x: auto;
     width: 100%;
     -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 #view-transportes table {
-    min-width: 600px; /* Garante que a tabela não esmague em telas pequenas */
+    min-width: 700px; /* Garante que a tabela tenha espaço e gere a barra de rolagem */
 }
