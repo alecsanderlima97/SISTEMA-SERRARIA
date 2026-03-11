@@ -2,18 +2,14 @@
    VARIÁVEIS DESENHO MODERNO (GLASSMORPHISM)
    ========================================= */
 :root {
-    --primary-color: #e67e22;
-    /* Laranja vibrante */
-    --primary-hover: #d35400;
-    --secondary-color: #2b2e38;
-    --accent-color: #f1c40f;
-    /* Dourado */
-    --bg-color: #0f0a09;
-    /* Terroso escuro */
-    --panel-bg: rgba(255, 255, 255, 0.05);
-    --panel-border: rgba(255, 255, 255, 0.1);
-    --text-color: #e6edf3;
-    --text-muted: #a1a1a1;
+    --primary-color: #e67e22; /* Laranja Pôr do Sol */
+    --primary-hover: #cf711f;
+    --sidebar-bg: #2E3B1F; /* Verde Musgo */
+    --bg-color: #0d0c0b;
+    --panel-bg: rgba(255, 255, 255, 0.08); /* Menos transparente */
+    --panel-border: rgba(255, 255, 255, 0.15);
+    --text-color: #ffffff; /* Texto totalmente branco para brilhar */
+    --text-muted: #cbd5e0; /* Cinza claro bem legível */
     --danger-color: #f85149;
     --danger-hover: #da3633;
 
@@ -95,13 +91,23 @@ body {
 }
 
 @keyframes float {
-    0% {
-        transform: translate(0, 0) scale(1);
-    }
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(50px, 50px) scale(1.2); }
+}
 
-    100% {
-        transform: translate(50px, 50px) scale(1.2);
-    }
+/* Efeito Marca d'Água Serra */
+body::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 60%;
+    width: 800px;
+    height: 800px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="rgba(255,255,255,0.05)"><path d="M256 0c-141.4 0-256 114.6-256 256s114.6 256 256 256 256-114.6 256-256-114.6-256-256-256zm0 432c-97.2 0-176-78.8-176-176s78.8-176 176-176 176 78.8 176 176-78.8 176-176 176zm80-176l-80-80-80 80 80 80 80-80z"/></svg>') no-repeat center center;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
 }
 
 /* =========================================
@@ -247,7 +253,7 @@ input::placeholder {
 .sidebar {
     width: 180px; /* Reduzido de 220px */
     min-width: 180px;
-    background: rgba(15, 20, 25, 0.75);
+    background: var(--sidebar-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -664,6 +670,8 @@ td {
     padding: 0.4rem 0.6rem; /* Reduzido de 0.8rem 1rem */
     text-align: left;
     border-bottom: 1px solid var(--panel-border);
+    word-break: break-word; /* Garante que texto longo quebre */
+    max-width: 250px; /* Limita largura máxima para evitar estouro */
 }
 
 th {
