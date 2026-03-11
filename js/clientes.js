@@ -56,17 +56,22 @@ if (btnBuscaCnpj) {
                 return res.json();
             })
             .then(data => {
-                document.getElementById('cliNome').value = data.razao_social || data.nome_fantasia;
-                document.getElementById('cliEmail').value = data.email || '';
-                document.getElementById('cliContato').value = data.ddd_telefone_1 || '';
-                document.getElementById('cliCep').value = data.cep || '';
-                document.getElementById('cliCidade').value = `${data.municipio} / ${data.uf}`;
-                document.getElementById('cliRua').value = data.logradouro || '';
-                document.getElementById('cliNumero').value = data.numero || '';
-                document.getElementById('cliBairro').value = data.bairro || '';
+                const fill = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val || '';
+                };
+
+                fill('cliNome', data.razao_social || data.nome_fantasia);
+                fill('cliEmail', data.email);
+                fill('cliContato', data.ddd_telefone_1);
+                fill('cliCep', data.cep);
+                fill('cliCidade', `${data.municipio} / ${data.uf}`);
+                fill('cliRua', data.logradouro);
+                fill('cliNumero', data.numero);
+                fill('cliBairro', data.bairro);
                 
                 // Forçar trigger das máscaras
-                contatoInput.dispatchEvent(new Event('input'));
+                if (contatoInput) contatoInput.dispatchEvent(new Event('input'));
                 alert("Dados importados com sucesso!");
             })
             .catch(err => {
