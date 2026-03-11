@@ -95,21 +95,21 @@ body {
     100% { transform: translate(50px, 50px) scale(1.2); }
 }
 
-/* Efeito Marca d'Água Serra Rústica */
+/* Efeito Marca d'Água Serra Realística (Estilo Gancho) */
 .main-content::before {
     content: '';
     position: fixed;
     top: 50%;
     left: 55%;
-    width: 700px;
-    height: 700px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='white' opacity='0.04'%3E%3Cpath d='M50 0 L53 15 L65 10 L63 25 L75 25 L68 37 L80 42 L68 50 L80 58 L68 63 L75 75 L63 75 L65 90 L53 85 L50 100 L47 85 L35 90 L37 75 L25 75 L32 63 L20 58 L32 50 L20 42 L32 37 L25 25 L37 25 L35 10 L47 15 Z'/%3E%3Ccircle cx='50' cy='50' r='15' fill='none' stroke='white' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='5' fill='white'/%3E%3C/svg%3E");
+    width: 650px;
+    height: 650px;
+    /* SVG baseado na imagem enviada com dentes afiados em curva */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' opacity='0.05' d='M50 20 C55 20 60 21 64 24 L60 30 C70 25 80 30 85 40 L78 40 C85 48 85 58 78 65 L85 65 C80 75 70 80 60 75 L64 81 C60 84 55 85 50 85 C45 85 40 84 36 81 L40 75 C30 80 20 75 15 65 L22 65 C15 58 15 48 22 40 L15 40 C20 30 30 25 40 30 L36 24 C40 21 45 20 50 20 Z M50 45 A5 5 0 1 0 50 55 A5 5 0 1 0 50 45 Z'/%3E%3Cpath fill='white' opacity='0.02' d='M50 0 L55 10 L65 5 L62 18 L75 15 L70 28 L83 28 L75 40 L88 43 L78 52 L88 61 L78 68 L85 80 L72 78 L74 90 L62 84 L60 96 L50 85 L40 96 L38 84 L26 90 L28 78 L15 80 L22 68 L12 61 L22 52 L12 43 L25 40 L17 28 L30 28 L25 15 L38 18 L35 5 L45 10 Z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
-    transform: translate(-50%, -50%) rotate(0deg);
     z-index: -1;
     pointer-events: none;
-    animation: rotateSaw 60s linear infinite;
+    animation: rotateSaw 40s linear infinite;
 }
 
 @keyframes rotateSaw {
@@ -1018,19 +1018,61 @@ tfoot td {
     font-weight: 500;
 }
 
-/* Decoração de Rodapé (Eucaliptos e Pinus) */
+/* Decoração de Rodapé Animada (Eucaliptos e Pinus) */
 .main-content::after {
     content: '';
     position: fixed;
     bottom: -10px;
     left: 0;
     width: 100%;
-    height: 120px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 120' preserveAspectRatio='none'%3E%3Cg fill='%232E3B1F' opacity='0.2'%3E%3Cpath d='M50 120 L60 80 L55 80 L65 50 L60 50 L75 20 L90 50 L85 50 L95 80 L90 80 L100 120 Z' /%3E%3Cpath d='M150 120 L165 70 L158 70 L175 30 L192 70 L185 70 L200 120 Z' /%3E%3Cpath d='M250 120 L270 20 L290 120 Z' /%3E%3Cpath d='M400 120 L415 60 L408 60 L425 20 L442 60 L435 60 L450 120 Z' /%3E%3Cpath d='M550 120 L570 40 L590 120 Z' /%3E%3Cpath d='M700 120 L715 80 L708 80 L725 30 L742 80 L735 80 L750 120 Z' /%3E%3Cpath d='M850 120 L870 10 L890 120 Z' /%3E%3C/g%3E%3C/svg%3E");
+    height: 140px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 140' preserveAspectRatio='none'%3E%3Cg fill='%232E3B1F' opacity='0.22'%3E%3Cpath d='M50 140 L60 90 L55 90 L65 50 L60 50 L75 20 L90 50 L85 50 L95 90 L90 90 L100 140 Z' /%3E%3Cpath d='M150 140 L165 75 L158 75 L175 35 L192 75 L185 75 L200 140 Z' /%3E%3Cpath d='M250 140 L275 15 L300 140 Z' /%3E%3Cpath d='M400 140 L415 65 L408 65 L425 25 L442 65 L435 65 L450 140 Z' /%3E%3Cpath d='M550 140 L575 35 L600 140 Z' /%3E%3Cpath d='M720 140 L735 85 L728 85 L745 35 L762 85 L755 85 L770 140 Z' /%3E%3Cpath d='M880 140 L905 10 L930 140 Z' /%3E%3C/g%3E%3C/svg%3E");
     background-repeat: repeat-x;
     background-position: bottom;
     z-index: -1;
     pointer-events: none;
+    animation: swayTrees 8s ease-in-out infinite alternate;
+    transform-origin: bottom center;
+}
+
+@keyframes swayTrees {
+    0% { transform: skewX(-1deg); }
+    100% { transform: skewX(1deg); }
+}
+
+/* Efeito de Folhas ao Vento atravessando o sistema */
+.leaves-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Passa por cima dos painéis mas abaixo de elementos interativos se necessário */
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.leaf {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232E3B1F' opacity='0.3'%3E%3Cpath d='M17,8C8,10,5,16,5,22C5,22,9,22,14,20c4-1.6,7-5,7-5S17,14,17,8z'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    animation: leafWind 15s linear infinite;
+    opacity: 0;
+}
+
+.leaf-1 { top: 10%; left: -5%; animation-delay: 0s; }
+.leaf-2 { top: 30%; left: -5%; animation-delay: 5s; }
+.leaf-3 { top: 60%; left: -5%; animation-delay: 10s; }
+.leaf-4 { top: 80%; left: -5%; animation-delay: 2s; }
+
+@keyframes leafWind {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { transform: translate(110vw, 40vh) rotate(720deg); opacity: 0; }
 }
 
 /* Ajuste específico para evitar estouro na aba transportadoras */
