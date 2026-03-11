@@ -48,3 +48,48 @@ navLinks.forEach(link => {
         document.getElementById(targetId).style.display = 'block';
     });
 });
+
+// ---- UTILITÁRIOS E MÁSCARAS ----
+
+window.applyMask = function(input, decimals) {
+    if (!input) return;
+    input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ""); // Remove não-dígitos
+        if (value === "") {
+            e.target.value = "";
+            return;
+        }
+        let number = parseFloat(value) / Math.pow(10, decimals);
+        e.target.value = number.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
+    });
+};
+
+window.parseLocalFloat = function(value) {
+    if (typeof value !== 'string') return parseFloat(value) || 0;
+    return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+};
+
+// ---- BARRA DE STATUS (USUÁRIO, DATA, HORA) ----
+
+window.updateStatusBar = function() {
+    const statusUser = document.getElementById('statusUser');
+    const statusDate = document.getElementById('statusDate');
+    const statusTime = document.getElementById('statusTime');
+
+    // Tentar pegar login salvo ou usar padrão
+    const loggedUser = localStorage.getItem('vanmarte_logged_user') || 'Administrador';
+    if (statusUser) statusUser.textContent = loggedUser;
+    
+    const agora = new Date();
+    if (statusDate) statusDate.textContent = agora.toLocaleDateString('pt-BR');
+    if (statusTime) statusTime.textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
+// Iniciar após DOM carregado
+document.addEventListener('DOMContentLoaded', () => {
+    window.updateStatusBar();
+    setInterval(window.updateStatusBar, 1000 * 60); // Atualiza a cada minuto
+});

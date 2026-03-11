@@ -145,7 +145,7 @@ body {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-lg);
-    padding: 2rem;
+    padding: 1.2rem;
     box-shadow: var(--shadow-lg);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -213,10 +213,10 @@ select {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-md);
-    padding: 0.8rem 1rem;
+    padding: 0.5rem 0.8rem;
     color: #fff;
     font-family: var(--font-main);
-    font-size: 1rem;
+    font-size: 0.95rem;
     transition: all 0.2s ease;
     outline: none;
 }
@@ -321,8 +321,34 @@ input::placeholder {
 }
 
 .logout-link {
-    margin-top: auto;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Barra de Status (Topo) */
+.user-status-bar {
+    display: flex;
+    gap: 15px;
+    padding: 5px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0 0 10px 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--panel-border);
+    border-right: 1px solid var(--panel-border);
+}
+
+.user-status-bar span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.user-status-bar b {
+    color: var(--accent-color);
 }
 
 /* ÁREA DE CONTEÚDO (MAIN) */
@@ -518,9 +544,9 @@ input::placeholder {
    ========================================= */
 button {
     font-family: var(--font-main);
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    padding: 0.8rem 1.5rem;
+    padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
     border: none;
     cursor: pointer;
