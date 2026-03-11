@@ -1,13 +1,24 @@
 // --- Ferramentas Auxiliares / Calculadoras ---
 
+// Inicializar Máscaras
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('calcEsp')) applyMask(document.getElementById('calcEsp'), 1);
+    if (document.getElementById('calcLar')) applyMask(document.getElementById('calcLar'), 1);
+    if (document.getElementById('calcComp')) applyMask(document.getElementById('calcComp'), 2);
+
+    if (document.getElementById('fardoEsp')) applyMask(document.getElementById('fardoEsp'), 1);
+    if (document.getElementById('fardoLar')) applyMask(document.getElementById('fardoLar'), 1);
+    if (document.getElementById('fardoComp')) applyMask(document.getElementById('fardoComp'), 2);
+});
+
 // 1. Cubagem Rápida
 const btnCalcCub = document.getElementById('btnCalcCub');
 const resultadoCub = document.getElementById('resultadoCub');
 
 btnCalcCub.addEventListener('click', function () {
-    const esp = parseFloat(document.getElementById('calcEsp').value) || 0;
-    const lar = parseFloat(document.getElementById('calcLar').value) || 0;
-    const comp = parseFloat(document.getElementById('calcComp').value) || 0;
+    const esp = parseLocalFloat(document.getElementById('calcEsp').value) || 0;
+    const lar = parseLocalFloat(document.getElementById('calcLar').value) || 0;
+    const comp = parseLocalFloat(document.getElementById('calcComp').value) || 0;
     const qtd = parseInt(document.getElementById('calcQtd').value, 10) || 1;
 
     if (esp === 0 || lar === 0 || comp === 0) {
@@ -127,9 +138,9 @@ const resFardoVol = document.getElementById('resFardoVol');
 
 if (btnCalcFardo) {
     btnCalcFardo.addEventListener('click', function () {
-        const esp = parseFloat(document.getElementById('fardoEsp').value) || 0;
-        const lar = parseFloat(document.getElementById('fardoLar').value) || 0;
-        const comp = parseFloat(document.getElementById('fardoComp').value) || 0;
+        const esp = parseLocalFloat(document.getElementById('fardoEsp').value) || 0;
+        const lar = parseLocalFloat(document.getElementById('fardoLar').value) || 0;
+        const comp = parseLocalFloat(document.getElementById('fardoComp').value) || 0;
         const altPecas = parseInt(document.getElementById('fardoAltPecas').value, 10) || 0;
         const larPecas = parseInt(document.getElementById('fardoLarPecas').value, 10) || 0;
         const amarras = parseInt(document.getElementById('fardoAmarras').value, 10) || 0;

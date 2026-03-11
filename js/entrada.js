@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const altD1 = document.getElementById('entAltDir1');
     const altD2 = document.getElementById('entAltDir2');
     const altD3 = document.getElementById('entAltDir3');
+
+    // Inicializar Máscaras (Todas em metros = 2 casas decimais)
+    const inputsComMascara = [entComp, entLarg, altE1, altE2, altE3, altD1, altD2, altD3];
+    inputsComMascara.forEach(input => {
+        if (input) applyMask(input, 2);
+    });
     
     // Resultados
     const resVolume = document.getElementById('entResultadoVolume');
@@ -30,15 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Função de Cálculo em Tempo Real
     function calcularVolumeAtual() {
-        const c = parseFloat(entComp.value) || 0;
-        const l = parseFloat(entLarg.value) || 0;
+        const c = parseLocalFloat(entComp.value) || 0;
+        const l = parseLocalFloat(entLarg.value) || 0;
         
         // Reunir todas as alturas preenchidas
         const inputsAltura = [altE1, altE2, altE3, altD1, altD2, altD3];
         const valoresAltura = [];
         
         inputsAltura.forEach(input => {
-            const v = parseFloat(input.value);
+            const v = parseLocalFloat(input.value);
             if (!isNaN(v) && v > 0) {
                 valoresAltura.push(v);
             }
@@ -74,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Renderizar Tabela de Histórico
     function renderizarEntradas() {
         if(!listaEntradas) return;
-        const entradas = DB.get('entradas');
+        const entradas = DB.get('entradas') || [];
         listaEntradas.innerHTML = '';
         
         if(entradas.length === 0) {
@@ -139,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 volume: calcData.volume
             };
             
-            const entradas = DB.get('entradas');
+            const entradas = DB.get('entradas') || [];
             entradas.push(novaEntrada);
             DB.set('entradas', entradas);
             
@@ -161,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função global para deletar
     window.deletarEntrada = function(id) {
         if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
-            let entradas = DB.get('entradas');
+            let entradas = DB.get('entradas') || [];
             entradas = entradas.filter(e => e.id !== id);
             DB.set('entradas', entradas);
             renderizarEntradas();

@@ -457,15 +457,15 @@
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Espessura (cm)</label>
-                            <input type="number" id="calcEsp" step="0.1" placeholder="Ex: 2.5">
+                            <input type="text" id="calcEsp" placeholder="Ex: 2,5">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Largura (cm)</label>
-                            <input type="number" id="calcLar" step="0.1" placeholder="Ex: 10">
+                            <input type="text" id="calcLar" placeholder="Ex: 10,0">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Comprimento (m)</label>
-                            <input type="number" id="calcComp" step="0.1" placeholder="Ex: 3">
+                            <input type="text" id="calcComp" placeholder="Ex: 3,00">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Quantidade</label>
@@ -512,13 +512,13 @@
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Medidas da Peça (cm)</label>
                             <div style="display: flex; gap: 5px;">
-                                <input type="number" id="fardoEsp" step="0.1" placeholder="Esp.">
-                                <input type="number" id="fardoLar" step="0.1" placeholder="Larg.">
+                                <input type="text" id="fardoEsp" placeholder="Esp.">
+                                <input type="text" id="fardoLar" placeholder="Larg.">
                             </div>
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Comprim. da Peça (m)</label>
-                            <input type="number" id="fardoComp" step="0.1" placeholder="Ex: 3.0">
+                            <input type="text" id="fardoComp" placeholder="Ex: 3,00">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Peças por Fardo (A x L)</label>
@@ -648,11 +648,11 @@
 
                         <div class="input-group">
                             <label>Comprimento Total (m) *</label>
-                            <input type="number" id="entComp" step="0.01" required placeholder="Ex: 5.5">
+                            <input type="text" id="entComp" required placeholder="Ex: 5,50">
                         </div>
                         <div class="input-group">
                             <label>Largura Média (m) *</label>
-                            <input type="number" id="entLarg" step="0.01" required placeholder="Ex: 2.6">
+                            <input type="text" id="entLarg" required placeholder="Ex: 2,60">
                         </div>
                         <div class="input-group" style="grid-column: span 2;">
                             <!-- Placeholder vazio para alinhar grid -->
@@ -662,41 +662,42 @@
                         <div style="grid-column: 1 / -1; margin-top: 15px;">
                             <p style="font-size: 0.9rem; color:#aaa; margin-bottom: 10px;">Preencha apenas as
                                 alturas que conseguir medir. É possível usar apenas 1, 2 ou 3 alturas por lado.
-                                A média será calculada automaticamente.</p>
+                                               A média será calculada automaticamente.</p>
                         </div>
 
                         <!-- Lado Esquerdo -->
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#2cc990;">Lado Esq. Inicial (m)</label>
-                            <input type="number" id="entAltEsq1" step="0.01" placeholder="Ex: 1.5">
+                            <input type="text" id="entAltEsq1" placeholder="Ex: 1,50">
                         </div>
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#2cc990;">Lado Esq. Meio (m)</label>
-                            <input type="number" id="entAltEsq2" step="0.01">
+                            <input type="text" id="entAltEsq2">
                         </div>
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#2cc990;">Lado Esq. Final (m)</label>
-                            <input type="number" id="entAltEsq3" step="0.01">
+                            <input type="text" id="entAltEsq3">
                         </div>
 
                         <!-- Lado Direito -->
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#3498db;">Lado Dir. Inicial (m)</label>
-                            <input type="number" id="entAltDir1" step="0.01">
+                            <input type="text" id="entAltDir1">
                         </div>
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#3498db;">Lado Dir. Meio (m)</label>
-                            <input type="number" id="entAltDir2" step="0.01">
+                            <input type="text" id="entAltDir2">
                         </div>
                         <div class="input-group"
                             style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                             <label style="color:#3498db;">Lado Dir. Final (m)</label>
-                            <input type="number" id="entAltDir3" step="0.01">
+                            <input type="text" id="entAltDir3">
+                        </div>
                         </div>
 
                         <!-- Resultado em Real-Time -->
@@ -954,15 +955,15 @@
 
                             <div class="input-group">
                                 <label for="espessura">Espessura (cm)</label>
-                                <input type="number" id="espessura" step="0.1" required placeholder="Ex: 2.5">
+                                <input type="text" id="espessura" required placeholder="Ex: 2,5">
                             </div>
                             <div class="input-group">
                                 <label for="largura">Largura (cm)</label>
-                                <input type="number" id="largura" step="0.1" required placeholder="Ex: 10">
+                                <input type="text" id="largura" required placeholder="Ex: 10,0">
                             </div>
                             <div class="input-group">
                                 <label for="comprimento">Comprimento (m)</label>
-                                <input type="number" id="comprimento" step="0.1" required placeholder="Ex: 3.0">
+                                <input type="text" id="comprimento" required placeholder="Ex: 3,00">
                             </div>
                             <div class="input-group">
                                 <label for="quantidade">Qtd de Peças</label>

@@ -1,5 +1,12 @@
 // --- Lógica Principal do Romaneio ---
 
+// Inicializar Máscaras
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('espessura')) applyMask(document.getElementById('espessura'), 1);
+    if (document.getElementById('largura')) applyMask(document.getElementById('largura'), 1);
+    if (document.getElementById('comprimento')) applyMask(document.getElementById('comprimento'), 2);
+});
+
 let itensRomaneio = [];
 let proximoItemId = 1;
 let itemEditando = null;
@@ -213,9 +220,9 @@ formItem.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const produtoId = romSelectMadeira.value;
-    const espessura = parseFloat(document.getElementById('espessura').value);
-    const largMadeira = parseFloat(document.getElementById('largura').value);
-    const comprimento = parseFloat(document.getElementById('comprimento').value);
+    const espessura = parseLocalFloat(document.getElementById('espessura').value);
+    const largMadeira = parseLocalFloat(document.getElementById('largura').value);
+    const comprimento = parseLocalFloat(document.getElementById('comprimento').value);
     const pecasPckg = parseInt(document.getElementById('quantidade').value, 10);
     const pCustom = parseFloat(precoCustomizado.value);
     const pacotes = parseInt(document.getElementById('qtPacotes').value, 10) || 0;
