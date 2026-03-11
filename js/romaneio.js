@@ -154,26 +154,35 @@ function formatarMoeda(valor) {
 }
 
 function recalcularTotais() {
-    // Totais Quantidade e Metro Cúbico Físico
+    // Totais Quantidade e Metro Cúbico Físico (CARGA / MOTORISTA)
     const somaQtd = itensRomaneio.reduce((acc, curr) => acc + curr.quantidade, 0);
     const somaPacotes = itensRomaneio.reduce((acc, curr) => acc + (curr.pacotes || 0), 0);
-    const somaVolume = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0);
+    const somaVolume = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0); // Real
+
+    // Totais de VENDA (FATURAMENTO CLIENTE)
+    const somaVolumeVenda = itensRomaneio.reduce((acc, curr) => acc + (curr.volumeTotalVenda || curr.volumeTotal), 0);
 
     document.getElementById('totalQtd').innerHTML = `<strong>${somaQtd} pçs</strong>`;
     document.getElementById('totalPacotes').innerHTML = `<strong>${somaPacotes} pct(s)</strong>`;
     document.getElementById('totalVolume').innerHTML = `<strong>${somaVolume.toFixed(4)} m³</strong>`;
+    
+    // Novo: Total Volume Venda
+    if (document.getElementById('totalVolumeVenda')) {
+        document.getElementById('totalVolumeVenda').innerHTML = `<strong>${somaVolumeVenda.toFixed(4)} m³</strong>`;
+    }
 
-    // Matemática Financeira Associada ao Produto
-    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + (curr.volumeTotal * curr.precoUsado), 0);
+    // Matemática Financeira Associada ao Produto (Venda)
+    // Usamos somaVolumeVenda para o faturamento da madeira
+    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + ((curr.volumeTotalVenda || curr.volumeTotal) * curr.precoUsado), 0);
 
-    // Lógica do Frete: m³ total * Preço do Frete por m³ digitado
+    // Custo do Frete exibido separadamente
     let fretePorM3 = parseFloat(valorFrete.value) || 0;
     let custoFrete = somaVolume * fretePorM3;
 
     // Imposto NF
     let imposto = parseFloat(valorJurosNf.value) || 0;
 
-    let valorTotalGeral = totalValorMadeira + custoFrete + imposto;
+    let valorTotalGeral = totalValorMadeira + imposto;
 
     document.getElementById('resValorMadeira').textContent = formatarMoeda(totalValorMadeira);
     document.getElementById('resValorFrete').textContent = formatarMoeda(custoFrete);
@@ -223,6 +232,7 @@ formItem.addEventListener('submit', function(e) {
     const espessura = parseLocalFloat(document.getElementById('espessura').value);
     const largMadeira = parseLocalFloat(document.getElementById('largura').value);
     const comprimento = parseLocalFloat(document.getElementById('comprimento').value);
+    const comprimentoVenda = parseLocalFloat(document.getElementById('comprimentoVenda').value);
     const pecasPckg = parseInt(document.getElementById('quantidade').value, 10);
     const pCustom = parseFloat(precoCustomizado.value);
     const pacotes = parseInt(document.getElementById('qtPacotes').value, 10) || 0;
@@ -230,8 +240,14 @@ formItem.addEventListener('submit', function(e) {
     // Lógica multiplicadora (Se tiver pacote, multiplica, senão a quantidade total é igual às peças digitadas)
     const quantidadeAbsoluta = pacotes > 0 ? (pecasPckg * pacotes) : pecasPckg;
 
+    // Volume Real (Motorista)
     const volumeUnidade = (espessura / 100) * (largMadeira / 100) * comprimento;
     const volumeTotal = volumeUnidade * quantidadeAbsoluta;
+
+    // Volume Venda (Faturamento)
+    const compUsoVenda = comprimentoVenda > 0 ? comprimentoVenda : comprimento;
+    const volumeUnidadeVenda = (espessura / 100) * (largMadeira / 100) * compUsoVenda;
+    const volumeTotalVenda = volumeUnidadeVenda * quantidadeAbsoluta;
 
     let pInfo = (DB.get('produtos') || []).find(x => x.id == produtoId);
     let nomeExibicao = pInfo ? `${pInfo.tipo} ${pInfo.classe} (${pInfo.natureza})` : 'Madeira Padrão';
@@ -255,6 +271,9 @@ formItem.addEventListener('submit', function(e) {
                 amarras: pacoteAmarras.value,
                 volumeUnidade: volumeUnidade,
                 volumeTotal: volumeTotal,
+                volumeUnidadeVenda: volumeUnidadeVenda,
+                volumeTotalVenda: volumeTotalVenda,
+                comprimentoVenda: comprimentoVenda,
                 precoUsado: pCustom // Salva o preco unitário na hora!
             };
         }
@@ -276,6 +295,9 @@ formItem.addEventListener('submit', function(e) {
             amarras: pacoteAmarras.value,
             volumeUnidade: volumeUnidade,
             volumeTotal: volumeTotal,
+            volumeUnidadeVenda: volumeUnidadeVenda,
+            volumeTotalVenda: volumeTotalVenda,
+            comprimentoVenda: comprimentoVenda,
             precoUsado: pCustom
         });
         
@@ -302,7 +324,11 @@ function exporParaEdicao(id) {
     
     document.getElementById('espessura').value = item.espessura;
     document.getElementById('largura').value = item.largura;
+    document.getElementById('comprimento').value = item.espessura; // Bug check? Wait, it should be item.comprimento
     document.getElementById('comprimento').value = item.comprimento;
+    if (document.getElementById('comprimentoVenda')) {
+        document.getElementById('comprimentoVenda').value = item.comprimentoVenda || '';
+    }
     
     // Restaurar a Calculadora do Fardo se existir
     pacoteAltura.value = item.alturaFardo || '';
@@ -347,12 +373,14 @@ function renderizarTabelaRomaneio() {
         const tr = document.createElement('tr');
         const medidasTexto = `${item.espessura} cm x ${item.largura} cm x ${item.comprimento.toFixed(1)} m`;
 
-        // Calculo Valor Unidade Customizado
-        let valorUnitarioPeca = item.volumeUnidade * item.precoUsado;
+        // Nota de Venda Customizada
+        const temMedidaVenda = item.comprimentoVenda > 0 && item.comprimentoVenda !== item.comprimento;
+        const notaVenda = temMedidaVenda ? 
+            `<span class="nota-venda">Venda: ${item.volumeTotalVenda.toFixed(3)} m³ c/ ${item.comprimentoVenda.toFixed(2)}m</span>` : '';
 
         tr.innerHTML = `
             <td><strong>#${index + 1}</strong> - ${item.nomeProduto}</td>
-            <td>${medidasTexto}</td>
+            <td>${medidasTexto}${notaVenda}</td>
             <td>${item.pacotes || 0}</td>
             <td>${item.quantidade}</td>
             <td>${item.volumeUnidade.toFixed(4)}</td>
@@ -395,13 +423,16 @@ document.getElementById('btnFinalizar').addEventListener('click', () => {
         return;
     }
 
-    // Coletando Totais da UI
-    const somaVolume = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0);
-    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + (curr.volumeTotal * curr.precoUsado), 0);
+    // Coletando Totais para o Histórico
+    const somaVolumeCarga = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0);
+    const somaVolumeVenda = itensRomaneio.reduce((acc, curr) => acc + (curr.volumeTotalVenda || curr.volumeTotal), 0);
+    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + ((curr.volumeTotalVenda || curr.volumeTotal) * curr.precoUsado), 0);
 
     let fretePorM3 = parseFloat(valorFrete.value) || 0;
     let imposto = parseFloat(valorJurosNf.value) || 0;
-    let valorTotalGeral = totalValorMadeira + (somaVolume * fretePorM3) + imposto;
+    
+    // O valor faturado da madeira NÃO inclui o frete (conforme solicitado pelo usuário)
+    let valorTotalGeral = totalValorMadeira + imposto;
 
     // Pegar nome do Cliente
     let cId = romSelectCliente.value;
@@ -420,8 +451,9 @@ document.getElementById('btnFinalizar').addEventListener('click', () => {
         data: document.getElementById('dataCarga').value || new Date().toISOString().split('T')[0],
         freteAplicado: fretePorM3,
         itens: itensRomaneio,
-        volumeTotalItem: somaVolume,
-        valorFinal: valorTotalGeral
+        volumeTotalItem: somaVolumeCarga, // Real (Motorista)
+        volumeVendaTotal: somaVolumeVenda, // Faturamento
+        valorFinal: valorTotalGeral // Apenas Madeira + Imposto
     };
 
     historias.push(novaHistoria);

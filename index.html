@@ -967,8 +967,14 @@
                                 <input type="text" id="largura" required placeholder="Ex: 10,0">
                             </div>
                             <div class="input-group">
-                                <label for="comprimento">Comprimento (m)</label>
+                                <label for="comprimento">Comprimento Real (m)</label>
                                 <input type="text" id="comprimento" required placeholder="Ex: 3,00">
+                                <small style="color:#aaa; font-size:0.75rem;">(Motorista)</small>
+                            </div>
+                            <div class="input-group" style="background: rgba(44, 201, 144, 0.05); border-radius: 6px;">
+                                <label for="comprimentoVenda" style="color: #3498db;">Comp. Faturamento (m)</label>
+                                <input type="text" id="comprimentoVenda" placeholder="Ex: 1,20">
+                                <small style="color:#3498db; font-size:0.75rem;">(Preço p/ Cliente)</small>
                             </div>
                             <div class="input-group">
                                 <label for="quantidade">Qtd de Peças</label>
@@ -1019,8 +1025,8 @@
                                 </tbody>
                                 <tfoot id="resumoTabela">
                                     <tr>
-                                        <td colspan="2" class="text-right"><strong>TOTAL FÍSICO
-                                                (MADEIRA):</strong></td>
+                                        <td colspan="2" class="text-right"><strong>TOTAL CARGA
+                                                (MOTORISTA):</strong></td>
                                         <td id="totalPacotes" style="color:var(--primary-color);"><strong>0
                                                 pct</strong>
                                         </td>
@@ -1029,6 +1035,11 @@
                                         <td>-</td>
                                         <td class="total-highlight"><strong id="totalVolume">0.000 m³</strong>
                                         </td>
+                                        <td class="hide-on-print"></td>
+                                    </tr>
+                                    <tr style="background: rgba(52, 152, 219, 0.1);">
+                                        <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL VENDA (FATURAMENTO CLIENTE):</strong></td>
+                                        <td class="total-highlight"><strong id="totalVolumeVenda" style="color:#3498db;">0.000 m³</strong></td>
                                         <td class="hide-on-print"></td>
                                     </tr>
                                     <tr class="sumario-financeiro">
