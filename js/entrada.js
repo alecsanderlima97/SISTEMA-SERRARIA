@@ -110,8 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             tr.innerHTML = `
                 <td>${dtStr}</td>
-                <td><strong>${en.fornecedor}</strong><br><small style="color:#aaa;">${en.motorista || '-'}</small></td>
-                <td><span class="badge" style="background:#555;">${en.placa}</span></td>
+                <td>
+                    <div style="font-weight:bold; color:var(--accent-color);">${en.fornecedor}</div>
+                    <div style="font-size:0.8rem; color:#aaa;"><i class="fa-solid fa-user-tag" style="font-size:0.7rem;"></i> ${en.motorista || '-'}</div>
+                </td>
+                <td><span class="badge" style="background:#333; border:1px solid #555; padding: 4px 8px;">${en.placa}</span></td>
                 <td style="font-size: 0.9em;">
                     C: ${(en.comp || 0).toFixed(2)}m <br>
                     L: ${(en.larg || 0).toFixed(2)}m <br>
