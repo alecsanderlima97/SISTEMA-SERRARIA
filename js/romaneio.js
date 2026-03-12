@@ -70,8 +70,17 @@ romSelectCliente.addEventListener('change', function() {
     let c = clientes.find(x => x.id == this.value);
     if(c) {
         printNomeCli.textContent = c.nome;
+        // Adicionando mais infos para o cabeçalho NF
+        if(document.getElementById('printDocCli')) document.getElementById('printDocCli').textContent = c.cnpj || c.cpf || '---';
+        if(document.getElementById('printEndCli')) document.getElementById('printEndCli').textContent = `${c.rua || ''}, ${c.numero || ''} - ${c.bairro || ''}`;
+        if(document.getElementById('printCidCli')) document.getElementById('printCidCli').textContent = `${c.cidade || ''}`;
+        if(document.getElementById('printFoneCli')) document.getElementById('printFoneCli').textContent = c.contato || '---';
     } else {
         printNomeCli.textContent = '';
+        if(document.getElementById('printDocCli')) document.getElementById('printDocCli').textContent = '';
+        if(document.getElementById('printEndCli')) document.getElementById('printEndCli').textContent = '';
+        if(document.getElementById('printCidCli')) document.getElementById('printCidCli').textContent = '';
+        if(document.getElementById('printFoneCli')) document.getElementById('printFoneCli').textContent = '';
     }
 
     // 2. Busca último frete deste cliente no Histórico
@@ -384,7 +393,7 @@ function renderizarTabelaRomaneio() {
             <td>${item.pacotes || 0}</td>
             <td>${item.quantidade}</td>
             <td>${item.volumeUnidade.toFixed(4)}</td>
-            <td style="color:var(--accent-color); font-weight:bold;">${formatarMoeda(valorUnitarioPeca)}</td>
+            <td style="color:var(--accent-color); font-weight:bold;">${formatarMoeda(item.precoUsado)}</td>
             <td><strong>${item.volumeTotal.toFixed(4)}</strong></td>
             <td class="hide-on-print">
                 <button type="button" class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="editarItemRomaneio(${item.id})" title="Editar"><i class="fa-solid fa-pencil"></i></button>
@@ -407,7 +416,21 @@ document.getElementById('btnPrint').addEventListener('click', () => {
     if(!romSelectCliente.value) {
         alert("Atenção: Recomenda-se selecionar um Cliente antes da impressão.");
     }
-    
+
+    // Preencher data e número no cabeçalho NF antes de imprimir
+    const dataCargaInput = document.getElementById('dataCarga').value;
+    if (dataCargaInput) {
+        const [ano, mes, dia] = dataCargaInput.split('-');
+        document.getElementById('printDataCarga').textContent = `${dia}/${mes}/${ano}`;
+    } else {
+        document.getElementById('printDataCarga').textContent = new Date().toLocaleDateString('pt-BR');
+    }
+
+    // Tentar pegar o número da próxima carga (ou 'PREVIEW')
+    let historias = DB.get('historico') || [];
+    let numCorrente = (historias.length + 1).toString().padStart(4, '0');
+    document.getElementById('printNumeroCarga').textContent = `Nº ${numCorrente}`;
+
     document.querySelector('.sidebar').classList.add('hide-on-print'); 
     window.print();
 });

@@ -783,6 +783,83 @@ tfoot td {
 }
 
 /* =========================================
+   ESTILOS NOTA FISCAL (NF STYLE)
+   ========================================= */
+.nf-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid #000;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.nf-emitter-box h1 {
+    font-size: 18pt !important;
+    margin: 0;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    background: none !important;
+}
+
+.nf-emitter-box p {
+    margin: 2px 0;
+    font-size: 10pt;
+    color: #333;
+}
+
+.nf-number-box {
+    text-align: center;
+    border-left: 2px solid #000;
+    padding-left: 20px;
+    display: flex !important;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nf-label {
+    font-weight: bold;
+    font-size: 12pt;
+    color: #000;
+}
+
+.nf-number {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #e67e22 !important; /* Cor primária do sistema */
+}
+
+.nf-details-container {
+    display: none;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    padding: 10px;
+    color: #000;
+}
+
+.nf-client-box, .nf-transport-box {
+    font-size: 9pt;
+}
+
+.nf-section-title {
+    background: #eee;
+    font-weight: bold;
+    padding: 3px 5px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #000;
+    font-size: 8pt;
+    color: #000;
+    text-transform: uppercase;
+}
+
+.nf-details-container p {
+    margin: 3px 0;
+}
+
+/* =========================================
    ESTILOS DE IMPRESSÃO
    ========================================= */
 @media print {
@@ -811,7 +888,12 @@ tfoot td {
         gap: 0;
     }
 
-    .hide-on-print {
+    .hide-on-print,
+    .leaves-container,
+    .background-elements,
+    .user-status-bar,
+    .main-content::before,
+    .main-content::after {
         display: none !important;
     }
 
@@ -820,11 +902,26 @@ tfoot td {
     }
 
     .glass-panel {
-        background: transparent;
-        border: none;
-        box-shadow: none;
-        padding: 10px 0;
-        border-radius: 0;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 5px 0 !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        overflow: visible !important;
+    }
+
+    .nf-header, .nf-details-container {
+        display: flex !important;
+        color: #000 !important;
+    }
+
+    .nf-details-container {
+        display: grid !important;
+    }
+    
+    .nf-number {
+        color: #000 !important; /* Preto na impressão para economizar tinta e ser formal */
     }
 
     input,
@@ -893,13 +990,32 @@ tfoot td {
     }
 
     .grid-form {
-        grid-template-columns: 1fr 1fr;
-        gap: 10px 20px;
+        display: block !important;
     }
 
     .input-group {
-        border-bottom: 1px solid #ccc;
-        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 2px;
+        margin-bottom: 5px;
+    }
+    
+    /* Correção para evitar corte de palavras */
+    td {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .table-container {
+        overflow: visible !important;
+        width: 100% !important;
+    }
+    
+    tfoot td {
+        font-size: 10pt !important;
+    }
+    
+    .total-highlight {
+        font-size: 12pt !important;
     }
 
     @page {

@@ -864,12 +864,18 @@
             <section id="view-romaneio" class="view-section" style="display: none;">
                 <div class="app-container" style="padding:0; max-width:100%;">
 
-                    <header class="main-header show-on-print"
-                        style="display:none; text-align:center; margin-bottom: 20px;">
-                        <h1
-                            style="font-size: 24pt; border-bottom: 2px solid #000; padding-bottom:10px; margin-bottom: 20px;">
-                            ORQUESTRASIS - SISTEMA PARA SERRARIAS</h1>
-                        <h2>ROMANEIO DE CARGA</h2>
+                    <header class="nf-header show-on-print" style="display:none;">
+                        <div class="nf-emitter-box">
+                            <h1>ORQUESTRASIS - SISTEMA PARA SERRARIAS</h1>
+                            <p>Indústria e Comércio de Madeiras em Geral</p>
+                            <p>Escritório: Rua das Madeiras, 1000 - Distrito Industrial</p>
+                            <p>Fone: (00) 0000-0000 | CNPJ: 00.000.000/0001-00</p>
+                        </div>
+                        <div class="nf-number-box">
+                            <span class="nf-label">ROMANEIO DE CARGA</span>
+                            <span class="nf-number" id="printNumeroCarga">---</span>
+                            <span class="nf-date" id="printDataCarga">--/--/----</span>
+                        </div>
                     </header>
 
                     <div class="main-header hide-on-print">
@@ -933,15 +939,21 @@
                         </div>
 
                         <!-- Info extra do cliente para o PDF -->
-                        <div class="info-impressao show-on-print"
-                            style="display:none; margin-top: 15px; font-size:12px; border:1px solid #000; padding:10px;">
-                            <p><strong>Cliente:</strong> <span id="printNomeCli"></span></p>
-                            <p><i class="fa-solid fa-truck"></i> <strong>Transportadora:</strong> <span
-                                    id="printFretista">---</span></p>
-                            <p><i class="fa-solid fa-id-card"></i> <strong>Placa/Motorista:</strong> <span
-                                    id="printPlaca">---</span></p>
-                            <p><i class="fa-solid fa-money-bill-wave"></i> <strong>Forma Pgat:</strong> <span
-                                    id="printPagam">À Vista</span></p>
+                        <!-- Info Destinatário e Transporte (NF Style) -->
+                        <div class="nf-details-container show-on-print" style="display:none;">
+                            <div class="nf-client-box">
+                                <div class="nf-section-title">DADOS DO DESTINATÁRIO</div>
+                                <p><strong>NOME/RAZÃO SOCIAL:</strong> <span id="printNomeCli"></span></p>
+                                <p><strong>CNPJ/CPF:</strong> <span id="printDocCli"></span></p>
+                                <p><strong>ENDEREÇO:</strong> <span id="printEndCli"></span></p>
+                                <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span id="printFoneCli"></span></p>
+                            </div>
+                            <div class="nf-transport-box">
+                                <div class="nf-section-title">DADOS DO TRANSPORTE / CARGA</div>
+                                <p><strong>FRETISTA/EMP:</strong> <span id="printFretista">---</span></p>
+                                <p><strong>PLACA/VEÍCULO:</strong> <span id="printPlaca">---</span></p>
+                                <p><strong>FORMA PGTO:</strong> <span id="printPagam">À Vista</span></p>
+                            </div>
                         </div>
                     </section>
 
@@ -1035,13 +1047,13 @@
                             <table id="tabelaRomaneio">
                                 <thead>
                                     <tr>
-                                        <th>Mercadoria</th>
+                                        <th>Descrição do Produto</th>
                                         <th>Medidas (E x L x C)</th>
-                                        <th>Pacotes</th>
+                                        <th>Pct</th>
                                         <th>Peças</th>
-                                        <th>Volume Unit (m³)</th>
-                                        <th>Valor un/Peça (R$)</th>
-                                        <th>Volume Total</th>
+                                        <th>Volume Unit</th>
+                                        <th>Vlr. Unit (R$)</th>
+                                        <th>Vlr. Total (R$)</th>
                                         <th class="hide-on-print">Ações</th>
                                     </tr>
                                 </thead>
