@@ -1560,11 +1560,11 @@ input:checked + .slider:before {
     border-left: 3px solid var(--primary-color);
 }
 
-/* ====== SELETOR DE SUBPRODUTOS (CAVACO/PÓ) ====== */
+/* ====== SELETOR DE SUBPRODUTOS (CAVACO/PÓ) COMPACTO ====== */
 .subproduct-selector {
     display: flex;
-    gap: 15px;
-    margin-top: 5px;
+    gap: 8px;
+    margin-top: 3px;
 }
 
 .sub-option {
@@ -1578,35 +1578,58 @@ input:checked + .slider:before {
 
 .sub-box {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    transition: all 0.3s ease;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: all 0.2s ease;
     color: #acc8fa;
+    height: 34px;
 }
 
 .sub-box i {
-    font-size: 1.5rem;
-}
-
-.sub-box span {
-    font-weight: 600;
     font-size: 0.9rem;
 }
 
+.sub-box span {
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
 .sub-option input:checked + .sub-box {
-    background: rgba(44, 201, 144, 0.1);
+    background: rgba(44, 201, 144, 0.08);
     border-color: var(--accent-color);
     color: var(--accent-color);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(44, 201, 144, 0.2);
 }
 
 .sub-box:hover {
-    background: rgba(255, 255, 255, 0.08);
-}
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Ajuste fino para o formulário de cavaco */
+#view-cavaco .glass-panel {
+    max-width: 550px !important;
+    padding: 0.8rem !important;
+}
+
+#view-cavaco .input-group label {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+
+#view-cavaco .input-group input, 
+#view-cavaco .input-group select {
+    height: 32px;
+    font-size: 0.85rem;
+}
+
+#view-cavaco .btn-primary {
+    padding: 10px;
+    font-size: 0.95rem;
+    margin-top: 10px;
+}
+
