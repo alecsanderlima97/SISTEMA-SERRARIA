@@ -62,7 +62,7 @@
                     <li><a href="#" data-target="view-clientes"><i class="fa-solid fa-users"></i> Clientes</a></li>
                     <li><a href="#" data-target="view-transportes"><i class="fa-solid fa-truck"></i> Transportadoras</a>
                     </li>
-                    <li><a href="#" data-target="view-entrada"><i class="fa-solid fa-tree"></i> Entrada de Toras</a>
+                    <li><a href="#" data-target="view-entrada"><i class="fa-solid fa-truck-ramp-box"></i> Conferência de Cargas</a>
                     </li>
                     <li><a href="#" data-target="view-cavaco"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/Pó)</a>
                     </li>
@@ -696,107 +696,106 @@
             </section>
 
 
-            <!-- ====== TELA: ENTRADA DE MADEIRA/TORA ====== -->
+            <!-- ====== TELA: CONFERÊNCIA DE CARGAS (FISICO) ====== -->
             <section id="view-entrada" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-tree"></i> Entrada de Toras (M³)</h1>
-                    <p>Registro de entrada e cálculo de cubagem de caminhões</p>
+                    <h1><i class="fa-solid fa-truck-ramp-box"></i> Conferência de Cargas</h1>
+                    <p>Cálculo de cubagem (Toras / Cavaco / Pó) inspirado no modelo físico</p>
                 </div>
 
                 <div class="glass-panel" style="margin-bottom: 2rem;">
-                    <div class="section-title">
-                        <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³ (Média de Alturas)</h2>
-                    </div>
-                    <form id="formEntrada" class="grid-form">
-                        <div class="input-group" style="grid-column: span 2;">
-                            <label for="entFornecedor">Fornecedor / Motorista *</label>
-                            <input type="text" id="entFornecedor" required placeholder="Nome do responsável">
-                        </div>
-                        <div class="input-group">
-                            <label for="entPlaca">Placa do Caminhão *</label>
-                            <input type="text" id="entPlaca" required placeholder="ABC-1234">
-                        </div>
-                        <div class="input-group">
-                            <label for="entData">Data de Entrada</label>
-                            <input type="date" id="entData" required>
-                        </div>
-
-                        <!-- Separação Medidas Base -->
-                        <div
-                            style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <h3 style="color:var(--accent-color);"><i class="fa-solid fa-ruler-combined"></i>
-                                Medidas da Carroceria / Carga</h3>
+                    <form id="formEntrada">
+                        <div class="grid-form" style="margin-bottom: 2rem;">
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label for="entFornecedor">Fornecedor / Motorista *</label>
+                                <input type="text" id="entFornecedor" required placeholder="Nome do representante">
+                            </div>
+                            <div class="input-group">
+                                <label for="entPlaca">Placa do Caminhão *</label>
+                                <input type="text" id="entPlaca" required placeholder="ABC-1234">
+                            </div>
+                            <div class="input-group">
+                                <label for="entData">Data da Conferência</label>
+                                <input type="date" id="entData" required>
+                            </div>
                         </div>
 
-                        <div class="input-group">
-                            <label>Comprimento Total (m) *</label>
-                            <input type="text" id="entComp" required placeholder="Ex: 5,50">
-                        </div>
-                        <div class="input-group">
-                            <label>Largura Média (m) *</label>
-                            <input type="text" id="entLarg" required placeholder="Ex: 2,60">
-                        </div>
-                        <div class="input-group" style="grid-column: span 2;">
-                            <!-- Placeholder vazio para alinhar grid -->
-                        </div>
+                        <div class="conferencia-container">
+                            <!-- LADO ESQUERDO -->
+                            <div class="conferencia-col">
+                                <h3>L. ESQ.</h3>
+                                <div class="conferencia-slot">
+                                    <span>1</span>
+                                    <input type="text" id="entAltEsq1" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>2</span>
+                                    <input type="text" id="entAltEsq2" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>3</span>
+                                    <input type="text" id="entAltEsq3" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>4</span>
+                                    <input type="text" id="entAltEsq4" placeholder="0,00">
+                                </div>
+                            </div>
 
-                        <!-- Separação Alturas -->
-                        <div style="grid-column: 1 / -1; margin-top: 15px;">
-                            <p style="font-size: 0.9rem; color:#aaa; margin-bottom: 10px;">Preencha apenas as
-                                alturas que conseguir medir. É possível usar apenas 1, 2 ou 3 alturas por lado.
-                                               A média será calculada automaticamente.</p>
-                        </div>
+                            <div class="v-divider"></div>
 
-                        <!-- Lado Esquerdo -->
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Inicial (m)</label>
-                            <input type="text" id="entAltEsq1" placeholder="Ex: 1,50">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Meio (m)</label>
-                            <input type="text" id="entAltEsq2">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Final (m)</label>
-                            <input type="text" id="entAltEsq3">
-                        </div>
+                            <!-- LADO DIREITO -->
+                            <div class="conferencia-col">
+                                <h3>L. DIR.</h3>
+                                <div class="conferencia-slot">
+                                    <span>1</span>
+                                    <input type="text" id="entAltDir1" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>2</span>
+                                    <input type="text" id="entAltDir2" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>3</span>
+                                    <input type="text" id="entAltDir3" placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot">
+                                    <span>4</span>
+                                    <input type="text" id="entAltDir4" placeholder="0,00">
+                                </div>
+                            </div>
 
-                        <!-- Lado Direito -->
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Inicial (m)</label>
-                            <input type="text" id="entAltDir1">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Meio (m)</label>
-                            <input type="text" id="entAltDir2">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Final (m)</label>
-                            <input type="text" id="entAltDir3">
+                            <div class="v-divider"></div>
+
+                            <!-- MEDIDAS CAMINHÃO -->
+                            <div class="conferencia-col">
+                                <h3>CAMINHÃO</h3>
+                                <div class="conferencia-slot truck-dims">
+                                    <span>ALT. Média</span>
+                                    <input type="text" id="entAltMediaDisplay" readonly placeholder="0,00" style="color:var(--accent-color);">
+                                </div>
+                                <div class="conferencia-slot truck-dims">
+                                    <span>LAR.</span>
+                                    <input type="text" id="entLarg" required placeholder="0,00">
+                                </div>
+                                <div class="conferencia-slot truck-dims">
+                                    <span>COMP.</span>
+                                    <input type="text" id="entComp" required placeholder="0,00">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Resultado em Real-Time -->
-                        <div
-                            style="grid-column: 1 / -1; text-align: center; margin-top: 15px; padding: 20px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
-                            <h4 style="margin: 0; color:#ccc;">Volume Calculado</h4>
-                            <div id="entResultadoVolume"
-                                style="font-size: 2.5rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">
-                                0.000 m³</div>
-                            <small id="entInfoMedia" style="color:#aaa;">Altura média: 0.00 m (0 pontos
-                                medidos)</small>
+                        <div style="text-align: center; margin-top: 2rem; padding: 20px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
+                            <h4 style="margin: 0; color:#ccc; text-transform: uppercase; font-size: 0.8rem;">Volume Total Calculado</h4>
+                            <div id="entResultadoVolume" style="font-size: 3rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">0.000 m³</div>
+                            <small id="entInfoMedia" style="color:#aaa;">Preencha as alturas para calcular a média e o m³.</small>
                         </div>
 
-                        <div class="input-group"
-                            style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
-                            <button type="submit" class="btn-primary" style="padding: 15px 30px; font-size: 1.1rem;"><i
-                                    class="fa-solid fa-save"></i>
-                                Registrar Entrada</button>
+                        <div style="display: flex; justify-content: center; margin-top: 2rem;">
+                            <button type="submit" class="btn-primary" style="padding: 1.2rem 4rem; font-size: 1.2rem; border-radius: 50px; box-shadow: 0 10px 20px rgba(44, 201, 144, 0.2);">
+                                <i class="fa-solid fa-save"></i> Registrar Conferência
+                            </button>
                         </div>
                     </form>
                 </div>

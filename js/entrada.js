@@ -12,16 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const altE1 = document.getElementById('entAltEsq1');
     const altE2 = document.getElementById('entAltEsq2');
     const altE3 = document.getElementById('entAltEsq3');
+    const altE4 = document.getElementById('entAltEsq4');
     
     // Alturas Direita
     const altD1 = document.getElementById('entAltDir1');
     const altD2 = document.getElementById('entAltDir2');
     const altD3 = document.getElementById('entAltDir3');
+    const altD4 = document.getElementById('entAltDir4');
 
     // Inicializar Máscaras (Todas em metros = 2 casas decimais)
-    const inputsComMascara = [entComp, entLarg, altE1, altE2, altE3, altD1, altD2, altD3];
+    const inputsComMascara = [entComp, entLarg, altE1, altE2, altE3, altE4, altD1, altD2, altD3, altD4];
     inputsComMascara.forEach(input => {
-        if (input) applyMask(input, 2);
+        if (input && window.applyMask) window.applyMask(input, 2);
     });
     
     // Resultados
@@ -40,11 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const l = parseLocalFloat(entLarg.value) || 0;
         
         // Reunir todas as alturas preenchidas
-        const inputsAltura = [altE1, altE2, altE3, altD1, altD2, altD3];
+        const inputsAltura = [altE1, altE2, altE3, altE4, altD1, altD2, altD3, altD4];
         const valoresAltura = [];
         
         inputsAltura.forEach(input => {
-            const v = parseLocalFloat(input.value);
+            if (!input) return;
+            const v = window.parseLocalFloat(input.value);
             if (!isNaN(v) && v > 0) {
                 valoresAltura.push(v);
             }
@@ -63,14 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Atualizar UI
-        resVolume.textContent = volume.toFixed(3) + ' m³';
-        resInfo.textContent = `Altura média: ${mediaAltura.toFixed(2)} m (${valoresAltura.length} pontos medidos)`;
+        const displayMedia = document.getElementById('entAltMediaDisplay');
+        if (displayMedia) {
+            displayMedia.value = mediaAltura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        
+        resVolume.textContent = volume.toFixed(3).replace('.', ',') + ' m³';
+        resInfo.textContent = `Cubagem calculada com ${valoresAltura.length} pontos de medição.`;
         
         return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l };
     }
     
     // Adicionar eventos de input para todos os campos que afetam o cálculo
-    const calcInputs = [entComp, entLarg, altE1, altE2, altE3, altD1, altD2, altD3];
+    const calcInputs = [entComp, entLarg, altE1, altE2, altE3, altE4, altD1, altD2, altD3, altD4];
     calcInputs.forEach(input => {
         if(input) {
             input.addEventListener('input', calcularVolumeAtual);
