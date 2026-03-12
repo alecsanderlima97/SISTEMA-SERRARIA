@@ -120,6 +120,33 @@ window.formatarMoeda = function(valor) {
     return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+/**
+ * Arredondamento financeiro preciso para centavos
+ */
+window.roundTo = function(val, decimals = 2) {
+    const factor = Math.pow(10, decimals);
+    return Math.round(val * factor) / factor;
+};
+
+/**
+ * Converte qualquer string (BR ou US) para float com segurança.
+ * Lida com '1.234,56' -> 1234.56 e '1234.56' -> 1234.56
+ */
+window.parseLocalFloat = function(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'number') return value;
+    
+    // Se contém vírgula, assume formato BR
+    if (value.includes(',')) {
+        // Remove pontos de milhar e troca vírgula por ponto decimal
+        const clean = value.replace(/\./g, '').replace(',', '.');
+        return parseFloat(clean) || 0;
+    }
+    
+    // Se não tem vírgula, assume formato US/Programação
+    return parseFloat(value) || 0;
+};
+
 DB.checkAuth();
 
 // ---- Controle de Rotas / Sidebar ----

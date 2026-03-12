@@ -218,16 +218,16 @@ function recalcularTotais() {
         const vol = curr.volumeTotalVenda || curr.volumeTotal;
         return acc + (vol * (curr.precoUsado || 0));
     }, 0);
-    totalValorMadeira = Math.round(totalValorMadeira * 100) / 100;
+    totalValorMadeira = window.roundTo(totalValorMadeira);
 
     // Custo do Frete
     let fretePorM3 = window.parseLocalFloat(valorFrete.value);
-    let custoFrete = Math.round((somaVolume * fretePorM3) * 100) / 100;
+    let custoFrete = window.roundTo(somaVolume * fretePorM3);
 
     // Imposto / Acréscimos
     let imposto = window.parseLocalFloat(valorJurosNf.value);
 
-    let valorTotalGeral = Math.round((totalValorMadeira + imposto) * 100) / 100;
+    let valorTotalGeral = window.roundTo(totalValorMadeira + imposto);
 
     document.getElementById('resValorMadeira').textContent = window.formatarMoeda(totalValorMadeira);
     document.getElementById('resValorFrete').textContent = window.formatarMoeda(custoFrete);
@@ -554,8 +554,8 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
                 window.applyMask(document.getElementById('comprimentoVenda'), 2);
             }
         }
-        valorFrete.value = '0.00';
-        valorJurosNf.value = '0.00';
+        valorFrete.value = '0,00';
+        valorJurosNf.value = '0,00';
         if (document.getElementById('qtPacotes')) document.getElementById('qtPacotes').value = '0';
         document.getElementById('dataCarga').valueAsDate = new Date();
         if (toggleFardo) {

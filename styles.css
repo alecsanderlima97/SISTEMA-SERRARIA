@@ -541,8 +541,8 @@ input::placeholder {
 .grid-form {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
-    align-items: end; 
+    gap: 1.2rem;
+    align-items: end; /* Força alinhamento dos campos pela base */
 }
 
 .input-group {
@@ -552,11 +552,19 @@ input::placeholder {
     width: 100%;
 }
 
+/* Garante que inputs e selects tenham sempre a mesma altura */
+.grid-form input, 
+.grid-form select {
+    height: 48px;
+    box-sizing: border-box;
+}
+
 .grid-form .btn-primary, .grid-form .btn-secondary {
     height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
 }
 
 /* DASHBOARD INFORMATIVO */
