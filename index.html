@@ -851,9 +851,22 @@
                             <label>Motorista do Caminhão</label>
                             <input type="text" id="calcCavMotorista" placeholder="Nome do motorista">
                         </div>
-                        <div class="input-group" style="margin-bottom:10px;">
-                            <label>Medidas do Caminhão</label>
-                            <input type="text" id="calcCavMedidas" placeholder="C x L x A (Opcional)">
+                        <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <label>Medidas do Caminhão (metros)</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                <div class="input-group">
+                                    <label style="font-size: 0.75rem;">Comprimento</label>
+                                    <input type="text" id="calcCavComp" placeholder="0,00">
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.75rem;">Largura</label>
+                                    <input type="text" id="calcCavLarg" placeholder="0,00">
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size: 0.75rem;">Altura</label>
+                                    <input type="text" id="calcCavAlt" placeholder="0,00">
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Tipo de Subproduto</label>

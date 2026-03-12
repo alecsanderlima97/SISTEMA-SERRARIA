@@ -9,7 +9,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('fardoEsp')) applyMask(document.getElementById('fardoEsp'), 1);
     if (document.getElementById('fardoLar')) applyMask(document.getElementById('fardoLar'), 1);
     if (document.getElementById('fardoComp')) applyMask(document.getElementById('fardoComp'), 2);
+
+    // Máscaras para Medidas de Subprodutos
+    if (document.getElementById('calcCavComp')) applyMask(document.getElementById('calcCavComp'), 2);
+    if (document.getElementById('calcCavLarg')) applyMask(document.getElementById('calcCavLarg'), 2);
+    if (document.getElementById('calcCavAlt')) applyMask(document.getElementById('calcCavAlt'), 2);
 });
+
+// Função para calcular volume automático na Venda de Subprodutos
+function atualizarVolumeSubproduto() {
+    const comp = parseLocalFloat(document.getElementById('calcCavComp').value) || 0;
+    const larg = parseLocalFloat(document.getElementById('calcCavLarg').value) || 0;
+    const alt = parseLocalFloat(document.getElementById('calcCavAlt').value) || 0;
+    const unidade = document.getElementById('calcCavUnidade').value;
+
+    // Só calcula automático se for m³
+    if (unidade === 'm³' && comp > 0 && larg > 0 && alt > 0) {
+        const vol = comp * larg * alt;
+        document.getElementById('calcCavQtd').value = vol.toFixed(3).replace('.', ',');
+    }
+}
+
+// Eventos para cálculo automático
+document.addEventListener('input', (e) => {
+    if (['calcCavComp', 'calcCavLarg', 'calcCavAlt'].includes(e.target.id)) {
+        atualizarVolumeSubproduto();
+    }
+});
+
+if (document.getElementById('calcCavUnidade')) {
+    document.getElementById('calcCavUnidade').addEventListener('change', atualizarVolumeSubproduto);
+}
 
 // 1. Cubagem Rápida
 const btnCalcCub = document.getElementById('btnCalcCub');
@@ -70,7 +100,11 @@ if (btnCalcCavaco) {
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
         const motorista = document.getElementById('calcCavMotorista').value || '---';
-        const medidas = document.getElementById('calcCavMedidas').value || '---';
+        
+        const comp = document.getElementById('calcCavComp').value || '0,00';
+        const larg = document.getElementById('calcCavLarg').value || '0,00';
+        const alt = document.getElementById('calcCavAlt').value || '0,00';
+        const medidas = `${comp} x ${larg} x ${alt}`;
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
