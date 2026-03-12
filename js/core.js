@@ -271,23 +271,31 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateStatusBar();
     setInterval(window.updateStatusBar, 1000 * 60); // Atualiza a cada minuto
 
-    // Global: Capitalizar primeira letra de campos de texto
+    // Global: Capitalizar primeira letra de cada palavra em campos de texto (Nomes)
     document.addEventListener('input', (e) => {
         const el = e.target;
         if (el.tagName === 'INPUT' && ['text', 'search'].includes(el.type) && !el.readOnly) {
-            // Ignorar campos que já são forçados para Uppercase (como Placa) ou específicos do sistema
             if (el.id.includes('Placa')) return;
 
             let val = el.value;
             if (val.length > 0) {
-                // Capitalizar apenas a primeira letra se ela for minúscula
-                const firstChar = val.charAt(0);
-                if (firstChar !== firstChar.toUpperCase()) {
-                    const start = el.selectionStart;
-                    const end = el.selectionEnd;
-                    
-                    el.value = firstChar.toUpperCase() + val.slice(1);
-                    
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+
+                // Capitalizar a primeira letra de cada palavra
+                // Ex: "joão pedro" -> "João Pedro"
+                let words = val.split(' ');
+                let capitalizedWords = words.map(word => {
+                    if (word.length > 0) {
+                        return word.charAt(0).toUpperCase() + word.slice(1);
+                    }
+                    return word;
+                });
+
+                let newVal = capitalizedWords.join(' ');
+
+                if (newVal !== val) {
+                    el.value = newVal;
                     // Restaurar posição do cursor
                     if (el.setSelectionRange) {
                         el.setSelectionRange(start, end);
