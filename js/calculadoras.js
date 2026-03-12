@@ -35,12 +35,27 @@ function atualizarVolumeSubproduto() {
         const vol = comp * larg * alt;
         document.getElementById('calcCavQtd').value = vol.toFixed(3).replace('.', ',');
     }
+    atualizarTotalSubproduto();
+}
+
+function atualizarTotalSubproduto() {
+    const qtd = parseLocalFloat(document.getElementById('calcCavQtd').value) || 0;
+    const valor = parseLocalFloat(document.getElementById('calcCavValor').value) || 0;
+    const total = qtd * valor;
+
+    const totalDisplay = document.getElementById('calcCavTotalFinal');
+    if (totalDisplay) {
+        totalDisplay.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
 }
 
 // Eventos para cálculo automático
 document.addEventListener('input', (e) => {
     if (['calcCavComp', 'calcCavLarg', 'calcCavAlt'].includes(e.target.id)) {
         atualizarVolumeSubproduto();
+    }
+    if (['calcCavQtd', 'calcCavValor'].includes(e.target.id)) {
+        atualizarTotalSubproduto();
     }
 });
 
