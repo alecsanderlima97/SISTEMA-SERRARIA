@@ -98,7 +98,13 @@ async function renderizarHistoricoSubprodutos() {
             <td><span class="badge" style="background: ${v.tipo === 'Cavaco' ? '#27ae60' : '#f39c12'}; font-size: 0.65rem;">${v.tipo}</span></td>
             <td>${v.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${v.unidade}</td>
             <td>${v.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-            <td>
+            <td class="td-actions">
+                <button onclick="editarVendaSubproduto(${JSON.stringify(v).replace(/"/g, '&quot;')})" class="btn-action btn-edit" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="reimprimirReciboSubproduto(${JSON.stringify(v).replace(/"/g, '&quot;')})" class="btn-action btn-print" title="Reimprimir">
+                    <i class="fa-solid fa-print"></i>
+                </button>
                 <button onclick="deletarVendaSubproduto(${v.id})" class="btn-action btn-delete" title="Excluir">
                     <i class="fa-solid fa-trash"></i>
                 </button>
@@ -118,6 +124,72 @@ window.deletarVendaSubproduto = async function(id) {
         await DB.delete('vendas_subprodutos', id);
         renderizarHistoricoSubprodutos();
     }
+};
+
+window.editarVendaSubproduto = function(venda) {
+    // Rolar para o topo do form
+    document.getElementById('formCavaco').scrollIntoView({ behavior: 'smooth' });
+    
+    // Preencher campos
+    document.getElementById('calcCavRomaneio').value = venda.romaneio || '';
+    document.getElementById('calcCavCliente').value = venda.cliente || '';
+    document.getElementById('calcCavMotorista').value = venda.motorista || '';
+    document.getElementById('calcCavPlaca').value = venda.placa || '';
+    
+    const [c, l, a] = (venda.medidas || '0 x 0 x 0').split(' x ');
+    document.getElementById('calcCavComp').value = c;
+    document.getElementById('calcCavLarg').value = l;
+    document.getElementById('calcCavAlt').value = a;
+    
+    document.getElementById('calcCavUnidade').value = venda.unidade;
+    document.getElementById('calcCavQtd').value = venda.quantidade.toLocaleString('pt-BR');
+    document.getElementById('calcCavValor').value = venda.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    
+    // Selecionar rádio
+    const radios = document.querySelectorAll('input[name="subproduto_tipo"]');
+    radios.forEach(r => {
+        if (r.value === venda.tipo) r.checked = true;
+    });
+
+    // Mudar ID para edição se necessário, ou apenas deixar preenchido para novo save
+    // Como o sistema recarrega ao salvar, vamos apenas deixar preenchido
+    atualizarTotalSubproduto();
+};
+
+window.reimprimirReciboSubproduto = function(venda) {
+    // Preencher área de impressão
+    document.getElementById('printCavRomaneio').textContent = venda.romaneio;
+    document.getElementById('printCavCliente').textContent = venda.cliente;
+    document.getElementById('printCavMotorista').textContent = venda.motorista;
+    document.getElementById('printCavPlaca').textContent = venda.placa;
+    document.getElementById('printCavMedidas').textContent = venda.medidas;
+
+    document.getElementById('printCavData').textContent = new Date(venda.data).toLocaleDateString('pt-BR');
+    document.getElementById('printCavTipo').textContent = venda.tipo;
+    document.getElementById('printCavQtd').textContent = venda.quantidade.toLocaleString('pt-BR');
+    document.getElementById('printCavUni').textContent = venda.unidade;
+    document.getElementById('printCavValorUni').textContent = venda.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    document.getElementById('printCavTotal').textContent = venda.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+    // Imprimir
+    const printContent = document.getElementById('printAreaSubprodutos').innerHTML;
+    const popup = window.open('', '_blank');
+    popup.document.write(`
+        <html>
+            <head>
+                <title>Reimpressão Recibo - ${venda.cliente}</title>
+                <link rel="stylesheet" href="style.css">
+                <style>
+                    body { font-family: sans-serif; padding: 20px; }
+                    .show-on-print { display: block !important; }
+                </style>
+            </head>
+            <body onload="window.print(); window.close();">
+                ${printContent}
+            </body>
+        </html>
+    `);
+    popup.document.close();
 };
 
 // Escutar atualizações para recarregar a tabela
