@@ -877,6 +877,7 @@
             <section id="view-romaneio" class="view-section" style="display: none;">
                 <div class="app-container" style="padding:0; max-width:100%;">
 
+                    <!-- Header de Impressão (Oculto na tela) -->
                     <header class="nf-header show-on-print" style="display:none;">
                         <div class="nf-emitter-box">
                             <h1>ORQUESTRASIS - SISTEMA PARA SERRARIAS</h1>
@@ -895,247 +896,287 @@
                         <h1><i class="fa-solid fa-file-invoice"></i> Emissão de Romaneio</h1>
                     </div>
 
-                    <!-- Formulário do Cliente -->
-                    <section class="glass-panel section-cliente">
-                        <div class="section-title">
-                            <h2><i class="fa-solid fa-truck-loading"></i> Faturamento e Expedição</h2>
+                    <!-- Stepper (Indicador de Passos) -->
+                    <div class="romaneio-stepper hide-on-print">
+                        <div class="step-item active" id="step1-indicator" onclick="goToStep(1)">
+                            <div class="step-number">1</div>
+                            <span class="step-label">Cliente</span>
                         </div>
-                        <div class="romaneio-config compact-form">
-                            <div class="input-group">
-                                <label>1. Identificação do Cliente *</label>
-                                <select id="romSelectCliente" required>
-                                    <option value="">-- Escolha um Cliente --</option>
-                                    <!-- Options via JS -->
-                                </select>
-                                <small style="color:var(--accent-color); font-size: 0.75rem;">O frete antigo
-                                    será puxado
-                                    se houver.</small>
-                            </div>
-                            <div class="input-group">
-                                <label>Transportadora (Fretista) *</label>
-                                <select id="romSelectTransporte" required>
-                                    <option value="">-- Escolha um Transporte --</option>
-                                </select>
-                            </div>
-                            <div class="input-group hide-on-print">
-                                <label>Forma de Pagamento</label>
-                                <select id="romSelectPagamento">
-                                    <option value="À Vista">À Vista</option>
-                                    <option value="Cheque">Cheque</option>
-                                    <option value="Boleto 15 Dias">Boleto 15 Dias</option>
-                                    <option value="Boleto 30 Dias">Boleto 30 Dias</option>
-                                    <option value="Boleto 45 Dias">Boleto 45 Dias</option>
-                                    <option value="Boleto 60 Dias">Boleto 60 Dias</option>
-                                    <option value="PIX">PIX Posterior</option>
-                                </select>
-                            </div>
-                            <div class="input-group">
-                                <label>Data da Expedição</label>
-                                <!-- Formatado em compact form -->
-                                <input type="date" id="dataCarga" required title="Data Atual Padrão"
-                                    style="font-weight:bold; color:var(--accent-color);">
-                            </div>
+                        <div class="step-item" id="step2-indicator" onclick="goToStep(2)">
+                            <div class="step-number">2</div>
+                            <span class="step-label">Itens</span>
                         </div>
-
-                        <!-- Valores Globais -->
-                        <div class="romaneio-config compact-form"
-                            style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <div class="input-group">
-                                <label>Valor Acordado Frete (R$/m³)</label>
-                                <input type="number" id="valorFrete" step="0.01" value="0.00">
-                            </div>
-                            <div class="input-group">
-                                <label>Acréscimos / Juros NF (R$)</label>
-                                <input type="number" id="valorJurosNf" step="0.01" value="0.00"
-                                    placeholder="Ex: 150.00">
-                            </div>
+                        <div class="step-item" id="step3-indicator" onclick="goToStep(3)">
+                            <div class="step-number">3</div>
+                            <span class="step-label">Resumo</span>
                         </div>
+                    </div>
 
-                        <!-- Info extra do cliente para o PDF -->
-                        <!-- Info Destinatário e Transporte (NF Style) -->
-                        <div class="nf-details-container show-on-print" style="display:none;">
-                            <div class="nf-client-box">
-                                <div class="nf-section-title">DADOS DO DESTINATÁRIO</div>
-                                <p><strong>NOME/RAZÃO SOCIAL:</strong> <span id="printNomeCli"></span></p>
-                                <p><strong>CNPJ/CPF:</strong> <span id="printDocCli"></span></p>
-                                <p><strong>ENDEREÇO:</strong> <span id="printEndCli"></span></p>
-                                <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span id="printFoneCli"></span></p>
+                    <!-- PASSO 1: DADOS DO CLIENTE E TRANSPORTE -->
+                    <div id="romaneio-step1" class="romaneio-step-content active hide-on-print">
+                        <section class="glass-panel">
+                            <div class="section-title">
+                                <h2><i class="fa-solid fa-truck-loading"></i> Passo 1: Faturamento e Expedição</h2>
                             </div>
-                            <div class="nf-transport-box">
-                                <div class="nf-section-title">DADOS DO TRANSPORTE / CARGA</div>
-                                <p><strong>FRETISTA/EMP:</strong> <span id="printFretista">---</span></p>
-                                <p><strong>PLACA/VEÍCULO:</strong> <span id="printPlaca">---</span></p>
-                                <p><strong>FORMA PGTO:</strong> <span id="printPagam">À Vista</span></p>
+                            <div class="grid-form">
+                                <div class="input-group">
+                                    <label>Identificação do Cliente *</label>
+                                    <select id="romSelectCliente" required>
+                                        <option value="">-- Escolha um Cliente --</option>
+                                    </select>
+                                    <small style="color:var(--accent-color); font-size: 0.75rem;">O frete antigo será puxado se houver.</small>
+                                </div>
+                                <div class="input-group">
+                                    <label>Transportadora (Fretista) *</label>
+                                    <select id="romSelectTransporte" required>
+                                        <option value="">-- Escolha um Transporte --</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Forma de Pagamento</label>
+                                    <select id="romSelectPagamento">
+                                        <option value="À Vista">À Vista</option>
+                                        <option value="Cheque">Cheque</option>
+                                        <option value="Boleto 15 Dias">Boleto 15 Dias</option>
+                                        <option value="Boleto 30 Dias">Boleto 30 Dias</option>
+                                        <option value="Boleto 45 Dias">Boleto 45 Dias</option>
+                                        <option value="Boleto 60 Dias">Boleto 60 Dias</option>
+                                        <option value="PIX">PIX Posterior</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Data da Expedição</label>
+                                    <input type="date" id="dataCarga" required title="Data Atual Padrão" style="font-weight:bold; color:var(--accent-color);">
+                                </div>
+                                <div class="input-group">
+                                    <label>Valor Acordado Frete (R$/m³)</label>
+                                    <input type="number" id="valorFrete" step="0.01" value="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>Acréscimos / Juros NF (R$)</label>
+                                    <input type="number" id="valorJurosNf" step="0.01" value="0.00" placeholder="Ex: 150.00">
+                                </div>
                             </div>
-                        </div>
-                    </section>
-
-                    <!-- Inserção de Itens (Oculto na impressão) -->
-                    <section class="glass-panel section-insercao hide-on-print">
-                        <div class="section-title">
-                            <h2><i class="fa-solid fa-plus-circle"></i> Adicionar Madeira</h2>
-                        </div>
-
-                        <form id="itemForm" class="romaneio-config compact-form">
-                            <div class="input-group" style="grid-column: span 2;">
-                                <label>2. Produto (Madeira)</label>
-                                <select id="romSelectMadeira" required>
-                                    <option value="">-- Escolha a Madeira --</option>
-                                    <!-- Options via JS -->
-                                </select>
-                            </div>
-                            <div class="input-group">
-                                <label>Edit. Preço (R$/m³)</label>
-                                <input type="number" id="precoCustomizado" step="0.01" required placeholder="0.00">
-                                <small style="color:#aaa; font-size:0.7rem;">Modificável para o cliente
-                                    atual</small>
-                            </div>
-                            <!-- Campos para Pacotes / Fardo -->
-                            <div class="input-group">
-                                <label for="qtPacotes">Qtd. Pacotes/Fardos</label>
-                                <input type="number" id="qtPacotes" min="0" placeholder="Opcional">
-                            </div>
-                            <div class="input-group">
-                                <label for="pacoteAltura">Calc Fardo: Altura (pçs)</label>
-                                <input type="number" id="pacoteAltura" min="0" placeholder="A x L">
-                            </div>
-                            <div class="input-group">
-                                <label for="pacoteLargura">Calc Fardo: Largura (pçs)</label>
-                                <input type="number" id="pacoteLargura" min="0" placeholder="A x L">
-                            </div>
-                            <div class="input-group">
-                                <label for="pacoteAmarras">Calc Fardo: Amarras</label>
-                                <input type="number" id="pacoteAmarras" min="0" placeholder="+ Amarras">
-                            </div>
-
-                            <div class="input-group">
-                                <label for="espessura">Espessura (cm)</label>
-                                <input type="text" id="espessura" required placeholder="Ex: 2,5">
-                            </div>
-                            <div class="input-group">
-                                <label for="largura">Largura (cm)</label>
-                                <input type="text" id="largura" required placeholder="Ex: 10,0">
-                            </div>
-                            <div class="input-group">
-                                <label for="comprimento">Comprimento Real (m)</label>
-                                <input type="text" id="comprimento" required placeholder="Ex: 3,00">
-                                <small style="color:#aaa; font-size:0.75rem;">(Motorista)</small>
-                            </div>
-                            <div class="input-group" style="background: rgba(44, 201, 144, 0.05); border-radius: 6px;">
-                                <label for="comprimentoVenda" style="color: #3498db;">Comp. Faturamento (m)</label>
-                                <input type="text" id="comprimentoVenda" placeholder="Ex: 1,20">
-                                <small style="color:#3498db; font-size:0.75rem;">(Preço p/ Cliente)</small>
-                            </div>
-                            <div class="input-group">
-                                <label for="quantidade">Qtd de Peças</label>
-                                <input type="number" id="quantidade" min="1" required placeholder="Ex: 50">
-                            </div>
-                            <div class="input-group btn-group align-bottom">
-                                <input type="hidden" id="editItemId" value="">
-                                <button type="submit" class="btn-primary" id="btnSalvarItem">
-                                    <i class="fa-solid fa-plus"></i> Adicionar
-                                </button>
-                                <button type="button" class="btn-secondary" id="btnCancelarEdicao"
-                                    style="display: none; margin-left: 10px;">
-                                    Cancelar
+                            <div class="step-actions">
+                                <span></span> <!-- Placeholder -->
+                                <button type="button" class="btn-primary" onclick="goToStep(2)">
+                                    Próximo: Adicionar Itens <i class="fa-solid fa-arrow-right"></i>
                                 </button>
                             </div>
-                        </form>
-                    </section>
+                        </section>
+                    </div>
 
-                    <!-- Tabela de Itens -->
-                    <section class="glass-panel section-tabela">
-                        <div class="tabela-header">
-                            <h2><i class="fa-solid fa-list"></i> Carga / Itens</h2>
-                            <div class="actions hide-on-print">
-                                <button id="btnPrint" class="btn-secondary"><i class="fa-solid fa-print"></i>
-                                    Visualizar/Imprimir PDF</button>
-                                <button id="btnFinalizar" class="btn-primary"
-                                    style="background:#2cc990; color:#0d1117; margin-left:10px;"><i
-                                        class="fa-solid fa-check-double"></i> Finalizar e Salvar Carga</button>
+                    <!-- PASSO 2: ADICIONAR ITENS -->
+                    <div id="romaneio-step2" class="romaneio-step-content hide-on-print">
+                        <section class="glass-panel">
+                            <div class="section-title">
+                                <h2><i class="fa-solid fa-plus-circle"></i> Passo 2: Adicionar Madeiras</h2>
                             </div>
-                        </div>
 
-                        <div class="table-container">
-                            <table id="tabelaRomaneio">
-                                <thead>
-                                    <tr>
-                                        <th>Descrição do Produto</th>
-                                        <th>Medidas (E x L x C)</th>
-                                        <th>Pct</th>
-                                        <th>Peças</th>
-                                        <th>Volume Unit</th>
-                                        <th>Vlr. Unit (R$)</th>
-                                        <th>Vlr. Total (R$)</th>
-                                        <th class="hide-on-print">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabelaBody">
-                                    <!-- Linhas geradas via JS -->
-                                </tbody>
-                                <tfoot id="resumoTabela">
-                                    <tr>
-                                        <td colspan="2" class="text-right"><strong>TOTAL CARGA
-                                                (MOTORISTA):</strong></td>
-                                        <td id="totalPacotes" style="color:var(--primary-color);"><strong>0
-                                                pct</strong>
-                                        </td>
-                                        <td id="totalQtd"><strong>0 pçs</strong></td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td class="total-highlight"><strong id="totalVolume">0.000 m³</strong>
-                                        </td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr style="background: rgba(52, 152, 219, 0.1);">
-                                        <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL VENDA (FATURAMENTO CLIENTE):</strong></td>
-                                        <td class="total-highlight"><strong id="totalVolumeVenda" style="color:#3498db;">0.000 m³</strong></td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">VALOR BRUTO DAS MERCADORIAS
-                                            (MADEIRAS):</td>
-                                        <td id="resValorMadeira">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">+ SERVIÇO DE FRETE (TERCEIRIZADO):
-                                        </td>
-                                        <td id="resValorFrete">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">+ ACRÉSCIMOS / JUROS N.F:</td>
-                                        <td id="resValorImposto">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro" style="background: rgba(44, 201, 144, 0.1);">
-                                        <td colspan="6" class="text-right"
-                                            style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                            VALOR
-                                            TOTAL DO ROMANEIO:</td>
-                                        <td id="resValorTotal"
-                                            style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                            R$
-                                            0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                            <form id="itemForm" class="grid-form">
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label>Produto (Madeira)</label>
+                                    <select id="romSelectMadeira" required>
+                                        <option value="">-- Escolha a Madeira --</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Edit. Preço (R$/m³)</label>
+                                    <input type="number" id="precoCustomizado" step="0.01" required placeholder="0.00">
+                                </div>
+                                <div class="input-group">
+                                    <label>Qtd. Pacotes/Fardos</label>
+                                    <input type="number" id="qtPacotes" min="0" placeholder="Opcional">
+                                </div>
 
-                        <!-- Assinatura visível apenas na impressão -->
-                        <div class="signatures show-on-print">
-                            <div class="signature-box">
-                                <div class="line"></div>
-                                <p>Orquestrasis. Sistema para serrarias.<br>Entregador</p>
+                                <div class="input-group" style="grid-column: 1 / -1; margin: 10px 0;">
+                                    <div class="toggle-container">
+                                        <label class="switch">
+                                            <input type="checkbox" id="toggleFardo">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span style="font-weight: 600; color: var(--primary-color);">Usar Calculadora de Fardo</span>
+                                    </div>
+                                    <div id="camposFardo" class="grid-form" style="display: none;">
+                                        <div class="input-group">
+                                            <label>Altura (pçs)</label>
+                                            <input type="number" id="pacoteAltura" min="0" placeholder="A x L">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Largura (pçs)</label>
+                                            <input type="number" id="pacoteLargura" min="0" placeholder="A x L">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Amarras</label>
+                                            <input type="number" id="pacoteAmarras" min="0" placeholder="+ Amarras">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="input-group">
+                                    <label>Espessura (cm)</label>
+                                    <input type="text" id="espessura" required placeholder="Ex: 2,5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Largura (cm)</label>
+                                    <input type="text" id="largura" required placeholder="Ex: 10,0">
+                                </div>
+                                <div class="input-group">
+                                    <label>Comp. Real (m)</label>
+                                    <input type="text" id="comprimento" required placeholder="Ex: 3,00">
+                                </div>
+                                <div class="input-group">
+                                    <label style="color: #3498db;">Comp. Faturamento (m)</label>
+                                    <input type="text" id="comprimentoVenda" placeholder="Opcional">
+                                </div>
+                                <div class="input-group">
+                                    <label>Qtd de Peças</label>
+                                    <input type="number" id="quantidade" min="1" required placeholder="Ex: 50">
+                                </div>
+                                <div class="input-group btn-group align-bottom">
+                                    <input type="hidden" id="editItemId" value="">
+                                    <button type="submit" class="btn-primary" id="btnSalvarItem" style="width: 100%;">
+                                        <i class="fa-solid fa-plus"></i> Adicionar à Carga
+                                    </button>
+                                    <button type="button" class="btn-secondary" id="btnCancelarEdicao" style="display: none; margin-top: 5px; width: 100%;">
+                                        Cancelar Edição
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="table-container" style="margin-top: 2rem;">
+                                <table id="tabelaRomaneioSimples">
+                                    <thead>
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th>Medidas</th>
+                                            <th>Peças</th>
+                                            <th>Volume</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaBodySimples">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="signature-box">
-                                <div class="line"></div>
-                                <p>Assinatura do Recebedor<br>Data e Hora de Recebimento</p>
+
+                            <div class="step-actions">
+                                <button type="button" class="btn-secondary" onclick="goToStep(1)">
+                                    <i class="fa-solid fa-arrow-left"></i> Voltar ao Cliente
+                                </button>
+                                <button type="button" class="btn-primary" onclick="goToStep(3)">
+                                    Revisar Romaneio <i class="fa-solid fa-check-double"></i>
+                                </button>
                             </div>
+                        </section>
+                    </div>
+
+                    <!-- PASSO 3: REVISÃO E FINALIZAÇÃO -->
+                    <div id="romaneio-step3" class="romaneio-step-content hide-on-print">
+                        <section class="glass-panel">
+                            <div class="section-title">
+                                <h2><i class="fa-solid fa-check-double"></i> Passo 3: Revisão e Finalização</h2>
+                            </div>
+
+                            <div class="table-container">
+                                <table id="tabelaRomaneio">
+                                    <thead>
+                                        <tr>
+                                            <th>Descrição do Produto</th>
+                                            <th>Medidas (E x L x C)</th>
+                                            <th>Pct</th>
+                                            <th>Peças</th>
+                                            <th>Volume Unit</th>
+                                            <th>Vlr. Unit (R$)</th>
+                                            <th>Vlr. Total (R$)</th>
+                                            <th class="hide-on-print">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaBody">
+                                        <!-- Linhas geradas via JS -->
+                                    </tbody>
+                                    <tfoot id="resumoTabela">
+                                        <tr>
+                                            <td colspan="2" class="text-right"><strong>TOTAL CARGA (MOTORISTA):</strong></td>
+                                            <td id="totalPacotes" style="color:var(--primary-color);"><strong>0 pct</strong></td>
+                                            <td id="totalQtd"><strong>0 pçs</strong></td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td class="total-highlight"><strong id="totalVolume">0.000 m³</strong></td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                        <tr style="background: rgba(52, 152, 219, 0.1);">
+                                            <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL VENDA (FATURAMENTO CLIENTE):</strong></td>
+                                            <td class="total-highlight"><strong id="totalVolumeVenda" style="color:#3498db;">0.000 m³</strong></td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                        <tr class="sumario-financeiro">
+                                            <td colspan="6" class="text-right">VALOR BRUTO DAS MERCADORIAS:</td>
+                                            <td id="resValorMadeira">R$ 0,00</td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                        <tr class="sumario-financeiro">
+                                            <td colspan="6" class="text-right">+ SERVIÇO DE FRETE (TERCEIRIZADO):</td>
+                                            <td id="resValorFrete">R$ 0,00</td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                        <tr class="sumario-financeiro">
+                                            <td colspan="6" class="text-right">+ ACRÉSCIMOS / JUROS N.F:</td>
+                                            <td id="resValorImposto">R$ 0,00</td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                        <tr class="sumario-financeiro" style="background: rgba(44, 201, 144, 0.1);">
+                                            <td colspan="6" class="text-right" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">VALOR TOTAL DO ROMANEIO:</td>
+                                            <td id="resValorTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">R$ 0,00</td>
+                                            <td class="hide-on-print"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div class="step-actions">
+                                <button type="button" class="btn-secondary" onclick="goToStep(2)">
+                                    <i class="fa-solid fa-arrow-left"></i> Ajustar Itens
+                                </button>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="btnPrint" class="btn-secondary"><i class="fa-solid fa-print"></i> Visualizar/Imprimir PDF</button>
+                                    <button id="btnFinalizar" class="btn-primary" style="background:#2cc990; color:#0d1117;">
+                                        <i class="fa-solid fa-check-double"></i> Finalizar e Salvar Carga
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Dados Destinatário e Transporte (Apenas Impressão) -->
+                    <div class="nf-details-container show-on-print" style="display:none;">
+                        <div class="nf-client-box">
+                            <div class="nf-section-title">DADOS DO DESTINATÁRIO</div>
+                            <p><strong>NOME/RAZÃO SOCIAL:</strong> <span id="printNomeCli"></span></p>
+                            <p><strong>CNPJ/CPF:</strong> <span id="printDocCli"></span></p>
+                            <p><strong>ENDEREÇO:</strong> <span id="printEndCli"></span></p>
+                            <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span id="printFoneCli"></span></p>
                         </div>
-                    </section>
+                        <div class="nf-transport-box">
+                            <div class="nf-section-title">DADOS DO TRANSPORTE / CARGA</div>
+                            <p><strong>FRETISTA/EMP:</strong> <span id="printFretista">---</span></p>
+                            <p><strong>PLACA/VEÍCULO:</strong> <span id="printPlaca">---</span></p>
+                            <p><strong>FORMA PGTO:</strong> <span id="printPagam">À Vista</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Assinatura visível apenas na impressão -->
+                    <div class="signatures show-on-print">
+                        <div class="signature-box">
+                            <div class="line"></div>
+                            <p>Orquestrasis. Sistema para serrarias.<br>Entregador</p>
+                        </div>
+                        <div class="signature-box">
+                            <div class="line"></div>
+                            <p>Assinatura do Recebedor<br>Data e Hora de Recebimento</p>
+                        </div>
+                    </div>
 
                 </div>
             </section>

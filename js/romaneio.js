@@ -29,6 +29,48 @@ const btnSalvarItem = document.getElementById('btnSalvarItem');
 const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
 const formItem = document.getElementById('itemForm');
 const tabelaBody = document.getElementById('tabelaBody');
+const tabelaBodySimples = document.getElementById('tabelaBodySimples');
+const toggleFardo = document.getElementById('toggleFardo');
+const camposFardo = document.getElementById('camposFardo');
+
+// --- Lógica de Passos (Stepper) ---
+window.goToStep = function(step) {
+    // Validação básica para avançar
+    if (step === 2 && !romSelectCliente.value) {
+        alert("Por favor, selecione um cliente antes de prosseguir.");
+        return;
+    }
+    if (step === 3 && itensRomaneio.length === 0) {
+        alert("Adicione pelo menos um item à carga antes de revisar.");
+        return;
+    }
+
+    // Gerenciar visibilidade dos conteúdos
+    document.querySelectorAll('.romaneio-step-content').forEach(el => el.classList.remove('active'));
+    document.getElementById(`romaneio-step${step}`).classList.add('active');
+
+    // Gerenciar indicadores do stepper
+    document.querySelectorAll('.step-item').forEach((el, index) => {
+        el.classList.remove('active', 'completed');
+        if (index + 1 < step) el.classList.add('completed');
+        if (index + 1 === step) el.classList.add('active');
+    });
+
+    // Rolar para o topo da seção
+    document.getElementById('view-romaneio').scrollIntoView({ behavior: 'smooth' });
+};
+
+// Toggle Calculadora de Fardo
+if (toggleFardo) {
+    toggleFardo.addEventListener('change', function() {
+        camposFardo.style.display = this.checked ? 'grid' : 'none';
+        if (!this.checked) {
+            pacoteAltura.value = '';
+            pacoteLargura.value = '';
+            pacoteAmarras.value = '';
+        }
+    });
+}
 
 // Info Impressão
 const printNomeCli = document.getElementById('printNomeCli');
@@ -358,16 +400,19 @@ window.editarItemRomaneio = exporParaEdicao;
 
 function renderizarTabelaRomaneio() {
     tabelaBody.innerHTML = '';
+    if (tabelaBodySimples) tabelaBodySimples.innerHTML = '';
 
     if (itensRomaneio.length === 0) {
-        tabelaBody.innerHTML = `
+        const emptyState = `
             <tr>
-                <td colspan="6" class="empty-state">
+                <td colspan="8" class="empty-state">
                     <i class="fa-solid fa-list-check"></i><br>
                     Nenhum item adicionado no momento.
                 </td>
             </tr>
         `;
+        tabelaBody.innerHTML = emptyState;
+        if (tabelaBodySimples) tabelaBodySimples.innerHTML = emptyState.replace('colspan="8"', 'colspan="5"');
         recalcularTotais();
         return;
     }
@@ -394,8 +439,22 @@ function renderizarTabelaRomaneio() {
                 <button type="button" class="btn-danger" style="padding: 5px;" onclick="removerItemRomaneio(${item.id})" title="Remover"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
-        
         tabelaBody.appendChild(tr);
+
+        // Tabela Simples (Passo 2)
+        if (tabelaBodySimples) {
+            const trSimples = document.createElement('tr');
+            trSimples.innerHTML = `
+                <td>${item.nomeProduto}</td>
+                <td>${medidasTexto}</td>
+                <td>${item.quantidade}</td>
+                <td>${item.volumeTotal.toFixed(3)} m³</td>
+                <td>
+                    <button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removerItemRomaneio(${item.id})"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            tabelaBodySimples.appendChild(trSimples);
+        }
     });
 
     recalcularTotais();
@@ -489,6 +548,13 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
         valorJurosNf.value = '0.00';
         if (document.getElementById('qtPacotes')) document.getElementById('qtPacotes').value = '0';
         document.getElementById('dataCarga').valueAsDate = new Date();
+        if (toggleFardo) {
+            toggleFardo.checked = false;
+            camposFardo.style.display = 'none';
+        }
+        
+        // Voltar para o Passo 1
+        goToStep(1);
         
         // Atualiza info de tela impressa
         printNomeCli.textContent = '';
