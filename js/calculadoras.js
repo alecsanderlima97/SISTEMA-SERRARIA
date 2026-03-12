@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('calcCavComp')) applyMask(document.getElementById('calcCavComp'), 2);
     if (document.getElementById('calcCavLarg')) applyMask(document.getElementById('calcCavLarg'), 2);
     if (document.getElementById('calcCavAlt')) applyMask(document.getElementById('calcCavAlt'), 2);
+    
+    // Máscaras para Quantidade e Valor (Subprodutos)
+    if (document.getElementById('calcCavQtd')) applyMask(document.getElementById('calcCavQtd'), 3);
+    if (document.getElementById('calcCavValor')) applyMask(document.getElementById('calcCavValor'), 2);
 });
 
 // Função para calcular volume automático na Venda de Subprodutos
@@ -23,8 +27,8 @@ function atualizarVolumeSubproduto() {
     const alt = parseLocalFloat(document.getElementById('calcCavAlt').value) || 0;
     const unidade = document.getElementById('calcCavUnidade').value;
 
-    // Só calcula automático se for m³
-    if (unidade === 'm³' && comp > 0 && larg > 0 && alt > 0) {
+    // Calcula automático se houver medidas
+    if (comp > 0 && larg > 0 && alt > 0) {
         const vol = comp * larg * alt;
         document.getElementById('calcCavQtd').value = vol.toFixed(3).replace('.', ',');
     }
@@ -95,8 +99,8 @@ if (btnCalcCavaco) {
         const tipoElement = document.querySelector('input[name="subproduto_tipo"]:checked');
         const tipo = tipoElement ? tipoElement.value : 'Cavaco';
         const unidade = document.getElementById('calcCavUnidade').value;
-        const qtd = parseFloat(document.getElementById('calcCavQtd').value) || 0;
-        const valorUni = parseFloat(document.getElementById('calcCavValor').value) || 0;
+        const qtd = parseLocalFloat(document.getElementById('calcCavQtd').value) || 0;
+        const valorUni = parseLocalFloat(document.getElementById('calcCavValor').value) || 0;
 
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
