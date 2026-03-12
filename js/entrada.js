@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             tr.innerHTML = `
                 <td>${dtStr}</td>
-                <td><strong>${en.fornecedor}</strong></td>
+                <td><strong>${en.fornecedor}</strong><br><small style="color:#aaa;">${en.motorista || '-'}</small></td>
                 <td><span class="badge" style="background:#555;">${en.placa}</span></td>
                 <td style="font-size: 0.9em;">
                     C: ${(en.comp || 0).toFixed(2)}m <br>
@@ -141,12 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const fornecedor = document.getElementById('entFornecedor').value.trim();
+            const motorista = document.getElementById('entMotorista').value.trim();
             const placa = document.getElementById('entPlaca').value.trim();
             const dataStr = document.getElementById('entData').value;
             
             const novaEntrada = {
                 data: dataStr,
                 fornecedor: fornecedor,
+                motorista: motorista,
                 placa: placa,
                 comp: calcData.comp,
                 larg: calcData.larg,
