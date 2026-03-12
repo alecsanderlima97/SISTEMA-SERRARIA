@@ -92,7 +92,8 @@ const btnCalcCavaco = document.getElementById('btnCalcCavaco');
 
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
-        const tipo = document.getElementById('calcCavTipo').value;
+        const tipoElement = document.querySelector('input[name="subproduto_tipo"]:checked');
+        const tipo = tipoElement ? tipoElement.value : 'Cavaco';
         const unidade = document.getElementById('calcCavUnidade').value;
         const qtd = parseFloat(document.getElementById('calcCavQtd').value) || 0;
         const valorUni = parseFloat(document.getElementById('calcCavValor').value) || 0;

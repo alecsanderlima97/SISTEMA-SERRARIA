@@ -868,15 +868,26 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="input-group" style="margin-bottom:10px;">
+                        <div class="input-group" style="grid-column: span 2; margin-bottom:15px;">
                             <label>Tipo de Subproduto</label>
-                            <select id="calcCavTipo">
-                                <option value="Cavaco / Maravalha">Cavaco / Maravalha</option>
-                                <option value="Pó de Serra">Pó de Serra</option>
-                                <option value="Casca">Casca</option>
-                                <option value="Lenha">Lenha de Refugo</option>
-                            </select>
+                            <div class="subproduct-selector">
+                                <label class="sub-option">
+                                    <input type="radio" name="subproduto_tipo" value="Cavaco" checked>
+                                    <div class="sub-box">
+                                        <i class="fa-solid fa-leaf"></i>
+                                        <span>Cavaco</span>
+                                    </div>
+                                </label>
+                                <label class="sub-option">
+                                    <input type="radio" name="subproduto_tipo" value="Pó de Serra">
+                                    <div class="sub-box">
+                                        <i class="fa-solid fa-wind"></i>
+                                        <span>Pó de Serra</span>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
+
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Unidade de Medida</label>
                             <select id="calcCavUnidade">
