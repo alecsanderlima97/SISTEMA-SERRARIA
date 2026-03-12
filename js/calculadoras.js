@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Máscaras para Quantidade e Valor (Subprodutos)
     if (document.getElementById('calcCavQtd')) applyMask(document.getElementById('calcCavQtd'), 3);
     if (document.getElementById('calcCavValor')) applyMask(document.getElementById('calcCavValor'), 2);
+
+    // Carregar histórico inicial
+    renderizarHistoricoSubprodutos();
 });
 
 // Função para calcular volume automático na Venda de Subprodutos
@@ -44,6 +47,65 @@ document.addEventListener('input', (e) => {
 if (document.getElementById('calcCavUnidade')) {
     document.getElementById('calcCavUnidade').addEventListener('change', atualizarVolumeSubproduto);
 }
+
+// Controle do Botão de Histórico
+const btnToggleHistoricoCavaco = document.getElementById('btnToggleHistoricoCavaco');
+const historicoCavacoContainer = document.getElementById('historicoCavacoContainer');
+
+if (btnToggleHistoricoCavaco) {
+    btnToggleHistoricoCavaco.addEventListener('click', () => {
+        const isHidden = historicoCavacoContainer.style.display === 'none';
+        historicoCavacoContainer.style.display = isHidden ? 'block' : 'none';
+        btnToggleHistoricoCavaco.innerHTML = isHidden ? 
+            '<i class="fa-solid fa-eye-slash"></i> Ocultar Histórico' : 
+            '<i class="fa-solid fa-clock-rotate-left"></i> Ver Histórico';
+        
+        if (isHidden) renderizarHistoricoSubprodutos();
+    });
+}
+
+// Função para renderizar o histórico na tabela
+async function renderizarHistoricoSubprodutos() {
+    const tableBody = document.querySelector('#tableHistoricoCavaco tbody');
+    if (!tableBody) return;
+
+    const vendas = await DB.list('vendas_subprodutos');
+    tableBody.innerHTML = '';
+
+    vendas.slice(0, 15).forEach(v => {
+        const tr = document.createElement('tr');
+        const dataFormatada = new Date(v.created_at || v.data).toLocaleDateString('pt-BR');
+        
+        tr.innerHTML = `
+            <td>${dataFormatada}</td>
+            <td title="${v.cliente}">${v.cliente.substring(0, 15)}${v.cliente.length > 15 ? '...' : ''}</td>
+            <td><span class="badge" style="background: ${v.tipo === 'Cavaco' ? '#27ae60' : '#f39c12'}; font-size: 0.65rem;">${v.tipo}</span></td>
+            <td>${v.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${v.unidade}</td>
+            <td>${v.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+            <td>
+                <button onclick="deletarVendaSubproduto(${v.id})" class="btn-action btn-delete" title="Excluir">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(tr);
+    });
+
+    if (vendas.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; opacity: 0.5;">Nenhum registro encontrado.</td></tr>';
+    }
+}
+
+// Global para ser acessado pelo onclick
+window.deletarVendaSubproduto = async function(id) {
+    if (confirm('Deseja realmente excluir este registro?')) {
+        await DB.delete('vendas_subprodutos', id);
+        renderizarHistoricoSubprodutos();
+    }
+};
+
+// Escutar atualizações para recarregar a tabela
+document.addEventListener('vendasSubprodutosUpdated', renderizarHistoricoSubprodutos);
 
 // 1. Cubagem Rápida
 const btnCalcCub = document.getElementById('btnCalcCub');
