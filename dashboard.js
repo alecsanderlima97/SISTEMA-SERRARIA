@@ -36,17 +36,10 @@ async function initDashboard() {
     // 5. Faturamento de Cavaco e Pó de Serra (R$)
     const faturamentoSub = (subprodutos || []).reduce((acc, s) => acc + (s.total || 0), 0);
 
-    // 6. Volume de Cavaco e Pó de Serra (m³)
-    const volumeSub = (subprodutos || []).reduce((acc, s) => {
-        if (s.unidade === 'm³') return acc + (s.quantidade || 0);
-        return acc;
-    }, 0);
 
     // 7. Clientes Ativos
     const totalClientes = (clientes || []).length;
 
-    // 8. Estoque (Simplificado: Entrada - Saída)
-    const estoqueVolume = volumeEntrada - volumeVendido;
 
     // Atualizar indicadores (KPIs) na UI
     const formatBRL = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -56,73 +49,12 @@ async function initDashboard() {
     if(document.getElementById('dash-entrada-toras')) document.getElementById('dash-entrada-toras').textContent = volumeEntrada.toFixed(2) + ' m³';
     if(document.getElementById('dash-faturamento-madeira')) document.getElementById('dash-faturamento-madeira').textContent = formatBRL(faturamentoMadeira);
     if(document.getElementById('dash-faturamento-sub')) document.getElementById('dash-faturamento-sub').textContent = formatBRL(faturamentoSub);
-    if(document.getElementById('dash-volume-sub')) document.getElementById('dash-volume-sub').textContent = volumeSub.toFixed(2) + ' m³';
     if(document.getElementById('dash-total-clientes')) document.getElementById('dash-total-clientes').textContent = totalClientes;
-    if(document.getElementById('dash-total-estoque')) document.getElementById('dash-total-estoque').textContent = (estoqueVolume > 0 ? estoqueVolume : 0).toFixed(2) + ' m³';
 
     // Gráficos
-    renderChartEspessura(historico || []);
     renderChartVendas(historico || []);
 }
 
-let chartEspessuraInstance = null;
-let chartVendasInstance = null;
-
-function renderChartEspessura(historico) {
-    const canvas = document.getElementById('chartVolumeEspessura');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    // Agrupar volume por espessura dos dados reais
-    const volumesPorEsp = {};
-    historico.forEach(h => {
-        if (h.itens) {
-            h.itens.forEach(item => {
-                const esp = item.espessura + 'cm';
-                volumesPorEsp[esp] = (volumesPorEsp[esp] || 0) + item.volumeTotal;
-            });
-        }
-    });
-
-    const labels = Object.keys(volumesPorEsp).length > 0 ? Object.keys(volumesPorEsp) : ['Sem dados'];
-    const data = Object.keys(volumesPorEsp).length > 0 ? Object.values(volumesPorEsp) : [0];
-
-    if(chartEspessuraInstance) chartEspessuraInstance.destroy();
-
-    // Criar o gráfico
-    chartEspessuraInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Volume (m³)',
-                data: data,
-                backgroundColor: 'rgba(230, 126, 34, 0.6)',
-                borderColor: '#e67e22',
-                borderWidth: 2,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: 'rgba(255,255,255,0.6)' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: 'rgba(255,255,255,0.6)' }
-                }
-            }
-        }
-    });
-}
 
 function renderChartVendas(historico) {
     const canvas = document.getElementById('chartVendasPeriodo');
