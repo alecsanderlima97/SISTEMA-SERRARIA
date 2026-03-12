@@ -1,70 +1,108 @@
-// Gerenciador de Banco de Dados Supabase (Substituindo o LocalStorage)
-const sb = window.supabaseClient; // Usando o cliente inicializado no index.html
+// Configuração de Persistência: 'local' para testar no navegador, 'supabase' para nuvem
+const DB_STORAGE_MODE = 'local'; 
+const sb = window.supabaseClient;
 
 const DB = {
-    // Buscar lista (Assíncrono)
+    // Helper para LocalStorage
+    _getLocal: (table) => JSON.parse(localStorage.getItem(`sistema_serraria_${table}`)) || [],
+    _setLocal: (table, data) => localStorage.setItem(`sistema_serraria_${table}`, JSON.stringify(data)),
+
+    // Buscar lista (Assíncrono para manter compatibilidade)
     list: async (table) => {
-        if (!sb) { console.error("Cliente Supabase não inicializado!"); return []; }
-        const { data, error } = await sb
-            .from(table)
-            .select('*')
-            .order('created_at', { ascending: false });
-        if (error) { console.error(`Erro ao listar ${table}:`, error); return []; }
-        return data;
+        if (DB_STORAGE_MODE === 'supabase' && sb) {
+            const { data, error } = await sb
+                .from(table)
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) { console.error(`Erro ao listar ${table}:`, error); return []; }
+            return data;
+        } else {
+            // Lógica LocalStorage
+            let data = DB._getLocal(table);
+            // Ordenar por data (simulado)
+            return data.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
     },
 
     // Buscar único por ID
     getById: async (table, id) => {
-        if (!sb) return null;
-        const { data, error } = await sb
-            .from(table)
-            .select('*')
-            .eq('id', id)
-            .single();
-        if (error) { console.error(`Erro ao buscar id ${id} em ${table}:`, error); return null; }
-        return data;
+        if (DB_STORAGE_MODE === 'supabase' && sb) {
+            const { data, error } = await sb
+                .from(table)
+                .select('*')
+                .eq('id', id)
+                .single();
+            if (error) { console.error(`Erro ao buscar id ${id} em ${table}:`, error); return null; }
+            return data;
+        } else {
+            let data = DB._getLocal(table);
+            return data.find(item => item.id == id) || null;
+        }
     },
 
     // Inserir
     insert: async (table, obj) => {
-        if (!sb) return null;
-        if (obj.id && typeof obj.id === 'number') delete obj.id;
-        const { data, error } = await sb
-            .from(table)
-            .insert([obj])
-            .select();
-        if (error) { console.error(`Erro ao inserir em ${table}:`, error); return null; }
-        return data[0];
+        if (DB_STORAGE_MODE === 'supabase' && sb) {
+            if (obj.id && typeof obj.id === 'number') delete obj.id;
+            const { data, error } = await sb
+                .from(table)
+                .insert([obj])
+                .select();
+            if (error) { console.error(`Erro ao inserir em ${table}:`, error); return null; }
+            return data[0];
+        } else {
+            let data = DB._getLocal(table);
+            // Simular ID e CreatedAt
+            const newObj = {
+                ...obj,
+                id: Date.now(), // ID único simplificado
+                created_at: new Date().toISOString()
+            };
+            data.push(newObj);
+            DB._setLocal(table, data);
+            return newObj;
+        }
     },
 
     // Atualizar
     update: async (table, id, obj) => {
-        if (!sb) return null;
-        const { data, error } = await sb
-            .from(table)
-            .update(obj)
-            .eq('id', id)
-            .select();
-        if (error) { console.error(`Erro ao atualizar ${table}:`, error); return null; }
-        return data[0];
+        if (DB_STORAGE_MODE === 'supabase' && sb) {
+            const { data, error } = await sb
+                .from(table)
+                .update(obj)
+                .eq('id', id)
+                .select();
+            if (error) { console.error(`Erro ao atualizar ${table}:`, error); return null; }
+            return data[0];
+        } else {
+            let data = DB._getLocal(table);
+            const index = data.findIndex(item => item.id == id);
+            if (index === -1) return null;
+            
+            data[index] = { ...data[index], ...obj };
+            DB._setLocal(table, data);
+            return data[index];
+        }
     },
 
     // Deletar
     delete: async (table, id) => {
-        if (!sb) return false;
-        const { error } = await sb
-            .from(table)
-            .delete()
-            .eq('id', id);
-        if (error) { console.error(`Erro ao deletar de ${table}:`, error); return false; }
-        return true;
+        if (DB_STORAGE_MODE === 'supabase' && sb) {
+            const { error } = await sb
+                .from(table)
+                .delete()
+                .eq('id', id);
+            if (error) { console.error(`Erro ao deletar de ${table}:`, error); return false; }
+            return true;
+        } else {
+            let data = DB._getLocal(table);
+            const newData = data.filter(item => item.id != id);
+            DB._setLocal(table, newData);
+            return true;
+        }
     },
 
-    // Compatibilidade Temporária (Legado LocalStorage)
-    get: (key) => JSON.parse(localStorage.getItem(`vanmarte_${key}`)) || [],
-    set: (key, data) => localStorage.setItem(`vanmarte_${key}`, JSON.stringify(data)),
-    
-    // Auth Check
+    // Auth Check (Simplificado para LocalStorage)
     checkAuth: () => {
         if(localStorage.getItem('vanmarte_logged') !== 'true') {
             window.location.href = 'login.html';
