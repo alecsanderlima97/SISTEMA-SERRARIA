@@ -345,6 +345,7 @@ select {
     font-size: 0.8rem; /* Reduzido de 0.9rem */
     transition: all 0.2s ease;
     outline: none;
+    width: 100%;
 }
 
 input:focus,

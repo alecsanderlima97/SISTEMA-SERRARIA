@@ -847,13 +847,13 @@
                             <label>Cliente / Empresa Compradora</label>
                             <input type="text" id="calcCavCliente" placeholder="Ex: Móveis Silva Ltda">
                         </div>
-                        <div class="input-group" style="margin-bottom:10px;">
+                        <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Motorista do Caminhão</label>
                             <input type="text" id="calcCavMotorista" placeholder="Nome do motorista">
                         </div>
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Medidas do Caminhão (metros)</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
                                 <div class="input-group">
                                     <label style="font-size: 0.75rem;">Comprimento</label>
                                     <input type="text" id="calcCavComp" placeholder="0,00">
