@@ -83,7 +83,7 @@ async function renderProdutos() {
 
     produtos.forEach(p => {
         const naturezaQualidade = `${p.natureza} - ${p.qualidade}`;
-        const precoFormatado = p.preco.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        const precoFormatado = window.formatarMoeda(p.preco);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `

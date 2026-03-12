@@ -195,10 +195,6 @@ romSelectMadeira.addEventListener('change', async function() {
 });
 
 // Atualiza e Formata Totais
-function formatarMoeda(valor) {
-    return valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-}
-
 function recalcularTotais() {
     // Totais Quantidade e Metro Cúbico Físico (CARGA / MOTORISTA)
     const somaQtd = itensRomaneio.reduce((acc, curr) => acc + curr.quantidade, 0);

@@ -114,6 +114,12 @@ const DB = {
     }
 };
 
+// ---- UTILITÁRIOS GLOBAIS ----
+
+window.formatarMoeda = function(valor) {
+    return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
 DB.checkAuth();
 
 // ---- Controle de Rotas / Sidebar ----
@@ -163,6 +169,17 @@ window.applyMask = function(input, decimals) {
             maximumFractionDigits: decimals
         });
     });
+    // Formatar valor inicial se houver
+    if (input.value) {
+        let val = input.value.replace(',', '.');
+        let num = parseFloat(val);
+        if (!isNaN(num)) {
+            input.value = num.toLocaleString('pt-BR', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+    }
 };
 
 window.maskCnpj = function(input) {

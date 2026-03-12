@@ -538,6 +538,20 @@ input::placeholder {
     margin-top: 10px;
 }
 
+.dashboard-.grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    align-items: flex-end; /* Alinha labels e inputs na base */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
 /* DASHBOARD INFORMATIVO */
 .dashboard-grid {
     display: grid;
