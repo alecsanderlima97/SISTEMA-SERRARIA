@@ -61,7 +61,7 @@ btnCalcDiesel.addEventListener('click', function () {
 const btnCalcCavaco = document.getElementById('btnCalcCavaco');
 
 if (btnCalcCavaco) {
-    btnCalcCavaco.addEventListener('click', function () {
+    btnCalcCavaco.addEventListener('click', async function () {
         const tipo = document.getElementById('calcCavTipo').value;
         const unidade = document.getElementById('calcCavUnidade').value;
         const qtd = parseFloat(document.getElementById('calcCavQtd').value) || 0;
@@ -79,9 +79,8 @@ if (btnCalcCavaco) {
 
         const total = qtd * valorUni;
 
-        // Salvar a venda no Banco de Dados (LocalStorage)
+        // Salvar a venda no Banco de Dados (Supabase)
         const novaVenda = {
-            id: 'CAV-' + Date.now(),
             data: new Date().toISOString().split('T')[0],
             romaneio: romaneio,
             cliente: cliente,
@@ -90,44 +89,40 @@ if (btnCalcCavaco) {
             tipo: tipo,
             unidade: unidade,
             quantidade: qtd,
-            valorUnitario: valorUni,
+            valor_unitario: valorUni,
             total: total
         };
 
-        const vendasSub = DB.get('vendas_subprodutos');
-        vendasSub.push(novaVenda);
-        DB.set('vendas_subprodutos', vendasSub);
+        try {
+            await DB.insert('vendas_subprodutos', novaVenda);
+            document.dispatchEvent(new Event('vendasSubprodutosUpdated'));
+            
+            // Preencher área de impressão
+            document.getElementById('printCavRomaneio').textContent = romaneio;
+            document.getElementById('printCavCliente').textContent = cliente;
+            document.getElementById('printCavMotorista').textContent = motorista;
+            document.getElementById('printCavMedidas').textContent = medidas;
 
-        // Preencher área de impressão
-        document.getElementById('printCavRomaneio').textContent = romaneio;
-        document.getElementById('printCavCliente').textContent = cliente;
-        document.getElementById('printCavMotorista').textContent = motorista;
-        document.getElementById('printCavMedidas').textContent = medidas;
+            document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('printCavTipo').textContent = tipo;
+            document.getElementById('printCavQtd').textContent = qtd.toLocaleString('pt-BR');
+            document.getElementById('printCavUni').textContent = unidade;
+            document.getElementById('printCavValorUni').textContent = valorUni.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('printCavTotal').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-        document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
-        document.getElementById('printCavTipo').textContent = tipo;
-        document.getElementById('printCavQtd').textContent = qtd.toLocaleString('pt-BR');
-        document.getElementById('printCavUni').textContent = unidade;
-        document.getElementById('printCavValorUni').textContent = valorUni.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        document.getElementById('printCavTotal').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            // Imprimir
+            const printContent = document.getElementById('printAreaSubprodutos').innerHTML;
+            const originalContent = document.body.innerHTML;
 
-        // Ocultar tudo na tela exceto a área de impressão
-        const originalContent = document.body.innerHTML;
-        const printContent = document.getElementById('printAreaSubprodutos').outerHTML;
-
-        // Mostrar alerta de sucesso antes da impressão (opcional, como o print recarrega, alerta pode ser melhor depois se não fosse reload)
-        console.log("Venda salva com sucesso!");
-
-        document.body.innerHTML = printContent;
-        // Forçar display block para impressão
-        document.getElementById('printAreaSubprodutos').style.display = 'block';
-
-        window.print();
-
-        // Restaurar estado original (necessita reload suave das ações ou trocar display via classe)
-        // A melhor prática para SPAs sem recarregar a tela após o print:
-        document.body.innerHTML = originalContent;
-        window.location.reload(); // Reload necessário para resvincular eventos após substituição brusca de innerHTML.
+            document.body.innerHTML = printContent;
+            window.print();
+            
+            // Recarregar para limpar e manter consistência
+            window.location.reload();
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao salvar venda de subproduto no Supabase.');
+        }
     });
 }
 

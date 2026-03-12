@@ -1,6 +1,66 @@
-// Gerenciador de Banco de Dados Local Fake
+// Gerenciador de Banco de Dados Supabase (Substituindo o LocalStorage)
+const sb = window.supabaseClient; // Usando o cliente inicializado no index.html
+
 const DB = {
-    // Inicializar e pegar do localStorage
+    // Buscar lista (Assíncrono)
+    list: async (table) => {
+        if (!sb) { console.error("Cliente Supabase não inicializado!"); return []; }
+        const { data, error } = await sb
+            .from(table)
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) { console.error(`Erro ao listar ${table}:`, error); return []; }
+        return data;
+    },
+
+    // Buscar único por ID
+    getById: async (table, id) => {
+        if (!sb) return null;
+        const { data, error } = await sb
+            .from(table)
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) { console.error(`Erro ao buscar id ${id} em ${table}:`, error); return null; }
+        return data;
+    },
+
+    // Inserir
+    insert: async (table, obj) => {
+        if (!sb) return null;
+        if (obj.id && typeof obj.id === 'number') delete obj.id;
+        const { data, error } = await sb
+            .from(table)
+            .insert([obj])
+            .select();
+        if (error) { console.error(`Erro ao inserir em ${table}:`, error); return null; }
+        return data[0];
+    },
+
+    // Atualizar
+    update: async (table, id, obj) => {
+        if (!sb) return null;
+        const { data, error } = await sb
+            .from(table)
+            .update(obj)
+            .eq('id', id)
+            .select();
+        if (error) { console.error(`Erro ao atualizar ${table}:`, error); return null; }
+        return data[0];
+    },
+
+    // Deletar
+    delete: async (table, id) => {
+        if (!sb) return false;
+        const { error } = await sb
+            .from(table)
+            .delete()
+            .eq('id', id);
+        if (error) { console.error(`Erro ao deletar de ${table}:`, error); return false; }
+        return true;
+    },
+
+    // Compatibilidade Temporária (Legado LocalStorage)
     get: (key) => JSON.parse(localStorage.getItem(`vanmarte_${key}`)) || [],
     set: (key, data) => localStorage.setItem(`vanmarte_${key}`, JSON.stringify(data)),
     

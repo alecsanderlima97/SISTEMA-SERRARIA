@@ -2,26 +2,34 @@
 
 const listaHistorico = document.getElementById('listaHistorico');
 
-function renderizarHistorico() {
-    let historias = DB.get('historico') || [];
+async function renderizarHistorico() {
+    if (!listaHistorico) return;
+    listaHistorico.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando histórico...</td></tr>';
+
+    const historias = await DB.list('historico');
     listaHistorico.innerHTML = '';
 
-    if(historias.length === 0) {
+    if(!historias || historias.length === 0) {
         listaHistorico.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ainda não há cargas finalizadas.</td></tr>`;
         return;
     }
 
-    // Mostrar os mais recentes primeiro
-    let histInvertido = [...historias].reverse();
-
-    histInvertido.forEach(h => {
+    // Supabase já retorna ordenado se configurado em DB.list
+    historias.forEach(h => {
         const tr = document.createElement('tr');
+        // Mapeamento de campos snake_case para o novo sistema
+        const numCarga = h.numero_carga || h.numeroCarga || '---';
+        const dataCarga = h.data_carga || h.data || '---';
+        const clienteNome = h.cliente_nome || h.cliente || 'Avulso';
+        const volTotal = h.volume_total_item || h.volumeTotalItem || 0;
+        const vFinal = h.valor_final || h.valorFinal || 0;
+
         tr.innerHTML = `
-            <td><strong>${h.numeroCarga}</strong></td>
-            <td>${h.data}</td>
-            <td>${h.cliente}</td>
-            <td>${h.volumeTotalItem.toFixed(4)} m³</td>
-            <td style="color:var(--accent-color); font-weight:bold;">${h.valorFinal.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+            <td><strong>${numCarga}</strong></td>
+            <td>${dataCarga}</td>
+            <td>${clienteNome}</td>
+            <td>${volTotal.toFixed(4)} m³</td>
+            <td style="color:var(--accent-color); font-weight:bold;">${vFinal.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
         `;
         listaHistorico.appendChild(tr);
     });

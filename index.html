@@ -14,6 +14,15 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Configuração Supabase
+        const SUPABASE_URL = "https://hutrqirbklesrafcvxlk.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_-S-Quael__U1fVcdaPLvdQ_WSPMloL9";
+        // Usamos uma variável global diferente para não conflitar com o script da CDN
+        window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    </script>
 </head>
 
 <body>

@@ -36,21 +36,21 @@ const printFretista = document.getElementById('printFretista');
 const printPlaca = document.getElementById('printPlaca');
 const printPagam = document.getElementById('printPagam');
 
-// Carregar Combos
-function carregarSelects() {
-    let clientes = DB.get('clientes') || [];
+// Carregar Combos (Assíncrono)
+async function carregarSelects() {
+    let clientes = await DB.list('clientes');
     romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
     clientes.forEach(c => {
         romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade}</option>`;
     });
 
-    let transportes = DB.get('transportes') || [];
+    let transportes = await DB.list('transportes');
     romSelectTransporte.innerHTML = '<option value="">-- Escolha um Transporte --</option>';
     transportes.forEach(t => {
         romSelectTransporte.innerHTML += `<option value="${t.id}">${t.nome} (Placa: ${t.placa})</option>`;
     });
 
-    let produtos = DB.get('produtos') || [];
+    let produtos = await DB.list('produtos');
     romSelectMadeira.innerHTML = '<option value="">-- Escolha a Madeira --</option>';
     produtos.forEach(p => {
         romSelectMadeira.innerHTML += `<option value="${p.id}">${p.tipo} (${p.natureza} - ${p.qualidade})</option>`;
@@ -64,10 +64,9 @@ document.addEventListener('produtosUpdated', carregarSelects);
 carregarSelects();
 
 // Lógica de Memória do Cliente e Info para PDF
-romSelectCliente.addEventListener('change', function() {
+romSelectCliente.addEventListener('change', async function() {
     // 1. Preenche Header PDF
-    let clientes = DB.get('clientes') || [];
-    let c = clientes.find(x => x.id == this.value);
+    let c = await DB.getById('clientes', this.value);
     if(c) {
         printNomeCli.textContent = c.nome;
         // Adicionando mais infos para o cabeçalho NF
@@ -84,15 +83,13 @@ romSelectCliente.addEventListener('change', function() {
     }
 
     // 2. Busca último frete deste cliente no Histórico
-    let historico = DB.get('historico') || [];
+    let historico = await DB.list('historico');
     let encontrou = false;
     
-    // Inverte para pegar do mais novo para o mais velho
-    let histInvertido = [...historico].reverse();
-    
-    for(let h of histInvertido) {
-        if(h.clienteId == this.value && h.freteAplicado !== undefined) {
-            valorFrete.value = h.freteAplicado;
+    // Filtro e Ordenação já vem do Supabase (list ordena por created_at desc)
+    for(let h of historico) {
+        if(h.cliente_id == this.value && h.frete_aplicado !== undefined) {
+            valorFrete.value = h.frete_aplicado;
             encontrou = true;
             break;
         }
@@ -103,9 +100,8 @@ romSelectCliente.addEventListener('change', function() {
 });
 
 // Update Fretista Footer PDF
-romSelectTransporte.addEventListener('change', function() {
-    let transportes = DB.get('transportes') || [];
-    let t = transportes.find(x => x.id == this.value);
+romSelectTransporte.addEventListener('change', async function() {
+    let t = await DB.getById('transportes', this.value);
     if(t) {
         printFretista.textContent = t.nome;
         printPlaca.textContent = `${t.placa} / ${t.motorista || ''}`;
@@ -121,7 +117,7 @@ romSelectPagamento.addEventListener('change', function() {
 });
 
 // Quando selecionar uma Madeira, Auto-preencher o "Edit. Preço"
-romSelectMadeira.addEventListener('change', function() {
+romSelectMadeira.addEventListener('change', async function() {
     let pId = this.value;
     if(!pId) {
         precoCustomizado.value = ''; return;
@@ -129,13 +125,12 @@ romSelectMadeira.addEventListener('change', function() {
 
     // Primeiro busco se o cliente já comprou issso (Lembrança)
     let cId = romSelectCliente.value;
-    let historico = DB.get('historico') || [];
+    let historico = await DB.list('historico');
     let precoHistEncontrado = null;
 
     if(cId) {
-        let histInvertido = [...historico].reverse();
-        for(let h of histInvertido) {
-            if(h.clienteId == cId && h.itens) {
+        for(let h of historico) {
+            if(h.cliente_id == cId && h.itens) {
                 // Procurar essa madeira nos itens desta carga velha
                 let itemAntigo = h.itens.find(x => x.produtoId == pId);
                 if(itemAntigo) {
@@ -150,7 +145,7 @@ romSelectMadeira.addEventListener('change', function() {
         precoCustomizado.value = precoHistEncontrado.toFixed(2);
     } else {
         // Se nunca comprou, puxa o da tabela geral
-        let pInfo = DB.get('produtos').find(prod => prod.id == pId);
+        let pInfo = await DB.getById('produtos', pId);
         if(pInfo) {
             precoCustomizado.value = pInfo.preco.toFixed(2);
         }
@@ -234,7 +229,7 @@ pacoteAmarras.addEventListener('input', calcularFardo);
 
 
 // Adicionar / Editar Linha
-formItem.addEventListener('submit', function(e) {
+formItem.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const produtoId = romSelectMadeira.value;
@@ -253,12 +248,11 @@ formItem.addEventListener('submit', function(e) {
     const volumeUnidade = (espessura / 100) * (largMadeira / 100) * comprimento;
     const volumeTotal = volumeUnidade * quantidadeAbsoluta;
 
-    // Volume Venda (Faturamento)
-    const compUsoVenda = comprimentoVenda > 0 ? comprimentoVenda : comprimento;
+    let compUsoVenda = comprimentoVenda > 0 ? comprimentoVenda : comprimento;
     const volumeUnidadeVenda = (espessura / 100) * (largMadeira / 100) * compUsoVenda;
     const volumeTotalVenda = volumeUnidadeVenda * quantidadeAbsoluta;
 
-    let pInfo = (DB.get('produtos') || []).find(x => x.id == produtoId);
+    const pInfo = await DB.getById('produtos', produtoId);
     let nomeExibicao = pInfo ? `${pInfo.tipo} ${pInfo.classe} (${pInfo.natureza})` : 'Madeira Padrão';
 
     if(itemEditando) {
@@ -408,7 +402,7 @@ function renderizarTabelaRomaneio() {
 }
 
 // Botões Especiais Romaneio
-document.getElementById('btnPrint').addEventListener('click', () => {
+document.getElementById('btnPrint').addEventListener('click', async () => {
     if(itensRomaneio.length === 0) {
         alert("Atenção: Você não tem itens no romaneio.");
         return;
@@ -427,7 +421,7 @@ document.getElementById('btnPrint').addEventListener('click', () => {
     }
 
     // Tentar pegar o número da próxima carga (ou 'PREVIEW')
-    let historias = DB.get('historico') || [];
+    const historias = await DB.list('historico');
     let numCorrente = (historias.length + 1).toString().padStart(4, '0');
     document.getElementById('printNumeroCarga').textContent = `Nº ${numCorrente}`;
 
@@ -436,7 +430,7 @@ document.getElementById('btnPrint').addEventListener('click', () => {
 });
 
 // Finalizar Carga e Salvar no Histórico
-document.getElementById('btnFinalizar').addEventListener('click', () => {
+document.getElementById('btnFinalizar').addEventListener('click', async () => {
     if(itensRomaneio.length === 0) {
         alert("Nenhum item na carga para finalizar.");
         return;
@@ -459,51 +453,53 @@ document.getElementById('btnFinalizar').addEventListener('click', () => {
 
     // Pegar nome do Cliente
     let cId = romSelectCliente.value;
-    let nomeCliObj = (DB.get('clientes') || []).find(x => x.id == cId);
-    let nomeClienteFinal = nomeCliObj ? nomeCliObj.nome : "Avulso (Sem cadastro)";
+    let cliObj = await DB.getById('clientes', cId);
+    let nomeClienteFinal = cliObj ? cliObj.nome : "Avulso (Sem cadastro)";
 
     // Objeto História
-    let historias = DB.get('historico') || [];
+    const historias = await DB.list('historico');
     let numCarga = (historias.length + 1).toString().padStart(4, '0');
 
     let novaHistoria = {
-        id: Date.now(),
-        numeroCarga: `Carga Nº ${numCarga}`,
-        clienteId: cId,
-        cliente: nomeClienteFinal,
-        data: document.getElementById('dataCarga').value || new Date().toISOString().split('T')[0],
-        freteAplicado: fretePorM3,
+        numero_carga: `Carga Nº ${numCarga}`,
+        cliente_id: cId || null,
+        cliente_nome: nomeClienteFinal,
+        data_carga: document.getElementById('dataCarga').value || new Date().toISOString().split('T')[0],
+        frete_aplicado: fretePorM3,
         itens: itensRomaneio,
-        volumeTotalItem: somaVolumeCarga, // Real (Motorista)
-        volumeVendaTotal: somaVolumeVenda, // Faturamento
-        valorFinal: valorTotalGeral // Apenas Madeira + Imposto
+        volume_total_item: somaVolumeCarga, // Real (Motorista)
+        volume_venda_total: somaVolumeVenda, // Faturamento
+        valor_final: valorTotalGeral // Apenas Madeira + Imposto
     };
 
-    historias.push(novaHistoria);
-    DB.set('historico', historias);
-    
-    // Dispara Evento pro historico.js atualizar
-    document.dispatchEvent(new Event('historicoUpdated'));
+    try {
+        await DB.insert('historico', novaHistoria);
+        // Dispara Evento pro historico.js atualizar
+        document.dispatchEvent(new Event('historicoUpdated'));
 
-    alert(`Sucesso! ${novaHistoria.numeroCarga} foi salva no Histórico.`);
+        alert(`Sucesso! ${novaHistoria.numero_carga} foi salva no Histórico.`);
 
-    // Limpar Romaneio
-    itensRomaneio = [];
-    romSelectCliente.value = '';
-    romSelectTransporte.value = '';
-    romSelectMadeira.value = '';
-    precoCustomizado.value = '';
-    valorFrete.value = '0.00';
-    valorJurosNf.value = '0.00';
-    document.getElementById('qtPacotes').value = '0';
-    document.getElementById('dataCarga').valueAsDate = new Date();
-    
-    // Atualiza info de tela impressa
-    printNomeCli.textContent = '';
-    printFretista.textContent = '';
-    printPlaca.textContent = '';
-    
-    renderizarTabelaRomaneio();
+        // Limpar Romaneio
+        itensRomaneio = [];
+        romSelectCliente.value = '';
+        romSelectTransporte.value = '';
+        romSelectMadeira.value = '';
+        precoCustomizado.value = '';
+        valorFrete.value = '0.00';
+        valorJurosNf.value = '0.00';
+        if (document.getElementById('qtPacotes')) document.getElementById('qtPacotes').value = '0';
+        document.getElementById('dataCarga').valueAsDate = new Date();
+        
+        // Atualiza info de tela impressa
+        printNomeCli.textContent = '';
+        printFretista.textContent = '';
+        printPlaca.textContent = '';
+        
+        renderizarTabelaRomaneio();
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar carga no Supabase.');
+    }
 });
 
 // Força data do dia ao abrir

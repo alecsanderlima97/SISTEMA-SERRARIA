@@ -5,7 +5,7 @@ const listaProdutos = document.getElementById('listaProdutos');
 
 let produtoEditandoId = null;
 
-formProduto.addEventListener('submit', function(e) {
+formProduto.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const dadosProd = {
@@ -16,37 +16,33 @@ formProduto.addEventListener('submit', function(e) {
         preco: parseFloat(document.getElementById('prodPreco').value)
     };
 
-    let produtos = DB.get('produtos');
-
-    if(produtoEditandoId) {
-        // Atualizar
-        let idx = produtos.findIndex(p => p.id === produtoEditandoId);
-        if(idx > -1) {
-            dadosProd.id = produtoEditandoId;
-            produtos[idx] = dadosProd;
+    try {
+        if(produtoEditandoId) {
+            // Atualizar no Supabase
+            await DB.update('produtos', produtoEditandoId, dadosProd);
+            produtoEditandoId = null;
+            formProduto.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
+            formProduto.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
+            alert('Madeira atualizada!');
+        } else {
+            // Criar no Supabase
+            await DB.insert('produtos', dadosProd);
+            alert('Madeira cadastrada!');
         }
-        produtoEditandoId = null;
-        formProduto.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
-        formProduto.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
-        alert('Madeira atualizada!');
-    } else {
-        // Criar
-        dadosProd.id = Date.now();
-        produtos.push(dadosProd);
-        alert('Madeira cadastrada!');
+
+        formProduto.reset();
+        await renderProdutos();
+        
+        // Disparar evento para o combo do romaneio recarregar
+        document.dispatchEvent(new Event('produtosUpdated'));
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar produto no Supabase.');
     }
-
-    DB.set('produtos', produtos);
-
-    formProduto.reset();
-    renderProdutos();
-    
-    // Disparar evento para o combo do romaneio recarregar
-    document.dispatchEvent(new Event('produtosUpdated'));
 });
 
-window.editarProduto = function(id) {
-    let p = DB.get('produtos').find(x => x.id === id);
+window.editarProduto = async function(id) {
+    let p = await DB.getById('produtos', id);
     if(p) {
         document.getElementById('prodTipo').value = p.tipo;
         document.getElementById('prodNatureza').value = p.natureza;
@@ -63,20 +59,24 @@ window.editarProduto = function(id) {
     }
 }
 
-function apagarProduto(id) {
+window.apagarProduto = async function(id) {
     if(confirm('Apagar configuração de madeira?')) {
-        let produtos = DB.get('produtos').filter(p => p.id !== id);
-        DB.set('produtos', produtos);
-        renderProdutos();
-        document.dispatchEvent(new Event('produtosUpdated'));
+        const sucesso = await DB.delete('produtos', id);
+        if (sucesso) {
+            await renderProdutos();
+            document.dispatchEvent(new Event('produtosUpdated'));
+        }
     }
 }
 
-function renderProdutos() {
-    let produtos = DB.get('produtos');
+async function renderProdutos() {
+    if(!listaProdutos) return;
+    listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;">Buscando dados no Supabase...</td></tr>';
+
+    const produtos = await DB.list('produtos');
     listaProdutos.innerHTML = '';
     
-    if(produtos.length === 0) {
+    if(!produtos || produtos.length === 0) {
         listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado.</td></tr>`;
         return;
     }

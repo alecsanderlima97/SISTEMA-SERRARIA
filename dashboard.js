@@ -9,38 +9,41 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('historicoUpdated', initDashboard);
 document.addEventListener('vendasSubprodutosUpdated', initDashboard); // Evento que poderiamos disparar se quiséssemos
 
-function initDashboard() {
-    // Buscar Dados Reais
-    const historico = DB.get('historico') || [];
-    const entradas = DB.get('entradas') || [];
-    const subprodutos = DB.get('vendas_subprodutos') || [];
-    const clientes = DB.get('clientes') || [];
-    const produtos = DB.get('produtos') || [];
+async function initDashboard() {
+    // Buscar Dados Reais no Supabase
+    const listPrompts = [
+        DB.list('historico'),
+        DB.list('entradas'),
+        DB.list('vendas_subprodutos'),
+        DB.list('clientes'),
+        DB.list('produtos')
+    ];
+
+    const [historico, entradas, subprodutos, clientes, produtos] = await Promise.all(listPrompts);
 
     // 1. Total de Cargas (Vendas de Madeira)
-    const totalCargas = historico.length;
+    const totalCargas = (historico || []).length;
 
     // 2. Volume de Madeira Vendida (m³)
-    const volumeVendido = historico.reduce((acc, h) => acc + (h.volumeTotalItem || 0), 0);
+    const volumeVendido = (historico || []).reduce((acc, h) => acc + (h.volume_total_item || h.volumeTotalItem || 0), 0);
 
     // 3. Entrada de Toras (m³)
-    const volumeEntrada = entradas.reduce((acc, e) => acc + (e.volume || 0), 0);
+    const volumeEntrada = (entradas || []).reduce((acc, e) => acc + (e.volume || 0), 0);
 
     // 4. Faturamento Madeira (R$)
-    const faturamentoMadeira = historico.reduce((acc, h) => acc + (h.valorFinal || 0), 0);
+    const faturamentoMadeira = (historico || []).reduce((acc, h) => acc + (h.valor_final || h.valorFinal || 0), 0);
 
     // 5. Faturamento de Cavaco e Pó de Serra (R$)
-    const faturamentoSub = subprodutos.reduce((acc, s) => acc + (s.total || 0), 0);
+    const faturamentoSub = (subprodutos || []).reduce((acc, s) => acc + (s.total || 0), 0);
 
     // 6. Volume de Cavaco e Pó de Serra (m³)
-    // Nota: Filtramos apenas os que estão em m³ para este KPI específico ou somamos tudo que for volume
-    const volumeSub = subprodutos.reduce((acc, s) => {
+    const volumeSub = (subprodutos || []).reduce((acc, s) => {
         if (s.unidade === 'm³') return acc + (s.quantidade || 0);
         return acc;
     }, 0);
 
     // 7. Clientes Ativos
-    const totalClientes = clientes.length;
+    const totalClientes = (clientes || []).length;
 
     // 8. Estoque (Simplificado: Entrada - Saída)
     const estoqueVolume = volumeEntrada - volumeVendido;
@@ -58,8 +61,8 @@ function initDashboard() {
     if(document.getElementById('dash-total-estoque')) document.getElementById('dash-total-estoque').textContent = (estoqueVolume > 0 ? estoqueVolume : 0).toFixed(2) + ' m³';
 
     // Gráficos
-    renderChartEspessura(historico);
-    renderChartVendas(historico);
+    renderChartEspessura(historico || []);
+    renderChartVendas(historico || []);
 }
 
 let chartEspessuraInstance = null;

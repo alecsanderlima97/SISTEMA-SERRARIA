@@ -5,7 +5,7 @@ const listaTransportes = document.getElementById('listaTransportes');
 
 let transporteEditandoId = null;
 
-formTransporte.addEventListener('submit', function(e) {
+formTransporte.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const dadosTransp = {
@@ -15,37 +15,33 @@ formTransporte.addEventListener('submit', function(e) {
         placa: document.getElementById('transPlaca').value
     };
 
-    let transportes = DB.get('transportes') || [];
-
-    if(transporteEditandoId) {
-        // Atualizar
-        let idx = transportes.findIndex(t => t.id === transporteEditandoId);
-        if(idx > -1) {
-            dadosTransp.id = transporteEditandoId;
-            transportes[idx] = dadosTransp;
+    try {
+        if(transporteEditandoId) {
+            // Atualizar no Supabase
+            await DB.update('transportes', transporteEditandoId, dadosTransp);
+            transporteEditandoId = null;
+            formTransporte.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
+            formTransporte.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
+            alert('Transportadora atualizada!');
+        } else {
+            // Criar no Supabase
+            await DB.insert('transportes', dadosTransp);
+            alert('Transportadora cadastrada com sucesso!');
         }
-        transporteEditandoId = null;
-        formTransporte.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
-        formTransporte.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
-        alert('Transportadora atualizada!');
-    } else {
-        // Criar
-        dadosTransp.id = Date.now();
-        transportes.push(dadosTransp);
-        alert('Transportadora cadastrada com sucesso!');
+
+        formTransporte.reset();
+        await renderTransportes();
+        
+        // Disparar evento para o combo do romaneio recarregar
+        document.dispatchEvent(new Event('transportesUpdated'));
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar transportadora no Supabase.');
     }
-
-    DB.set('transportes', transportes);
-
-    formTransporte.reset();
-    renderTransportes();
-    
-    // Disparar evento para o combo do romaneio recarregar
-    document.dispatchEvent(new Event('transportesUpdated'));
 });
 
-window.editarTransporte = function(id) {
-    let t = (DB.get('transportes') || []).find(x => x.id === id);
+window.editarTransporte = async function(id) {
+    let t = await DB.getById('transportes', id);
     if(t) {
         document.getElementById('transNome').value = t.nome;
         document.getElementById('transMotorista').value = t.motorista || '';
@@ -61,20 +57,24 @@ window.editarTransporte = function(id) {
     }
 }
 
-window.apagarTransporte = function(id) {
+window.apagarTransporte = async function(id) {
     if(confirm('Apagar esta transportadora/fretista?')) {
-        let transportes = (DB.get('transportes') || []).filter(t => t.id !== id);
-        DB.set('transportes', transportes);
-        renderTransportes();
-        document.dispatchEvent(new Event('transportesUpdated'));
+        const sucesso = await DB.delete('transportes', id);
+        if (sucesso) {
+            await renderTransportes();
+            document.dispatchEvent(new Event('transportesUpdated'));
+        }
     }
 }
 
-function renderTransportes() {
-    let transportes = DB.get('transportes') || [];
+async function renderTransportes() {
+    if(!listaTransportes) return;
+    listaTransportes.innerHTML = '<tr><td colspan="5" style="text-align:center;">Buscando dados no Supabase...</td></tr>';
+
+    const transportes = await DB.list('transportes');
     listaTransportes.innerHTML = '';
 
-    if (transportes.length === 0) {
+    if (!transportes || transportes.length === 0) {
         listaTransportes.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhuma transportadora cadastrada.</td></tr>`;
         return;
     }

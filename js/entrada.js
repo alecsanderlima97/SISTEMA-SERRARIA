@@ -77,36 +77,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Renderizar Tabela de Histórico
-    function renderizarEntradas() {
+    // Renderizar Tabela de Histórico (Assíncrono)
+    async function renderizarEntradas() {
         if(!listaEntradas) return;
-        const entradas = DB.get('entradas') || [];
+        listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando entradas...</td></tr>';
+        
+        const entradas = await DB.list('entradas');
         listaEntradas.innerHTML = '';
         
-        if(entradas.length === 0) {
+        if(!entradas || entradas.length === 0) {
             listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#aaa;">Nenhuma entrada registrada ainda.</td></tr>';
             return;
         }
         
-        // Odenar por data mais recente primeiro
-        entradas.sort((a,b) => new Date(b.data) - new Date(a.data)).forEach(en => {
+        // Ordenar por data mais recente primeiro se não vier do DB
+        const sortedEntradas = [...entradas].sort((a,b) => new Date(b.data || b.data_carga) - new Date(a.data || a.data_carga));
+        
+        sortedEntradas.forEach(en => {
             const tr = document.createElement('tr');
             
-            // Formatar data para exibição PT-BR (UTC handle)
-            const dtObj = new Date(en.data);
-            const dtLocal = new Date(dtObj.getTime() + dtObj.getTimezoneOffset() * 60000);
-            const dtStr = dtLocal.toLocaleDateString('pt-BR');
+            // Formatar data para exibição PT-BR
+            const dtObj = new Date(en.data || en.data_carga);
+            const dtStr = dtObj.toLocaleDateString('pt-BR');
             
             tr.innerHTML = `
                 <td>${dtStr}</td>
                 <td><strong>${en.fornecedor}</strong></td>
                 <td><span class="badge" style="background:#555;">${en.placa}</span></td>
                 <td style="font-size: 0.9em;">
-                    C: ${en.comp.toFixed(2)}m <br>
-                    L: ${en.larg.toFixed(2)}m <br>
-                    A. Média: ${en.mediaAltura.toFixed(2)}m (${en.pontos} pt)
+                    C: ${(en.comp || 0).toFixed(2)}m <br>
+                    L: ${(en.larg || 0).toFixed(2)}m <br>
+                    A. Média: ${(en.mediaAltura || 0).toFixed(2)}m (${en.pontos || 0} pt)
                 </td>
-                <td style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">${en.volume.toFixed(3)}</td>
+                <td style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">${(en.volume || 0).toFixed(3)}</td>
                 <td>
                     <button class="btn-primary" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;" onclick="deletarEntrada('${en.id}')">
                         <i class="fa-solid fa-trash"></i>
@@ -119,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Salvar Entrada
     if (formEntrada) {
-        formEntrada.addEventListener('submit', (e) => {
+        formEntrada.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const calcData = calcularVolumeAtual();
@@ -134,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataStr = document.getElementById('entData').value;
             
             const novaEntrada = {
-                id: 'ENT-' + Date.now(),
                 data: dataStr,
                 fornecedor: fornecedor,
                 placa: placa,
@@ -145,32 +147,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 volume: calcData.volume
             };
             
-            const entradas = DB.get('entradas') || [];
-            entradas.push(novaEntrada);
-            DB.set('entradas', entradas);
-            
-            // Limpar form
-            formEntrada.reset();
-            // Volta data para hoje
-            if(entData) entData.valueAsDate = new Date();
-            // Resetar label
-            calcularVolumeAtual();
-            
-            // Atualizar lista
-            renderizarEntradas();
-            
-            // Notification simples simulada
-            alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!`);
+            try {
+                await DB.insert('entradas', novaEntrada);
+                
+                // Limpar form
+                formEntrada.reset();
+                if(entData) entData.valueAsDate = new Date();
+                calcularVolumeAtual();
+                
+                // Atualizar lista
+                await renderizarEntradas();
+                alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!`);
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao salvar entrada no Supabase.');
+            }
         });
     }
 
     // Função global para deletar
-    window.deletarEntrada = function(id) {
+    window.deletarEntrada = async function(id) {
         if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
-            let entradas = DB.get('entradas') || [];
-            entradas = entradas.filter(e => e.id !== id);
-            DB.set('entradas', entradas);
-            renderizarEntradas();
+            const sucesso = await DB.delete('entradas', id);
+            if (sucesso) {
+                await renderizarEntradas();
+            }
         }
     };
 

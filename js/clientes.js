@@ -94,7 +94,7 @@ cepInput.addEventListener('input', function(e) {
 // Salvar Cliente
 let clienteEditandoId = null;
 
-formCliente.addEventListener('submit', function(e) {
+formCliente.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     // Objeto Cliente
@@ -111,38 +111,34 @@ formCliente.addEventListener('submit', function(e) {
         bairro: document.getElementById('cliBairro').value
     };
 
-    let clientes = DB.get('clientes');
-
-    if(clienteEditandoId) {
-        // Atualizar
-        let index = clientes.findIndex(c => c.id === clienteEditandoId);
-        if(index > -1) {
-            dadosCliente.id = clienteEditandoId;
-            clientes[index] = dadosCliente;
+    try {
+        if(clienteEditandoId) {
+            // Atualizar no Supabase
+            await DB.update('clientes', clienteEditandoId, dadosCliente);
+            clienteEditandoId = null;
+            formCliente.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
+            formCliente.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
+            alert('Cliente atualizado!');
+        } else {
+            // Criar no Supabase
+            await DB.insert('clientes', dadosCliente);
+            alert('Cliente cadastrado com sucesso!');
         }
-        clienteEditandoId = null;
-        formCliente.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
-        formCliente.querySelector('button[type="submit"]').classList.replace('btn-secondary', 'btn-primary');
-        alert('Cliente atualizado!');
-    } else {
-        // Criar
-        dadosCliente.id = Date.now();
-        clientes.push(dadosCliente);
-        alert('Cliente cadastrado com sucesso!');
+
+        formCliente.reset();
+        await renderClientes();
+        
+        // Dispara evento para o combo do romaneio se recarregar
+        document.dispatchEvent(new Event('clientesUpdated'));
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar no Supabase.');
     }
-
-    DB.set('clientes', clientes);
-
-    formCliente.reset();
-    renderClientes();
-    
-    // Dispara evento para o combo do romaneio se recarregar
-    document.dispatchEvent(new Event('clientesUpdated'));
 });
 
 // Funcoes de tabela (Ver e Editar)
-window.verCliente = function(id) {
-    let c = DB.get('clientes').find(x => x.id === id);
+window.verCliente = async function(id) {
+    let c = await DB.getById('clientes', id);
     if(c) {
         let msg = `=== FICHA DO CLIENTE ===\n\n`;
         msg += `Nome: ${c.nome}\n`;
@@ -160,8 +156,8 @@ window.verCliente = function(id) {
     }
 }
 
-window.editarCliente = function(id) {
-    let c = DB.get('clientes').find(x => x.id === id);
+window.editarCliente = async function(id) {
+    let c = await DB.getById('clientes', id);
     if(c) {
         document.getElementById('cliNome').value = c.nome;
         document.getElementById('cliCnpj').value = c.cnpj;
@@ -186,21 +182,25 @@ window.editarCliente = function(id) {
 }
 
 // Excluir e Renderizar
-function apagarCliente(id) {
+window.apagarCliente = async function(id) {
     if(confirm('Apagar cliente?')) {
-        let clientes = DB.get('clientes').filter(c => c.id !== id);
-        DB.set('clientes', clientes);
-        renderClientes();
-        document.dispatchEvent(new Event('clientesUpdated'));
+        const sucesso = await DB.delete('clientes', id);
+        if (sucesso) {
+            await renderClientes();
+            document.dispatchEvent(new Event('clientesUpdated'));
+        }
     }
 }
 
-function renderClientes() {
-    let clientes = DB.get('clientes');
+async function renderClientes() {
+    if(!listaClientes) return;
+    listaClientes.innerHTML = '<tr><td colspan="6" style="text-align:center;">Buscando dados no Supabase...</td></tr>';
+
+    const clientes = await DB.list('clientes');
     listaClientes.innerHTML = '';
     
-    if(clientes.length === 0) {
-        listaClientes.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum cliente cadastrado.</td></tr>`;
+    if(!clientes || clientes.length === 0) {
+        listaClientes.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum cliente cadastrado.</td></tr>`;
         return;
     }
 
