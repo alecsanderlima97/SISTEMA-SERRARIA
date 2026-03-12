@@ -1559,3 +1559,54 @@ input:checked + .slider:before {
     border-radius: 8px;
     border-left: 3px solid var(--primary-color);
 }
+
+/* ====== SELETOR DE SUBPRODUTOS (CAVACO/PÓ) ====== */
+.subproduct-selector {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+}
+
+.sub-option {
+    flex: 1;
+    cursor: pointer;
+}
+
+.sub-option input {
+    display: none;
+}
+
+.sub-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    color: #acc8fa;
+}
+
+.sub-box i {
+    font-size: 1.5rem;
+}
+
+.sub-box span {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.sub-option input:checked + .sub-box {
+    background: rgba(44, 201, 144, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 201, 144, 0.2);
+}
+
+.sub-box:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
