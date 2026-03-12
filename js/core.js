@@ -176,7 +176,13 @@ navLinks.forEach(link => {
         // Pega o target e mostra
         const targetId = link.getAttribute('data-target');
         sections.forEach(s => s.style.display = 'none');
-        document.getElementById(targetId).style.display = 'block';
+        if (document.getElementById(targetId)) {
+            document.getElementById(targetId).style.display = 'block';
+            // Disparar evento de mudança de view para outros scripts
+            document.dispatchEvent(new CustomEvent('viewChanged', { 
+                detail: { viewId: targetId } 
+            }));
+        }
     });
 });
 

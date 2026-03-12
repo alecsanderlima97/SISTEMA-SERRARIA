@@ -1292,6 +1292,62 @@
 
                 </div>
             </section>
+            <!-- Seção Financeiro -->
+            <section id="view-financeiro" class="view-section" style="display: none;">
+                <div class="glass-panel">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-wallet"></i> Relatório Financeiro Consolidado</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Resumo mensal de faturamento e vendas.</p>
+                    </div>
+                    
+                    <div class="grid-form" style="margin-bottom: 25px;">
+                        <div class="input-group">
+                            <label>Mês / Ano</label>
+                            <input type="month" id="finFiltroMes">
+                        </div>
+                        <div class="input-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn-primary" id="btnFiltrarFinanceiro" style="width: 100%;">
+                                <i class="fa-solid fa-filter"></i> Atualizar Relatório
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid-form">
+                        <div class="glass-panel" style="background: rgba(44, 201, 144, 0.1); border: 1px solid var(--accent-color);">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">MADEIRA SERRADA (ROMANEIOS)</div>
+                            <div id="finTotalMadeira" style="font-size: 1.8rem; font-weight: bold; color: var(--accent-color);">R$ 0,00</div>
+                        </div>
+                        <div class="glass-panel" style="background: rgba(243, 156, 18, 0.1); border: 1px solid #f39c12;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">SUBPRODUTOS (CAVACO/PÓ)</div>
+                            <div id="finTotalSubprodutos" style="font-size: 1.8rem; font-weight: bold; color: #f39c12;">R$ 0,00</div>
+                        </div>
+                        <div class="glass-panel" style="background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; grid-column: span 2;">
+                            <div style="font-size: 0.9rem; color: var(--text-muted);">FATURAMENTO TOTAL DO PERÍODO</div>
+                            <div id="finTotalGeral" style="font-size: 2.2rem; font-weight: bold; color: #3498db;">R$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <div class="section-title">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Detalhes por Produto</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="tableFinanceiro">
+                                <thead>
+                                    <tr>
+                                        <th>Categoria</th>
+                                        <th>Volume / Qtd</th>
+                                        <th>Total Bruto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- JS preenche -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
