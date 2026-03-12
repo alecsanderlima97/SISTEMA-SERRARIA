@@ -182,15 +182,17 @@
                         <h2><i class="fa-solid fa-user-plus"></i> Novo Cliente</h2>
                     </div>
                     <form id="formCliente" class="grid-form">
-                        <div class="input-group">
+                        <div class="input-group" style="grid-column: span 2;">
                             <label for="cliNome">Nome / Razão Social</label>
                             <input type="text" id="cliNome" required>
                         </div>
-                        <div class="input-group">
+                        <div class="input-group" style="grid-column: span 2;">
                             <label for="cliCnpj">CNPJ / CPF</label>
-                            <div style="display: flex; gap: 5px;">
+                            <div style="display: flex; gap: 5px; align-items: stretch;">
                                 <input type="text" id="cliCnpj" required style="flex: 1;">
-                                <button type="button" id="btnBuscaCnpj" class="btn-secondary" style="padding: 0 10px;" title="Buscar dados do CNPJ"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                <button type="button" id="btnBuscaCnpj" class="btn-secondary" style="padding: 0 12px; width: 45px;" title="Buscar dados do CNPJ">
+                                    <i class="fa-solid fa-magnifying-glass" style="font-size: 0.8rem;"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="input-group">

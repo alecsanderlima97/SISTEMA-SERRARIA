@@ -270,4 +270,26 @@ window.updateStatusBar = function() {
 document.addEventListener('DOMContentLoaded', () => {
     window.updateStatusBar();
     setInterval(window.updateStatusBar, 1000 * 60); // Atualiza a cada minuto
+
+    // Global: Capitalizar primeira letra de campos de texto
+    document.addEventListener('input', (e) => {
+        const el = e.target;
+        // Filtros: apenas inputs de texto/search, ignorar e-mail, senhas e campos específicos (como placa que já é uppercase)
+        if (el.tagName === 'INPUT' && 
+            ['text', 'search'].includes(el.type) && 
+            !el.id.includes('Placa') && 
+            !el.id.includes('calcCav') // Para não quebrar máscaras decimais se o usuário digitar algo estranho
+        ) {
+            if (el.value.length > 0) {
+                // Se for o primeiro caracter, capitalizar
+                if (el.value.length === 1) {
+                    el.value = el.value.toUpperCase();
+                } else {
+                    // Opcional: Garantir que apenas a primeira letra do campo seja maiúscula ou manter como está?
+                    // O usuário pediu "deixe a primeira letra em maiusculo", interpretando como capitalizar o início do campo.
+                    // Não alteramos o restante para permitir nomes compostos (ex: Silva).
+                }
+            }
+        }
+    });
 });
