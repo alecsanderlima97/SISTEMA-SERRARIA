@@ -274,20 +274,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global: Capitalizar primeira letra de campos de texto
     document.addEventListener('input', (e) => {
         const el = e.target;
-        // Filtros: apenas inputs de texto/search, ignorar e-mail, senhas e campos específicos (como placa que já é uppercase)
-        if (el.tagName === 'INPUT' && 
-            ['text', 'search'].includes(el.type) && 
-            !el.id.includes('Placa') && 
-            !el.id.includes('calcCav') // Para não quebrar máscaras decimais se o usuário digitar algo estranho
-        ) {
-            if (el.value.length > 0) {
-                // Se for o primeiro caracter, capitalizar
-                if (el.value.length === 1) {
-                    el.value = el.value.toUpperCase();
-                } else {
-                    // Opcional: Garantir que apenas a primeira letra do campo seja maiúscula ou manter como está?
-                    // O usuário pediu "deixe a primeira letra em maiusculo", interpretando como capitalizar o início do campo.
-                    // Não alteramos o restante para permitir nomes compostos (ex: Silva).
+        if (el.tagName === 'INPUT' && ['text', 'search'].includes(el.type) && !el.readOnly) {
+            // Ignorar campos que já são forçados para Uppercase (como Placa) ou específicos do sistema
+            if (el.id.includes('Placa')) return;
+
+            let val = el.value;
+            if (val.length > 0) {
+                // Capitalizar apenas a primeira letra se ela for minúscula
+                const firstChar = val.charAt(0);
+                if (firstChar !== firstChar.toUpperCase()) {
+                    const start = el.selectionStart;
+                    const end = el.selectionEnd;
+                    
+                    el.value = firstChar.toUpperCase() + val.slice(1);
+                    
+                    // Restaurar posição do cursor
+                    if (el.setSelectionRange) {
+                        el.setSelectionRange(start, end);
+                    }
                 }
             }
         }
