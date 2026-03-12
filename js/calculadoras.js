@@ -170,78 +170,98 @@ btnCalcDiesel.addEventListener('click', function () {
 });
 
 // 3. Venda de Cavaco / Pó de Serra / Subprodutos
-const btnCalcCavaco = document.getElementById('btnCalcCavaco');
+// Função central de salvamento para Subprodutos
+async function coletarESalvarSubproduto() {
+    const tipoElement = document.querySelector('input[name="subproduto_tipo"]:checked');
+    const tipo = tipoElement ? tipoElement.value : 'Cavaco';
+    const unidade = document.getElementById('calcCavUnidade').value;
+    const qtd = parseLocalFloat(document.getElementById('calcCavQtd').value) || 0;
+    const valorUni = parseLocalFloat(document.getElementById('calcCavValor').value) || 0;
 
+    const romaneio = document.getElementById('calcCavRomaneio').value || '---';
+    const cliente = document.getElementById('calcCavCliente').value || '---';
+    const motorista = document.getElementById('calcCavMotorista').value || '---';
+    const placa = document.getElementById('calcCavPlaca').value || '---';
+    
+    const comp = document.getElementById('calcCavComp').value || '0,00';
+    const larg = document.getElementById('calcCavLarg').value || '0,00';
+    const alt = document.getElementById('calcCavAlt').value || '0,00';
+    const medidas = `${comp} x ${larg} x ${alt}`;
+
+    if (qtd <= 0 || valorUni <= 0) {
+        alert("Preencha corretamente a quantidade e o valor unitário!");
+        return null;
+    }
+
+    const total = qtd * valorUni;
+
+    const novaVenda = {
+        data: new Date().toISOString().split('T')[0],
+        romaneio: romaneio,
+        cliente: cliente,
+        motorista: motorista,
+        placa: placa.toUpperCase(),
+        medidas: medidas,
+        tipo: tipo,
+        unidade: unidade,
+        quantidade: qtd,
+        valor_unitario: valorUni,
+        total: total
+    };
+
+    try {
+        const result = await DB.insert('vendas_subprodutos', novaVenda);
+        document.dispatchEvent(new Event('vendasSubprodutosUpdated'));
+        return { ...novaVenda, id: result?.id };
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao salvar venda de subproduto.');
+        return null;
+    }
+}
+
+// Botão Imprimir (Salva + Imprime)
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
-        const tipoElement = document.querySelector('input[name="subproduto_tipo"]:checked');
-        const tipo = tipoElement ? tipoElement.value : 'Cavaco';
-        const unidade = document.getElementById('calcCavUnidade').value;
-        const qtd = parseLocalFloat(document.getElementById('calcCavQtd').value) || 0;
-        const valorUni = parseLocalFloat(document.getElementById('calcCavValor').value) || 0;
+        const venda = await coletarESalvarSubproduto();
+        if (!venda) return;
 
-        const romaneio = document.getElementById('calcCavRomaneio').value || '---';
-        const cliente = document.getElementById('calcCavCliente').value || '---';
-        const motorista = document.getElementById('calcCavMotorista').value || '---';
-        const placa = document.getElementById('calcCavPlaca').value || '---';
+        // Preencher área de impressão
+        document.getElementById('printCavRomaneio').textContent = venda.romaneio;
+        document.getElementById('printCavCliente').textContent = venda.cliente;
+        document.getElementById('printCavMotorista').textContent = venda.motorista;
+        document.getElementById('printCavPlaca').textContent = venda.placa;
+        document.getElementById('printCavMedidas').textContent = venda.medidas;
+
+        document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
+        document.getElementById('printCavTipo').textContent = venda.tipo;
+        document.getElementById('printCavQtd').textContent = venda.quantidade.toLocaleString('pt-BR');
+        document.getElementById('printCavUni').textContent = venda.unidade;
+        document.getElementById('printCavValorUni').textContent = venda.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        document.getElementById('printCavTotal').textContent = venda.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+        // Imprimir
+        const printContent = document.getElementById('printAreaSubprodutos').innerHTML;
+        const originalContent = document.body.innerHTML;
+
+        document.body.innerHTML = printContent;
+        window.print();
         
-        const comp = document.getElementById('calcCavComp').value || '0,00';
-        const larg = document.getElementById('calcCavLarg').value || '0,00';
-        const alt = document.getElementById('calcCavAlt').value || '0,00';
-        const medidas = `${comp} x ${larg} x ${alt}`;
+        // Recarregar para limpar
+        window.location.reload();
+    });
+}
 
-        if (qtd <= 0 || valorUni <= 0) {
-            alert("Preencha corretamente a quantidade e o valor unitário!");
-            return;
-        }
-
-        const total = qtd * valorUni;
-
-        // Salvar a venda no Banco de Dados (Supabase)
-        const novaVenda = {
-            data: new Date().toISOString().split('T')[0],
-            romaneio: romaneio,
-            cliente: cliente,
-            motorista: motorista,
-            placa: placa.toUpperCase(),
-            medidas: medidas,
-            tipo: tipo,
-            unidade: unidade,
-            quantidade: qtd,
-            valor_unitario: valorUni,
-            total: total
-        };
-
-        try {
-            await DB.insert('vendas_subprodutos', novaVenda);
-            document.dispatchEvent(new Event('vendasSubprodutosUpdated'));
-            
-            // Preencher área de impressão
-            document.getElementById('printCavRomaneio').textContent = romaneio;
-            document.getElementById('printCavCliente').textContent = cliente;
-            document.getElementById('printCavMotorista').textContent = motorista;
-            document.getElementById('printCavPlaca').textContent = placa.toUpperCase();
-            document.getElementById('printCavMedidas').textContent = medidas;
-
-            document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('printCavTipo').textContent = tipo;
-            document.getElementById('printCavQtd').textContent = qtd.toLocaleString('pt-BR');
-            document.getElementById('printCavUni').textContent = unidade;
-            document.getElementById('printCavValorUni').textContent = valorUni.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('printCavTotal').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-
-            // Imprimir
-            const printContent = document.getElementById('printAreaSubprodutos').innerHTML;
-            const originalContent = document.body.innerHTML;
-
-            document.body.innerHTML = printContent;
-            window.print();
-            
-            // Recarregar para limpar e manter consistência
+// Botão Salvar (Apenas Salva)
+const btnSalvarCavaco = document.getElementById('btnSalvarCavaco');
+if (btnSalvarCavaco) {
+    btnSalvarCavaco.addEventListener('click', async function () {
+        const venda = await coletarESalvarSubproduto();
+        if (venda) {
+            alert('Venda salva com sucesso no histórico!');
+            // Limpar apenas campos específicos se desejar, ou recarregar
+            // Por consistência com o resto do app que o usuário usa, vamos recarregar ou limpar o form
             window.location.reload();
-        } catch (err) {
-            console.error(err);
-            alert('Erro ao salvar venda de subproduto no Supabase.');
         }
     });
 }
