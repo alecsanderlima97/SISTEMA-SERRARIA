@@ -538,11 +538,11 @@ input::placeholder {
     margin-top: 10px;
 }
 
-.dashboard-.grid-form {
+.grid-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    align-items: flex-end; /* Alinha labels e inputs na base */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: end; 
 }
 
 .input-group {
@@ -550,6 +550,13 @@ input::placeholder {
     flex-direction: column;
     gap: 0.5rem;
     width: 100%;
+}
+
+.grid-form .btn-primary, .grid-form .btn-secondary {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* DASHBOARD INFORMATIVO */

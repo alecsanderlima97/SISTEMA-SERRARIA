@@ -96,4 +96,6 @@ async function renderTransportes() {
 }
 
 // Inicializar
-renderTransportes();
+document.addEventListener('DOMContentLoaded', () => {
+    renderTransportes();
+});

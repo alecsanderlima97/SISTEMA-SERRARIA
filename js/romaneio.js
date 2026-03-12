@@ -214,22 +214,25 @@ function recalcularTotais() {
     }
 
     // Matemática Financeira Associada ao Produto (Venda)
-    // Usamos somaVolumeVenda para o faturamento da madeira
-    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + ((curr.volumeTotalVenda || curr.volumeTotal) * curr.precoUsado), 0);
+    let totalValorMadeira = itensRomaneio.reduce((acc, curr) => {
+        const vol = curr.volumeTotalVenda || curr.volumeTotal;
+        return acc + (vol * (curr.precoUsado || 0));
+    }, 0);
+    totalValorMadeira = Math.round(totalValorMadeira * 100) / 100;
 
-    // Custo do Frete exibido separadamente
-    let fretePorM3 = parseFloat(valorFrete.value) || 0;
-    let custoFrete = somaVolume * fretePorM3;
+    // Custo do Frete
+    let fretePorM3 = window.parseLocalFloat(valorFrete.value);
+    let custoFrete = Math.round((somaVolume * fretePorM3) * 100) / 100;
 
-    // Imposto NF
-    let imposto = parseFloat(valorJurosNf.value) || 0;
+    // Imposto / Acréscimos
+    let imposto = window.parseLocalFloat(valorJurosNf.value);
 
-    let valorTotalGeral = totalValorMadeira + imposto;
+    let valorTotalGeral = Math.round((totalValorMadeira + imposto) * 100) / 100;
 
-    document.getElementById('resValorMadeira').textContent = formatarMoeda(totalValorMadeira);
-    document.getElementById('resValorFrete').textContent = formatarMoeda(custoFrete);
-    document.getElementById('resValorImposto').textContent = formatarMoeda(imposto);
-    document.getElementById('resValorTotal').textContent = formatarMoeda(valorTotalGeral);
+    document.getElementById('resValorMadeira').textContent = window.formatarMoeda(totalValorMadeira);
+    document.getElementById('resValorFrete').textContent = window.formatarMoeda(custoFrete);
+    document.getElementById('resValorImposto').textContent = window.formatarMoeda(imposto);
+    document.getElementById('resValorTotal').textContent = window.formatarMoeda(valorTotalGeral);
 }
 
 // Disparar o cálculo quando frete ou imposto mudarem
@@ -276,7 +279,7 @@ formItem.addEventListener('submit', async function(e) {
     const comprimento = parseLocalFloat(document.getElementById('comprimento').value);
     const comprimentoVenda = parseLocalFloat(document.getElementById('comprimentoVenda').value);
     const pecasPckg = parseInt(document.getElementById('quantidade').value, 10);
-    const pCustom = parseFloat(precoCustomizado.value);
+    const pCustom = window.parseLocalFloat(precoCustomizado.value);
     const pacotes = parseInt(document.getElementById('qtPacotes').value, 10) || 0;
 
     // Lógica multiplicadora (Se tiver pacote, multiplica, senão a quantidade total é igual às peças digitadas)
@@ -428,7 +431,7 @@ function renderizarTabelaRomaneio() {
             <td>${item.pacotes || 0}</td>
             <td>${item.quantidade}</td>
             <td>${item.volumeUnidade.toFixed(4)}</td>
-            <td style="color:var(--accent-color); font-weight:bold;">${formatarMoeda(item.precoUsado)}</td>
+            <td style="color:var(--accent-color); font-weight:bold;">${window.formatarMoeda(item.precoUsado)}</td>
             <td><strong>${item.volumeTotal.toFixed(4)}</strong></td>
             <td class="hide-on-print">
                 <button type="button" class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="editarItemRomaneio(${item.id})" title="Editar"><i class="fa-solid fa-pencil"></i></button>
@@ -540,6 +543,17 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
         romSelectTransporte.value = '';
         romSelectMadeira.value = '';
         precoCustomizado.value = '';
+        if (window.applyMask) {
+            window.applyMask(precoCustomizado, 2);
+            window.applyMask(valorFrete, 2);
+            window.applyMask(valorJurosNf, 2);
+            window.applyMask(document.getElementById('espessura'), 1);
+            window.applyMask(document.getElementById('largura'), 1);
+            window.applyMask(document.getElementById('comprimento'), 2);
+            if (document.getElementById('comprimentoVenda')) {
+                window.applyMask(document.getElementById('comprimentoVenda'), 2);
+            }
+        }
         valorFrete.value = '0.00';
         valorJurosNf.value = '0.00';
         if (document.getElementById('qtPacotes')) document.getElementById('qtPacotes').value = '0';

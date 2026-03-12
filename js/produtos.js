@@ -13,7 +13,7 @@ formProduto.addEventListener('submit', async function(e) {
         natureza: document.getElementById('prodNatureza').value,
         qualidade: document.getElementById('prodQualidade').value,
         classe: document.getElementById('prodClasse').value,
-        preco: parseFloat(document.getElementById('prodPreco').value)
+        preco: window.parseLocalFloat(document.getElementById('prodPreco').value)
     };
 
     try {
@@ -99,4 +99,8 @@ async function renderProdutos() {
     });
 }
 
-renderProdutos();
+document.addEventListener('DOMContentLoaded', () => {
+    const inputPreco = document.getElementById('prodPreco');
+    if (window.applyMask) window.applyMask(inputPreco, 2);
+    renderProdutos();
+});
