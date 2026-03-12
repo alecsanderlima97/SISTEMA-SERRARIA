@@ -848,8 +848,16 @@
                             <input type="text" id="calcCavCliente" placeholder="Ex: Móveis Silva Ltda">
                         </div>
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
-                            <label>Motorista do Caminhão</label>
-                            <input type="text" id="calcCavMotorista" placeholder="Nome do motorista">
+                            <div style="display: grid; grid-template-columns: 1fr 120px; gap: 10px;">
+                                <div class="input-group">
+                                    <label>Motorista do Caminhão</label>
+                                    <input type="text" id="calcCavMotorista" placeholder="Nome do motorista">
+                                </div>
+                                <div class="input-group">
+                                    <label>Placa</label>
+                                    <input type="text" id="calcCavPlaca" placeholder="ABC-1234" style="text-transform: uppercase;">
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Medidas do Caminhão (metros)</label>
@@ -929,6 +937,7 @@
                                 <tr>
                                     <th>Data</th>
                                     <th>Cliente</th>
+                                    <th>Placa</th>
                                     <th>Produto</th>
                                     <th>Qtd</th>
                                     <th>Total</th>
@@ -951,7 +960,7 @@
                     <p><strong>Nº Romaneio:</strong> <span id="printCavRomaneio"></span></p>
                     <p><strong>Data:</strong> <span id="printCavData"></span></p>
                     <p><strong>Cliente/Empresa:</strong> <span id="printCavCliente"></span></p>
-                    <p><strong>Motorista:</strong> <span id="printCavMotorista"></span></p>
+                    <p><strong>Motorista:</strong> <span id="printCavMotorista"></span> | <strong>Placa:</strong> <span id="printCavPlaca"></span></p>
                     <p><strong>Medidas do Caminhão:</strong> <span id="printCavMedidas"></span></p>
                     <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ccc;">
                     <p><strong>Produto:</strong> <span id="printCavTipo"></span></p>

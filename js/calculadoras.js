@@ -79,6 +79,7 @@ async function renderizarHistoricoSubprodutos() {
         tr.innerHTML = `
             <td>${dataFormatada}</td>
             <td title="${v.cliente}">${v.cliente.substring(0, 15)}${v.cliente.length > 15 ? '...' : ''}</td>
+            <td style="font-weight: bold; color: var(--accent-color);">${v.placa || '---'}</td>
             <td><span class="badge" style="background: ${v.tipo === 'Cavaco' ? '#27ae60' : '#f39c12'}; font-size: 0.65rem;">${v.tipo}</span></td>
             <td>${v.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${v.unidade}</td>
             <td>${v.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -92,7 +93,7 @@ async function renderizarHistoricoSubprodutos() {
     });
 
     if (vendas.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; opacity: 0.5;">Nenhum registro encontrado.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; opacity: 0.5;">Nenhum registro encontrado.</td></tr>';
     }
 }
 
@@ -167,6 +168,7 @@ if (btnCalcCavaco) {
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
         const motorista = document.getElementById('calcCavMotorista').value || '---';
+        const placa = document.getElementById('calcCavPlaca').value || '---';
         
         const comp = document.getElementById('calcCavComp').value || '0,00';
         const larg = document.getElementById('calcCavLarg').value || '0,00';
@@ -186,6 +188,7 @@ if (btnCalcCavaco) {
             romaneio: romaneio,
             cliente: cliente,
             motorista: motorista,
+            placa: placa.toUpperCase(),
             medidas: medidas,
             tipo: tipo,
             unidade: unidade,
@@ -202,6 +205,7 @@ if (btnCalcCavaco) {
             document.getElementById('printCavRomaneio').textContent = romaneio;
             document.getElementById('printCavCliente').textContent = cliente;
             document.getElementById('printCavMotorista').textContent = motorista;
+            document.getElementById('printCavPlaca').textContent = placa.toUpperCase();
             document.getElementById('printCavMedidas').textContent = medidas;
 
             document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
