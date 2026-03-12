@@ -714,73 +714,66 @@
                                 <label for="entPlaca">Placa do Caminhão *</label>
                                 <input type="text" id="entPlaca" required placeholder="ABC-1234">
                             </div>
-                            <div class="input-group">
-                                <label for="entData">Data da Conferência</label>
-                                <input type="date" id="entData" required>
-                            </div>
-                        </div>
-
-                        <div class="conferencia-container">
-                            <!-- LADO ESQUERDO -->
-                            <div class="conferencia-col">
-                                <h3>L. ESQ.</h3>
-                                <div class="conferencia-slot">
-                                    <span>1</span>
-                                    <input type="text" id="entAltEsq1" placeholder="0,00">
+                        <div class="conferencia-wrapper">
+                            <!-- BLOCO SUPERIOR: MEDIDAS CAMINHÃO -->
+                            <div class="truck-dims-row">
+                                <div class="input-group">
+                                    <label style="color:var(--accent-color);">ALT. MÉDIA (m)</label>
+                                    <input type="text" id="entAltMediaDisplay" readonly placeholder="0,00" style="font-size: 1.3rem; font-weight: 800;">
                                 </div>
-                                <div class="conferencia-slot">
-                                    <span>2</span>
-                                    <input type="text" id="entAltEsq2" placeholder="0,00">
+                                <div class="input-group">
+                                    <label>LARGURA (m)</label>
+                                    <input type="text" id="entLarg" required placeholder="0,00" style="font-size: 1.3rem; font-weight: 800;">
                                 </div>
-                                <div class="conferencia-slot">
-                                    <span>3</span>
-                                    <input type="text" id="entAltEsq3" placeholder="0,00">
-                                </div>
-                                <div class="conferencia-slot">
-                                    <span>4</span>
-                                    <input type="text" id="entAltEsq4" placeholder="0,00">
+                                <div class="input-group">
+                                    <label>COMPRIMENTO (m)</label>
+                                    <input type="text" id="entComp" required placeholder="0,00" style="font-size: 1.3rem; font-weight: 800;">
                                 </div>
                             </div>
 
-                            <div class="v-divider"></div>
+                            <div class="conferencia-container">
+                                <!-- LADO ESQUERDO -->
+                                <div class="conferencia-col">
+                                    <h3>L. ESQUERDO</h3>
+                                    <div class="conferencia-slot">
+                                        <span>1</span>
+                                        <input type="text" id="entAltEsq1" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>2</span>
+                                        <input type="text" id="entAltEsq2" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>3</span>
+                                        <input type="text" id="entAltEsq3" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>4</span>
+                                        <input type="text" id="entAltEsq4" placeholder="0,00">
+                                    </div>
+                                </div>
 
-                            <!-- LADO DIREITO -->
-                            <div class="conferencia-col">
-                                <h3>L. DIR.</h3>
-                                <div class="conferencia-slot">
-                                    <span>1</span>
-                                    <input type="text" id="entAltDir1" placeholder="0,00">
-                                </div>
-                                <div class="conferencia-slot">
-                                    <span>2</span>
-                                    <input type="text" id="entAltDir2" placeholder="0,00">
-                                </div>
-                                <div class="conferencia-slot">
-                                    <span>3</span>
-                                    <input type="text" id="entAltDir3" placeholder="0,00">
-                                </div>
-                                <div class="conferencia-slot">
-                                    <span>4</span>
-                                    <input type="text" id="entAltDir4" placeholder="0,00">
-                                </div>
-                            </div>
+                                <div class="v-divider"></div>
 
-                            <div class="v-divider"></div>
-
-                            <!-- MEDIDAS CAMINHÃO -->
-                            <div class="conferencia-col">
-                                <h3>CAMINHÃO</h3>
-                                <div class="conferencia-slot truck-dims">
-                                    <span>ALT. Média</span>
-                                    <input type="text" id="entAltMediaDisplay" readonly placeholder="0,00" style="color:var(--accent-color);">
-                                </div>
-                                <div class="conferencia-slot truck-dims">
-                                    <span>LAR.</span>
-                                    <input type="text" id="entLarg" required placeholder="0,00">
-                                </div>
-                                <div class="conferencia-slot truck-dims">
-                                    <span>COMP.</span>
-                                    <input type="text" id="entComp" required placeholder="0,00">
+                                <!-- LADO DIREITO -->
+                                <div class="conferencia-col">
+                                    <h3>L. DIREITO</h3>
+                                    <div class="conferencia-slot">
+                                        <span>1</span>
+                                        <input type="text" id="entAltDir1" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>2</span>
+                                        <input type="text" id="entAltDir2" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>3</span>
+                                        <input type="text" id="entAltDir3" placeholder="0,00">
+                                    </div>
+                                    <div class="conferencia-slot">
+                                        <span>4</span>
+                                        <input type="text" id="entAltDir4" placeholder="0,00">
+                                    </div>
                                 </div>
                             </div>
                         </div>
