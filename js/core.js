@@ -277,6 +277,83 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateStatusBar();
     setInterval(window.updateStatusBar, 1000 * 60); // Atualiza a cada minuto
 
+    // ---- Lógica do Dropdown de Perfil ----
+    const profileTrigger = document.getElementById('profileTrigger');
+    const profileDropdown = document.getElementById('profileDropdown');
+
+    if (profileTrigger && profileDropdown) {
+        profileTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!profileTrigger.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // Ação do Botão Configurações
+    const configBtn = document.querySelector('.dropdown-item[data-action="config"]');
+    if (configBtn) {
+        configBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simular uma ação de configuração (pode ser expandido depois)
+            alert('Menu de configurações em desenvolvimento. Futuramente será possível alterar o tema e imagens aqui.');
+        });
+    }
+
+    // ---- Lógica de Backup (Exportar Dados) ----
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) {
+        btnBackup.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                // Montar o objeto de backup
+                const backupData = {
+                    version: "2.1.0",
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        entradas: await DB.list('entradas') || [],
+                        clientes: await DB.list('clientes') || [],
+                        produtos_madeira: await DB.list('produtos_madeira') || [],
+                        transportes: await DB.list('transportes') || [],
+                        vendas_cavaco: await DB.list('vendas_cavaco') || [],
+                        romaneios: await DB.list('romaneios') || [], // Se houver
+                        estoque: await DB.list('estoque') || []
+                    }
+                };
+
+                // Criar e baixar arquivo JSON
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_vanmarte_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('Backup gerado e salvo com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar backup:', error);
+                alert('Ocorreu um erro ao gerar o backup. Consulte o console para mais detalhes.');
+            }
+        });
+    }
+
+    // Tratamento Logout do Dropdown
+    const btnLogoutDropdown = document.getElementById('btnLogoutDropdown');
+    if(btnLogoutDropdown) {
+        btnLogoutDropdown.addEventListener('click', (e) => {
+            e.preventDefault();
+            DB.logout();
+        });
+    }
+
     // Global: Capitalizar primeira letra de cada palavra em campos de texto (Nomes)
     document.addEventListener('input', (e) => {
         const el = e.target;
@@ -289,7 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const end = el.selectionEnd;
 
                 // Capitalizar a primeira letra de cada palavra
-                // Ex: "joão pedro" -> "João Pedro"
                 let words = val.split(' ');
                 let capitalizedWords = words.map(word => {
                     if (word.length > 0) {
@@ -311,3 +387,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+

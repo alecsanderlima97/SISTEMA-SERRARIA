@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ORQUESTRACS - sistemas integrados</title>
+    <title>Orquestra.cs - sistemas integrados</title>
     <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap"
@@ -47,7 +47,7 @@
             <div class="brand">
                 <div class="logo-wrapper">
                     <div class="logo-circle"></div>
-                    <h2 class="logo-text-brand">rquestracs</h2>
+                    <h2 class="logo-text-brand">rquestra.cs</h2>
                 </div>
                 <span>Sistemas Integrados</span>
             </div>
@@ -63,7 +63,8 @@
                     <li><a href="#" data-target="view-clientes"><i class="fa-solid fa-users"></i> Clientes</a></li>
                     <li><a href="#" data-target="view-transportes"><i class="fa-solid fa-truck"></i> Transportadoras</a>
                     </li>
-                    <li><a href="#" data-target="view-entrada"><i class="fa-solid fa-truck-ramp-box"></i> Conferência de Cargas</a>
+                    <li><a href="#" data-target="view-entrada"><i class="fa-solid fa-truck-ramp-box"></i> Conferência de
+                            Cargas</a>
                     </li>
                     <li><a href="#" data-target="view-cavaco"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/Pó)</a>
                     </li>
@@ -84,11 +85,34 @@
         <!-- CONTEÚDO PRINCIPAL -->
         <main class="main-content">
             <!-- Barra de Status Superior -->
+            <!-- Barra Superior com Perfil Vanmarte -->
             <div id="userStatusBar" class="user-status-bar">
-                <span><i class="fa-solid fa-user"></i> <b id="statusUser">---</b></span>
-                <span id="weather-widget"><i class="fa-solid fa-cloud-sun"></i> --°C</span>
-                <span><i class="fa-solid fa-calendar-days"></i> <span id="statusDate">--/--/----</span></span>
-                <span><i class="fa-solid fa-clock"></i> <span id="statusTime">00:00</span></span>
+                <div class="user-profile-header" id="profileTrigger">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                        <img id="userPhoto" src="" alt="" style="display:none;">
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name" id="statusUser">Vanmarte</span>
+                        <span class="user-role">Administrador</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down toggle-icon"></i>
+
+                    <!-- Dropdown de Perfil (Estilo Studio Valen) -->
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <a href="#" class="dropdown-item" data-action="config"><i class="fa-solid fa-cog"></i> Configurações</a>
+                        <button class="dropdown-item" id="btnBackup"><i class="fa-solid fa-shield-halved"></i> Salvar e Backup</button>
+                        <button class="dropdown-item" onclick="location.reload()"><i class="fa-solid fa-arrows-rotate"></i> Atualizar Sistema</button>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item danger" id="btnLogoutDropdown"><i class="fa-solid fa-sign-out-alt"></i> Sair do Sistema</a>
+                    </div>
+                </div>
+
+                <div class="status-widgets">
+                    <span id="weather-widget"><i class="fa-solid fa-cloud-sun"></i> --°C</span>
+                    <span><i class="fa-solid fa-calendar-days"></i> <span id="statusDate">--/--/----</span></span>
+                    <span><i class="fa-solid fa-clock"></i> <span id="statusTime">00:00</span></span>
+                </div>
             </div>
 
             <!-- ====== HOME DASHBOARD ====== -->
@@ -173,7 +197,8 @@
                             <label for="cliCnpj">CNPJ / CPF</label>
                             <div style="display: flex; gap: 5px; align-items: stretch;">
                                 <input type="text" id="cliCnpj" required style="flex: 1;">
-                                <button type="button" id="btnBuscaCnpj" class="btn-secondary" style="padding: 0 12px; width: 45px;" title="Buscar dados do CNPJ">
+                                <button type="button" id="btnBuscaCnpj" class="btn-secondary"
+                                    style="padding: 0 12px; width: 45px;" title="Buscar dados do CNPJ">
                                     <i class="fa-solid fa-magnifying-glass" style="font-size: 0.8rem;"></i>
                                 </button>
                             </div>
@@ -273,12 +298,17 @@
             </section>
 
             <!-- Modal para Detalhes do Histórico -->
-            <div id="modalDetalhes" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8);">
-                <div class="glass-panel" style="margin: 5% auto; padding: 20px; width: 80%; max-width: 900px; border: 1px solid var(--panel-border); position: relative;">
-                    <span class="close-modal" onclick="fecharModalDetalhes()" style="position: absolute; right: 20px; top: 10px; font-size: 28px; font-weight: bold; cursor: pointer; color: var(--text-muted);">&times;</span>
-                    <h2 style="margin-bottom: 20px;"><i class="fa-solid fa-list-ul"></i> Detalhes da Carga <span id="detalheNumCarga"></span></h2>
-                    
-                    <div id="detalheInfoGeral" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+            <div id="modalDetalhes" class="modal"
+                style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8);">
+                <div class="glass-panel"
+                    style="margin: 5% auto; padding: 20px; width: 80%; max-width: 900px; border: 1px solid var(--panel-border); position: relative;">
+                    <span class="close-modal" onclick="fecharModalDetalhes()"
+                        style="position: absolute; right: 20px; top: 10px; font-size: 28px; font-weight: bold; cursor: pointer; color: var(--text-muted);">&times;</span>
+                    <h2 style="margin-bottom: 20px;"><i class="fa-solid fa-list-ul"></i> Detalhes da Carga <span
+                            id="detalheNumCarga"></span></h2>
+
+                    <div id="detalheInfoGeral"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
                         <!-- JS preenche -->
                     </div>
 
@@ -300,7 +330,7 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div style="text-align: right; margin-top: 20px;">
                         <button class="btn-secondary" onclick="fecharModalDetalhes()">Fechar</button>
                     </div>
@@ -400,7 +430,8 @@
                             <input type="text" id="prodPreco" required placeholder="Ex: 850,00">
                         </div>
                         <div class="form-actions" style="grid-column: 1 / -1; margin-top: 1rem;">
-                            <button type="submit" class="btn-primary" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
+                            <button type="submit" class="btn-primary" style="padding: 0.8rem 2rem;"><i
+                                    class="fa-solid fa-save"></i> Salvar Madeira</button>
                         </div>
                     </form>
                 </div>
@@ -577,7 +608,8 @@
                                 class="fa-solid fa-equals"></i> Calcular Fardo</button>
                         <div style="margin-top:20px; text-align:center;">
                             <div id="resFardoQtd" style="font-size:1.1rem; color:#ccc;">0 peças</div>
-                            <div id="resFardoVol" style="font-size:1.5rem; font-weight:bold; color:var(--accent-color);">0.000 m³</div>
+                            <div id="resFardoVol"
+                                style="font-size:1.5rem; font-weight:bold; color:var(--accent-color);">0.000 m³</div>
                         </div>
                     </div>
 
@@ -774,14 +806,20 @@
                         </div>
 
                         <!-- Resultado em Real-Time -->
-                        <div style="text-align: center; margin-top: 1rem; padding: 10px; background: rgba(44, 201, 144, 0.05); border: 1px dashed var(--accent-color); border-radius: 6px;">
-                            <h4 style="margin: 0; color:#ccc; text-transform: uppercase; font-size: 0.7rem;">Volume Total</h4>
-                            <div id="entResultadoVolume" style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 2px;">0.000 m³</div>
-                            <small id="entInfoMedia" style="color:#777; font-size: 0.65rem;">Média e cubagem calculadas em tempo real.</small>
+                        <div
+                            style="text-align: center; margin-top: 1rem; padding: 10px; background: rgba(44, 201, 144, 0.05); border: 1px dashed var(--accent-color); border-radius: 6px;">
+                            <h4 style="margin: 0; color:#ccc; text-transform: uppercase; font-size: 0.7rem;">Volume
+                                Total</h4>
+                            <div id="entResultadoVolume"
+                                style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 2px;">
+                                0.000 m³</div>
+                            <small id="entInfoMedia" style="color:#777; font-size: 0.65rem;">Média e cubagem calculadas
+                                em tempo real.</small>
                         </div>
 
                         <div style="display: flex; justify-content: center; margin-top: 1rem;">
-                            <button type="submit" class="btn-primary" style="padding: 0.6rem 2rem; font-size: 1rem; border-radius: 30px;">
+                            <button type="submit" class="btn-primary"
+                                style="padding: 0.6rem 2rem; font-size: 1rem; border-radius: 30px;">
                                 <i class="fa-solid fa-save"></i> Registrar Conferência
                             </button>
                         </div>
@@ -840,13 +878,15 @@
                                 </div>
                                 <div class="input-group">
                                     <label>Placa</label>
-                                    <input type="text" id="calcCavPlaca" placeholder="ABC-1234" style="text-transform: uppercase;">
+                                    <input type="text" id="calcCavPlaca" placeholder="ABC-1234"
+                                        style="text-transform: uppercase;">
                                 </div>
                             </div>
                         </div>
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Medidas do Caminhão (metros)</label>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
                                 <div class="input-group">
                                     <label style="font-size: 0.75rem;">Comprimento</label>
                                     <input type="text" id="calcCavComp" placeholder="0,00">
@@ -898,18 +938,23 @@
                             <label>Valor Unitário (R$)</label>
                             <input type="text" id="calcCavValor" placeholder="Ex: 45,00">
                         </div>
-                        <div class="input-group" style="margin-bottom:10px; justify-content: center; align-items: center; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(44, 201, 144, 0.05);">
+                        <div class="input-group"
+                            style="margin-bottom:10px; justify-content: center; align-items: center; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(44, 201, 144, 0.05);">
                             <label style="color: var(--text-muted); font-size: 0.7rem;">TOTAL ESTIMADO</label>
-                            <div id="calcCavTotalFinal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color);">R$ 0,00</div>
+                            <div id="calcCavTotalFinal"
+                                style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color);">R$ 0,00</div>
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; grid-column: span 2; margin-top:15px;">
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; grid-column: span 2; margin-top:15px;">
                             <button type="button" class="btn-primary" style="padding: 12px;" id="btnCalcCavaco">
                                 <i class="fa-solid fa-print"></i> Imprimir
                             </button>
-                            <button type="button" class="btn-primary" style="padding: 12px; background: #27ae60;" id="btnSalvarCavaco">
+                            <button type="button" class="btn-primary" style="padding: 12px; background: #27ae60;"
+                                id="btnSalvarCavaco">
                                 <i class="fa-solid fa-save"></i> Salvar Venda
                             </button>
-                            <button type="button" class="btn-primary" style="padding: 12px; background: var(--sidebar-bg);" id="btnToggleHistoricoCavaco">
+                            <button type="button" class="btn-primary"
+                                style="padding: 12px; background: var(--sidebar-bg);" id="btnToggleHistoricoCavaco">
                                 <i class="fa-solid fa-clock-rotate-left"></i> Histórico
                             </button>
                         </div>
@@ -917,14 +962,17 @@
                 </div>
 
                 <!-- Histórico de Vendas de Subprodutos -->
-                <div id="historicoCavacoContainer" class="glass-panel" style="max-width: 1100px; margin: 20px auto; display: none;">
+                <div id="historicoCavacoContainer" class="glass-panel"
+                    style="max-width: 1100px; margin: 20px auto; display: none;">
                     <div class="section-title" style="margin-bottom: 10px; padding-bottom: 5px;">
-                        <h3 style="font-size: 1rem; color: var(--accent-color); display: flex; align-items: center; gap: 8px;">
+                        <h3
+                            style="font-size: 1rem; color: var(--accent-color); display: flex; align-items: center; gap: 8px;">
                             <i class="fa-solid fa-list-ul"></i> Últimas Vendas
                         </h3>
                     </div>
                     <div class="table-container" style="max-height: 400px; overflow-y: auto;">
-                        <table class="data-table" id="tableHistoricoCavaco" style="font-size: 0.8rem; width: 100%; white-space: nowrap;">
+                        <table class="data-table" id="tableHistoricoCavaco"
+                            style="font-size: 0.8rem; width: 100%; white-space: nowrap;">
                             <thead>
                                 <tr>
                                     <th>Data</th>
@@ -952,7 +1000,8 @@
                     <p><strong>Nº Romaneio:</strong> <span id="printCavRomaneio"></span></p>
                     <p><strong>Data:</strong> <span id="printCavData"></span></p>
                     <p><strong>Cliente/Empresa:</strong> <span id="printCavCliente"></span></p>
-                    <p><strong>Motorista:</strong> <span id="printCavMotorista"></span> | <strong>Placa:</strong> <span id="printCavPlaca"></span></p>
+                    <p><strong>Motorista:</strong> <span id="printCavMotorista"></span> | <strong>Placa:</strong> <span
+                            id="printCavPlaca"></span></p>
                     <p><strong>Medidas do Caminhão:</strong> <span id="printCavMedidas"></span></p>
                     <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ccc;">
                     <p><strong>Produto:</strong> <span id="printCavTipo"></span></p>
@@ -1018,7 +1067,8 @@
                                     <select id="romSelectCliente" required>
                                         <option value="">-- Escolha um Cliente --</option>
                                     </select>
-                                    <small style="color:var(--accent-color); font-size: 0.75rem;">O frete antigo será puxado se houver.</small>
+                                    <small style="color:var(--accent-color); font-size: 0.75rem;">O frete antigo será
+                                        puxado se houver.</small>
                                 </div>
                                 <div class="input-group">
                                     <label>Transportadora (Fretista) *</label>
@@ -1040,7 +1090,8 @@
                                 </div>
                                 <div class="input-group">
                                     <label>Data da Expedição</label>
-                                    <input type="date" id="dataCarga" required title="Data Atual Padrão" style="font-weight:bold; color:var(--accent-color);">
+                                    <input type="date" id="dataCarga" required title="Data Atual Padrão"
+                                        style="font-weight:bold; color:var(--accent-color);">
                                 </div>
                                 <div class="input-group">
                                     <label>Valor Acordado Frete (R$/m³)</label>
@@ -1089,7 +1140,8 @@
                                             <input type="checkbox" id="toggleFardo">
                                             <span class="slider"></span>
                                         </label>
-                                        <span style="font-weight: 600; color: var(--primary-color);">Usar Calculadora de Fardo</span>
+                                        <span style="font-weight: 600; color: var(--primary-color);">Usar Calculadora de
+                                            Fardo</span>
                                     </div>
                                     <div id="camposFardo" class="grid-form" style="display: none;">
                                         <div class="input-group">
@@ -1132,7 +1184,8 @@
                                     <button type="submit" class="btn-primary" id="btnSalvarItem" style="width: 100%;">
                                         <i class="fa-solid fa-plus"></i> Adicionar à Carga
                                     </button>
-                                    <button type="button" class="btn-secondary" id="btnCancelarEdicao" style="display: none; margin-top: 5px; width: 100%;">
+                                    <button type="button" class="btn-secondary" id="btnCancelarEdicao"
+                                        style="display: none; margin-top: 5px; width: 100%;">
                                         Cancelar Edição
                                     </button>
                                 </div>
@@ -1192,8 +1245,10 @@
                                     </tbody>
                                     <tfoot id="resumoTabela">
                                         <tr>
-                                            <td colspan="2" class="text-right"><strong>TOTAL CARGA (MOTORISTA):</strong></td>
-                                            <td id="totalPacotes" style="color:var(--primary-color);"><strong>0 pct</strong></td>
+                                            <td colspan="2" class="text-right"><strong>TOTAL CARGA (MOTORISTA):</strong>
+                                            </td>
+                                            <td id="totalPacotes" style="color:var(--primary-color);"><strong>0
+                                                    pct</strong></td>
                                             <td id="totalQtd"><strong>0 pçs</strong></td>
                                             <td>-</td>
                                             <td>-</td>
@@ -1201,8 +1256,10 @@
                                             <td class="hide-on-print"></td>
                                         </tr>
                                         <tr style="background: rgba(52, 152, 219, 0.1);">
-                                            <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL VENDA (FATURAMENTO CLIENTE):</strong></td>
-                                            <td class="total-highlight"><strong id="totalVolumeVenda" style="color:#3498db;">0.000 m³</strong></td>
+                                            <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL
+                                                    VENDA (FATURAMENTO CLIENTE):</strong></td>
+                                            <td class="total-highlight"><strong id="totalVolumeVenda"
+                                                    style="color:#3498db;">0.000 m³</strong></td>
                                             <td class="hide-on-print"></td>
                                         </tr>
                                         <tr class="sumario-financeiro">
@@ -1221,8 +1278,12 @@
                                             <td class="hide-on-print"></td>
                                         </tr>
                                         <tr class="sumario-financeiro" style="background: rgba(44, 201, 144, 0.1);">
-                                            <td colspan="6" class="text-right" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">VALOR TOTAL DO ROMANEIO:</td>
-                                            <td id="resValorTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">R$ 0,00</td>
+                                            <td colspan="6" class="text-right"
+                                                style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
+                                                VALOR TOTAL DO ROMANEIO:</td>
+                                            <td id="resValorTotal"
+                                                style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
+                                                R$ 0,00</td>
                                             <td class="hide-on-print"></td>
                                         </tr>
                                     </tfoot>
@@ -1234,8 +1295,10 @@
                                     <i class="fa-solid fa-arrow-left"></i> Ajustar Itens
                                 </button>
                                 <div style="display: flex; gap: 10px;">
-                                    <button id="btnPrint" class="btn-secondary"><i class="fa-solid fa-print"></i> Visualizar/Imprimir PDF</button>
-                                    <button id="btnFinalizar" class="btn-primary" style="background:#2cc990; color:#0d1117;">
+                                    <button id="btnPrint" class="btn-secondary"><i class="fa-solid fa-print"></i>
+                                        Visualizar/Imprimir PDF</button>
+                                    <button id="btnFinalizar" class="btn-primary"
+                                        style="background:#2cc990; color:#0d1117;">
                                         <i class="fa-solid fa-check-double"></i> Finalizar e Salvar Carga
                                     </button>
                                 </div>
@@ -1250,7 +1313,8 @@
                             <p><strong>NOME/RAZÃO SOCIAL:</strong> <span id="printNomeCli"></span></p>
                             <p><strong>CNPJ/CPF:</strong> <span id="printDocCli"></span></p>
                             <p><strong>ENDEREÇO:</strong> <span id="printEndCli"></span></p>
-                            <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span id="printFoneCli"></span></p>
+                            <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span
+                                    id="printFoneCli"></span></p>
                         </div>
                         <div class="nf-transport-box">
                             <div class="nf-section-title">DADOS DO TRANSPORTE / CARGA</div>
@@ -1279,9 +1343,10 @@
                 <div class="glass-panel">
                     <div class="section-title">
                         <h2><i class="fa-solid fa-wallet"></i> Relatório Financeiro Consolidado</h2>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">Resumo mensal de faturamento e vendas.</p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Resumo mensal de faturamento e vendas.
+                        </p>
                     </div>
-                    
+
                     <div class="grid-form" style="margin-bottom: 25px;">
                         <div class="input-group">
                             <label>Mês / Ano</label>
@@ -1295,17 +1360,23 @@
                     </div>
 
                     <div class="grid-form">
-                        <div class="glass-panel" style="background: rgba(44, 201, 144, 0.1); border: 1px solid var(--accent-color);">
+                        <div class="glass-panel"
+                            style="background: rgba(44, 201, 144, 0.1); border: 1px solid var(--accent-color);">
                             <div style="font-size: 0.8rem; color: var(--text-muted);">MADEIRA SERRADA (ROMANEIOS)</div>
-                            <div id="finTotalMadeira" style="font-size: 1.8rem; font-weight: bold; color: var(--accent-color);">R$ 0,00</div>
+                            <div id="finTotalMadeira"
+                                style="font-size: 1.8rem; font-weight: bold; color: var(--accent-color);">R$ 0,00</div>
                         </div>
-                        <div class="glass-panel" style="background: rgba(243, 156, 18, 0.1); border: 1px solid #f39c12;">
+                        <div class="glass-panel"
+                            style="background: rgba(243, 156, 18, 0.1); border: 1px solid #f39c12;">
                             <div style="font-size: 0.8rem; color: var(--text-muted);">SUBPRODUTOS (CAVACO/PÓ)</div>
-                            <div id="finTotalSubprodutos" style="font-size: 1.8rem; font-weight: bold; color: #f39c12;">R$ 0,00</div>
+                            <div id="finTotalSubprodutos" style="font-size: 1.8rem; font-weight: bold; color: #f39c12;">
+                                R$ 0,00</div>
                         </div>
-                        <div class="glass-panel" style="background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; grid-column: span 2;">
+                        <div class="glass-panel"
+                            style="background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; grid-column: span 2;">
                             <div style="font-size: 0.9rem; color: var(--text-muted);">FATURAMENTO TOTAL DO PERÍODO</div>
-                            <div id="finTotalGeral" style="font-size: 2.2rem; font-weight: bold; color: #3498db;">R$ 0,00</div>
+                            <div id="finTotalGeral" style="font-size: 2.2rem; font-weight: bold; color: #3498db;">R$
+                                0,00</div>
                         </div>
                     </div>
 
@@ -1330,6 +1401,29 @@
                     </div>
                 </div>
             </section>
+            <!-- RODAPÉ INFORMATIVO -->
+            <footer>
+                <div class="footer-content">
+                    <div class="footer-column">
+                        <h4>Contato & Suporte</h4>
+                        <p><i class="fa-solid fa-phone"></i> (55) 15 99999-9999</p>
+                        <p><i class="fa-solid fa-envelope"></i> suporte@orquestracs.com</p>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Links Rápidos</h4>
+                        <a href="#" data-target="view-dashboard">Dashboard</a>
+                        <a href="#" data-target="view-romaneio">Gerar Romaneio</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Sobre o Sistema</h4>
+                        <p><i class="fa-solid fa-code"></i> Versão 2.1.0</p>
+                        <p><i class="fa-solid fa-copyright"></i> 2026 Vanmarte. Todos os direitos reservados.</p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    Desenvolvido por <b>Orquestra.cs</b> Sistemas Integrados
+                </div>
+            </footer>
         </main>
     </div>
 

@@ -104,7 +104,7 @@ body {
     left: 55%;
     width: 500px;
     height: 250px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%233b82f6;stop-opacity:0.04' /%3E%3Cstop offset='100%25' style='stop-color:%232563eb;stop-opacity:0.04' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='60' cy='100' r='35' fill='none' stroke='url(%23grad)' stroke-width='16' opacity='0.3' /%3E%3Ctext x='100' y='115' font-family='Outfit, sans-serif' font-weight='800' font-size='56' fill='white' opacity='0.03'%3ERQUESTRACS%3C/text%3E%3Ctext x='110' y='145' font-family='Inter, sans-serif' font-weight='500' font-size='14' fill='white' opacity='0.02' letter-spacing='6'%3ESISTEMAS INTEGRADOS%3C/text%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%233b82f6;stop-opacity:0.04' /%3E%3Cstop offset='100%25' style='stop-color:%232563eb;stop-opacity:0.04' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='60' cy='100' r='35' fill='none' stroke='url(%23grad)' stroke-width='16' opacity='0.3' /%3E%3Ctext x='100' y='115' font-family='Outfit, sans-serif' font-weight='800' font-size='56' fill='white' opacity='0.03'%3ERQUESTRA.CS%3C/text%3E%3Ctext x='110' y='145' font-family='Inter, sans-serif' font-weight='500' font-size='14' fill='white' opacity='0.02' letter-spacing='6'%3ESISTEMAS INTEGRADOS%3C/text%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
     transform: translate(-50%, -50%);
@@ -499,45 +499,215 @@ input::placeholder {
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Barra Superior com Perfil Vanmarte (Estilo Studio Valen) */
 .user-status-bar {
     display: flex;
-    gap: 15px;
-    padding: 4px 12px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 0 0 0 10px;
-    font-size: 0.7rem;
-    color: var(--text-muted);
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 15px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 0 0 0 16px;
+    font-size: 0.8rem;
+    color: var(--text-color);
     position: absolute;
     top: 0;
     right: 0;
-    z-index: 100;
+    z-index: 1000;
     border-bottom: 1px solid var(--panel-border);
     border-left: 1px solid var(--panel-border);
+    min-width: 450px;
 }
 
-.user-status-bar span {
+.user-profile-header {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 12px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-.user-status-bar b {
-    color: var(--accent-color);
+.user-profile-header:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
-#weather-widget {
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #fff;
-    background: rgba(59, 130, 246, 0.2);
-    padding: 2px 8px;
-    border-radius: 6px;
+    font-size: 1.1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.user-role {
+    font-size: 0.65rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.status-widgets {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.status-widgets span {
     display: flex;
     align-items: center;
     gap: 6px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-#weather-widget i {
-    color: #3b82f6;
+/* Dropdown de Perfil */
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 220px;
+    background: rgba(15, 20, 25, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+    z-index: 1001;
+    display: none; /* Controlado via JS */
+    animation: dropdownFade 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-dropdown.show {
+    display: block;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    border: none;
+    background: transparent;
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-main);
+}
+
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    padding-left: 18px;
+}
+
+.dropdown-item.danger:hover {
+    background: rgba(248, 81, 73, 0.1);
+    color: #ff7b72;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 6px 0;
+}
+
+/* ====== RODAPÉ INFORMATIVO ====== */
+footer {
+    padding: 2rem 0;
+    margin-top: 3rem;
+    border-top: 1px solid var(--panel-border);
+    background: rgba(0, 0, 0, 0.2);
+    width: 100%;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer-column h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.footer-column p, .footer-column a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    transition: color 0.2s;
+}
+
+.footer-column a:hover {
+    color: #fff;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 2rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 2rem;
+}
+
+.footer-bottom b {
+    color: var(--primary-color);
 }
 
 /* ÁREA DE CONTEÚDO (MAIN) */
