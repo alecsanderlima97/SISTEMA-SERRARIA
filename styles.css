@@ -23,6 +23,57 @@
     --font-heading: 'Outfit', sans-serif;
 }
 
+body[data-theme="dark"] {
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --sidebar-bg: #111827; 
+    --bg-color: #0d1117;
+    --panel-bg: rgba(255, 255, 255, 0.03); 
+    --panel-border: rgba(255, 255, 255, 0.05);
+    --text-color: #f1f5f9;
+    --text-muted: #94a3b8;
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --accent-color: #10b981; 
+}
+
+body[data-theme="light"] {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --sidebar-bg: #f8fafc; 
+    --bg-color: #e2e8f0;
+    --panel-bg: rgba(255, 255, 255, 0.9); 
+    --panel-border: rgba(0, 0, 0, 0.1);
+    --text-color: #0f172a;
+    --text-muted: #475569;
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --accent-color: #059669; 
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="light"] .sidebar nav ul li a i {
+    color: #64748b;
+}
+
+body[data-theme="light"] .logo-text-brand {
+    color: #0f172a !important;
+}
+
+body[data-theme="light"] input, body[data-theme="light"] select {
+    background: #fff;
+    color: #333;
+    border: 1px solid #cbd5e1;
+}
+
+body[data-theme="dark"] .background-elements,
+body[data-theme="light"] .background-elements,
+body[data-theme="dark"] .leaves-container,
+body[data-theme="light"] .leaves-container {
+    display: none; /* Em dark e light, desativa animações rústicas */
+}
+
 /* =========================================
    RESETS E CONFIGURAÇÕES GERAIS
    ========================================= */

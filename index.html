@@ -49,7 +49,7 @@
                     <div class="logo-circle"></div>
                     <h2 class="logo-text-brand">rquestra.cs</h2>
                 </div>
-                <span>Sistemas Integrados</span>
+                <span>Sistemas Personalizados</span>
             </div>
             <nav>
                 <ul>
@@ -1401,13 +1401,57 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ====== CONFIGURAÇÕES ====== -->
+            <section id="view-configuracoes" class="view-section" style="display: none;">
+                <div class="main-header">
+                    <h1><i class="fa-solid fa-cog"></i> Configurações</h1>
+                    <p>Personalize seu perfil e a aparência do sistema</p>
+                </div>
+
+                <div class="glass-panel" style="max-width: 600px; margin: 0 auto; margin-bottom: 2rem;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-user-pen"></i> Perfil do Usuário</h2>
+                    </div>
+                    <form id="formConfig" class="grid-form">
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="confNome">Nome Exibido</label>
+                            <input type="text" id="confNome" value="Vanmarte" required>
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="confFoto">URL da Foto de Perfil (Opcional)</label>
+                            <input type="text" id="confFoto" placeholder="https://exemplo.com/suafoto.jpg">
+                        </div>
+                        
+                        <div class="section-title" style="grid-column: span 2; margin-top: 1.5rem;">
+                            <h2><i class="fa-solid fa-palette"></i> Aparência</h2>
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="confTema">Tema do Sistema</label>
+                            <select id="confTema">
+                                <option value="rustico">Serraria / Padrão (Fundo Animado)</option>
+                                <option value="dark">Modo Escuro (Minimalista)</option>
+                                <option value="light">Modo Claro (Documento)</option>
+                            </select>
+                        </div>
+                        
+                        <div style="grid-column: span 2; display: flex; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="button" id="btnSalvarConfig" class="btn-primary" style="background:#2cc990;">
+                                <i class="fa-solid fa-save"></i> Salvar e Aplicar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
             <!-- RODAPÉ INFORMATIVO -->
             <footer>
                 <div class="footer-content">
                     <div class="footer-column">
                         <h4>Contato & Suporte</h4>
-                        <p><i class="fa-solid fa-phone"></i> (55) 15 99999-9999</p>
+                        <p><i class="fa-solid fa-phone"></i> 55 15 99847-8705</p>
                         <p><i class="fa-solid fa-envelope"></i> suporte@orquestracs.com</p>
+                        <p><i class="fa-brands fa-instagram"></i> @Orquestra.cs</p>
                     </div>
                     <div class="footer-column">
                         <h4>Links Rápidos</h4>
@@ -1421,7 +1465,7 @@
                     </div>
                 </div>
                 <div class="footer-bottom">
-                    Desenvolvido por <b>Orquestra.cs</b> Sistemas Integrados
+                    Desenvolvido por <b>Orquestra.cs</b> Sistemas Personalizados
                 </div>
             </footer>
         </main>

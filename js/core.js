@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateStatusBar();
     setInterval(window.updateStatusBar, 1000 * 60); // Atualiza a cada minuto
 
-    // ---- Lógica do Dropdown de Perfil ----
+    // ---- Lógica do Dropdown de Perfil & Configurações ----
     const profileTrigger = document.getElementById('profileTrigger');
     const profileDropdown = document.getElementById('profileDropdown');
 
@@ -295,15 +295,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Ação do Botão Configurações
+    // Carregar configurações do usuário na inicialização
+    function carregarConfiguracoes() {
+        const configUser = JSON.parse(localStorage.getItem('valen_user_settings')) || {
+            nome: 'Vanmarte',
+            foto: '',
+            tema: 'rustico'
+        };
+
+        // Aplica o tema
+        document.body.setAttribute('data-theme', configUser.tema);
+
+        // Aplica usuário na barra e no formulário
+        const statusUser = document.getElementById('statusUser');
+        const confNome = document.getElementById('confNome');
+        const userPhoto = document.getElementById('userPhoto');
+        const userIcon = document.querySelector('.user-avatar i');
+        const confFoto = document.getElementById('confFoto');
+        const confTema = document.getElementById('confTema');
+
+        if(statusUser) statusUser.textContent = configUser.nome;
+        if(confNome) confNome.value = configUser.nome;
+        
+        if (configUser.foto && userPhoto) {
+            userPhoto.src = configUser.foto;
+            userPhoto.style.display = 'block';
+            if(userIcon) userIcon.style.display = 'none';
+        } else if (userPhoto) {
+            userPhoto.style.display = 'none';
+            if(userIcon) userIcon.style.display = 'block';
+        }
+        if(confFoto) confFoto.value = configUser.foto || '';
+
+        if(confTema) confTema.value = configUser.tema;
+    }
+
+    // Ação do Botão Configurações (Abre tela e fecha drop)
     const configBtn = document.querySelector('.dropdown-item[data-action="config"]');
     if (configBtn) {
         configBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Simular uma ação de configuração (pode ser expandido depois)
-            alert('Menu de configurações em desenvolvimento. Futuramente será possível alterar o tema e imagens aqui.');
+            profileDropdown.classList.remove('show');
+            
+            // Navega para aba
+            document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
+            
+            const viewConfig = document.getElementById('view-configuracoes');
+            if(viewConfig) viewConfig.style.display = 'block';
         });
     }
+
+    // Ação de Salvar Configurações
+    const btnSalvarConfig = document.getElementById('btnSalvarConfig');
+    if (btnSalvarConfig) {
+        btnSalvarConfig.addEventListener('click', () => {
+            const confNome = document.getElementById('confNome');
+            const confFoto = document.getElementById('confFoto');
+            const confTema = document.getElementById('confTema');
+            
+            const newConfig = {
+                nome: confNome ? confNome.value : 'Vanmarte',
+                foto: confFoto ? confFoto.value : '',
+                tema: confTema ? confTema.value : 'rustico'
+            };
+
+            localStorage.setItem('valen_user_settings', JSON.stringify(newConfig));
+            carregarConfiguracoes();
+            alert('Configurações salvas e aplicadas com sucesso!');
+        });
+    }
+
+    // Chama o carregamento na inicialização
+    carregarConfiguracoes();
 
     // ---- Lógica de Backup (Exportar Dados) ----
     const btnBackup = document.getElementById('btnBackup');
