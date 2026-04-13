@@ -1856,4 +1856,251 @@ input:checked + .slider:before {
     font-size: 0.95rem;
     margin-top: 10px;
 }
+
+/* =========================================
+   EXCEL-LIKE ROMANEIO LAYOUT (VIEW & PRINT)
+   ========================================= */
+.excel-layout {
+    font-family: 'Arial', sans-serif;
+    color: #000;
+    background: #fff;
+    padding: 20px;
+    font-size: 13px;
+    width: 100%;
+}
+.excel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+.excel-header-left {
+    display: flex;
+    flex-direction: column;
+}
+.excel-header-left h1 {
+    color: #004b87;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+}
+.excel-header-left h2 {
+    color: #004b87;
+    margin: 0;
+    font-size: 11px;
+    font-style: italic;
+    font-weight: normal;
+}
+.excel-box-title {
+    border: 3px solid #000;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 3px 20px;
+    margin-top: 5px;
+    max-width: fit-content;
+}
+.excel-header-center h1 {
+    font-size: 32px;
+    font-weight: bold;
+    text-decoration: underline;
+    margin: 0;
+    padding-top: 10px;
+}
+.excel-header-right table {
+    width: auto;
+    border-collapse: collapse;
+}
+.excel-header-right td {
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.excel-product-group {
+    margin-bottom: 0px;
+}
+.excel-product-title-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #a30000; /* Linha divisória fina parecida com a imagem */
+}
+.excel-product-title {
+    background: #eaf1dd; /* MAD 1 default color */
+    border: 1px solid #000;
+    padding: 2px 40px 2px 5px;
+    font-weight: bold;
+    font-size: 14px;
+}
+.excel-product-title.alt {
+    background: #e6b8b7; /* MAD 2B vermelho claro */
+}
+.excel-item-row {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 10px;
+    padding-left: 50px;
+}
+.excel-measures-box {
+    border: 1px solid #000;
+    display: flex;
+    min-width: 140px;
+    text-align: center;
+}
+.excel-measure-cell {
+    flex: 1;
+    color: red;
+    padding: 2px;
+    font-weight: normal;
+}
+.excel-measure-cell:not(:last-child) {
+    border-right: 1px solid #000;
+}
+.excel-arrow {
+    margin: 0 10px;
+    font-family: monospace;
+}
+.excel-pieces-info {
+    font-weight: bold;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+}
+.excel-pieces-info div { margin-bottom: 2px; }
+.excel-pieces-main { display: flex; justify-content: space-between; font-size:14px; }
+
+.excel-vol-box {
+    border: 1px solid #000;
+    display: flex;
+    margin-left: 20px;
+}
+.excel-vol-cell-red {
+    color: red;
+    padding: 2px 10px;
+    border-right: 1px solid #000;
+}
+.excel-vol-cell-unit {
+    padding: 2px 5px;
+    font-weight: bold;
+}
+.excel-group-total {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    color: red;
+    font-weight: bold;
+    margin-top: 5px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+/* Tabela de resumo */
+.excel-summary-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.excel-summary-qtd {
+    color: red;
+    font-weight: bold;
+    font-style: italic;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+.excel-summary-table {
+    width: 60%;
+    min-width: 400px;
+    border-collapse: collapse;
+}
+.excel-summary-table td, .excel-summary-table th {
+    border: 1px solid #000;
+    padding: 2px 5px;
+    font-size: 14px;
+    text-align: right;
+}
+.excel-summary-table th { text-align: left; }
+.excel-st-blue { background: #dce6f1; }
+.excel-st-yellow { background: #ffff00; }
+.excel-st-green { background: #eaf1dd; }
+.excel-st-red { background: #e6b8b7; }
+
+/* Totais no fim */
+.excel-totals-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    font-size: 14px;
+    font-weight: bold;
+}
+.excel-totals-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 40%;
+}
+.excel-tot-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.excel-tot-label { min-width: 80px; font-style: italic; }
+.excel-tot-box {
+    border: 2px solid #000;
+    min-width: 150px;
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 5px;
+}
+.excel-tot-box.green-box { background: #eaf1dd; }
+
+.excel-payment-box {
+    border: 3px solid #000;
+    width: 50%;
+}
+.excel-payment-box > div {
+    border-bottom: 2px solid #000;
+    padding: 3px 5px;
+    color: red;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+}
+.excel-payment-box > div:last-child {
+    border-bottom: none;
+}
+
+.excel-frete-bottom {
+    margin-top: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: red;
+}
+.excel-frete-bottom span { font-size: 14px; }
+.excel-frete-black { color: #000; }
+.excel-frete-bottom-line {
+    border-bottom: 1px solid #000;
+    min-width: 100px;
+}
+
+@media print {
+    body { background: #fff !important; }
+    #view-romaneio .hide-on-print,
+    .sidebar, .user-status-bar, footer, .background-elements, .leaves-container {
+        display: none !important;
+    }
+    .main-content {
+        padding: 0;
+        overflow: visible;
+        margin: 0;
+    }
+    .excel-layout {
+        padding: 0;
+        background: transparent;
+    }
+}
+
 

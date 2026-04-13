@@ -1020,20 +1020,12 @@
             <section id="view-romaneio" class="view-section" style="display: none;">
                 <div class="app-container" style="padding:0; max-width:100%;">
 
-                    <!-- Header de Impressão (Oculto na tela) -->
-                    <header class="nf-header show-on-print" style="display:none;">
-                        <div class="nf-emitter-box">
-                            <h1>COMERCIO DE MADEIRAS VANMARTE</h1>
-                            <p>Indústria e Comércio de Madeiras em Geral</p>
-                            <p>Escritório: Rua das Madeiras, 1000 - Distrito Industrial</p>
-                            <p>Fone: (00) 0000-0000 | CNPJ: 00.000.000/0001-00</p>
-                        </div>
-                        <div class="nf-number-box">
-                            <span class="nf-label">ROMANEIO DE CARGA</span>
-                            <span class="nf-number" id="printNumeroCarga">---</span>
-                            <span class="nf-date" id="printDataCarga">--/--/----</span>
-                        </div>
-                    </header>
+                    <!-- Variables internally used for print scripts, kept hidden -->
+                    <div id="hidden-print-data" style="display:none;">
+                        <span id="printNumeroCarga">---</span>
+                        <span id="printDataCarga">--/--/----</span>
+                    </div>
+
 
                     <div class="main-header hide-on-print">
                         <h1><i class="fa-solid fa-file-invoice"></i> Emissão de Romaneio</h1>
@@ -1226,71 +1218,11 @@
                                 <h2><i class="fa-solid fa-check-double"></i> Passo 3: Revisão e Finalização</h2>
                             </div>
 
-                            <div class="table-container">
-                                <table id="tabelaRomaneio">
-                                    <thead>
-                                        <tr>
-                                            <th>Descrição do Produto</th>
-                                            <th>Medidas (E x L x C)</th>
-                                            <th>Pct</th>
-                                            <th>Peças</th>
-                                            <th>Volume Unit</th>
-                                            <th>Vlr. Unit (R$)</th>
-                                            <th>Vlr. Total (R$)</th>
-                                            <th class="hide-on-print">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabelaBody">
-                                        <!-- Linhas geradas via JS -->
-                                    </tbody>
-                                    <tfoot id="resumoTabela">
-                                        <tr>
-                                            <td colspan="2" class="text-right"><strong>TOTAL CARGA (MOTORISTA):</strong>
-                                            </td>
-                                            <td id="totalPacotes" style="color:var(--primary-color);"><strong>0
-                                                    pct</strong></td>
-                                            <td id="totalQtd"><strong>0 pçs</strong></td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td class="total-highlight"><strong id="totalVolume">0.000 m³</strong></td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                        <tr style="background: rgba(52, 152, 219, 0.1);">
-                                            <td colspan="6" class="text-right"><strong style="color:#3498db;">TOTAL
-                                                    VENDA (FATURAMENTO CLIENTE):</strong></td>
-                                            <td class="total-highlight"><strong id="totalVolumeVenda"
-                                                    style="color:#3498db;">0.000 m³</strong></td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                        <tr class="sumario-financeiro">
-                                            <td colspan="6" class="text-right">VALOR BRUTO DAS MERCADORIAS:</td>
-                                            <td id="resValorMadeira">R$ 0,00</td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                        <tr class="sumario-financeiro">
-                                            <td colspan="6" class="text-right">+ SERVIÇO DE FRETE (TERCEIRIZADO):</td>
-                                            <td id="resValorFrete">R$ 0,00</td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                        <tr class="sumario-financeiro">
-                                            <td colspan="6" class="text-right">+ ACRÉSCIMOS / JUROS N.F:</td>
-                                            <td id="resValorImposto">R$ 0,00</td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                        <tr class="sumario-financeiro" style="background: rgba(44, 201, 144, 0.1);">
-                                            <td colspan="6" class="text-right"
-                                                style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                                VALOR TOTAL DO ROMANEIO:</td>
-                                            <td id="resValorTotal"
-                                                style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                                R$ 0,00</td>
-                                            <td class="hide-on-print"></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                            <div id="excel-romaneio-container" class="excel-layout">
+                                <!-- O layout excel será renderizado aqui pelo JS -->
                             </div>
 
-                            <div class="step-actions">
+                            <div class="step-actions hide-on-print">
                                 <button type="button" class="btn-secondary" onclick="goToStep(2)">
                                     <i class="fa-solid fa-arrow-left"></i> Ajustar Itens
                                 </button>
@@ -1304,36 +1236,6 @@
                                 </div>
                             </div>
                         </section>
-                    </div>
-
-                    <!-- Dados Destinatário e Transporte (Apenas Impressão) -->
-                    <div class="nf-details-container show-on-print" style="display:none;">
-                        <div class="nf-client-box">
-                            <div class="nf-section-title">DADOS DO DESTINATÁRIO</div>
-                            <p><strong>NOME/RAZÃO SOCIAL:</strong> <span id="printNomeCli"></span></p>
-                            <p><strong>CNPJ/CPF:</strong> <span id="printDocCli"></span></p>
-                            <p><strong>ENDEREÇO:</strong> <span id="printEndCli"></span></p>
-                            <p><strong>CIDADE/UF:</strong> <span id="printCidCli"></span> | <strong>FONE:</strong> <span
-                                    id="printFoneCli"></span></p>
-                        </div>
-                        <div class="nf-transport-box">
-                            <div class="nf-section-title">DADOS DO TRANSPORTE / CARGA</div>
-                            <p><strong>FRETISTA/EMP:</strong> <span id="printFretista">---</span></p>
-                            <p><strong>PLACA/VEÍCULO:</strong> <span id="printPlaca">---</span></p>
-                            <p><strong>FORMA PGTO:</strong> <span id="printPagam">À Vista</span></p>
-                        </div>
-                    </div>
-
-                    <!-- Assinatura visível apenas na impressão -->
-                    <div class="signatures show-on-print">
-                        <div class="signature-box">
-                            <div class="line"></div>
-                            <p>COMERCIO DE MADEIRAS VANMARTE<br>Entregador</p>
-                        </div>
-                        <div class="signature-box">
-                            <div class="line"></div>
-                            <p>Assinatura do Recebedor<br>Data e Hora de Recebimento</p>
-                        </div>
                     </div>
 
                 </div>

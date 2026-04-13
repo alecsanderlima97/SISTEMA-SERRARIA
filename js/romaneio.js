@@ -398,63 +398,254 @@ window.removerItemRomaneio = function(id) {
 window.editarItemRomaneio = exporParaEdicao;
 
 function renderizarTabelaRomaneio() {
-    tabelaBody.innerHTML = '';
+    const excelContainer = document.getElementById('excel-romaneio-container');
+    if (excelContainer) excelContainer.innerHTML = '';
     if (tabelaBodySimples) tabelaBodySimples.innerHTML = '';
 
     if (itensRomaneio.length === 0) {
-        const emptyState = `
-            <tr>
-                <td colspan="8" class="empty-state">
-                    <i class="fa-solid fa-list-check"></i><br>
-                    Nenhum item adicionado no momento.
-                </td>
-            </tr>
-        `;
-        tabelaBody.innerHTML = emptyState;
-        if (tabelaBodySimples) tabelaBodySimples.innerHTML = emptyState.replace('colspan="8"', 'colspan="5"');
+        if(excelContainer) {
+            excelContainer.innerHTML = `<div class="empty-state" style="text-align: center; padding: 40px; color: #acc8fa;">
+                <i class="fa-solid fa-list-check" style="font-size:30px;"></i><br>Nenhum item adicionado no momento.
+            </div>`;
+        }
+        if (tabelaBodySimples) {
+            tabelaBodySimples.innerHTML = `<tr><td colspan="5" class="empty-state" style="text-align:center;">Nenhum item adicionado.</td></tr>`;
+        }
         recalcularTotais();
         return;
     }
 
+    // Tabela Simples (Passo 2)
     itensRomaneio.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        const medidasTexto = `${item.espessura} cm x ${item.largura} cm x ${item.comprimento.toFixed(1)} m`;
-
-        // Nota de Venda Customizada
-        const temMedidaVenda = item.comprimentoVenda > 0 && item.comprimentoVenda !== item.comprimento;
-        const notaVenda = temMedidaVenda ? 
-            `<span class="nota-venda">Venda: ${item.volumeTotalVenda.toFixed(3)} m³ c/ ${item.comprimentoVenda.toFixed(2)}m</span>` : '';
-
-        tr.innerHTML = `
-            <td><strong>#${index + 1}</strong> - ${item.nomeProduto}</td>
-            <td>${medidasTexto}${notaVenda}</td>
-            <td>${item.pacotes || 0}</td>
-            <td>${item.quantidade}</td>
-            <td>${item.volumeUnidade.toFixed(4)}</td>
-            <td style="color:var(--accent-color); font-weight:bold;">${window.formatarMoeda(item.precoUsado)}</td>
-            <td><strong>${item.volumeTotal.toFixed(4)}</strong></td>
-            <td class="hide-on-print">
-                <button type="button" class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="editarItemRomaneio(${item.id})" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                <button type="button" class="btn-danger" style="padding: 5px;" onclick="removerItemRomaneio(${item.id})" title="Remover"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        `;
-        tabelaBody.appendChild(tr);
-
-        // Tabela Simples (Passo 2)
         if (tabelaBodySimples) {
             const trSimples = document.createElement('tr');
+            const medidasTexto = `${item.espessura} cm x ${item.largura} cm x ${item.comprimento.toFixed(1)} m`;
             trSimples.innerHTML = `
                 <td>${item.nomeProduto}</td>
                 <td>${medidasTexto}</td>
                 <td>${item.quantidade}</td>
                 <td>${item.volumeTotal.toFixed(3)} m³</td>
                 <td>
+                    <button type="button" class="btn-secondary" style="padding: 2px 6px; color:#3498db" onclick="editarItemRomaneio(${item.id})"><i class="fa-solid fa-pencil"></i></button>
                     <button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removerItemRomaneio(${item.id})"><i class="fa-solid fa-trash"></i></button>
                 </td>
             `;
             tabelaBodySimples.appendChild(trSimples);
         }
     });
+
+    // ========== RENDER EXCEL LAYOUT (PASSO 3 E IMPRESSÃO) ==========
+    if (excelContainer) {
+        // Obter variáveis de cabeçalho
+        let cId = romSelectCliente.value;
+        const printNomeCli = document.getElementById('printNomeCli') ? document.getElementById('printNomeCli').textContent : '';
+        const printFretista = document.getElementById('printFretista') ? document.getElementById('printFretista').textContent : '';
+        let dataCarregamentoInput = document.getElementById('dataCarga') ? document.getElementById('dataCarga').value : '';
+        let dataCarregamentoStr = '';
+        if(dataCarregamentoInput) {
+            const [ano, mes, dia] = dataCarregamentoInput.split('-');
+            dataCarregamentoStr = `${dia}/${mes}/${ano}`;
+        }
+        
+        let cargaNum = document.getElementById('printNumeroCarga') ? document.getElementById('printNumeroCarga').textContent : '';
+        if (!cargaNum || cargaNum === '-') cargaNum = 'Nº ???';
+        
+        // Agrupar itens por Produto
+        let grupos = {};
+        itensRomaneio.forEach(item => {
+            let nome = item.nomeProduto;
+            if (!grupos[nome]) grupos[nome] = [];
+            grupos[nome].push(item);
+        });
+
+        let html = `
+        <div class="excel-header">
+            <div class="excel-header-left">
+                <h1>VANMARTE</h1>
+                <h2>Madeiras serradas para embalagens</h2>
+                <div class="excel-box-title">CARGA ${cargaNum}</div>
+            </div>
+            <div class="excel-header-center">
+                <h1>${printNomeCli}</h1>
+            </div>
+            <div class="excel-header-right">
+                <table>
+                    <tr><td>CARREGAMENTO</td><td>${dataCarregamentoStr}</td></tr>
+                    <tr><td>DESCARREGAMENTO</td><td></td></tr>
+                    <tr><td>TRANSPORTE</td><td>${printFretista}</td></tr>
+                </table>
+            </div>
+        </div>`;
+
+        let somaTotalPcts = 0;
+        let arrayResumoTotais = [];
+        let countColors = 0;
+
+        for(let nomeProduto in grupos) {
+            let items = grupos[nomeProduto];
+            let isSegundo = countColors % 2 !== 0;
+            let classeCor = isSegundo ? 'alt' : '';
+            let corResumo = isSegundo ? 'excel-st-red' : 'excel-st-green';
+            
+            html += `<div class="excel-product-group">
+                        <div class="excel-product-title-row">
+                            <div class="excel-product-title ${classeCor}">${nomeProduto}</div>
+                        </div>`;
+                    
+            let totalVolumeGrupo = 0;
+            
+            items.forEach(item => {
+                let pctHtml = '';
+                if (item.pacotes > 0) {
+                    pctHtml = `<div>${item.pacotes} PCTS ${item.alturaFardo} X ${item.larguraFardo}</div>`;
+                    if(item.amarras > 0) pctHtml += `<div>AMARRAS ${item.amarras} PEÇAS</div>`;
+                }
+                
+                let displayEspessura = (item.espessura * 10).toFixed(0);
+                let displayLargura = (item.largura * 10).toFixed(0);
+                let displayComprimento = (item.comprimento * 1000).toFixed(0);
+                
+                html += `<div class="excel-item-row">
+                            <div class="excel-measures-box">
+                                <div class="excel-measure-cell">${displayEspessura}</div>
+                                <div class="excel-measure-cell">${displayLargura}</div>
+                                <div class="excel-measure-cell">${displayComprimento}</div>
+                            </div>
+                            
+                            <div class="excel-arrow">-></div>
+                            
+                            <div class="excel-pieces-info">
+                                <div class="excel-pieces-main">
+                                    <span>${item.quantidade}</span>
+                                    <span>PECAS</span>
+                                </div>
+                                ${pctHtml}
+                            </div>
+                            
+                            <div class="excel-arrow">-></div>
+                            
+                            <div class="excel-vol-box">
+                                <div class="excel-vol-cell-red">${item.volumeTotal.toFixed(3).replace('.', ',')}</div>
+                                <div class="excel-vol-cell-unit">M3</div>
+                            </div>
+                            
+                            <div class="hide-on-print" style="margin-left: 20px; display:flex; gap:5px;">
+                                <button type="button" class="btn-secondary" style="padding: 2px 6px; color:#3498db" onclick="editarItemRomaneio(${item.id})"><i class="fa-solid fa-pencil"></i></button>
+                                <button type="button" class="btn-danger" style="padding: 2px 6px;" onclick="removerItemRomaneio(${item.id})"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                        
+                totalVolumeGrupo += item.volumeTotal;
+                somaTotalPcts += parseInt(item.pacotes || 0, 10);
+            });
+            
+            html += `  <div class="excel-group-total">
+                            ${totalVolumeGrupo.toFixed(3).replace('.',',')} M³
+                        </div>
+                    </div>`;
+                    
+            let infoGroup = items[0];         
+            arrayResumoTotais.push({
+                nome: nomeProduto,
+                vol: totalVolumeGrupo,
+                preco: parseFloat(infoGroup.precoUsado || 0),
+                stClass: corResumo
+            });
+            
+            countColors++;
+        }
+
+        // Tabela de Resumo / Somatório
+        html += `<div class="excel-summary-container">`;
+        if(somaTotalPcts > 0) {
+            html += `<div class="excel-summary-qtd">QTD DE PCTS ${somaTotalPcts}</div>`;
+        }
+
+        html += `<table class="excel-summary-table">
+                    <thead><tr>`;
+        arrayResumoTotais.forEach(res => {
+            html += `<th class="${res.stClass}">${res.nome}</th>`;
+        });
+        html += `   </tr></thead>
+                    <tbody><tr>`;
+        arrayResumoTotais.forEach(res => {
+            html += `<td>${res.vol.toFixed(3).replace('.',',')} M³</td>`;
+        });                
+        html += `   </tr><tr>`;
+        arrayResumoTotais.forEach(res => {
+            html += `<td>X R$ ${res.preco.toFixed(2).replace('.',',')}</td>`;
+        });
+        html += `   </tr><tr style="border-top: 2px solid #000;">`;
+        let valTotalMadeiraSoma = 0;
+        arrayResumoTotais.forEach(res => {
+            let sub = res.vol * res.preco;
+            valTotalMadeiraSoma += sub;
+            html += `<td style="color:red;"><strong>R$ ${sub.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits:2})}</strong></td>`;
+        });
+        html += `   </tr></tbody></table></div>`;
+
+        // Impostos e Totais
+        let strJuros = valorJurosNf.value || "0";
+        let valorImposto = parseFloat(strJuros.replace(',','.')) || 0;
+        let valorFinalTotalGeral = valTotalMadeiraSoma + valorImposto;
+
+        let txtPagamento = romSelectPagamento.value || '-';
+
+        html += `
+        <div class="excel-totals-section">
+            <div class="excel-totals-left">
+                <div class="excel-tot-row">
+                    <span class="excel-tot-label">TOTAL MAD -></span>
+                    <div class="excel-tot-box">
+                        <span>R$</span>
+                        <span>${valTotalMadeiraSoma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+                <div class="excel-tot-row">
+                    <span class="excel-tot-label">V.N -></span>
+                    <div class="excel-tot-box">
+                        <span style="margin-right:20px">+</span>
+                        <span>R$</span>
+                        <span>${valorImposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+                <div class="excel-tot-row">
+                    <span class="excel-tot-label">TOTAL -></span>
+                    <div class="excel-tot-box green-box">
+                        <span style="margin-right:20px">=</span>
+                        <span>R$</span>
+                        <span>${valorFinalTotalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="excel-payment-box">
+                <div>FORMA DE PAGAMENTO</div>
+                <div style="height: 50px; display: flex; align-items: center; justify-content: center; font-size: 16px;">${txtPagamento}</div>
+            </div>
+        </div>`;
+
+        // Frete
+        let strFrete = valorFrete.value || "0";
+        let customFreteNum = parseFloat(strFrete.replace(',','.')) || 0;
+        
+        let totalVolCalc = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0);
+        let formatedFreteTotal = (totalVolCalc * customFreteNum).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+        if (customFreteNum > 0) {
+            html += `
+            <div class="excel-frete-bottom">
+                FRETE PARTICULAR 
+                <div class="excel-frete-bottom-line"></div>
+                <span class="excel-frete-black">R$</span>
+                <span>${formatedFreteTotal}</span>
+            </div>`;
+        }
+
+        excelContainer.innerHTML = html;
+        
+        // Ensure "Número Carga" works if missing (Fallback to random for the preview if needed but wait, it is updated at printing via document.getElementById('btnPrint').addEventListener(...)!)
+    }
 
     recalcularTotais();
 }
@@ -483,6 +674,8 @@ document.getElementById('btnPrint').addEventListener('click', async () => {
     let numCorrente = (historias.length + 1).toString().padStart(4, '0');
     document.getElementById('printNumeroCarga').textContent = `Nº ${numCorrente}`;
 
+    renderizarTabelaRomaneio(); // Atualiza o layout do excel com o cabeçalho recém populado
+    
     document.querySelector('.sidebar').classList.add('hide-on-print'); 
     window.print();
 });
