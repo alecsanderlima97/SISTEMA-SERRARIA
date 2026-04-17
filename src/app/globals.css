@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #fff6ee;
+  --color-primary-100: #ffecd9;
+  --color-primary-200: #ffd5b0;
+  --color-primary-300: #ffb77d;
+  --color-primary-400: #ff8e40;
+  --color-primary-500: #f86f15; /* Laranja Pôr do Sol */
+  --color-primary-600: #e6550b;
+  --color-primary-700: #bf400a;
+  --color-primary-800: #99330e;
+  --color-primary-900: #7a2b0e;
+
+  --color-sidebar: #2E3B1F; /* Verde Musgo */
+  
+  --color-bg-base: #0d0c0b;
+  --color-bg-panel: rgba(255, 255, 255, 0.03);
+  --color-border-panel: rgba(255, 255, 255, 0.05);
+
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+}
+
+/* Base resets e Glassmorphism */
+@layer base {
+  :root {
+    --background: #0d1117;
+    --foreground: #f1f5f9;
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen overflow-x-hidden;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transition-all duration-300;
+  }
+  
+  .glass-panel:hover {
+    @apply border-white/20 translate-y-[-2px] shadow-2xl;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-200;
+  }
+
+  .input-glass {
+    @apply bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm transition-all outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30;
+  }
+}
+
+/* Animações de fundo da Serraria (Globais) */
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  opacity: 0.4;
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out alternate;
+  z-index: -1;
+}
+
+.blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 500px;
+  height: 500px;
+  background: rgba(230, 126, 34, 0.3);
+}
+
+.blob-2 {
+  bottom: -10%;
+  right: -5%;
+  width: 600px;
+  height: 600px;
+  background: rgba(231, 76, 60, 0.2);
+  animation-delay: -5s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(50px, 50px) scale(1.2); }
+}
