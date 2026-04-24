@@ -24,7 +24,7 @@ export default function FinanceiroRelatorios() {
 
   // Processar dados para os gráficos
   const totalGeral = contas.reduce((acc, c) => acc + c.valor, 0);
-  const totalPago = contas.filter(c => c.status === 'pago').reduce((acc, c) => acc + c.valor, 0);
+  const totalPago = contas.filter(c => c.status === 'concluido').reduce((acc, c) => acc + c.valor, 0);
   const totalPendente = totalGeral - totalPago;
 
   const porCategoria = contas.reduce((acc: any, c) => {
@@ -39,7 +39,7 @@ export default function FinanceiroRelatorios() {
 
   // Agrupar por mês
   const porMes = contas.reduce((acc: any, c) => {
-    const mes = c.dataVencimento.substring(0, 7); // YYYY-MM
+    const mes = c.dataVencimento ? c.dataVencimento.substring(0, 7) : 'Sem data'; // YYYY-MM ou 'Sem data'
     acc[mes] = (acc[mes] || 0) + c.valor;
     return acc;
   }, {});
@@ -143,7 +143,7 @@ export default function FinanceiroRelatorios() {
             <tbody className="divide-y divide-white/5">
               {contas.slice(0, 10).map((conta) => (
                 <tr key={conta.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-slate-400 text-sm">{new Date(conta.dataVencimento).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-6 py-4 text-slate-400 text-sm">{conta.dataVencimento ? new Date(conta.dataVencimento).toLocaleDateString('pt-BR') : '-'}</td>
                   <td className="px-6 py-4 text-white font-medium">{conta.descricao}</td>
                   <td className="px-6 py-4">
                     <span className="text-xs px-2 py-1 bg-slate-800 rounded-md text-slate-300">
@@ -155,7 +155,7 @@ export default function FinanceiroRelatorios() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase
-                      ${conta.status === 'pago' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                      ${conta.status === 'concluido' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
                         conta.status === 'atrasado' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 
                         'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
                       {conta.status}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Tag, Package, Tool, Zap, Settings, Users, Fuel, Landmark, ArrowUpRight, ArrowDownRight, Clock, FileText, Receipt } from "lucide-react";
+import { Plus, Tag, Package, PenTool, Zap, Settings, Users, Fuel, Landmark, ArrowUpRight, ArrowDownRight, Clock, FileText, Receipt } from "lucide-react";
 import Link from "next/link";
 import { getContasPagar, ContaPagar } from "@/services/db/financeiro";
 
@@ -20,7 +20,7 @@ export default function FinanceiroPage() {
 
   const totais = {
     pendente: contas.filter(c => c.status === 'pendente').reduce((acc, curr) => acc + curr.valor, 0),
-    pago: contas.filter(c => c.status === 'pago').reduce((acc, curr) => acc + curr.valor, 0),
+    pago: contas.filter(c => c.status === 'concluido').reduce((acc, curr) => acc + curr.valor, 0),
     atrasado: contas.filter(c => c.status === 'atrasado').reduce((acc, curr) => acc + curr.valor, 0),
   };
 
@@ -114,7 +114,7 @@ export default function FinanceiroPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-300">
-                      {new Date(conta.dataVencimento).toLocaleDateString('pt-BR')}
+                      {conta.dataVencimento ? new Date(conta.dataVencimento).toLocaleDateString('pt-BR') : '-'}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-white">
                       R$ {conta.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -164,7 +164,7 @@ function StatCard({ title, value, icon, color, subtitle }: any) {
 
 function StatusBadge({ status }: { status: string }) {
   const configs: any = {
-    pago: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    concluido: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
     pendente: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     atrasado: "bg-rose-500/20 text-rose-400 border-rose-500/30",
     cancelado: "bg-slate-500/20 text-slate-400 border-slate-500/30",
@@ -180,7 +180,7 @@ function StatusBadge({ status }: { status: string }) {
 function getCategoryIcon(categoria: string) {
   switch (categoria) {
     case 'venda': return <Tag size={16} className="text-emerald-400" />;
-    case 'servico': return <Tool size={16} className="text-blue-400" />;
+    case 'servico': return <PenTool size={16} className="text-blue-400" />;
     case 'imposto': return <Landmark size={16} className="text-purple-400" />;
     case 'combustivel': return <Fuel size={16} className="text-orange-400" />;
     case 'manutencao': return <Settings size={16} className="text-slate-400" />;

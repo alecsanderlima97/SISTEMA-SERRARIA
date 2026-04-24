@@ -40,6 +40,8 @@ export interface RomaneioInput {
   observacoes?: string;
 }
 
+export type Romaneio = RomaneioInput & { id: string };
+
 export async function createRomaneio(dados: RomaneioInput) {
   try {
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {

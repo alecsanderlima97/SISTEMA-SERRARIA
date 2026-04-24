@@ -27,7 +27,7 @@ export default function HumanResourcesPage() {
   const stats = {
     total: funcionarios.length,
     ativos: funcionarios.filter(f => f.status === 'ativo').length,
-    ferias: funcionarios.filter(f => f.status === 'ferias').length,
+    afastados: funcionarios.filter(f => f.status === 'afastado').length,
   };
 
   return (
@@ -60,7 +60,7 @@ export default function HumanResourcesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RHStatCard title="Total Colaboradores" value={stats.total} icon={<Users />} color="primary" />
         <RHStatCard title="Funcionários Ativos" value={stats.ativos} icon={<Calendar />} color="emerald" />
-        <RHStatCard title="Em Férias/Afastados" value={stats.ferias} icon={<FileText />} color="amber" />
+        <RHStatCard title="Em Férias/Afastados" value={stats.afastados} icon={<FileText />} color="amber" />
       </div>
 
       {/* Quadro de Funcionários */}
@@ -115,7 +115,7 @@ export default function HumanResourcesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-300 font-medium">{func.cargo}</div>
-                      <div className="text-xs text-slate-500">{func.departamento}</div>
+                      <div className="text-xs text-slate-500">{func.tipoContrato}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-400 font-mono">
                       {new Date(func.dataAdmissao).toLocaleDateString('pt-BR')}

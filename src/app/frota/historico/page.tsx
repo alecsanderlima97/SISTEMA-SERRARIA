@@ -118,7 +118,7 @@ export default function HistoricoConsumoPage() {
                   </td>
                   <td className="px-8 py-4 text-sm text-slate-300 font-medium">{item.produto}</td>
                   <td className="px-8 py-4 font-bold text-white">{item.quantidade}L</td>
-                  <td className="px-8 py-4 text-sm text-slate-400">{item.quilometragem || item.horimetro || "-"}</td>
+                  <td className="px-8 py-4 text-sm text-slate-400">{item.km_horas || "-"}</td>
                   <td className="px-8 py-4">
                     <span className="text-xs text-slate-500 font-bold bg-white/5 px-2 py-1 rounded">
                       {item.origem === 'tanque_interno' ? 'TANQUE SERRARIA' : 'POSTO EXTERNO'}

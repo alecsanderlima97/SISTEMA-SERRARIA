@@ -6,7 +6,7 @@ import {
   ArrowLeft, Save, Receipt, Fuel, 
   Landmark, User, Briefcase, FileText, 
   Calendar, CreditCard, DollarSign, Upload,
-  Settings, Users, Tool, Zap
+  Settings, Users, PenTool, Zap
 } from "lucide-react";
 import Link from "next/link";
 import { createContaPagar, ContaPagar } from "@/services/db/financeiro";
@@ -99,7 +99,7 @@ export default function NovoLancamentoPage() {
             <CategoryButton 
               active={formData.categoria === 'servico'} 
               onClick={() => setFormData({...formData, categoria: 'servico'})}
-              icon={<Tool size={20} />}
+              icon={<PenTool size={20} />}
               label="Serviços"
             />
             <CategoryButton 

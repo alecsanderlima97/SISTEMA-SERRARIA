@@ -31,14 +31,14 @@ export async function addEstoquePacote(dados: EstoquePacoteInput) {
   }
 }
 
-export async function getEstoquePacotes() {
+export async function getEstoquePacotes(): Promise<(EstoquePacoteInput & { id: string })[]> {
   try {
     const q = query(collection(db, COLLECTION_NAME), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    })) as (EstoquePacoteInput & { id: string })[];
   } catch (error) {
     console.error("Erro ao listar pacotes do estoque:", error);
     return [];

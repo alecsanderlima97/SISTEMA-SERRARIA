@@ -104,7 +104,7 @@ export default function HoleritePage({ params }: { params: Promise<{ id: string 
             
             <div className="space-y-4 pt-6 border-t border-white/5">
               <InfoItem icon={<User size={14} />} label="CPF" value={funcionario.cpf} />
-              <InfoItem icon={<Briefcase size={14} />} label="Setor" value={funcionario.departamento} />
+              <InfoItem icon={<Briefcase size={14} />} label="Cargo" value={funcionario.cargo} />
               <InfoItem icon={<Calendar size={14} />} label="Admissão" value={new Date(funcionario.dataAdmissao).toLocaleDateString('pt-BR')} />
             </div>
           </div>
