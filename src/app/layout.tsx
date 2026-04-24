@@ -43,10 +43,11 @@ export default function RootLayout({
             <nav className="flex-1 px-4 space-y-1">
               <SidebarLink href="/" icon="📊" label="Dashboard" />
               <SidebarLink href="/toras" icon="🪵" label="Entrada de Toras" />
+              <SidebarLink href="/romaneios" icon="🧾" label="Romaneios" />
               <SidebarLink href="/estoque" icon="📦" label="Estoque Madeira" />
               <SidebarLink href="/financeiro" icon="💰" label="Financeiro" />
               <SidebarLink href="/rh" icon="👥" label="Recursos Humanos" />
-              <SidebarLink href="/logistica" icon="🚛" label="Logística & Frotas" />
+              <SidebarLink href="/frotas" icon="🚛" label="Gestão de Frotas" />
             </nav>
             
             <div className="p-4 border-t border-white/5">

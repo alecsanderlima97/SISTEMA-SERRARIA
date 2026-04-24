@@ -3,6 +3,17 @@
  * Utilitários matemáticos para os cálculos da Serraria baseados no legado.
  */
 
+/**
+ * Calcula a quantidade de amarras baseada na altura de fiadas (Serraria Vanmarte)
+ * Regra do Excel: 10 fiadas = 8, 20 = 10, 30 = 12, 40 = 14, 50 = 16
+ */
+export function calcularAmarras(alturaPecas: number): number {
+  if (alturaPecas <= 0) return 0;
+  const fiadas = Math.floor(alturaPecas / 10);
+  if (fiadas < 1) return 8; // Mínimo 8 amarras (pés)
+  return 8 + (fiadas - 1) * 2;
+}
+
 // 1. Cubagem Rápida (Peças Individuais de Madeira Serrada)
 export function calcularVolumePecas(
     espessuraCm: number,
