@@ -92,3 +92,28 @@ export const importarVeiculosIniciais = async (veiculos: any[]) => {
     return { success: false, error };
   }
 };
+
+export const deleteVeiculo = async (id: string) => {
+  try {
+    const { deleteDoc } = await import("firebase/firestore");
+    await deleteDoc(doc(db, "frota", id));
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao excluir veículo:", error);
+    return { success: false, error };
+  }
+};
+
+export const updateVeiculo = async (id: string, veiculo: Partial<Veiculo>) => {
+  try {
+    const docRef = doc(db, "frota", id);
+    await updateDoc(docRef, {
+      ...veiculo,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao atualizar veículo:", error);
+    return { success: false, error };
+  }
+};

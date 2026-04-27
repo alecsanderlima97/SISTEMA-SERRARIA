@@ -47,7 +47,7 @@ export default function RootLayout({
               <SidebarLink href="/estoque" icon="📦" label="Estoque Madeira" />
               <SidebarLink href="/financeiro" icon="💰" label="Financeiro" />
               <SidebarLink href="/rh" icon="👥" label="Recursos Humanos" />
-              <SidebarLink href="/frotas" icon="🚛" label="Gestão de Frotas" />
+              <SidebarLink href="/frota" icon="🚛" label="Gestão de Frotas" />
             </nav>
             
             <div className="p-4 border-t border-white/5">

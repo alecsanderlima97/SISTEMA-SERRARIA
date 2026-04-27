@@ -181,7 +181,7 @@ export default function Home() {
               <QuickActionLink href="/romaneios/novo" label="Novo Romaneio" icon={<Truck size={16} />} />
               <QuickActionLink href="/financeiro/novo" label="Lançar Despesa" icon={<DollarSign size={16} />} />
               <QuickActionLink href="/estoque" label="Ver Inventário" icon={<Package size={16} />} />
-              <QuickActionLink href="/frotas" label="Gestão de Frotas" icon={<Truck size={16} />} />
+              <QuickActionLink href="/frota" label="Gestão de Frotas" icon={<Truck size={16} />} />
               <QuickActionLink href="/rh" label="Gestão de Pessoal" icon={<Users size={16} />} />
             </div>
           </div>
