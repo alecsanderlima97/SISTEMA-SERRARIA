@@ -47,13 +47,48 @@ export const createVeiculo = async (veiculo: Omit<Veiculo, 'id' | 'createdAt'>) 
   try {
     const docRef = await addDoc(collection(db, "frota"), {
       ...veiculo,
-      horimetroAtual: veiculo.horimetroInicial || 0,
-      hodometroAtual: veiculo.hodometroInicial || 0,
+      horimetroAtual: veiculo.horimetroAtual || veiculo.horimetroInicial || 0,
+      hodometroAtual: veiculo.hodometroAtual || veiculo.hodometroInicial || 0,
       createdAt: Timestamp.now()
     });
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error("Erro ao cadastrar veículo:", error);
+    return { success: false, error };
+  }
+};
+
+export const importarVeiculosIniciais = async (veiculos: any[]) => {
+  try {
+    const results = await Promise.all(veiculos.map(v => {
+      const identificacao = v.placa || v.nome;
+      const isMaquina = v.nome.includes('VALMET') || 
+                        v.nome.includes('CATERPILLAR') || 
+                        v.nome.includes('FIATALLIS') || 
+                        v.nome.includes('GUINCHO') ||
+                        v.nome.includes('BERÇO') ||
+                        v.nome.includes('RETRO') ||
+                        v.nome.includes('ESCAVADEIRA') ||
+                        v.nome.includes('EMPILHADEIRA');
+
+      const isMoto = v.nome.includes('HONDA') || v.nome.includes('TITAN') || v.nome.includes('BROS');
+      const isCarro = v.nome.includes('KWID') || v.nome.includes('COROLA') || v.nome.includes('HILUX');
+      
+      const tipo = isMaquina ? 'maquina' : isMoto ? 'moto' : isCarro ? 'carro' : 'caminhao';
+
+      return createVeiculo({
+        identificacao,
+        modelo: v.nome,
+        categoria: v.categoria,
+        tipo: tipo as any,
+        tipoCombustivel: isCarro && !v.nome.includes('HILUX') ? 'flex' : 'diesel',
+        horimetroInicial: 0,
+        hodometroInicial: 0
+      });
+    }));
+    return { success: true, count: results.filter(r => r.success).length };
+  } catch (error) {
+    console.error("Erro na importação em massa:", error);
     return { success: false, error };
   }
 };

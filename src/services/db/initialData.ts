@@ -1,5 +1,3 @@
-import { db } from "@/services/firebase";
-
 export const INITIAL_VEHICLES = [
   // SERRARIA
   { nome: "MERCEDEZ B AXOR 3340", placa: "BWZ-3B85", categoria: "SERRARIA" },

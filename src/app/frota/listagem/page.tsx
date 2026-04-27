@@ -1,23 +1,41 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getVeiculos, Veiculo } from '@/services/db/frota'
+import { getVeiculos, Veiculo, importarVeiculosIniciais } from '@/services/db/frota'
+import { INITIAL_VEHICLES } from '@/services/db/initialData'
 import Link from 'next/link'
-import { Plus, Search, Truck, Settings, ArrowRight } from 'lucide-react'
+import { Plus, Search, Truck, Settings, ArrowRight, Download } from 'lucide-react'
 
 export default function ListagemFrota() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [loading, setLoading] = useState(true)
+  const [importing, setImporting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
+  const loadData = async () => {
+    setLoading(true)
+    const data = await getVeiculos()
+    setVeiculos(data)
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function load() {
-      const data = await getVeiculos()
-      setVeiculos(data)
-      setLoading(false)
-    }
-    load()
+    loadData()
   }, [])
+
+  const handleImport = async () => {
+    if (!confirm('Deseja importar os 39 veículos iniciais padrão?')) return
+    
+    setImporting(true)
+    const result = await importarVeiculosIniciais(INITIAL_VEHICLES)
+    if (result.success) {
+      alert(`${result.count} veículos importados com sucesso!`)
+      loadData()
+    } else {
+      alert('Erro ao importar veículos.')
+    }
+    setImporting(false)
+  }
 
   const filtered = veiculos.filter(v => 
     v.identificacao.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -34,10 +52,22 @@ export default function ListagemFrota() {
           <p className="text-slate-500 mt-1">Visualize e gerencie todos os veículos e máquinas da empresa.</p>
         </div>
         
-        <Link href="/frota/novo" className="btn-primary flex items-center justify-center gap-2 group">
-          <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          Novo Veículo
-        </Link>
+        <div className="flex gap-3">
+          {veiculos.length === 0 && !loading && (
+            <button 
+              onClick={handleImport}
+              disabled={importing}
+              className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold flex items-center gap-2 transition-all"
+            >
+              <Download size={20} />
+              {importing ? 'Importando...' : 'Setup Inicial'}
+            </button>
+          )}
+          <Link href="/frota/novo" className="btn-primary flex items-center justify-center gap-2 group">
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            Novo Veículo
+          </Link>
+        </div>
       </div>
 
       {/* Filtros e Busca */}
