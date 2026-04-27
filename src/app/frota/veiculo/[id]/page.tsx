@@ -237,7 +237,7 @@ export default function DetalhesVeiculo() {
                           <p className="text-sm font-black text-white">{item.quantidade}L de {item.produto}</p>
                           <span className="text-[10px] text-slate-500 font-black uppercase">{new Date(item.data).toLocaleDateString()}</span>
                        </div>
-                       <p className="text-xs text-slate-500 font-medium">{item.operador}</p>
+                       <p className="text-xs text-slate-500 font-medium">{item.operador || 'Operador não informado'}</p>
                     </div>
                   </div>
                 )) : (

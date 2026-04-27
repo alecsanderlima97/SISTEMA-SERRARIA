@@ -305,7 +305,7 @@ export default function TanquePage() {
                         </td>
                         <td className="px-8 py-5 text-right">
                            <p className="font-bold text-white">R$ {item.valorTotal?.toLocaleString()}</p>
-                           <p className="text-[10px] text-slate-500 font-bold">R$ {(item.valorTotal / item.quantidade).toFixed(3)}/L</p>
+                           <p className="text-[10px] text-slate-500 font-bold">R$ {(item.valorTotal && item.quantidade) ? (item.valorTotal / item.quantidade).toFixed(3) : '0.000'}/L</p>
                         </td>
                       </tr>
                     ))}

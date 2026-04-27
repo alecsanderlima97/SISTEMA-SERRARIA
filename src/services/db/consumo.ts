@@ -28,6 +28,7 @@ export interface RegistroConsumo {
   km_horas_anterior?: number;
   media?: number; // KM/L ou L/H
   data: string;
+  operador?: string;
   createdAt?: Date;
 }
 
