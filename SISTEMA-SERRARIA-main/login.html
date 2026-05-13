@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Orquestrasis</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="login-body">
+    <div class="background-elements hide-on-print">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="login-container">
+        <div class="glass-panel login-panel">
+            <div class="login-header">
+                <!-- Usar uma representação da logo por enquanto -->
+                <h1 class="logo-text">ORQUESTRASIS<br><span>Sistema para serrarias</span></h1>
+                <p>Acesse o Sistema de Gestão</p>
+            </div>
+
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <label for="email">E-mail de Acesso</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" id="email" required placeholder="admin@orquestrasis.com.br">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Senha <span class="badge">(Será salva no 1º acesso)</span></label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" required placeholder="Sua senha segura">
+                    </div>
+                </div>
+
+                <div id="loginError" class="error-msg" style="display: none;">
+                    Senha incorreta. Tente novamente.
+                </div>
+
+                <button type="submit" class="btn-primary login-btn">
+                    Entrar no Sistema <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+
+</html>
