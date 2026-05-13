@@ -1,3 +1,5 @@
+import { db, collection, addDoc, getDocs } from './firebase-init.js';
+
 // --- Lógica Principal do Romaneio ---
 
 let itensRomaneio = [];
@@ -333,7 +335,7 @@ document.getElementById('btnPrint').addEventListener('click', () => {
 });
 
 // Finalizar Carga e Salvar no Histórico
-document.getElementById('btnFinalizar').addEventListener('click', () => {
+document.getElementById('btnFinalizar').addEventListener('click', async () => {
     if(itensRomaneio.length === 0) {
         alert("Nenhum item na carga para finalizar.");
         return;
@@ -356,48 +358,67 @@ document.getElementById('btnFinalizar').addEventListener('click', () => {
     let nomeCliObj = (DB.get('clientes') || []).find(x => x.id == cId);
     let nomeClienteFinal = nomeCliObj ? nomeCliObj.nome : "Avulso (Sem cadastro)";
 
-    // Objeto História
-    let historias = DB.get('historico') || [];
-    let numCarga = (historias.length + 1).toString().padStart(4, '0');
+    const btnFinalizar = document.getElementById('btnFinalizar');
+    const textoOriginal = btnFinalizar.innerHTML;
+    btnFinalizar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    btnFinalizar.disabled = true;
 
-    let novaHistoria = {
-        id: Date.now(),
-        numeroCarga: `Carga Nº ${numCarga}`,
-        clienteId: cId,
-        cliente: nomeClienteFinal,
-        data: document.getElementById('dataCarga').value || new Date().toISOString().split('T')[0],
-        freteAplicado: fretePorM3,
-        itens: itensRomaneio,
-        volumeTotalItem: somaVolume,
-        valorFinal: valorTotalGeral
-    };
+    try {
+        // Obter contagem do Firebase
+        const historicoCol = collection(db, 'historico');
+        const querySnapshot = await getDocs(historicoCol);
+        let numCarga = (querySnapshot.size + 1).toString().padStart(4, '0');
 
-    historias.push(novaHistoria);
-    DB.set('historico', historias);
-    
-    // Dispara Evento pro historico.js atualizar
-    document.dispatchEvent(new Event('historicoUpdated'));
+        let novaHistoria = {
+            numeroCarga: `Carga Nº ${numCarga}`,
+            clienteId: cId,
+            cliente: nomeClienteFinal,
+            data: document.getElementById('dataCarga').value || new Date().toISOString().split('T')[0],
+            freteAplicado: fretePorM3,
+            itens: itensRomaneio,
+            volumeTotalItem: somaVolume,
+            valorFinal: valorTotalGeral,
+            criadoEm: new Date().toISOString()
+        };
 
-    alert(`Sucesso! ${novaHistoria.numeroCarga} foi salva no Histórico.`);
+        // Salvar no Firebase
+        await addDoc(historicoCol, novaHistoria);
+        
+        // Atualizar DB local (opcional)
+        let historias = DB.get('historico') || [];
+        historias.push({id: Date.now().toString(), ...novaHistoria});
+        DB.set('historico', historias);
+        
+        // Dispara Evento pro historico.js atualizar
+        document.dispatchEvent(new Event('historicoUpdated'));
 
-    // Limpar Romaneio
-    itensRomaneio = [];
-    romSelectCliente.value = '';
-    romSelectTransporte.value = '';
-    descMadeira.value = '';
-    precoCustomizado.value = '';
-    valorFrete.value = '0.00';
-    valorJurosNf.value = '0.00';
-    document.getElementById('qtPacotes').value = '';
-    document.getElementById('quantidade').value = '';
-    document.getElementById('dataCarga').valueAsDate = new Date();
-    
-    // Atualiza info de tela impressa
-    printNomeCli.textContent = '';
-    printFretista.textContent = '';
-    printPlaca.textContent = '';
-    
-    renderizarTabelaRomaneio();
+        alert(`Sucesso! ${novaHistoria.numeroCarga} foi salva no Histórico.`);
+
+        // Limpar Romaneio
+        itensRomaneio = [];
+        romSelectCliente.value = '';
+        romSelectTransporte.value = '';
+        descMadeira.value = '';
+        precoCustomizado.value = '';
+        valorFrete.value = '0.00';
+        valorJurosNf.value = '0.00';
+        document.getElementById('qtPacotes').value = '';
+        document.getElementById('quantidade').value = '';
+        document.getElementById('dataCarga').valueAsDate = new Date();
+        
+        // Atualiza info de tela impressa
+        printNomeCli.textContent = '';
+        printFretista.textContent = '';
+        printPlaca.textContent = '';
+        
+        renderizarTabelaRomaneio();
+    } catch (error) {
+        console.error("Erro ao finalizar carga: ", error);
+        alert("Erro ao salvar histórico. Verifique o console.");
+    } finally {
+        btnFinalizar.innerHTML = textoOriginal;
+        btnFinalizar.disabled = false;
+    }
 });
 
 // Força data do dia ao abrir

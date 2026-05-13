@@ -1,3 +1,5 @@
+import { db, collection, addDoc, getDocs, doc, deleteDoc } from './firebase-init.js';
+
 // ---- MÓDULO: ENTRADA DE MADEIRA (CUBAGEM DE CAMINHÃO) ----
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -72,9 +74,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Renderizar Tabela de Histórico
-    function renderizarEntradas() {
+    async function renderizarEntradas() {
         if(!listaEntradas) return;
-        const entradas = DB.get('entradas');
+        listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando do Firebase...</td></tr>';
+        
+        let entradas = [];
+        try {
+            const entradasCol = collection(db, 'entradas');
+            const querySnapshot = await getDocs(entradasCol);
+            querySnapshot.forEach((doc) => {
+                entradas.push({ id: doc.id, ...doc.data() });
+            });
+        } catch (error) {
+            console.error("Erro ao buscar entradas: ", error);
+            listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
+            return;
+        }
+
         listaEntradas.innerHTML = '';
         
         if(entradas.length === 0) {
@@ -113,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Salvar Entrada
     if (formEntrada) {
-        formEntrada.addEventListener('submit', (e) => {
+        formEntrada.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const calcData = calcularVolumeAtual();
@@ -128,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataStr = document.getElementById('entData').value;
             
             const novaEntrada = {
-                id: 'ENT-' + Date.now(),
                 data: dataStr,
                 fornecedor: fornecedor,
                 placa: placa,
@@ -136,35 +151,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 larg: calcData.larg,
                 mediaAltura: calcData.mediaAltura,
                 pontos: calcData.pontos,
-                volume: calcData.volume
+                volume: calcData.volume,
+                criadoEm: new Date().toISOString()
             };
             
-            const entradas = DB.get('entradas');
-            entradas.push(novaEntrada);
-            DB.set('entradas', entradas);
-            
-            // Limpar form
-            formEntrada.reset();
-            // Volta data para hoje
-            if(entData) entData.valueAsDate = new Date();
-            // Resetar label
-            calcularVolumeAtual();
-            
-            // Atualizar lista
-            renderizarEntradas();
-            
-            // Notification simples simulada
-            alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!`);
+            const submitBtn = formEntrada.querySelector('button[type="submit"]');
+            const textoOriginal = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+            submitBtn.disabled = true;
+
+            try {
+                const entradasCol = collection(db, 'entradas');
+                await addDoc(entradasCol, novaEntrada);
+                
+                // Limpar form
+                formEntrada.reset();
+                // Volta data para hoje
+                if(entData) entData.valueAsDate = new Date();
+                // Resetar label
+                calcularVolumeAtual();
+                
+                // Atualizar lista
+                await renderizarEntradas();
+                
+                // Notification simples simulada
+                alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!`);
+            } catch (error) {
+                console.error("Erro ao salvar entrada: ", error);
+                alert("Erro ao salvar entrada. Verifique o console.");
+            } finally {
+                submitBtn.innerHTML = textoOriginal;
+                submitBtn.disabled = false;
+            }
         });
     }
 
     // Função global para deletar
-    window.deletarEntrada = function(id) {
+    window.deletarEntrada = async function(id) {
         if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
-            let entradas = DB.get('entradas');
-            entradas = entradas.filter(e => e.id !== id);
-            DB.set('entradas', entradas);
-            renderizarEntradas();
+            try {
+                const docRef = doc(db, 'entradas', id);
+                await deleteDoc(docRef);
+                await renderizarEntradas();
+            } catch (error) {
+                console.error("Erro ao deletar entrada: ", error);
+                alert("Erro ao deletar entrada.");
+            }
         }
     };
 
