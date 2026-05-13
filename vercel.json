@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "public": true,
+  "name": "sistema-serraria",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ],
+  "cleanUrls": true
+}
