@@ -120,9 +120,6 @@ async function carregarTransportes() {
             transportesAtuais.push({ id: doc.id, ...doc.data() });
         });
         
-        // Mantém fallback para outros módulos antigos que usam DB
-        if(window.DB) window.DB.set('transportes', transportesAtuais);
-        
         renderTransportes();
         document.dispatchEvent(new Event('transportesUpdated'));
     } catch(error) {

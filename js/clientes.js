@@ -176,12 +176,6 @@ async function carregarClientes() {
             clientesAtuais.push({ id: doc.id, ...doc.data() });
         });
         
-        // Compatibilidade temporária para o resto do sistema que pode estar lendo do localStorage
-        // Idealmente, removeremos isso depois que todos os módulos usarem Firebase
-        if(window.DB) {
-            window.DB.set('clientes', clientesAtuais);
-        }
-        
         renderClientes();
         document.dispatchEvent(new Event('clientesUpdated'));
     } catch (error) {

@@ -17,6 +17,10 @@ formProduto.addEventListener('submit', async function(e) {
         natureza: document.getElementById('prodNatureza').value,
         qualidade: document.getElementById('prodQualidade').value,
         classe: document.getElementById('prodClasse').value,
+        espessura: parseFloat(document.getElementById('prodEspessura').value) || 0,
+        largura: parseFloat(document.getElementById('prodLargura').value) || 0,
+        comprimentoVenda: parseFloat(document.getElementById('prodComprimentoVenda').value) || 0,
+        comprimentoReal: parseFloat(document.getElementById('prodComprimentoReal').value) || 0,
         preco: parseFloat(document.getElementById('prodPreco').value),
         atualizadoEm: new Date().toISOString()
     };
@@ -64,6 +68,10 @@ window.editarProduto = function(id) {
         document.getElementById('prodNatureza').value = p.natureza || '';
         document.getElementById('prodQualidade').value = p.qualidade || '';
         document.getElementById('prodClasse').value = p.classe || '';
+        document.getElementById('prodEspessura').value = p.espessura || 0;
+        document.getElementById('prodLargura').value = p.largura || 0;
+        document.getElementById('prodComprimentoVenda').value = p.comprimentoVenda || 0;
+        document.getElementById('prodComprimentoReal').value = p.comprimentoReal || 0;
         document.getElementById('prodPreco').value = p.preco || 0;
 
         produtoEditandoId = p.id;
@@ -101,11 +109,17 @@ function renderProdutos() {
         const naturezaQualidade = `${p.natureza || '-'} - ${p.qualidade || '-'}`;
         const precoNum = parseFloat(p.preco) || 0;
         const precoFormatado = precoNum.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        const medidas = `${p.espessura} x ${p.largura} x ${p.comprimentoVenda}m`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${p.tipo || '-'}</strong> <br> <span style="font-size:0.8rem; color:var(--text-muted);">${p.classe || ''}</span></td>
-            <td>${naturezaQualidade}</td>
+            <td>
+                <strong>${p.tipo || '-'}</strong>
+            </td>
+            <td>
+                ${naturezaQualidade} <br>
+                <small style="color: var(--warning)">${medidas}</small>
+            </td>
             <td style="color:var(--accent-color); font-weight:bold;">${precoFormatado}</td>
             <td>
                 <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="window.editarProduto('${p.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
@@ -124,9 +138,6 @@ async function carregarProdutos() {
         querySnapshot.forEach((doc) => {
             produtosAtuais.push({ id: doc.id, ...doc.data() });
         });
-        
-        // Mantém fallback para outros módulos antigos que usam DB
-        if(window.DB) window.DB.set('produtos', produtosAtuais);
         
         renderProdutos();
         document.dispatchEvent(new Event('produtosUpdated'));

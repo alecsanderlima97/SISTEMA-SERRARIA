@@ -5,6 +5,7 @@ import { db, collection, addDoc, getDocs, query, where, orderBy, limit } from '.
 let itensRomaneio = [];
 let proximoItemId = 1;
 let itemEditando = null;
+let clientesCache = []; // Cache local para evitar uso do localStorage
 
 // Elementos
 const romSelectCliente = document.getElementById('romSelectCliente');
@@ -39,11 +40,13 @@ async function carregarSelects() {
     try {
         // Clientes
         const clientesSnapshot = await getDocs(collection(db, 'clientes'));
+        clientesCache = []; // Reset cache
         if (romSelectCliente) {
             let selecaoAtualCliente = romSelectCliente.value;
             romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
             clientesSnapshot.forEach(doc => {
                 const c = { id: doc.id, ...doc.data() };
+                clientesCache.push(c); // Salva no cache
                 romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade || ''}</option>`;
             });
             if(selecaoAtualCliente) romSelectCliente.value = selecaoAtualCliente;
@@ -426,7 +429,7 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
 
     // Pegar nome do Cliente
     let cId = romSelectCliente.value;
-    let nomeCliObj = (DB.get('clientes') || []).find(x => x.id == cId);
+    let nomeCliObj = clientesCache.find(x => x.id == cId);
     let nomeClienteFinal = nomeCliObj ? nomeCliObj.nome : "Avulso (Sem cadastro)";
 
     const btnFinalizar = document.getElementById('btnFinalizar');

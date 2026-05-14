@@ -1,7 +1,10 @@
+import { db, collection, addDoc, getDocs, query, where, deleteDoc, doc, onAuthStateChanged, auth } from './js/firebase-init.js';
+
 // Estado da Agenda
 let currentDate = new Date();
 let selectedDate = new Date();
-let events = JSON.parse(localStorage.getItem('sistema_serraria_events')) || {};
+let events = {}; // Objeto local para cache/renderização: { "YYYY-MM-DD": ["evento1", ...] }
+let eventsFullData = []; // Array com {id, dateKey, text} para facilitar deleção
 
 // Elementos DOM
 const calendarGrid = document.getElementById('calendarGrid');
@@ -24,18 +27,48 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
 
-    formEvento.addEventListener('submit', (e) => {
-        e.preventDefault();
-        addEvent();
-    });
+    if (formEvento) {
+        formEvento.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addEvent();
+        });
+    }
 });
 
-function initCalendar() {
+async function initCalendar() {
+    await carregarEventosFirestore();
     renderCalendar();
     renderEvents();
 }
 
+async function carregarEventosFirestore() {
+    try {
+        const snap = await getDocs(collection(db, "agenda"));
+        events = {};
+        eventsFullData = [];
+        
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            const dateKey = data.dateKey;
+            const text = data.text;
+            
+            if (!events[dateKey]) events[dateKey] = [];
+            events[dateKey].push(text);
+            
+            eventsFullData.push({
+                id: docSnap.id,
+                dateKey: dateKey,
+                text: text
+            });
+        });
+        console.log("Agenda: Eventos carregados do Firebase");
+    } catch (e) {
+        console.error("Erro ao carregar agenda:", e);
+    }
+}
+
 function renderCalendar() {
+    if (!calendarGrid) return;
     calendarGrid.innerHTML = '';
     
     // Cabeçalho dias da semana
@@ -52,7 +85,7 @@ function renderCalendar() {
     
     // Nome do mês
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-    currentMonthEl.textContent = `${monthNames[month]} ${year}`;
+    if (currentMonthEl) currentMonthEl.textContent = `${monthNames[month]} ${year}`;
 
     // Primeiro dia do mês e total de dias
     const firstDay = new Date(year, month, 1).getDay();
@@ -102,6 +135,7 @@ function createDayElement(day, className, dateObj) {
 }
 
 function renderEvents() {
+    if (!eventListEl) return;
     const dateKey = formatDateKey(selectedDate);
     eventListEl.innerHTML = '';
     
@@ -113,7 +147,8 @@ function renderEvents() {
     header.textContent = `Compromissos para ${dayLabel}:`;
     eventListEl.appendChild(header);
 
-    const dayEvents = events[dateKey] || [];
+    // Filtrar da lista completa para ter acesso aos IDs
+    const dayEvents = eventsFullData.filter(e => e.dateKey === dateKey);
     
     if (dayEvents.length === 0) {
         const empty = document.createElement('p');
@@ -123,12 +158,12 @@ function renderEvents() {
         return;
     }
 
-    dayEvents.forEach((evt, index) => {
+    dayEvents.forEach((evt) => {
         const item = document.createElement('div');
         item.className = 'event-item';
         item.innerHTML = `
-            <span>${evt}</span>
-            <button class="btn-del-event" onclick="deleteEvent('${dateKey}', ${index})">
+            <span>${evt.text}</span>
+            <button class="btn-del-event" onclick="deleteEventFirebase('${evt.id}')">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;
@@ -136,32 +171,56 @@ function renderEvents() {
     });
 }
 
-function addEvent() {
+async function addEvent() {
     const text = eventTextInp.value.trim();
     if (!text) return;
 
     const dateKey = formatDateKey(selectedDate);
-    if (!events[dateKey]) events[dateKey] = [];
     
-    events[dateKey].push(text);
-    saveEvents();
-    eventTextInp.value = '';
-    renderEvents();
-    renderCalendar();
+    try {
+        const docRef = await addDoc(collection(db, "agenda"), {
+            dateKey: dateKey,
+            text: text,
+            criadoEm: new Date().toISOString()
+        });
+        
+        // Atualizar localmente
+        if (!events[dateKey]) events[dateKey] = [];
+        events[dateKey].push(text);
+        eventsFullData.push({ id: docRef.id, dateKey, text });
+        
+        eventTextInp.value = '';
+        renderEvents();
+        renderCalendar();
+    } catch (e) {
+        console.error("Erro ao salvar evento:", e);
+        alert("Erro ao salvar compromisso.");
+    }
 }
 
-window.deleteEvent = function(dateKey, index) {
-    events[dateKey].splice(index, 1);
-    if (events[dateKey].length === 0) delete events[dateKey];
-    saveEvents();
-    renderEvents();
-    renderCalendar();
-}
-
-function saveEvents() {
-    localStorage.setItem('sistema_serraria_events', JSON.stringify(events));
+window.deleteEventFirebase = async function(id) {
+    if (!confirm("Excluir este compromisso?")) return;
+    try {
+        await deleteDoc(doc(db, "agenda", id));
+        
+        // Remover do cache local
+        const evt = eventsFullData.find(e => e.id === id);
+        if (evt) {
+            const dateKey = evt.dateKey;
+            events[dateKey] = events[dateKey].filter(t => t !== evt.text);
+            if (events[dateKey].length === 0) delete events[dateKey];
+            eventsFullData = eventsFullData.filter(e => e.id !== id);
+        }
+        
+        renderEvents();
+        renderCalendar();
+    } catch (e) {
+        console.error("Erro ao excluir evento:", e);
+        alert("Erro ao excluir.");
+    }
 }
 
 function formatDateKey(date) {
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 }
+

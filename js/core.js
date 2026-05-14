@@ -1,27 +1,31 @@
 import { auth, signOut, onAuthStateChanged } from './firebase-init.js';
 
-// Gerenciador de Estado Global
+console.log("Core: Inicializando sistema de segurança e navegação...");
+
+// Objeto de compatibilidade para evitar que scripts antigos travem o sistema
+window.DB = {
+    get: (key) => JSON.parse(localStorage.getItem(key)) || [],
+    set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
+};
+
 const App = {
     user: null,
 
     init() {
         this.checkAuth();
-        this.initNavigation();
+        this.setupNavigation();
     },
 
-    // Auth Check Realtime
     checkAuth() {
         onAuthStateChanged(auth, (user) => {
+            this.user = user;
             if (user) {
-                this.user = user;
-                console.log("Usuário logado:", user.email);
-                // Se estiver na página de login, vai para o index
+                console.log("Core: Autenticado como " + user.email);
                 if (window.location.pathname.includes('login.html')) {
                     window.location.href = 'index.html';
                 }
             } else {
-                this.user = null;
-                // Se não estiver na página de login, redireciona para lá
+                console.warn("Core: Usuário não autenticado.");
                 if (!window.location.pathname.includes('login.html')) {
                     window.location.href = 'login.html';
                 }
@@ -34,47 +38,64 @@ const App = {
             await signOut(auth);
             window.location.href = 'login.html';
         } catch (error) {
-            console.error("Erro ao deslogar:", error);
+            console.error("Erro no logout:", error);
         }
     },
 
-    initNavigation() {
-        const navLinks = document.querySelectorAll('.sidebar nav ul li a');
-        const sections = document.querySelectorAll('.view-section');
+    setupNavigation() {
+        console.log("Core: Ativando escuta de navegação...");
+        
+        // Uso de Delegação de Eventos: Mais robusto que querySelectorAll direto
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.sidebar nav ul li a');
+            if (!link) return;
 
-        // Oculta todas e mostra dashboard padrão (se existir na página)
-        sections.forEach(s => s.style.display = 'none');
-        const defaultView = document.getElementById('view-dashboard');
-        if (defaultView) defaultView.style.display = 'block';
-
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                if (link.id === 'btnLogout') {
-                    e.preventDefault();
-                    this.logout();
-                    return;
-                }
-
-                const targetId = link.getAttribute('data-target');
-                if (!targetId) return;
-
+            const targetId = link.getAttribute('data-target');
+            
+            if (link.id === 'btnLogout') {
                 e.preventDefault();
-                
-                // Navegação entre seções na mesma página
-                navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
+                this.logout();
+                return;
+            }
 
-                sections.forEach(s => s.style.display = 'none');
-                const targetSection = document.getElementById(targetId);
-                if (targetSection) targetSection.style.display = 'block';
-            });
+            if (targetId) {
+                e.preventDefault();
+                console.log("Core: Navegando para " + targetId);
+                this.showSection(targetId);
+                
+                // Atualizar classe ativa
+                document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            }
         });
+
+        // Mostrar dashboard por padrão ao carregar
+        this.showSection('view-dashboard');
+    },
+
+    showSection(id) {
+        const sections = document.querySelectorAll('.view-section');
+        let found = false;
+        sections.forEach(s => {
+            if (s.id === id) {
+                s.style.display = 'block';
+                found = true;
+            } else {
+                s.style.display = 'none';
+            }
+        });
+        
+        if (!found && id !== 'view-dashboard') {
+            console.error("Core: Seção não encontrada: " + id);
+        }
     }
 };
 
-// Inicia o App
-App.init();
+// Iniciar quando o DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
+    App.init();
+}
 
-// Exporta para uso em outros módulos se necessário
 export { App };
-

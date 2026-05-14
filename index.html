@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -12,6 +12,7 @@
     <!-- FontAwesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="romaneio-v2.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -34,8 +35,7 @@
                 <ul>
                     <li><a href="#" class="active" data-target="view-dashboard"><i class="fa-solid fa-home"></i>
                             Início</a></li>
-                    <li><a href="#" data-target="view-romaneio"><i class="fa-solid fa-file-invoice"></i> Gerar
-                            Romaneio</a></li>
+                    <li><a href="#" data-target="view-romaneio-v2"><i class="fa-solid fa-file-invoice"></i> Gerar Romaneio</a></li>
                     <li><a href="#" data-target="view-historico"><i class="fa-solid fa-clock-rotate-left"></i> Histórico
                             de Cargas</a></li>
                     <li><a href="#" data-target="view-clientes"><i class="fa-solid fa-users"></i> Clientes</a></li>
@@ -219,16 +219,27 @@
                     <p>Registro de todos os romaneios finalizados</p>
                 </div>
 
+                <div class="glass-panel" style="margin-bottom: 20px;">
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label><i class="fa-solid fa-magnifying-glass"></i> Filtrar por Cliente</label>
+                            <input type="text" id="filtroHistoricoCliente" placeholder="Digite o nome do cliente para buscar...">
+                        </div>
+                        <button onclick="renderizarHistorico()" class="btn-primary" style="margin-top: 25px;"><i class="fa-solid fa-sync"></i> Atualizar</button>
+                    </div>
+                </div>
+
                 <div class="glass-panel">
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Carga Nº</th>
-                                    <th>Data Finalizada</th>
+                                    <th>Romaneio Nº</th>
+                                    <th>Data</th>
                                     <th>Cliente</th>
-                                    <th>Volume (m³)</th>
-                                    <th>Valor Total (R$)</th>
+                                    <th>Volume Total</th>
+                                    <th>Valor Total</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="listaHistorico">
@@ -309,27 +320,33 @@
                             <input type="text" id="prodTipo" required>
                         </div>
                         <div class="input-group">
-                            <label for="prodNatureza">Natureza</label>
-                            <select id="prodNatureza" required>
-                                <option value="Pinus">Pinus</option>
-                                <option value="Eucalipto">Eucalipto</option>
-                            </select>
+                            <label for="prodNatureza">Natureza / Madeira</label>
+                            <input type="text" id="prodNatureza" placeholder="Ex: Eucalipto, Pinus, etc" required>
                         </div>
                         <div class="input-group">
                             <label for="prodQualidade">Qualidade</label>
-                            <select id="prodQualidade">
-                                <option value="Primeira">Primeira</option>
-                                <option value="Segunda">Segunda</option>
-                                <option value="Construção">Uso Construção</option>
-                            </select>
+                            <input type="text" id="prodQualidade" placeholder="Ex: 1ª Qualidade, BCA, etc">
+                        </div>
+                        <input type="hidden" id="prodClasse" value="Geral"> 
+                        <div class="input-group">
+                            <label for="prodEspessura">Espessura (cm)</label>
+                            <input type="number" id="prodEspessura" step="0.1" required placeholder="Ex: 2.5">
                         </div>
                         <div class="input-group">
-                            <label for="prodClasse">Classe / Espessura (Opcional)</label>
-                            <input type="text" id="prodClasse" placeholder="Ex: Fina, Grossa">
+                            <label for="prodLargura">Largura (cm)</label>
+                            <input type="number" id="prodLargura" step="0.1" required placeholder="Ex: 10">
+                        </div>
+                        <div class="input-group">
+                            <label for="prodComprimentoVenda">Comp. Venda (m)</label>
+                            <input type="number" id="prodComprimentoVenda" step="0.1" required placeholder="Ex: 1.2">
+                        </div>
+                        <div class="input-group">
+                            <label for="prodComprimentoReal">Comp. Real/Frete (m)</label>
+                            <input type="number" id="prodComprimentoReal" step="0.1" placeholder="Vazio = igual Venda">
                         </div>
                         <div class="input-group">
                             <label for="prodPreco">Preço do m³ (R$)</label>
-                            <input type="number" id="prodPreco" step="0.01" required placeholder="Ex: 850.00">
+                            <input type="number" id="prodPreco" step="0.01" required placeholder="Ex: 820.00">
                         </div>
                         <div class="input-group" style="justify-content: flex-end;">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
@@ -830,247 +847,190 @@
             </section>
 
             <!-- ====== TELA: GERAR ROMANEIO ====== -->
-            <section id="view-romaneio" class="view-section" style="display: none;">
+
                 <div class="app-container" style="padding:0; max-width:100%;">
 
-                    <header class="main-header show-on-print"
-                        style="display:none; text-align:center; margin-bottom: 20px;">
-                        <h1
-                            style="font-size: 24pt; border-bottom: 2px solid #000; padding-bottom:10px; margin-bottom: 20px;">
-                            ORQUESTRASIS - SISTEMA PARA SERRARIAS</h1>
-                        <h2>ROMANEIO DE CARGA</h2>
-                    </header>
+                    <header class="main-header sh
 
-                    <div class="main-header hide-on-print">
-                        <h1><i class="fa-solid fa-file-invoice"></i> Emissão de Romaneio</h1>
+one;">
+                <div id="secao-romaneio-v2">
+                    <div class="main-header">
+                        <h1><i class="fa-solid fa-file-invoice"></i> Gerar Romaneio</h1>
+                        <p>Sistema profissional agrupado por classes e logística detalhada.</p>
                     </div>
 
-                    <!-- Formulário do Cliente -->
-                    <section class="glass-panel section-cliente">
-                        <div class="section-title">
-                            <h2><i class="fa-solid fa-truck-loading"></i> Faturamento e Expedição</h2>
-                        </div>
-                        <div class="romaneio-config compact-form">
-                            <div class="input-group">
-                                <label>1. Identificação do Cliente *</label>
-                                <select id="romSelectCliente" required>
-                                    <option value="">-- Escolha um Cliente --</option>
-                                    <!-- Options via JS -->
-                                </select>
-                                <small style="color:var(--accent-color); font-size: 0.75rem;">O frete antigo
-                                    será puxado
-                                    se houver.</small>
-                            </div>
-                            <div class="input-group">
-                                <label>Transportadora (Fretista) *</label>
-                                <select id="romSelectTransporte" required>
-                                    <option value="">-- Escolha um Transporte --</option>
+                    <!-- 1. Cabeçalho Logístico -->
+                    <div class="logistics-grid">
+                        <div class="card-v2">
+                            <span class="card-title">Dados da Carga</span>
+                            <div class="input-group-v2">
+                                <label>Selecionar Cliente</label>
+                                <select id="v2-select-cliente" class="input-v2">
+                                    <option value="">Selecione um cliente...</option>
                                 </select>
                             </div>
-                            <div class="input-group hide-on-print">
-                                <label>Forma de Pagamento</label>
-                                <select id="romSelectPagamento">
-                                    <option value="À Vista">À Vista</option>
-                                    <option value="Cheque">Cheque</option>
-                                    <option value="Boleto 15 Dias">Boleto 15 Dias</option>
-                                    <option value="Boleto 30 Dias">Boleto 30 Dias</option>
-                                    <option value="Boleto 45 Dias">Boleto 45 Dias</option>
-                                    <option value="Boleto 60 Dias">Boleto 60 Dias</option>
-                                    <option value="PIX">PIX Posterior</option>
+                            <input type="hidden" id="v2-cliente">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                                <div class="input-group-v2">
+                                    <label>Data Carreg.</label>
+                                    <input type="date" id="v2-data-carreg" class="input-v2">
+                                </div>
+                                <div class="input-group-v2">
+                                    <label>Nº Romaneio (Ordem)</label>
+                                    <input type="number" id="v2-numero-ordem" class="input-v2" placeholder="000">
+                                </div>
+                            </div>
+                            <div class="input-group-v2" style="margin-top: 10px;">
+                                <label>Data Descarreg.</label>
+                                <input type="date" id="v2-data-descarreg" class="input-v2">
+                            </div>
+                        </div>
+
+                        <div class="card-v2">
+                            <span class="card-title">Transporte e Logística</span>
+                            
+                            <div class="input-group-v2">
+                                <label>1. Transportadora / Responsável</label>
+                                <select id="v2-select-transporte" class="input-v2">
+                                    <option value="">Selecione uma transportadora...</option>
                                 </select>
                             </div>
-                            <div class="input-group">
-                                <label>Data da Expedição</label>
-                                <!-- Formatado em compact form -->
-                                <input type="date" id="dataCarga" required title="Data Atual Padrão"
-                                    style="font-weight:bold; color:var(--accent-color);">
+
+                            <div class="input-group-v2" style="margin-top: 15px;">
+                                <label>2. Motorista</label>
+                                <input type="text" id="v2-motorista" class="input-v2" placeholder="Nome do Motorista">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                                <div class="input-group-v2">
+                                    <label>3. Caminhão</label>
+                                    <input type="text" id="v2-caminhao" class="input-v2" placeholder="Modelo">
+                                </div>
+                                <div class="input-group-v2">
+                                    <label>4. Placa</label>
+                                    <input type="text" id="v2-placa" class="input-v2" placeholder="ABC-1234">
+                                </div>
+                            </div>
+
+                            <div class="input-group-v2" style="margin-top: 15px; background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 8px; border: 1px solid var(--warning);">
+                                <label style="color: var(--warning); font-weight: 800;">5. VALOR DO FRETE (R$/m³)</label>
+                                <input type="number" id="v2-valor-frete" class="input-v2" placeholder="0,00" step="0.01" style="border-color: var(--warning); font-weight: bold; font-size: 1.2rem; color: var(--warning);">
                             </div>
                         </div>
 
-                        <!-- Valores Globais -->
-                        <div class="romaneio-config compact-form"
-                            style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <div class="input-group">
-                                <label>Valor Acordado Frete (R$/m³)</label>
-                                <input type="number" id="valorFrete" step="0.01" value="0.00">
-                            </div>
-                            <div class="input-group">
-                                <label>Acréscimos / Juros NF (R$)</label>
-                                <input type="number" id="valorJurosNf" step="0.01" value="0.00"
-                                    placeholder="Ex: 150.00">
-                            </div>
-                        </div>
+                    </div>
 
-                        <!-- Info extra do cliente para o PDF -->
-                        <div class="info-impressao show-on-print"
-                            style="display:none; margin-top: 15px; font-size:12px; border:1px solid #000; padding:10px;">
-                            <p><strong>Cliente:</strong> <span id="printNomeCli"></span></p>
-                            <p><i class="fa-solid fa-truck"></i> <strong>Transportadora:</strong> <span
-                                    id="printFretista">---</span></p>
-                            <p><i class="fa-solid fa-id-card"></i> <strong>Placa/Motorista:</strong> <span
-                                    id="printPlaca">---</span></p>
-                            <p><i class="fa-solid fa-money-bill-wave"></i> <strong>Forma Pgat:</strong> <span
-                                    id="printPagam">À Vista</span></p>
-                        </div>
-                    </section>
-
-                    <!-- Inserção de Itens (Oculto na impressão) -->
-                    <section class="glass-panel section-insercao hide-on-print">
-                        <div class="section-title">
-                            <h2><i class="fa-solid fa-plus-circle"></i> Adicionar Madeira</h2>
-                        </div>
-
-                        <form id="itemForm" class="romaneio-config compact-form">
-                            <div class="input-group" style="grid-column: span 2;">
-                                <label>2. Descrição do Produto / Madeira</label>
-                                <input type="text" id="descMadeira" list="listaMadeirasSugestao" required placeholder="Ex: Madeira de Primeira (1ª)">
-                                <datalist id="listaMadeirasSugestao">
-                                    <!-- Preenchido via JS -->
-                                </datalist>
+                    <!-- 2. Adicionar Pacotes (Entrada de Dados) -->
+                    <div class="card-v2" style="margin-bottom: 30px; border: 1px solid var(--accent);">
+                        <span class="card-title" style="color: var(--accent);">Adicionar Pacotes à Carga</span>
+                        <div class="entry-form">
+                            <div class="input-group-v2" style="grid-column: span 2;">
+                                <label>Madeira / Estilo (Cadastrado)</label>
+                                <select id="v2-select-produto" class="input-v2">
+                                    <option value="">Selecione uma madeira...</option>
+                                </select>
                             </div>
-                            <div class="input-group">
-                                <label>Preço Acordado (R$/m³)</label>
-                                <input type="number" id="precoCustomizado" step="0.01" required placeholder="Ex: 820.00">
+                            <div class="input-group-v2">
+                                <label>Qualidade / Natureza</label>
+                                <input type="text" id="v2-qualidade" class="input-v2" placeholder="Ex: 1ª Qualidade">
                             </div>
-                            <!-- Campos para Pacotes / Fardo -->
-                            <div class="input-group">
-                                <label for="qtPacotes">Qtd. Pacotes/Fardos</label>
-                                <input type="number" id="qtPacotes" min="0" placeholder="Opcional">
+                            <div class="input-group-v2">
+                                <label>Preço m³ (R$)</label>
+                                <input type="number" id="v2-preco-m3-item" class="input-v2" step="0.01" placeholder="R$ 0,00">
                             </div>
-                            <div class="input-group">
-                                <label for="pacoteAltura">Calc Fardo: Altura (pçs)</label>
-                                <input type="number" id="pacoteAltura" min="0" placeholder="A x L">
+                            <div class="input-group-v2">
+                                <label>Espessura (cm)</label>
+                                <input type="number" id="v2-espessura" class="input-v2" step="0.1" placeholder="0.0">
                             </div>
-                            <div class="input-group">
-                                <label for="pacoteLargura">Calc Fardo: Largura (pçs)</label>
-                                <input type="number" id="pacoteLargura" min="0" placeholder="A x L">
+                            <div class="input-group-v2">
+                                <label>Largura (cm)</label>
+                                <input type="number" id="v2-largura" class="input-v2" step="0.1" placeholder="0.0">
                             </div>
-                            <div class="input-group">
-                                <label for="pacoteAmarras">Calc Fardo: Amarras</label>
-                                <input type="number" id="pacoteAmarras" min="0" placeholder="+ Amarras">
+                            <div class="input-group-v2">
+                                <label>Comp. Venda (m)</label>
+                                <input type="number" id="v2-comprimento" class="input-v2" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="input-group-v2">
+                                <label>Comp. Real (Frete)</label>
+                                <input type="number" id="v2-comprimento-real" class="input-v2" step="0.01" placeholder="0.00">
                             </div>
 
-                            <div class="input-group">
-                                <label for="espessura">Espessura (cm)</label>
-                                <input type="number" id="espessura" step="0.1" required placeholder="Ex: 2.5">
+                            
+                            <!-- Calculadora de Peças Interna -->
+                            <div class="input-group-v2" style="background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px;">
+                                <label>Alt x Cam + Am.</label>
+                                <div style="display: flex; gap: 4px;">
+                                    <input type="number" id="v2-altura" class="input-v2" style="width: 50px; padding: 5px;" placeholder="Alt">
+                                    <input type="number" id="v2-camada" class="input-v2" style="width: 50px; padding: 5px;" placeholder="Cam">
+                                    <input type="number" id="v2-amarras" class="input-v2" style="width: 50px; padding: 5px;" placeholder="+">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="largura">Largura (cm)</label>
-                                <input type="number" id="largura" step="0.1" required placeholder="Ex: 10">
+
+                             <div class="input-group-v2">
+                                <label>Qtd Peças/Pacote</label>
+                                <input type="number" id="v2-quantidade" class="input-v2" placeholder="0">
                             </div>
-                            <div class="input-group">
-                                <label for="comprimento">Comprimento (m)</label>
-                                <input type="number" id="comprimento" step="0.1" required placeholder="Ex: 3.0">
+                             <div class="input-group-v2">
+                                <label>Qtd Pacotes</label>
+                                <input type="number" id="v2-qtd-pacotes" class="input-v2" value="1" min="1">
                             </div>
-                            <div class="input-group">
-                                <label for="quantidade">Qtd de Peças</label>
-                                <input type="number" id="quantidade" min="1" required placeholder="Ex: 50">
-                            </div>
-                            <div class="input-group btn-group align-bottom">
-                                <input type="hidden" id="editItemId" value="">
-                                <button type="submit" class="btn-primary" id="btnSalvarItem">
-                                    <i class="fa-solid fa-plus"></i> Adicionar
+
+                            <div style="display: flex; gap: 10px; align-items: flex-end; grid-column: span 2;">
+                                <button id="btn-add-pacote-v2" class="btn-v2 btn-primary-v2" style="flex: 1;">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Pacote
                                 </button>
-                                <button type="button" class="btn-secondary" id="btnCancelarEdicao"
-                                    style="display: none; margin-left: 10px;">
-                                    Cancelar
+                                <button id="btn-update-pacote-v2" class="btn-v2 btn-secondary-v2" style="display: none; flex: 1; background: var(--warning); color: black;">
+                                    <i class="fa-solid fa-save"></i> Atualizar Pacote
+                                </button>
+                                <button id="btn-limpar-romaneio-v2" class="btn-v2" style="background: var(--danger); color: white;">
+                                    <i class="fa-solid fa-trash-can"></i> Limpar Tudo
                                 </button>
                             </div>
-                        </form>
-                    </section>
-
-                    <!-- Tabela de Itens -->
-                    <section class="glass-panel section-tabela">
-                        <div class="tabela-header">
-                            <h2><i class="fa-solid fa-list"></i> Carga / Itens</h2>
-                            <div class="actions hide-on-print">
-                                <button id="btnPrint" class="btn-secondary"><i class="fa-solid fa-print"></i>
-                                    Visualizar/Imprimir PDF</button>
-                                <button id="btnFinalizar" class="btn-primary"
-                                    style="background:#2cc990; color:#0d1117; margin-left:10px;"><i
-                                        class="fa-solid fa-check-double"></i> Finalizar e Salvar Carga</button>
-                            </div>
                         </div>
+                    </div>
 
-                        <div class="table-container">
-                            <table id="tabelaRomaneio">
-                                <thead>
-                                    <tr>
-                                        <th>Mercadoria</th>
-                                        <th>Medidas (E x L x C)</th>
-                                        <th>Pacotes</th>
-                                        <th>Peças</th>
-                                        <th>Volume Unit (m³)</th>
-                                        <th>Valor un/Peça (R$)</th>
-                                        <th>Volume Total</th>
-                                        <th class="hide-on-print">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabelaBody">
-                                    <!-- Linhas geradas via JS -->
-                                </tbody>
-                                <tfoot id="resumoTabela">
-                                    <tr>
-                                        <td colspan="2" class="text-right"><strong>TOTAL FÍSICO
-                                                (MADEIRA):</strong></td>
-                                        <td id="totalPacotes" style="color:var(--primary-color);"><strong>0
-                                                pct</strong>
-                                        </td>
-                                        <td id="totalQtd"><strong>0 pçs</strong></td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td class="total-highlight"><strong id="totalVolume">0.000 m³</strong>
-                                        </td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">VALOR BRUTO DAS MERCADORIAS
-                                            (MADEIRAS):</td>
-                                        <td id="resValorMadeira">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">+ SERVIÇO DE FRETE (TERCEIRIZADO):
-                                        </td>
-                                        <td id="resValorFrete">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro">
-                                        <td colspan="6" class="text-right">+ ACRÉSCIMOS / JUROS N.F:</td>
-                                        <td id="resValorImposto">R$ 0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                    <tr class="sumario-financeiro" style="background: rgba(44, 201, 144, 0.1);">
-                                        <td colspan="6" class="text-right"
-                                            style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                            VALOR
-                                            TOTAL DO ROMANEIO:</td>
-                                        <td id="resValorTotal"
-                                            style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">
-                                            R$
-                                            0,00</td>
-                                        <td class="hide-on-print"></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                    <!-- 3. Lista de Pacotes Agrupados -->
+                    <div id="v2-lista-classes">
+                        <!-- Gerado dinamicamente pelo JS -->
+                        <p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhum pacote adicionado ainda.</p>
+                    </div>
+
+                    <!-- 4. Resumo Financeiro -->
+                    <div style="margin-top: 40px; background: rgba(245, 158, 11, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2); display: flex; align-items: center; gap: 20px;">
+                        <div class="input-group-v2">
+                            <label style="color: var(--warning);">Ajustar Taxa NF (%)</label>
+                            <input type="number" id="v2-taxa-nf" class="input-v2" style="width: 100px; border-color: var(--warning);" value="9.3" step="0.1">
                         </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+                            <i class="fa-solid fa-circle-info"></i> Altere a taxa acima para atualizar os cálculos automaticamente no painel abaixo.
+                        </p>
+                    </div>
 
-                        <!-- Assinatura visível apenas na impressão -->
-                        <div class="signatures show-on-print">
-                            <div class="signature-box">
-                                <div class="line"></div>
-                                <p>Orquestrasis. Sistema para serrarias.<br>Entregador</p>
-                            </div>
-                            <div class="signature-box">
-                                <div class="line"></div>
-                                <p>Assinatura do Recebedor<br>Data e Hora de Recebimento</p>
-                            </div>
-                        </div>
-                    </section>
-
+                    <div class="finance-footer" style="margin-top: 15px;">
+                        <!-- O conteúdo detalhado e cálculos são gerados pelo js/romaneio_v2.js -->
+                        <p style="text-align: center; width: 100%;">Carregando cálculos...</p>
+                    </div>
                 </div>
             </section>
+
         </main>
+    </div>
+
+    <!-- MODAL: DETALHES DO ROMANEIO -->
+    <div id="modalDetalhesRomaneio" class="modal-v2" style="display: none;">
+        <div class="modal-content-v2 card-v2">
+            <div class="modal-header-v2">
+                <h2><i class="fa-solid fa-file-invoice"></i> Detalhes da Carga</h2>
+                <button onclick="fecharModalDetalhes()" class="btn-close-v2">&times;</button>
+            </div>
+            <div id="conteudoDetalhesRomaneio" class="modal-body-v2">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="modal-footer-v2 hide-on-print">
+                <button onclick="window.print()" class="btn-v2 btn-secondary-v2"><i class="fa-solid fa-print"></i> Imprimir</button>
+                <button onclick="fecharModalDetalhes()" class="btn-v2" style="background: var(--border); color: white;">Fechar</button>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase Initialization -->
@@ -1084,7 +1044,7 @@
     <script type="module" src="js/transportes.js"></script>
     <script type="module" src="js/entrada.js"></script>
     <script type="module" src="js/estoque.js"></script>
-    <script type="module" src="js/romaneio.js"></script>
+    <script type="module" src="js/romaneio_v2.js"></script>
     <script type="module" src="js/historico.js"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js"></script>
