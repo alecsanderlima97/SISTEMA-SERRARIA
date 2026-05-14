@@ -923,7 +923,10 @@
                         <form id="itemForm" class="romaneio-config compact-form">
                             <div class="input-group" style="grid-column: span 2;">
                                 <label>2. Descrição do Produto / Madeira</label>
-                                <input type="text" id="descMadeira" required placeholder="Ex: Madeira de Primeira (1ª)">
+                                <input type="text" id="descMadeira" list="listaMadeirasSugestao" required placeholder="Ex: Madeira de Primeira (1ª)">
+                                <datalist id="listaMadeirasSugestao">
+                                    <!-- Preenchido via JS -->
+                                </datalist>
                             </div>
                             <div class="input-group">
                                 <label>Preço Acordado (R$/m³)</label>

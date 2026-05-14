@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs } from './firebase-init.js';
+import { db, collection, addDoc, getDocs, query, where, orderBy, limit } from './firebase-init.js';
 
 // --- Lógica Principal do Romaneio ---
 
@@ -10,12 +10,14 @@ let itemEditando = null;
 const romSelectCliente = document.getElementById('romSelectCliente');
 const romSelectTransporte = document.getElementById('romSelectTransporte');
 const romSelectPagamento = document.getElementById('romSelectPagamento');
-const descMadeira = document.getElementById('descMadeira'); // Novo campo de texto livre
-const precoCustomizado = document.getElementById('precoCustomizado'); // Preço do M3
-const pacoteAltura = document.getElementById('pacoteAltura');
+const descMadeira = document.getElementById('descMadeira'); 
+const listaMadeirasSugestao = document.getElementById('listaMadeirasSugestao');
+const precoCustomizado = document.getElementById('precoCustomizado'); 
+
+let listaProdutosCache = [];const pacoteAltura = document.getElementById('pacoteAltura');
 const pacoteLargura = document.getElementById('pacoteLargura');
 const pacoteAmarras = document.getElementById('pacoteAmarras');
-const quantidade = document.getElementById('quantidade'); // Total Peças Final (O antigo "quantidade")
+const quantidade = document.getElementById('quantidade'); 
 const qtPacotes = document.getElementById('qtPacotes');
 const valorFrete = document.getElementById('valorFrete');
 const valorJurosNf = document.getElementById('valorJurosNf');
@@ -31,77 +33,127 @@ const printFretista = document.getElementById('printFretista');
 const printPlaca = document.getElementById('printPlaca');
 const printPagam = document.getElementById('printPagam');
 
-// Carregar Combos
-function carregarSelects() {
-    let clientes = DB.get('clientes') || [];
-    let selecaoAtualCliente = romSelectCliente.value;
-    romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
-    clientes.forEach(c => {
-        romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade}</option>`;
-    });
-    if(selecaoAtualCliente) romSelectCliente.value = selecaoAtualCliente;
+// Carregar Combos do Firebase
+async function carregarSelects() {
+    try {
+        // Clientes
+        const clientesSnapshot = await getDocs(collection(db, 'clientes'));
+        let selecaoAtualCliente = romSelectCliente.value;
+        romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
+        clientesSnapshot.forEach(doc => {
+            const c = { id: doc.id, ...doc.data() };
+            romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade || ''}</option>`;
+        });
+        if(selecaoAtualCliente) romSelectCliente.value = selecaoAtualCliente;
 
-    let transportes = DB.get('transportes') || [];
-    let selecaoAtualTransp = romSelectTransporte.value;
-    romSelectTransporte.innerHTML = '<option value="">-- Escolha um Transporte --</option>';
-    transportes.forEach(t => {
-        romSelectTransporte.innerHTML += `<option value="${t.id}">${t.nome} (Placa: ${t.placa})</option>`;
-    });
-    if(selecaoAtualTransp) romSelectTransporte.value = selecaoAtualTransp;
+        // Transportadoras
+        const transportesSnapshot = await getDocs(collection(db, 'transportes'));
+        let selecaoAtualTransp = romSelectTransporte.value;
+        romSelectTransporte.innerHTML = '<option value="">-- Escolha um Transporte --</option>';
+        transportesSnapshot.forEach(doc => {
+            const t = { id: doc.id, ...doc.data() };
+            romSelectTransporte.innerHTML += `<option value="${t.id}">${t.nome} (Placa: ${t.placa})</option>`;
+        });
+        if(selecaoAtualTransp) romSelectTransporte.value = selecaoAtualTransp;
+
+        // Produtos (Madeiras) para Sugestão
+        const produtosSnapshot = await getDocs(collection(db, 'produtos'));
+        if (listaMadeirasSugestao) {
+            listaMadeirasSugestao.innerHTML = '';
+            listaProdutosCache = [];
+            produtosSnapshot.forEach(doc => {
+                const p = { id: doc.id, ...doc.data() };
+                listaProdutosCache.push(p);
+                const label = `${p.tipo} (${p.natureza} ${p.qualidade})`;
+                listaMadeirasSugestao.innerHTML += `<option value="${label}">`;
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao carregar selects do Firebase:", error);
+    }
 }
 
 // Ouvintes para atualizar combos
 document.addEventListener('clientesUpdated', carregarSelects);
 document.addEventListener('transportesUpdated', carregarSelects);
+document.addEventListener('produtosUpdated', carregarSelects);
 carregarSelects();
 
-// Lógica de Memória do Cliente e Info para PDF
-romSelectCliente.addEventListener('change', function() {
-    // 1. Preenche Header PDF
-    let clientes = DB.get('clientes') || [];
-    let c = clientes.find(x => x.id == this.value);
-    if(c) {
-        printNomeCli.textContent = c.nome;
-    } else {
+// Autopreenchimento de Preço ao selecionar Madeira
+if (descMadeira) {
+    descMadeira.addEventListener('input', function() {
+        const valorDigitado = this.value;
+        const produtoEncontrado = listaProdutosCache.find(p => {
+            const label = `${p.tipo} (${p.natureza} ${p.qualidade})`;
+            return label === valorDigitado;
+        });
+
+        if (produtoEncontrado) {
+            precoCustomizado.value = produtoEncontrado.preco;
+            console.log(`Preço automático aplicado: R$ ${produtoEncontrado.preco}`);
+        }
+    });
+}
+
+// Lógica de Memória do Cliente e Info para PDF (Busca no Firestore)
+romSelectCliente.addEventListener('change', async function() {
+    const clienteId = this.value;
+    if(!clienteId) {
         printNomeCli.textContent = '';
+        valorFrete.value = "0.00";
+        return;
     }
 
-    // 2. Busca último frete deste cliente no Histórico
-    let historico = DB.get('historico') || [];
-    let encontrou = false;
-    
-    // Inverte para pegar do mais novo para o mais velho
-    let histInvertido = [...historico].reverse();
-    
-    for(let h of histInvertido) {
-        if(h.clienteId == this.value && h.freteAplicado !== undefined) {
-            valorFrete.value = h.freteAplicado;
-            encontrou = true;
-            break;
+    // 1. Preenche Header PDF (Busca nome no combo selecionado)
+    const selectedOption = this.options[this.selectedIndex];
+    printNomeCli.textContent = selectedOption.text.split(' - ')[0];
+
+    // 2. Busca ÚLTIMO FRETE deste cliente no Firestore
+    try {
+        const historicoRef = collection(db, 'historico');
+        const q = query(
+            historicoRef, 
+            where("clienteId", "==", clienteId), 
+            orderBy("criadoEm", "desc"), 
+            limit(1)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const ultimoRomaneio = querySnapshot.docs[0].data();
+            if (ultimoRomaneio.freteAplicado !== undefined) {
+                valorFrete.value = ultimoRomaneio.freteAplicado;
+                console.log(`Frete recuperado do histórico: R$ ${ultimoRomaneio.freteAplicado}`);
+            }
+        } else {
+            valorFrete.value = "0.00";
         }
+    } catch (error) {
+        console.error("Erro ao buscar último frete:", error);
     }
     
-    if(!encontrou) valorFrete.value = "0.00";
     recalcularTotais();
 });
 
 // Update Fretista Footer PDF
-romSelectTransporte.addEventListener('change', function() {
-    let transportes = DB.get('transportes') || [];
-    let t = transportes.find(x => x.id == this.value);
-    if(t) {
-        printFretista.textContent = t.nome;
-        printPlaca.textContent = `${t.placa} / ${t.motorista || ''}`;
-    } else {
+romSelectTransporte.addEventListener('change', async function() {
+    if(!this.value) {
         printFretista.textContent = '---';
         printPlaca.textContent = '---';
+        return;
     }
+    
+    const selectedOption = this.options[this.selectedIndex];
+    printFretista.textContent = selectedOption.text.split(' (Placa:')[0];
+    printPlaca.textContent = selectedOption.text.match(/\(Placa: (.*?)\)/)?.[1] || '';
 });
 
 // Update Pagamento Footer PDF
 romSelectPagamento.addEventListener('change', function() {
     printPagam.textContent = this.value;
 });
+
 
 // Atualiza e Formata Totais
 function formatarMoeda(valor) {
