@@ -35,26 +35,31 @@ const printPagam = document.getElementById('printPagam');
 
 // Carregar Combos do Firebase
 async function carregarSelects() {
+    console.log("Iniciando carregamento de dados do Firebase...");
     try {
         // Clientes
         const clientesSnapshot = await getDocs(collection(db, 'clientes'));
-        let selecaoAtualCliente = romSelectCliente.value;
-        romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
-        clientesSnapshot.forEach(doc => {
-            const c = { id: doc.id, ...doc.data() };
-            romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade || ''}</option>`;
-        });
-        if(selecaoAtualCliente) romSelectCliente.value = selecaoAtualCliente;
+        if (romSelectCliente) {
+            let selecaoAtualCliente = romSelectCliente.value;
+            romSelectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
+            clientesSnapshot.forEach(doc => {
+                const c = { id: doc.id, ...doc.data() };
+                romSelectCliente.innerHTML += `<option value="${c.id}">${c.nome} - ${c.cidade || ''}</option>`;
+            });
+            if(selecaoAtualCliente) romSelectCliente.value = selecaoAtualCliente;
+        }
 
         // Transportadoras
         const transportesSnapshot = await getDocs(collection(db, 'transportes'));
-        let selecaoAtualTransp = romSelectTransporte.value;
-        romSelectTransporte.innerHTML = '<option value="">-- Escolha um Transporte --</option>';
-        transportesSnapshot.forEach(doc => {
-            const t = { id: doc.id, ...doc.data() };
-            romSelectTransporte.innerHTML += `<option value="${t.id}">${t.nome} (Placa: ${t.placa})</option>`;
-        });
-        if(selecaoAtualTransp) romSelectTransporte.value = selecaoAtualTransp;
+        if (romSelectTransporte) {
+            let selecaoAtualTransp = romSelectTransporte.value;
+            romSelectTransporte.innerHTML = '<option value="">-- Escolha um Transporte --</option>';
+            transportesSnapshot.forEach(doc => {
+                const t = { id: doc.id, ...doc.data() };
+                romSelectTransporte.innerHTML += `<option value="${t.id}">${t.nome} (Placa: ${t.placa})</option>`;
+            });
+            if(selecaoAtualTransp) romSelectTransporte.value = selecaoAtualTransp;
+        }
 
         // Produtos (Madeiras) para Sugestão
         const produtosSnapshot = await getDocs(collection(db, 'produtos'));
@@ -68,8 +73,9 @@ async function carregarSelects() {
                 listaMadeirasSugestao.innerHTML += `<option value="${label}">`;
             });
         }
+        console.log("Dados carregados com sucesso!");
     } catch (error) {
-        console.error("Erro ao carregar selects do Firebase:", error);
+        console.error("Erro ao carregar dados do Firebase:", error);
     }
 }
 
@@ -90,7 +96,7 @@ if (descMadeira) {
 
         if (produtoEncontrado) {
             precoCustomizado.value = produtoEncontrado.preco;
-            console.log(`Preço automático aplicado: R$ ${produtoEncontrado.preco}`);
+            console.log("Preço automático encontrado para:", valorDigitado, "R$", produtoEncontrado.preco);
         }
     });
 }
@@ -98,18 +104,19 @@ if (descMadeira) {
 // Lógica de Memória do Cliente e Info para PDF (Busca no Firestore)
 romSelectCliente.addEventListener('change', async function() {
     const clienteId = this.value;
+    console.log("Cliente selecionado ID:", clienteId);
+    
     if(!clienteId) {
         printNomeCli.textContent = '';
         valorFrete.value = "0.00";
         return;
     }
 
-    // 1. Preenche Header PDF (Busca nome no combo selecionado)
     const selectedOption = this.options[this.selectedIndex];
     printNomeCli.textContent = selectedOption.text.split(' - ')[0];
 
-    // 2. Busca ÚLTIMO FRETE deste cliente no Firestore
     try {
+        console.log("Buscando último frete no histórico para o cliente...");
         const historicoRef = collection(db, 'historico');
         const q = query(
             historicoRef, 
@@ -122,15 +129,16 @@ romSelectCliente.addEventListener('change', async function() {
         
         if (!querySnapshot.empty) {
             const ultimoRomaneio = querySnapshot.docs[0].data();
+            console.log("Último romaneio encontrado:", ultimoRomaneio);
             if (ultimoRomaneio.freteAplicado !== undefined) {
                 valorFrete.value = ultimoRomaneio.freteAplicado;
-                console.log(`Frete recuperado do histórico: R$ ${ultimoRomaneio.freteAplicado}`);
             }
         } else {
+            console.log("Nenhum histórico encontrado para este cliente.");
             valorFrete.value = "0.00";
         }
     } catch (error) {
-        console.error("Erro ao buscar último frete:", error);
+        console.error("Erro detalhado na busca de frete:", error);
     }
     
     recalcularTotais();
@@ -161,32 +169,43 @@ function formatarMoeda(valor) {
 }
 
 function recalcularTotais() {
-    // Totais Quantidade e Metro Cúbico Físico
+    // Totais Físicos
     const somaQtd = itensRomaneio.reduce((acc, curr) => acc + curr.quantidade, 0);
     const somaPacotes = itensRomaneio.reduce((acc, curr) => acc + (curr.pacotes || 0), 0);
     const somaVolume = itensRomaneio.reduce((acc, curr) => acc + curr.volumeTotal, 0);
 
-    document.getElementById('totalQtd').innerHTML = `<strong>${somaQtd} pçs</strong>`;
-    document.getElementById('totalPacotes').innerHTML = `<strong>${somaPacotes} pct(s)</strong>`;
-    document.getElementById('totalVolume').innerHTML = `<strong>${somaVolume.toFixed(4)} m³</strong>`;
+    const totalQtdEl = document.getElementById('totalQtd');
+    const totalPacotesEl = document.getElementById('totalPacotes');
+    const totalVolumeEl = document.getElementById('totalVolume');
 
-    // Matemática Financeira Associada ao Produto
+    if(totalQtdEl) totalQtdEl.innerHTML = `<strong>${somaQtd} pçs</strong>`;
+    if(totalPacotesEl) totalPacotesEl.innerHTML = `<strong>${somaPacotes} pct(s)</strong>`;
+    if(totalVolumeEl) totalVolumeEl.innerHTML = `<strong>${somaVolume.toFixed(4)} m³</strong>`;
+
+    // VALOR SÓ DA MADEIRA (Sem somar frete no produto)
     let totalValorMadeira = itensRomaneio.reduce((acc, curr) => acc + (curr.volumeTotal * curr.precoUsado), 0);
 
-    // Lógica do Frete: m³ total * Preço do Frete por m³ digitado
+    // VALOR SÓ DO FRETE (Cálculo à parte)
     let fretePorM3 = parseFloat(valorFrete.value) || 0;
     let custoFrete = somaVolume * fretePorM3;
 
-    // Imposto NF
+    // ACRÉSCIMOS
     let imposto = parseFloat(valorJurosNf.value) || 0;
 
+    // TOTAL FINAL DO ROMANEIO (Soma tudo mas exibe separado)
     let valorTotalGeral = totalValorMadeira + custoFrete + imposto;
 
-    document.getElementById('resValorMadeira').textContent = formatarMoeda(totalValorMadeira);
-    document.getElementById('resValorFrete').textContent = formatarMoeda(custoFrete);
-    document.getElementById('resValorImposto').textContent = formatarMoeda(imposto);
-    document.getElementById('resValorTotal').textContent = formatarMoeda(valorTotalGeral);
+    const resValorMadeiraEl = document.getElementById('resValorMadeira');
+    const resValorFreteEl = document.getElementById('resValorFrete');
+    const resValorImpostoEl = document.getElementById('resValorImposto');
+    const resValorTotalEl = document.getElementById('resValorTotal');
+
+    if(resValorMadeiraEl) resValorMadeiraEl.textContent = formatarMoeda(totalValorMadeira);
+    if(resValorFreteEl) resValorFreteEl.textContent = formatarMoeda(custoFrete);
+    if(resValorImpostoEl) resValorImpostoEl.textContent = formatarMoeda(imposto);
+    if(resValorTotalEl) resValorTotalEl.textContent = formatarMoeda(valorTotalGeral);
 }
+
 
 // Disparar o cálculo quando frete ou imposto mudarem
 valorFrete.addEventListener('input', recalcularTotais);
@@ -416,7 +435,7 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
     btnFinalizar.disabled = true;
 
     try {
-        // Obter contagem do Firebase
+        // Obter contagem do Firebase para gerar o próximo número de carga
         const historicoCol = collection(db, 'historico');
         const querySnapshot = await getDocs(historicoCol);
         let numCarga = (querySnapshot.size + 1).toString().padStart(4, '0');
@@ -433,18 +452,15 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
             criadoEm: new Date().toISOString()
         };
 
+        console.log("Tentando salvar no Firebase...", novaHistoria);
+
         // Salvar no Firebase
         await addDoc(historicoCol, novaHistoria);
         
-        // Atualizar DB local (opcional)
-        let historias = DB.get('historico') || [];
-        historias.push({id: Date.now().toString(), ...novaHistoria});
-        DB.set('historico', historias);
-        
-        // Dispara Evento pro historico.js atualizar
+        // Dispara Evento pro historico.js atualizar a tela de histórico
         document.dispatchEvent(new Event('historicoUpdated'));
 
-        alert(`Sucesso! ${novaHistoria.numeroCarga} foi salva no Histórico.`);
+        alert(`Sucesso! ${novaHistoria.numeroCarga} foi salva no Firebase.`);
 
         // Limpar Romaneio
         itensRomaneio = [];
@@ -465,9 +481,10 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
         
         renderizarTabelaRomaneio();
     } catch (error) {
-        console.error("Erro ao finalizar carga: ", error);
-        alert("Erro ao salvar histórico. Verifique o console.");
+        console.error("ERRO CRÍTICO AO SALVAR NO FIREBASE: ", error);
+        alert("Erro ao salvar histórico no Firebase. Verifique se você está logado ou se as regras do banco permitem escrita.");
     } finally {
+
         btnFinalizar.innerHTML = textoOriginal;
         btnFinalizar.disabled = false;
     }
