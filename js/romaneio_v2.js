@@ -663,17 +663,21 @@ window.verPreviaRomaneioV2 = () => {
     let totalPcs = 0;
     let totalM3Madeira = 0;
     let totalMadeira = 0;
+    let totalM3Frete = 0;
 
     r.pacotes.forEach(p => { 
         totalPcts += p.qtdPacotes; 
         totalPcs += (p.pecasPorPacote * p.qtdPacotes); 
         totalM3Madeira += p.m3VendaTotal;
         totalMadeira += p.valorTotalWood;
+        totalM3Frete += p.m3FreteTotal;
     });
 
     const taxa = r.financeiro.taxaNF || 0;
     const imposto = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) * (taxa / 100);
     const subtotalLiquido = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) + imposto;
+    const freteBruto = totalM3Frete * (r.logistica.valorFrete || 0);
+    const freteFinal = freteBruto + (r.logistica.adicionalFrete || 0);
 
     conteudo.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
@@ -720,8 +724,9 @@ window.verPreviaRomaneioV2 = () => {
                 <p style="margin: 10px 0 5px 0; font-size: 1.1rem; font-weight: bold; border-top: 1px solid #ccc; padding-top: 5px;">Subtotal Líquido: R$ ${subtotalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                 
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 0.9rem;">
-                    <p style="margin: 0 0 5px 0;">Frete Base: R$ ${r.logistica.valorFrete}/m³</p>
-                    ${r.logistica.adicionalFrete ? `<p style="margin: 0;">Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}
+                    <p style="margin: 0 0 5px 0;">Estimativa Frete Base: ${totalM3Frete.toFixed(3)} m³ × R$ ${r.logistica.valorFrete}/m³ = R$ ${freteBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    ${r.logistica.adicionalFrete ? `<p style="margin: 0 0 5px 0;">Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}
+                    <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 1.1rem; color: #111;">Custo Total Frete: R$ ${freteFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                 </div>
 
                 <p style="font-size: 1.4rem; font-weight: 900; margin: 15px 0 0 0; border-top: 2px solid #333; padding-top: 10px;">

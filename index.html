@@ -825,9 +825,15 @@
                 <!-- Recibo de Impressão Temporário de Subprodutos -->
                 <div id="printAreaSubprodutos" class="show-on-print"
                     style="display:none; padding: 20px; border: 2px dashed #000; margin-top: 20px;">
-                    <h2 style="text-align:center;">ORQUESTRASIS - SISTEMA PARA SERRARIAS</h2>
-                    <h3 style="text-align:center;">Recibo de Venda - Subprodutos</h3>
-                    <hr>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
+                        <div>
+                            <img src="logo.png" alt="VANMARTE - Madeiras serradas para embalagens" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
+                        </div>
+                        <div style="text-align:right;">
+                            <h2 style="margin:0; font-size: 1.5rem; text-transform: uppercase;">RECIBO DE VENDA</h2>
+                            <h3 style="margin:5px 0 0 0; font-size: 1.2rem; color: #444;">Subprodutos</h3>
+                        </div>
+                    </div>
                     <p><strong>Nº Romaneio:</strong> <span id="printCavRomaneio"></span></p>
                     <p><strong>Data:</strong> <span id="printCavData"></span></p>
                     <p><strong>Cliente/Empresa:</strong> <span id="printCavCliente"></span></p>
