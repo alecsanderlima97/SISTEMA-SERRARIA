@@ -13,12 +13,16 @@ let romaneioAtual = {
         caminhao: '',
         placa: '',
         responsavelFrete: '',
-        valorFrete: 0
+        valorFrete: 0,
+        adicionalFrete: 0,
+        obsFrete: ''
     },
     pacotes: [], 
     financeiro: {
         taxaNF: 0,
-        totalGeral: 0
+        totalGeral: 0,
+        adicionalMadeira: 0,
+        obsMadeira: ''
     }
 };
 
@@ -149,7 +153,7 @@ function configurarEventos() {
     const selectTransp = document.getElementById('v2-select-transporte');
     if (selectTransp) selectTransp.onchange = selecionarTransportadoraCadastrada;
 
-    ['v2-taxa-nf', 'v2-valor-frete'].forEach(id => {
+    ['v2-taxa-nf', 'v2-valor-frete', 'v2-adicional-madeira', 'v2-adicional-frete', 'v2-obs-madeira', 'v2-obs-frete'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.oninput = atualizarTotalGeral;
     });
@@ -336,19 +340,40 @@ function salvarEdicaoPacote() {
 function atualizarTotalGeral() {
     let totalMadeira = 0;
     let totalM3Frete = 0;
+    let totalPacotes = 0;
+    let totalPecasGeral = 0;
+
     romaneioAtual.pacotes.forEach(p => {
         totalMadeira += p.valorTotalWood;
         totalM3Frete += p.m3FreteTotal;
+        totalPacotes += (p.qtdPacotes || 0);
+        totalPecasGeral += (p.pecasPorPacote * p.qtdPacotes) || 0;
     });
+
     const valorFreteUnit = parseFloat(document.getElementById('v2-valor-frete').value) || 0;
-    const totalFrete = totalM3Frete * valorFreteUnit;
+    let totalFrete = totalM3Frete * valorFreteUnit;
+    
+    const addMadeira = parseFloat(document.getElementById('v2-adicional-madeira')?.value) || 0;
+    const addFrete = parseFloat(document.getElementById('v2-adicional-frete')?.value) || 0;
+    
+    romaneioAtual.financeiro.adicionalMadeira = addMadeira;
+    romaneioAtual.financeiro.obsMadeira = document.getElementById('v2-obs-madeira')?.value || '';
+    
+    romaneioAtual.logistica.adicionalFrete = addFrete;
+    romaneioAtual.logistica.obsFrete = document.getElementById('v2-obs-frete')?.value || '';
+
+    totalFrete += addFrete;
+    const totalMadeiraComAjuste = totalMadeira + addMadeira;
+
     const taxa = parseFloat(document.getElementById('v2-taxa-nf')?.value) || 0;
-    const imposto = totalMadeira * (taxa / 100);
-    romaneioAtual.financeiro.totalGeral = totalMadeira + imposto;
+    const imposto = totalMadeiraComAjuste * (taxa / 100);
+    
+    romaneioAtual.financeiro.totalGeral = totalMadeiraComAjuste + imposto;
     romaneioAtual.financeiro.taxaNF = taxa;
     romaneioAtual.logistica.valorFrete = valorFreteUnit;
     romaneioAtual.numero = parseInt(document.getElementById('v2-numero-ordem').value) || 0;
-    renderizarResumoFinanceiro(totalFrete, totalM3Frete);
+    
+    renderizarResumoFinanceiro(totalFrete, totalM3Frete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste);
 }
 
 function getCorPorQualidade(qual) {
@@ -393,8 +418,10 @@ function renderizarTabelaPacotes() {
                             <tr>
                                 <th>Madeira / Medida</th>
                                 <th>Pcts</th>
-                                <th>Peças/Pct</th>
+                                <th>Pçs/Pct</th>
+                                <th>Total Pçs</th>
                                 <th>m³ Venda</th>
+                                <th>V. Unit.</th>
                                 <th>Preço m³</th>
                                 <th>Subtotal</th>
                                 <th class="hide-on-print">Ações</th>
@@ -406,7 +433,9 @@ function renderizarTabelaPacotes() {
                                     <td><strong>${p.produtoNome}</strong><br><small>${p.medidas}</small></td>
                                     <td>${p.qtdPacotes}</td>
                                     <td>${p.pecasPorPacote}</td>
+                                    <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
                                     <td>${p.m3VendaTotal.toFixed(3)}</td>
+                                    <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                     <td>R$ ${p.precoM3.toLocaleString('pt-BR')}</td>
                                     <td><strong>R$ ${p.valorTotalWood.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
                                     <td class="hide-on-print">
@@ -424,12 +453,19 @@ function renderizarTabelaPacotes() {
     container.innerHTML = html;
 }
 
-function renderizarResumoFinanceiro(valFrete, volFrete) {
-    let totalMadeira = 0;
-    romaneioAtual.pacotes.forEach(p => totalMadeira += p.valorTotalWood);
+function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste) {
     const taxa = romaneioAtual.financeiro.taxaNF;
-    const valorTaxa = totalMadeira * (taxa / 100);
-    const totalComTaxa = totalMadeira + valorTaxa;
+    const totalComTaxa = totalMadeiraComAjuste + imposto;
+
+    const obsMadHtml = romaneioAtual.financeiro.obsMadeira ? ` <small style="color:var(--text-muted);">(${romaneioAtual.financeiro.obsMadeira})</small>` : '';
+    const obsFreteHtml = romaneioAtual.logistica.obsFrete ? ` <br><span style="margin-left: 25px; color:var(--text-muted);">Ajuste: R$ ${romaneioAtual.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${romaneioAtual.logistica.obsFrete})</span>` : (romaneioAtual.logistica.adicionalFrete ? ` <br><span style="margin-left: 25px; color:var(--text-muted);">Ajuste: R$ ${romaneioAtual.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>` : '');
+
+    const addMadDisplay = addMadeira !== 0 ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-muted);">Ajuste Madeira:${obsMadHtml}</span>
+            <span style="color: ${addMadeira < 0 ? 'var(--danger)' : '#00ff88'};">${addMadeira < 0 ? '' : '+'} R$ ${addMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+        </div>
+    ` : '';
 
     const elResumo = document.querySelector('.finance-footer');
     if (!elResumo) return;
@@ -440,12 +476,17 @@ function renderizarResumoFinanceiro(valFrete, volFrete) {
                 <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--warning);"></div>
                 <h4 style="color: var(--warning); margin-bottom: 15px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Detalhamento Financeiro</h4>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted);">Total de Pacotes / Peças:</span>
+                    <span><strong>${totalPacotes}</strong> pcts / <strong>${totalPecasGeral}</strong> pçs</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--text-muted);">Soma dos Produtos:</span>
                     <span>R$ ${totalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
+                ${addMadDisplay}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--text-muted);">Impostos / Taxa NF (${taxa}%):</span>
-                    <span style="color: var(--danger);">+ R$ ${valorTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    <span style="color: var(--danger);">+ R$ ${imposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-weight: bold; font-size: 1.1rem;">
                     <span>Subtotal Líquido:</span>
@@ -453,7 +494,7 @@ function renderizarResumoFinanceiro(valFrete, volFrete) {
                 </div>
                 <div style="margin-top: 20px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; font-size: 0.9rem;">
                     <i class="fa-solid fa-truck" style="margin-right: 8px; color: var(--warning);"></i>
-                    <strong>Frete Estimado:</strong> ${volFrete.toFixed(3)} m³ × R$ ${romaneioAtual.logistica.valorFrete} = 
+                    <strong>Frete Estimado:</strong> ${volFrete.toFixed(3)} m³ × R$ ${romaneioAtual.logistica.valorFrete} ${obsFreteHtml} = 
                     <span style="float: right; font-weight: bold;">R$ ${valFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
             </div>
@@ -568,7 +609,9 @@ window.verPreviaRomaneioV2 = () => {
                     <th>Madeira</th>
                     <th>Pcts</th>
                     <th>Pçs/Pct</th>
+                    <th>Total Pçs</th>
                     <th>m³ Venda</th>
+                    <th>V. Unit.</th>
                     <th>Valor Total</th>
                 </tr>
             </thead>
@@ -579,13 +622,22 @@ window.verPreviaRomaneioV2 = () => {
                         <td>${p.produtoNome}<br><small>${p.medidas}</small></td>
                         <td>${p.qtdPacotes}</td>
                         <td>${p.pecasPorPacote}</td>
+                        <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
                         <td>${p.m3VendaTotal.toFixed(3)}</td>
+                        <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td>R$ ${p.valorTotalWood.toLocaleString('pt-BR')}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `;
+
+    let totalPcts = 0;
+    let totalPcs = 0;
+    r.pacotes.forEach(p => { totalPcts += p.qtdPacotes; totalPcs += (p.pecasPorPacote * p.qtdPacotes); });
+
+    let adjMadHtml = r.financeiro.adicionalMadeira ? `<br><small>Ajuste Madeira: R$ ${r.financeiro.adicionalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.financeiro.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</small>` : '';
+    let adjFreteHtml = r.logistica.adicionalFrete ? `<br><small>Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</small>` : '';
 
     conteudo.innerHTML = `
         <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
@@ -597,6 +649,8 @@ window.verPreviaRomaneioV2 = () => {
                 <p><strong>Cliente:</strong> ${r.cliente}</p>
                 <p><strong>Nº Ordem:</strong> ${r.numero}</p>
                 <p><strong>Data Carreg.:</strong> ${r.logistica.dataCarregamento}</p>
+                <p><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
+                <p><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
             </div>
             <div>
                 <p><strong>Motorista:</strong> ${r.logistica.motorista || '-'}</p>
@@ -606,8 +660,10 @@ window.verPreviaRomaneioV2 = () => {
         </div>
         ${pacotesHtml}
         <div style="margin-top: 20px; text-align: right; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; color: black;">
-            <p style="font-size: 1.2rem; font-weight: 800; margin: 0;">TOTAL DA MADEIRA: R$ ${r.financeiro.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-            <small>Taxa NF: ${r.financeiro.taxaNF}% | Frete: R$ ${r.logistica.valorFrete}/m³</small>
+            <p style="font-size: 1.2rem; font-weight: 800; margin: 0;">TOTAL DO ROMANEIO: R$ ${r.financeiro.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+            <small>Taxa NF: ${r.financeiro.taxaNF}% | Frete Base: R$ ${r.logistica.valorFrete}/m³</small>
+            ${adjMadHtml}
+            ${adjFreteHtml}
         </div>
         <div class="show-on-print" style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Motorista</div>
