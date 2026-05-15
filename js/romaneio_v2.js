@@ -606,6 +606,7 @@ window.verPreviaRomaneioV2 = () => {
     if (!modal || !conteudo) return;
 
     modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
     
     // Gerar HTML da prévia
     const clienteId = document.getElementById('v2-select-cliente').value;
@@ -713,6 +714,7 @@ window.verPreviaRomaneioV2 = () => {
 
 window.fecharModalDetalhes = () => {
     document.getElementById('modalDetalhesRomaneio').style.display = 'none';
+    document.body.classList.remove('modal-open');
 };
 
 function limparCamposPacote() {

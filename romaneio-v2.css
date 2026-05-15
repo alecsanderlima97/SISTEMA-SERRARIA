@@ -216,6 +216,7 @@
         text-shadow: none !important;
     }
     body { background: white !important; }
+    body.modal-open .app-wrapper { display: none !important; }
     .modal-v2 { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: white !important; backdrop-filter: none; padding: 0 !important; z-index: 999999; }
     .modal-content-v2 { border: none !important; padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
     .sidebar, .navbar, .hide-on-print, .modal-footer-v2, .main-content > section:not(#view-romaneio-v2), .background-elements { display: none !important; }
