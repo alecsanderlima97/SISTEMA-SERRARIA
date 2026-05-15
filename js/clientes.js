@@ -13,6 +13,56 @@ const clientesCollection = collection(db, 'clientes');
 // Lista local para manter estado na tela
 let clientesAtuais = [];
 
+// Busca de CNPJ Automática via Brasil API
+const cnpjInput = document.getElementById('cliCnpj');
+const nomeInput = document.getElementById('cliNome');
+const emailInput = document.getElementById('cliEmail');
+const contatoInput = document.getElementById('cliContato');
+
+cnpjInput.addEventListener('blur', function() {
+    let cnpj = this.value.replace(/\D/g, '');
+    if (cnpj.length === 14) {
+        nomeInput.placeholder = "Buscando dados do CNPJ...";
+        fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.razao_social) {
+                    if(!nomeInput.value) nomeInput.value = data.razao_social;
+                    if(!emailInput.value && data.email) emailInput.value = data.email;
+                    if(!contatoInput.value && data.ddd_telefone_1) contatoInput.value = data.ddd_telefone_1;
+                    if(!cepInput.value && data.cep) {
+                        cepInput.value = data.cep;
+                        cepInput.dispatchEvent(new Event('blur')); // Força a busca do endereço
+                    }
+                    this.value = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+                }
+                nomeInput.placeholder = "Nome / Razão Social";
+            })
+            .catch(() => {
+                nomeInput.placeholder = "Nome / Razão Social";
+            });
+    }
+});
+
+// Formatação amigável de CNPJ e CPF ao digitar
+cnpjInput.addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length <= 11) {
+        // Formato CPF
+        if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+        else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+        else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+    } else {
+        // Formato CNPJ
+        v = v.substring(0, 14); // Limita em 14 dígitos (CNPJ)
+        if (v.length > 12) v = v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, "$1.$2.$3/$4-$5");
+        else if (v.length > 8) v = v.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, "$1.$2.$3/$4");
+        else if (v.length > 5) v = v.replace(/(\d{2})(\d{3})(\d{1,3})/, "$1.$2.$3");
+        else if (v.length > 2) v = v.replace(/(\d{2})(\d{1,3})/, "$1.$2");
+    }
+    e.target.value = v;
+});
+
 // Busca de CEP Automática via API Pública (viacep)
 cepInput.addEventListener('blur', function() {
     let cep = this.value.replace(/\D/g, '');
