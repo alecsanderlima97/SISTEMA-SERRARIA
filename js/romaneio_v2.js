@@ -661,16 +661,25 @@ window.verPreviaRomaneioV2 = () => {
 
     let totalPcts = 0;
     let totalPcs = 0;
-    r.pacotes.forEach(p => { totalPcts += p.qtdPacotes; totalPcs += (p.pecasPorPacote * p.qtdPacotes); });
+    let totalM3Madeira = 0;
+    let totalMadeira = 0;
 
-    let adjMadHtml = r.financeiro.adicionalMadeira ? `<br><small>Ajuste Madeira: R$ ${r.financeiro.adicionalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.financeiro.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</small>` : '';
-    let adjFreteHtml = r.logistica.adicionalFrete ? `<br><small>Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</small>` : '';
+    r.pacotes.forEach(p => { 
+        totalPcts += p.qtdPacotes; 
+        totalPcs += (p.pecasPorPacote * p.qtdPacotes); 
+        totalM3Madeira += p.m3VendaTotal;
+        totalMadeira += p.valorTotalWood;
+    });
+
+    const taxa = r.financeiro.taxaNF || 0;
+    const imposto = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) * (taxa / 100);
+    const subtotalLiquido = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) + imposto;
 
     conteudo.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
             <div>
                 <!-- O usuário enviará a logo, que deve ser salva na raiz como logo.png ou logo.jpg e referenciada aqui -->
-                <img src="logo.png" alt="Logo Serraria" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
+                <img src="logo.png" alt="VANMARTE - Madeiras serradas para embalagens" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
             </div>
             <div style="text-align:right; color: black;">
                 <h1 style="margin:0; font-size: 1.5rem; text-transform: uppercase;">ROMANEIO DE CARGA</h1>
@@ -691,16 +700,34 @@ window.verPreviaRomaneioV2 = () => {
                 <p><strong>Caminhão / Placa:</strong> ${r.logistica.caminhao || '-'} / ${r.logistica.placa || '-'}</p>
             </div>
         </div>
-        <div style="margin-top: 15px; display: flex; justify-content: space-between; color: black;">
-            <p><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
-            <p><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
-        </div>
         ${pacotesHtml}
-        <div style="margin-top: 20px; text-align: right; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; color: black;">
-            <p style="font-size: 1.2rem; font-weight: 800; margin: 0;">TOTAL DO ROMANEIO: R$ ${r.financeiro.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-            <small>Taxa NF: ${r.financeiro.taxaNF}% | Frete Base: R$ ${r.logistica.valorFrete}/m³</small>
-            ${adjMadHtml}
-            ${adjFreteHtml}
+        
+        <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; color: black; page-break-inside: avoid;">
+            <!-- M3 e Resumo de Carga -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; display: flex; flex-direction: column; justify-content: center;">
+                <p style="margin: 0; font-size: 1rem;"><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
+                <p style="margin: 5px 0; font-size: 1rem;"><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
+                <p style="margin: 10px 0 0 0; font-size: 1.4rem; font-weight: 900; color: #111; text-transform: uppercase; border-top: 1px solid #ccc; padding-top: 10px;">
+                    M³ TOTAL: <span style="float:right;">${totalM3Madeira.toFixed(3)} m³</span>
+                </p>
+            </div>
+
+            <!-- Detalhamento Financeiro -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: right;">
+                <p style="margin: 0 0 5px 0; font-size: 1rem;">Soma dos Produtos: <span style="font-weight: 500;">R$ ${totalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></p>
+                ${r.financeiro.adicionalMadeira ? `<p style="margin: 0 0 5px 0; font-size: 0.9rem;">Ajuste Madeira: R$ ${r.financeiro.adicionalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.financeiro.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}
+                <p style="margin: 0 0 5px 0; font-size: 0.9rem;">Impostos / Taxa NF (${taxa}%): <span style="color: #555;">+ R$ ${imposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></p>
+                <p style="margin: 10px 0 5px 0; font-size: 1.1rem; font-weight: bold; border-top: 1px solid #ccc; padding-top: 5px;">Subtotal Líquido: R$ ${subtotalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 0.9rem;">
+                    <p style="margin: 0 0 5px 0;">Frete Base: R$ ${r.logistica.valorFrete}/m³</p>
+                    ${r.logistica.adicionalFrete ? `<p style="margin: 0;">Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}
+                </div>
+
+                <p style="font-size: 1.4rem; font-weight: 900; margin: 15px 0 0 0; border-top: 2px solid #333; padding-top: 10px;">
+                    TOTAL DA CARGA: R$ ${r.financeiro.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </p>
+            </div>
         </div>
         <div class="show-on-print" style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Motorista</div>
