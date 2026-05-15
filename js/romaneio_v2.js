@@ -607,7 +607,12 @@ window.verPreviaRomaneioV2 = () => {
 
     modal.style.display = 'flex';
     
-    // Gerar HTML da prévia (mesma lógica do histórico mas com romaneioAtual)
+    // Gerar HTML da prévia
+    const clienteId = document.getElementById('v2-select-cliente').value;
+    const clienteObj = clientesDisponiveis.find(c => c.id === clienteId) || {};
+    const cnpj = clienteObj.cnpj || clienteObj.cpf || '-';
+    const cidade = clienteObj.cidade || '-';
+
     const r = {
         ...romaneioAtual,
         cliente: document.getElementById('v2-cliente').value || 'Cliente Não Selecionado',
@@ -661,23 +666,33 @@ window.verPreviaRomaneioV2 = () => {
     let adjFreteHtml = r.logistica.adicionalFrete ? `<br><small>Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</small>` : '';
 
     conteudo.innerHTML = `
-        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
-            <h1 style="margin:0; font-size: 1.5rem;">ORQUESTRASIS - SISTEMA PARA SERRARIAS</h1>
-            <h2 style="margin:5px 0; font-size: 1.2rem;">ROMANEIO DE CARGA (PRÉVIA)</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
+            <div>
+                <!-- O usuário enviará a logo, que deve ser salva na raiz como logo.png ou logo.jpg e referenciada aqui -->
+                <img src="logo.png" alt="Logo Serraria" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
+            </div>
+            <div style="text-align:right; color: black;">
+                <h1 style="margin:0; font-size: 1.5rem; text-transform: uppercase;">ROMANEIO DE CARGA</h1>
+                <h2 style="margin:5px 0 0 0; font-size: 1.2rem; color: #444;">Nº ${r.numero}</h2>
+            </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 20px; color: black;">
             <div>
+                <p style="margin-bottom: 8px; font-weight: bold; font-size: 1rem; text-transform: uppercase;">Dados do Comprador</p>
                 <p><strong>Cliente:</strong> ${r.cliente}</p>
-                <p><strong>Nº Ordem:</strong> ${r.numero}</p>
-                <p><strong>Data Carreg.:</strong> ${r.logistica.dataCarregamento}</p>
-                <p><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
-                <p><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
+                <p><strong>CNPJ/CPF:</strong> ${cnpj}</p>
+                <p><strong>Localização:</strong> ${cidade}</p>
             </div>
             <div>
+                <p style="margin-bottom: 8px; font-weight: bold; font-size: 1rem; text-transform: uppercase;">Dados Logísticos</p>
+                <p><strong>Data Carreg.:</strong> ${r.logistica.dataCarregamento}</p>
                 <p><strong>Motorista:</strong> ${r.logistica.motorista || '-'}</p>
-                <p><strong>Caminhão:</strong> ${r.logistica.caminhao || '-'}</p>
-                <p><strong>Placa:</strong> ${r.logistica.placa || '-'}</p>
+                <p><strong>Caminhão / Placa:</strong> ${r.logistica.caminhao || '-'} / ${r.logistica.placa || '-'}</p>
             </div>
+        </div>
+        <div style="margin-top: 15px; display: flex; justify-content: space-between; color: black;">
+            <p><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
+            <p><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
         </div>
         ${pacotesHtml}
         <div style="margin-top: 20px; text-align: right; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; color: black;">
@@ -689,6 +704,9 @@ window.verPreviaRomaneioV2 = () => {
         <div class="show-on-print" style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Motorista</div>
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Recebedor</div>
+        </div>
+        <div class="show-on-print" style="text-align: center; margin-top: 40px; font-size: 0.65rem; color: #777;">
+            Desenvolvido por: Orquestra.cs - sistemas personalizados
         </div>
     `;
 };
