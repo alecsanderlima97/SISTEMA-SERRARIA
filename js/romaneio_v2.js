@@ -249,6 +249,11 @@ function adicionarPacote() {
 
     const prod = produtosDisponiveis.find(x => x.id === prodId);
     
+    const alt = parseInt(document.getElementById('v2-altura').value) || 0;
+    const cam = parseInt(document.getElementById('v2-camada').value) || 0;
+    const amarras = parseInt(document.getElementById('v2-amarras').value) || 0;
+    const configPct = (alt > 0 || cam > 0) ? `${alt}x${cam}${amarras > 0 ? '+'+amarras : ''}` : '-';
+
     const m3VendaUnit = ( (esp/100) * (larg/100) * compV ) * pecasPorPacote;
     const m3FreteUnit = ( (esp/100) * (larg/100) * compR ) * pecasPorPacote;
 
@@ -260,6 +265,7 @@ function adicionarPacote() {
         medidas: `${esp}x${larg}x${compV}m`,
         esp, larg, compV, compR,
         pecasPorPacote,
+        alt, cam, amarras, configPct,
         qtdPacotes,
         precoM3,
         m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
@@ -289,6 +295,10 @@ function editarPacoteV2(id) {
     document.getElementById('v2-comprimento-real').value = p.compR;
     document.getElementById('v2-quantidade').value = p.pecasPorPacote;
     
+    document.getElementById('v2-altura').value = p.alt || '';
+    document.getElementById('v2-camada').value = p.cam || '';
+    document.getElementById('v2-amarras').value = p.amarras || '';
+    
     // UI
     document.getElementById('btn-add-pacote-v2').style.display = 'none';
     document.getElementById('btn-update-pacote-v2').style.display = 'block';
@@ -309,6 +319,12 @@ function salvarEdicaoPacote() {
     const compR = parseFloat(document.getElementById('v2-comprimento-real').value) || compV;
 
     const prod = produtosDisponiveis.find(x => x.id === prodId);
+
+    const alt = parseInt(document.getElementById('v2-altura').value) || 0;
+    const cam = parseInt(document.getElementById('v2-camada').value) || 0;
+    const amarras = parseInt(document.getElementById('v2-amarras').value) || 0;
+    const configPct = (alt > 0 || cam > 0) ? `${alt}x${cam}${amarras > 0 ? '+'+amarras : ''}` : '-';
+
     const m3VendaUnit = ( (esp/100) * (larg/100) * compV ) * pecasPorPacote;
     const m3FreteUnit = ( (esp/100) * (larg/100) * compR ) * pecasPorPacote;
 
@@ -322,6 +338,7 @@ function salvarEdicaoPacote() {
             medidas: `${esp}x${larg}x${compV}m`,
             esp, larg, compV, compR,
             pecasPorPacote,
+            alt, cam, amarras, configPct,
             qtdPacotes,
             precoM3,
             m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
@@ -418,6 +435,7 @@ function renderizarTabelaPacotes() {
                             <tr>
                                 <th>Madeira / Medida</th>
                                 <th>Pcts</th>
+                                <th>Config</th>
                                 <th>Pçs/Pct</th>
                                 <th>Total Pçs</th>
                                 <th>m³ Venda</th>
@@ -432,6 +450,7 @@ function renderizarTabelaPacotes() {
                                 <tr>
                                     <td><strong>${p.produtoNome}</strong><br><small>${p.medidas}</small></td>
                                     <td>${p.qtdPacotes}</td>
+                                    <td><small>${p.configPct}</small></td>
                                     <td>${p.pecasPorPacote}</td>
                                     <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
                                     <td>${p.m3VendaTotal.toFixed(3)}</td>
@@ -608,6 +627,7 @@ window.verPreviaRomaneioV2 = () => {
                     <th>Qualidade</th>
                     <th>Madeira</th>
                     <th>Pcts</th>
+                    <th>Config</th>
                     <th>Pçs/Pct</th>
                     <th>Total Pçs</th>
                     <th>m³ Venda</th>
@@ -621,6 +641,7 @@ window.verPreviaRomaneioV2 = () => {
                         <td><strong>${p.qualidade}</strong></td>
                         <td>${p.produtoNome}<br><small>${p.medidas}</small></td>
                         <td>${p.qtdPacotes}</td>
+                        <td><small>${p.configPct}</small></td>
                         <td>${p.pecasPorPacote}</td>
                         <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
                         <td>${p.m3VendaTotal.toFixed(3)}</td>

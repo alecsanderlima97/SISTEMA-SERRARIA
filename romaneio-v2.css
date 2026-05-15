@@ -209,6 +209,17 @@
     gap: 10px;
 }
 @media print {
-    .modal-v2 { position: absolute; background: white; backdrop-filter: none; }
-    .sidebar, .navbar, .hide-on-print, .modal-footer-v2 { display: none !important; }
+    * {
+        color: #000 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    body { background: white !important; }
+    .modal-v2 { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: white !important; backdrop-filter: none; padding: 0 !important; z-index: 999999; }
+    .modal-content-v2 { border: none !important; padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+    .sidebar, .navbar, .hide-on-print, .modal-footer-v2, .main-content > section:not(#view-romaneio-v2), .background-elements { display: none !important; }
+    .package-table { border-collapse: collapse !important; border: 1px solid #000 !important; }
+    .package-table th, .package-table td { border: 1px solid #000 !important; padding: 4px !important; font-size: 12px !important; }
+    h1, h2, h3, p, div, span, small, strong { color: #000 !important; }
 }
