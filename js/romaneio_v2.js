@@ -6,6 +6,9 @@ console.log("Romaneio V2: Script carregado");
 let romaneioAtual = {
     numero: 0,
     cliente: '',
+    formaPagamento: '',
+    prazoPagamento: '',
+    observacaoCliente: '',
     logistica: {
         dataCarregamento: '',
         dataDescarregamento: '',
@@ -173,10 +176,52 @@ function configurarEventos() {
 
 async function selecionarClienteCadastrado(e) {
     const cli = clientesDisponiveis.find(x => x.id === e.target.value);
-    if (!cli) return;
+    const infoBox = document.getElementById('v2-info-cliente-box');
+    const infoTexto = document.getElementById('v2-info-cliente-texto');
+
+    if (!cli) {
+        if(infoBox) infoBox.style.display = 'none';
+        return;
+    }
 
     document.getElementById('v2-cliente').value = cli.nome;
     
+    // Salvar dados do cliente no romaneio atual para o preview
+    romaneioAtual.formaPagamento = cli.formaPagamento || '';
+    romaneioAtual.prazoPagamento = cli.prazoPagamento || '';
+    romaneioAtual.observacaoCliente = cli.observacao || '';
+    
+    // Atualizar box de informações comerciais
+    if (infoBox && infoTexto) {
+        let infoHtml = '';
+        if(cli.formaPagamento) infoHtml += `<strong>Pagamento:</strong> ${cli.formaPagamento} ${cli.prazoPagamento ? `(${cli.prazoPagamento})` : ''}<br>`;
+        
+        let precos = [];
+        if(cli.madeira1) precos.push(`1ª: R$ ${cli.madeira1}`);
+        if(cli.madeira2) precos.push(`2ª: R$ ${cli.madeira2}`);
+        if(cli.madeira3) precos.push(`3ª: R$ ${cli.madeira3}`);
+        if(cli.madeiraPinus) precos.push(`Pinus: R$ ${cli.madeiraPinus}`);
+        if(cli.nomeMadeiraExtra && cli.valorMadeiraExtra) precos.push(`${cli.nomeMadeiraExtra}: R$ ${cli.valorMadeiraExtra}`);
+        
+        if(precos.length > 0) infoHtml += `<strong>Preços Acordados:</strong> ${precos.join(' | ')}<br>`;
+        if(cli.observacao) infoHtml += `<strong>Obs do Cliente:</strong> <span style="color:var(--warning);">${cli.observacao}</span><br>`;
+        
+        if(infoHtml !== '') {
+            infoTexto.innerHTML = infoHtml;
+            infoBox.style.display = 'block';
+        } else {
+            infoBox.style.display = 'none';
+        }
+    }
+
+    // Preencher campos automáticos (taxa e frete) a partir do cadastro do cliente
+    if (cli.porcentagemNF) {
+        document.getElementById('v2-taxa-nf').value = cli.porcentagemNF;
+    }
+    if (cli.valorFrete) {
+        document.getElementById('v2-valor-frete').value = cli.valorFrete;
+    }
+
     try {
         const qCount = query(collection(db, "romaneios"), where("cliente", "==", cli.nome));
         const snapCount = await getDocs(qCount);
@@ -192,10 +237,11 @@ async function selecionarClienteCadastrado(e) {
 
         if (!snap.empty) {
             const ultimo = snap.docs[0].data();
-            if (ultimo.financeiro && ultimo.financeiro.taxaNF) {
+            // Se não tiver no cadastro do cliente, puxa do último romaneio dele
+            if (!cli.porcentagemNF && ultimo.financeiro && ultimo.financeiro.taxaNF) {
                 document.getElementById('v2-taxa-nf').value = ultimo.financeiro.taxaNF;
             }
-            if (ultimo.logistica && ultimo.logistica.valorFrete) {
+            if (!cli.valorFrete && ultimo.logistica && ultimo.logistica.valorFrete) {
                 document.getElementById('v2-valor-frete').value = ultimo.logistica.valorFrete;
             }
         }
@@ -696,6 +742,8 @@ window.verPreviaRomaneioV2 = () => {
                 <p><strong>Cliente:</strong> ${r.cliente}</p>
                 <p><strong>CNPJ/CPF:</strong> ${cnpj}</p>
                 <p><strong>Localização:</strong> ${cidade}</p>
+                ${r.formaPagamento ? `<p><strong>Pagamento:</strong> ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</p>` : ''}
+                ${r.observacaoCliente ? `<p><strong>Obs Cliente:</strong> ${r.observacaoCliente}</p>` : ''}
             </div>
             <div>
                 <p style="margin-bottom: 8px; font-weight: bold; font-size: 1rem; text-transform: uppercase;">Dados Logísticos</p>

@@ -182,7 +182,64 @@
                             <label for="cliCidade">Cidade / Estado</label>
                             <input type="text" id="cliCidade" required readonly>
                         </div>
-                        <div class="input-group" style="justify-content: flex-end;">
+                        <div style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <h3 style="color:var(--accent-color);"><i class="fa-solid fa-handshake"></i> Informações Comerciais / Preços Acordados</h3>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="cliValorFrete">Valor do Frete (R$)</label>
+                            <input type="number" step="0.01" id="cliValorFrete" placeholder="Ex: 100.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliPorcentagemNF">Valor da % da Nota Fiscal</label>
+                            <input type="number" step="0.01" id="cliPorcentagemNF" placeholder="Ex: 9.3">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliFormaPagamento">Forma de Pagamento</label>
+                            <select id="cliFormaPagamento" onchange="document.getElementById('containerPrazo').style.display = this.value === 'A Prazo' ? 'flex' : 'none'">
+                                <option value="">Selecione...</option>
+                                <option value="A Vista">A Vista</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Boleto">Boleto</option>
+                                <option value="A Prazo">A Prazo</option>
+                            </select>
+                        </div>
+                        <div class="input-group" id="containerPrazo" style="display: none;">
+                            <label for="cliPrazoPagamento">Prazo (Ex: 15 dias)</label>
+                            <input type="text" id="cliPrazoPagamento" placeholder="Ex: 15 dias">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="cliMadeira1">Madeira de 1ª (R$ / m³)</label>
+                            <input type="number" step="0.01" id="cliMadeira1" placeholder="Ex: 850.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliMadeira2">Madeira de 2ª (R$ / m³)</label>
+                            <input type="number" step="0.01" id="cliMadeira2" placeholder="Ex: 650.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliMadeira3">Madeira de 3ª (R$ / m³)</label>
+                            <input type="number" step="0.01" id="cliMadeira3" placeholder="Ex: 400.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliMadeiraPinus">Madeira de Pinus (R$ / m³)</label>
+                            <input type="number" step="0.01" id="cliMadeiraPinus" placeholder="Ex: 500.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliNomeMadeiraExtra">Nome Madeira Extra</label>
+                            <input type="text" id="cliNomeMadeiraExtra" placeholder="Ex: Eucalipto">
+                        </div>
+                        <div class="input-group">
+                            <label for="cliValorMadeiraExtra">Valor Madeira Extra (R$ / m³)</label>
+                            <input type="number" step="0.01" id="cliValorMadeiraExtra" placeholder="Ex: 700.00">
+                        </div>
+
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label for="cliObservacao">Observações Importantes do Cliente</label>
+                            <textarea id="cliObservacao" rows="3" placeholder="Ex: Ligar antes de entregar, horário de recebimento, etc." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;"></textarea>
+                        </div>
+
+                        <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
                                 Cliente</button>
                         </div>
@@ -870,6 +927,13 @@
                                 </select>
                             </div>
                             <input type="hidden" id="v2-cliente">
+                            
+                            <!-- Novo painel de info do cliente -->
+                            <div id="v2-info-cliente-box" style="display: none; background: rgba(0, 255, 136, 0.1); border: 1px solid var(--accent-color); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                                <h4 style="margin: 0 0 5px 0; color: var(--accent-color); font-size: 0.9rem;"><i class="fa-solid fa-circle-info"></i> Condições Comerciais do Cliente</h4>
+                                <div id="v2-info-cliente-texto" style="font-size: 0.85rem; color: #eee; line-height: 1.4;"></div>
+                            </div>
+
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                                 <div class="input-group-v2">
                                     <label>Data Carreg.</label>

@@ -109,6 +109,17 @@ formCliente.addEventListener('submit', async function(e) {
         email: document.getElementById('cliEmail').value,
         cep: document.getElementById('cliCep').value,
         cidade: document.getElementById('cliCidade').value,
+        valorFrete: document.getElementById('cliValorFrete').value,
+        porcentagemNF: document.getElementById('cliPorcentagemNF').value,
+        formaPagamento: document.getElementById('cliFormaPagamento').value,
+        prazoPagamento: document.getElementById('cliPrazoPagamento').value,
+        madeira1: document.getElementById('cliMadeira1').value,
+        madeira2: document.getElementById('cliMadeira2').value,
+        madeira3: document.getElementById('cliMadeira3').value,
+        madeiraPinus: document.getElementById('cliMadeiraPinus').value,
+        nomeMadeiraExtra: document.getElementById('cliNomeMadeiraExtra').value,
+        valorMadeiraExtra: document.getElementById('cliValorMadeiraExtra').value,
+        observacao: document.getElementById('cliObservacao').value,
         atualizadoEm: new Date().toISOString()
     };
 
@@ -166,6 +177,18 @@ window.editarCliente = function(id) {
         document.getElementById('cliEmail').value = c.email || '';
         document.getElementById('cliCep').value = c.cep || '';
         document.getElementById('cliCidade').value = c.cidade || '';
+        document.getElementById('cliValorFrete').value = c.valorFrete || '';
+        document.getElementById('cliPorcentagemNF').value = c.porcentagemNF || '';
+        document.getElementById('cliFormaPagamento').value = c.formaPagamento || '';
+        document.getElementById('containerPrazo').style.display = c.formaPagamento === 'A Prazo' ? 'flex' : 'none';
+        document.getElementById('cliPrazoPagamento').value = c.prazoPagamento || '';
+        document.getElementById('cliMadeira1').value = c.madeira1 || '';
+        document.getElementById('cliMadeira2').value = c.madeira2 || '';
+        document.getElementById('cliMadeira3').value = c.madeira3 || '';
+        document.getElementById('cliMadeiraPinus').value = c.madeiraPinus || '';
+        document.getElementById('cliNomeMadeiraExtra').value = c.nomeMadeiraExtra || '';
+        document.getElementById('cliValorMadeiraExtra').value = c.valorMadeiraExtra || '';
+        document.getElementById('cliObservacao').value = c.observacao || '';
 
         clienteEditandoId = c.id;
         
