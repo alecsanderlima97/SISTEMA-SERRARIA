@@ -79,7 +79,7 @@
 
                     <div id="profile-dropdown" class="profile-dropdown" style="display: none; position: absolute; top: 50px; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; width: 200px; padding: 8px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 200;">
                         <a href="#" class="dropdown-item" data-target="view-configuracoes" onclick="setTimeout(() => document.getElementById('profile-dropdown').style.display='none', 10);" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-gear"></i> Configurações</a>
-                        <a href="#" class="dropdown-item" onclick="setTimeout(() => document.getElementById('profile-dropdown').style.display='none', 10); alert('Backup salvo com sucesso!');" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
+                        <a href="#" class="dropdown-item" onclick="setTimeout(() => document.getElementById('profile-dropdown').style.display='none', 10); window.exportarBackup(null);" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
                         <a href="#" class="dropdown-item" onclick="window.location.reload();" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-rotate-right"></i> Atualizar Sistema</a>
                     </div>
                 </div>
@@ -1227,7 +1227,7 @@
                         </p>
 
                         <div style="display: flex; flex-direction: column; gap: 16px;">
-                            <button class="btn-primary" style="width: 100%; justify-content: center; padding: 16px;" onclick="alert('Exportação iniciada!')">
+                            <button class="btn-primary" style="width: 100%; justify-content: center; padding: 16px;" onclick="window.exportarBackup(this)">
                                 <i class="fa-solid fa-download"></i> Exportar Backup (Baixar Dados)
                             </button>
 

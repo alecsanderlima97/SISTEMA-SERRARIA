@@ -1,4 +1,4 @@
-import { auth, signOut, onAuthStateChanged } from './firebase-init.js';
+import { auth, signOut, onAuthStateChanged, db, collection, getDocs } from './firebase-init.js';
 
 console.log("Core: Inicializando sistema de segurança e navegação...");
 
@@ -48,6 +48,55 @@ window.changeTheme = function(themeName) {
         root.style.setProperty('--text-muted', '#a1a1a1');
     }
     localStorage.setItem('orquestrasis_theme', themeName);
+};
+
+window.exportarBackup = async function(btnElement) {
+    const textoOriginal = btnElement ? btnElement.innerHTML : null;
+    if (btnElement) {
+        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando Backup...';
+        btnElement.disabled = true;
+    }
+
+    try {
+        const backupData = {
+            produtos: [],
+            clientes: [],
+            romaneios: [],
+            dataExportacao: new Date().toISOString()
+        };
+
+        // 1. Puxar Produtos
+        const prodSnap = await getDocs(collection(db, 'produtos'));
+        prodSnap.forEach(doc => backupData.produtos.push({ id: doc.id, ...doc.data() }));
+
+        // 2. Puxar Clientes
+        const cliSnap = await getDocs(collection(db, 'clientes'));
+        cliSnap.forEach(doc => backupData.clientes.push({ id: doc.id, ...doc.data() }));
+
+        // 3. Puxar Romaneios
+        const romSnap = await getDocs(collection(db, 'romaneios'));
+        romSnap.forEach(doc => backupData.romaneios.push({ id: doc.id, ...doc.data() }));
+
+        // Gerar arquivo JSON e fazer o download
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `backup_serraria_${new Date().getTime()}.json`);
+        document.body.appendChild(downloadAnchorNode); // required for firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        if (!btnElement) alert('Backup concluído e baixado com sucesso!');
+
+    } catch (error) {
+        console.error("Erro ao gerar backup:", error);
+        alert('Erro ao gerar o backup. Verifique sua conexão com a internet e tente novamente.');
+    } finally {
+        if (btnElement) {
+            btnElement.innerHTML = textoOriginal;
+            btnElement.disabled = false;
+        }
+    }
 };
 
 const App = {
