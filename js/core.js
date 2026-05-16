@@ -47,7 +47,7 @@ const App = {
         
         // Uso de Delegação de Eventos: Mais robusto que querySelectorAll direto
         document.addEventListener('click', (e) => {
-            const link = e.target.closest('.sidebar nav ul li a');
+            const link = e.target.closest('.sidebar nav ul li a, .dropdown-item[data-target]');
             if (!link) return;
 
             const targetId = link.getAttribute('data-target');
@@ -63,9 +63,11 @@ const App = {
                 console.log("Core: Navegando para " + targetId);
                 this.showSection(targetId);
                 
-                // Atualizar classe ativa
+                // Atualizar classe ativa apenas para os links da sidebar
                 document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
+                if (link.closest('.sidebar')) {
+                    link.classList.add('active');
+                }
             }
         });
 

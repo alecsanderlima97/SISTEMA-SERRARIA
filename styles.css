@@ -927,4 +927,7 @@ tfoot td {
 .event-item .btn-del-event:hover {
     opacity: 1;
     color: #fff;
-}
+} 
+ . p r o f i l e - d r o p d o w n . s h o w   {   d i s p l a y :   b l o c k   ! i m p o r t a n t ;   }  
+ . d r o p d o w n - i t e m : h o v e r   {   b a c k g r o u n d :   r g b a ( 2 5 5 , 2 5 5 , 2 5 5 , 0 . 0 5 ) ;   }  
+ 
