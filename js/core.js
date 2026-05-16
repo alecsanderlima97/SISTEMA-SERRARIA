@@ -62,6 +62,8 @@ window.exportarBackup = async function(btnElement) {
             produtos: [],
             clientes: [],
             romaneios: [],
+            entradas: [],
+            empreiteiros: [],
             dataExportacao: new Date().toISOString()
         };
 
@@ -76,6 +78,14 @@ window.exportarBackup = async function(btnElement) {
         // 3. Puxar Romaneios
         const romSnap = await getDocs(collection(db, 'romaneios'));
         romSnap.forEach(doc => backupData.romaneios.push({ id: doc.id, ...doc.data() }));
+
+        // 4. Puxar Entradas de Tora
+        const entSnap = await getDocs(collection(db, 'entradas'));
+        entSnap.forEach(doc => backupData.entradas.push({ id: doc.id, ...doc.data() }));
+
+        // 5. Puxar Empreiteiros
+        const empSnap = await getDocs(collection(db, 'empreiteiros'));
+        empSnap.forEach(doc => backupData.empreiteiros.push({ id: doc.id, ...doc.data() }));
 
         // Gerar arquivo JSON e fazer o download
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));

@@ -726,14 +726,69 @@
                     <p>Registro de entrada e cálculo de cubagem de caminhões</p>
                 </div>
 
+                <!-- NOVO PAINEL: CADASTRO DE EMPREITEIROS -->
+                <div class="glass-panel" style="margin-bottom: 2rem;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros do Corte</h2>
+                    </div>
+                    <form id="formEmpreiteiro" class="grid-form">
+                        <div class="input-group">
+                            <label for="empNome">Nome do Empreiteiro *</label>
+                            <input type="text" id="empNome" required placeholder="Ex: José da Silva">
+                        </div>
+                        <div class="input-group">
+                            <label for="empContato">Contato (Telefone/WhatsApp)</label>
+                            <input type="text" id="empContato" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="input-group">
+                            <label for="empValorMetro">Valor Pago por Metro (R$ / m³) *</label>
+                            <input type="number" id="empValorMetro" step="0.01" required placeholder="Ex: 35.00">
+                        </div>
+                        <div class="input-group">
+                            <label for="empPix">Chave PIX para Pagamento</label>
+                            <input type="text" id="empPix" placeholder="CPF, Celular ou E-mail">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end;">
+                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Empreiteiro</button>
+                        </div>
+                    </form>
+                    <div class="table-container" style="margin-top: 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Contato</th>
+                                    <th>Valor (R$/m³)</th>
+                                    <th>PIX</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaEmpreiteiros">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="glass-panel" style="margin-bottom: 2rem;">
                     <div class="section-title">
                         <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³ (Média de Alturas)</h2>
                     </div>
                     <form id="formEntrada" class="grid-form">
                         <div class="input-group" style="grid-column: span 2;">
-                            <label for="entFornecedor">Fornecedor / Motorista *</label>
-                            <input type="text" id="entFornecedor" required placeholder="Nome do responsável">
+                            <label for="entEmpreiteiro">Empreiteiro / Fornecedor *</label>
+                            <select id="entEmpreiteiro" required>
+                                <option value="">Selecione o Empreiteiro...</option>
+                                <!-- Preenchido via JS -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="entMotorista">Nome do Motorista *</label>
+                            <input type="text" id="entMotorista" required placeholder="Ex: Carlos Motorista">
+                        </div>
+                        <div class="input-group">
+                            <label for="entCaminhao">Modelo do Caminhão</label>
+                            <input type="text" id="entCaminhao" placeholder="Ex: Scania 113">
                         </div>
                         <div class="input-group">
                             <label for="entPlaca">Placa do Caminhão *</label>
@@ -743,6 +798,11 @@
                             <label for="entData">Data de Entrada</label>
                             <input type="date" id="entData" required>
                         </div>
+                        <div class="input-group">
+                            <label for="entHorario">Horário da Chegada</label>
+                            <input type="time" id="entHorario" required>
+                        </div>
+
 
                         <!-- Separação Medidas Base -->
                         <div
@@ -806,13 +866,22 @@
 
                         <!-- Resultado em Real-Time -->
                         <div
-                            style="grid-column: 1 / -1; text-align: center; margin-top: 15px; padding: 20px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
-                            <h4 style="margin: 0; color:#ccc;">Volume Calculado</h4>
-                            <div id="entResultadoVolume"
-                                style="font-size: 2.5rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">
-                                0.000 m³</div>
-                            <small id="entInfoMedia" style="color:#aaa;">Altura média: 0.00 m (0 pontos
-                                medidos)</small>
+                            style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div style="text-align: center; padding: 20px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
+                                <h4 style="margin: 0; color:#ccc;">Volume Calculado</h4>
+                                <div id="entResultadoVolume"
+                                    style="font-size: 2.5rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">
+                                    0.000 m³</div>
+                                <small id="entInfoMedia" style="color:#aaa;">Altura média: 0.00 m (0 pontos
+                                    medidos)</small>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
+                                <h4 style="margin: 0; color:#ccc;">Acerto do Empreiteiro</h4>
+                                <div id="entResultadoFinanceiro"
+                                    style="font-size: 2.5rem; font-weight: bold; color:#3498db; margin-top: 5px;">
+                                    R$ 0,00</div>
+                                <small id="entInfoFinanceira" style="color:#aaa;">Baseado em R$ 0,00 por m³</small>
+                            </div>
                         </div>
 
                         <div class="input-group"
@@ -832,11 +901,11 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Data</th>
-                                    <th>Fornecedor/Motorista</th>
-                                    <th>Placa</th>
-                                    <th>Medidas (C x L x A.M)</th>
-                                    <th>Volume (m³)</th>
+                                    <th>Data / Hora</th>
+                                    <th>Empreiteiro / Motorista</th>
+                                    <th>Caminhão / Placa</th>
+                                    <th>Volume / Medidas</th>
+                                    <th>Total Empreiteiro</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
