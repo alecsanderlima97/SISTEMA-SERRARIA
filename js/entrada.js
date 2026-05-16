@@ -111,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
     const formEntrada = document.getElementById('formEntrada');
     const listaEntradas = document.getElementById('listaEntradas');
+    const filtroEntradasNome = document.getElementById('filtroEntradasNome');
+    
+    let entradaEditandoId = null;
+    window.entradasAtuaisLista = [];
     
     const entComp = document.getElementById('entComp');
     const entLarg = document.getElementById('entLarg');
@@ -170,27 +174,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if(input) input.addEventListener('input', calcularVolumeAtual);
     });
 
-    async function renderizarEntradas() {
+    async function carregarEntradas() {
         if(!listaEntradas) return;
         listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
         
-        let entradas = [];
         try {
             const querySnapshot = await getDocs(collection(db, 'entradas'));
-            querySnapshot.forEach(doc => entradas.push({ id: doc.id, ...doc.data() }));
+            window.entradasAtuaisLista = [];
+            querySnapshot.forEach(doc => window.entradasAtuaisLista.push({ id: doc.id, ...doc.data() }));
+            renderizarEntradas();
         } catch (error) {
             console.error(error);
             listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
-            return;
         }
+    }
 
+    function renderizarEntradas() {
+        if(!listaEntradas) return;
         listaEntradas.innerHTML = '';
-        if(entradas.length === 0) {
-            listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma entrada registrada.</td></tr>';
+        
+        const filtro = filtroEntradasNome ? filtroEntradasNome.value.toLowerCase() : '';
+        const filtradas = window.entradasAtuaisLista.filter(en => {
+            const emp = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
+            const mot = (en.motorista || '').toLowerCase();
+            return emp.includes(filtro) || mot.includes(filtro);
+        });
+
+        if(filtradas.length === 0) {
+            listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma entrada encontrada.</td></tr>';
             return;
         }
         
-        entradas.sort((a,b) => new Date(b.data + 'T' + (b.horario || '00:00')) - new Date(a.data + 'T' + (a.horario || '00:00'))).forEach(en => {
+        filtradas.sort((a,b) => new Date(b.data + 'T' + (b.horario || '00:00')) - new Date(a.data + 'T' + (a.horario || '00:00'))).forEach(en => {
             const tr = document.createElement('tr');
             
             const dtObj = new Date(en.data + 'T12:00:00'); // hack for timezone
@@ -210,14 +225,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="color:#3498db; font-size:0.9rem;">${valorTotal}</div>
                 </td>
                 <td>
-                    <button class="btn-primary" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;" onclick="deletarEntrada('${en.id}')">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn-primary" style="padding: 5px; background:var(--primary-color);" onclick="visualizarEntrada('${en.id}')" title="Visualizar">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="btn-primary" style="padding: 5px; background:#f1c40f; color:#000;" onclick="alterarEntrada('${en.id}')" title="Alterar">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button class="btn-primary" style="padding: 5px; background:#3498db;" onclick="imprimirEntrada('${en.id}')" title="Imprimir">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                        <button class="btn-primary" style="background:var(--danger-color); padding: 5px;" onclick="deletarEntrada('${en.id}')" title="Excluir">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             listaEntradas.appendChild(tr);
         });
     }
+    
+    if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
 
     if (formEntrada) {
         formEntrada.addEventListener('submit', async (e) => {
@@ -247,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 volume: calcData.volume,
                 valorMetroEmpreiteiro: calcData.valorMetro,
                 totalEmpreiteiro: calcData.totalFinanceiro,
-                criadoEm: new Date().toISOString()
+                atualizadoEm: new Date().toISOString()
             };
             
             const submitBtn = formEntrada.querySelector('button[type="submit"]');
@@ -256,7 +284,18 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                await addDoc(collection(db, 'entradas'), novaEntrada);
+                if (entradaEditandoId) {
+                    import { updateDoc } from './firebase-init.js';
+                    await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
+                    alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ atualizada com sucesso!`);
+                    entradaEditandoId = null;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
+                } else {
+                    novaEntrada.criadoEm = new Date().toISOString();
+                    await addDoc(collection(db, 'entradas'), novaEntrada);
+                    alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
+                }
+                
                 formEntrada.reset();
                 if(entData) entData.valueAsDate = new Date();
                 if(entHorario) {
@@ -264,13 +303,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 }
                 calcularVolumeAtual();
-                await renderizarEntradas();
-                alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
+                await carregarEntradas();
             } catch (error) {
                 console.error(error);
                 alert("Erro ao salvar entrada.");
             } finally {
-                submitBtn.innerHTML = textoOriginal;
+                if(!entradaEditandoId) submitBtn.innerHTML = textoOriginal;
                 submitBtn.disabled = false;
             }
         });
@@ -280,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
             try {
                 await deleteDoc(doc(db, 'entradas', id));
-                await renderizarEntradas();
+                await carregarEntradas();
             } catch (error) {
                 console.error(error);
                 alert("Erro ao deletar entrada.");
@@ -288,7 +326,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.visualizarEntrada = function(id) {
+        const en = window.entradasAtuaisLista.find(e => e.id === id);
+        if(!en) return;
+        alert(`Detalhes da Entrada:
+Empreiteiro: ${en.empreiteiroNome || en.fornecedor || 'N/A'}
+Motorista: ${en.motorista || 'N/A'}
+Data: ${en.data} ${en.horario || ''}
+Caminhão/Placa: ${en.caminhao || 'N/A'} / ${en.placa}
+
+--- MEDIDAS ---
+Comprimento: ${en.comp}m
+Largura: ${en.larg}m
+Altura Média: ${en.mediaAltura}m
+Volume Total: ${en.volume.toFixed(3)}m³
+
+--- FINANCEIRO ---
+Valor/Metro: R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}
+Total a Pagar: R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}
+`);
+    };
+
+    window.alterarEntrada = function(id) {
+        const en = window.entradasAtuaisLista.find(e => e.id === id);
+        if(!en) return;
+        entradaEditandoId = id;
+        document.getElementById('entData').value = en.data || '';
+        document.getElementById('entHorario').value = en.horario || '';
+        if(selectEmpreiteiro) selectEmpreiteiro.value = en.empreiteiroId || '';
+        document.getElementById('entMotorista').value = en.motorista || '';
+        document.getElementById('entCaminhao').value = en.caminhao || '';
+        document.getElementById('entPlaca').value = en.placa || '';
+        document.getElementById('entComp').value = en.comp || '';
+        document.getElementById('entLarg').value = en.larg || '';
+        document.getElementById('entAltEsq1').value = '';
+        document.getElementById('entAltEsq2').value = '';
+        document.getElementById('entAltEsq3').value = '';
+        document.getElementById('entAltDir1').value = '';
+        document.getElementById('entAltDir2').value = '';
+        document.getElementById('entAltDir3').value = '';
+        const btn = formEntrada.querySelector('button[type="submit"]');
+        btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
+        window.scrollTo({top: formEntrada.offsetTop - 100, behavior: 'smooth'});
+        calcularVolumeAtual();
+    };
+
+    window.imprimirEntrada = function(id) {
+        const en = window.entradasAtuaisLista.find(e => e.id === id);
+        if(!en) return;
+        const dtObj = new Date(en.data + 'T12:00:00');
+        const dtStr = dtObj.toLocaleDateString('pt-BR');
+        let win = window.open('', '_blank');
+        win.document.write(`
+<html><head><title>Imprimir Recibo de Entrada</title>
+<style>body{font-family: Arial, sans-serif; padding: 20px;} table{width: 100%; border-collapse: collapse; margin-top: 20px;} th, td{border: 1px solid #ccc; padding: 8px; text-align: left;}</style>
+</head><body>
+<h2>Recibo de Entrada de Toras</h2>
+<p><strong>Empreiteiro:</strong> ${en.empreiteiroNome || en.fornecedor || 'N/A'}</p>
+<p><strong>Motorista:</strong> ${en.motorista || 'N/A'}</p>
+<p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p>
+<p><strong>Caminhão:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
+<table><tr><th>Comprimento</th><th>Largura</th><th>Altura Média</th><th>Volume (m³)</th></tr>
+<tr><td>${en.comp}m</td><td>${en.larg}m</td><td>${en.mediaAltura}m</td><td><strong>${en.volume.toFixed(3)}</strong></td></tr></table>
+<br><p><strong>Valor por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
+<h3><strong>TOTAL A PAGAR:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</h3>
+<br><br><br>
+<div style="text-align:center; width: 300px; border-top: 1px solid #000; margin: 0 auto;">Assinatura</div>
+</body></html>
+        `);
+        win.document.close();
+        win.print();
+    };
+
     // Inicialização
     carregarEmpreiteiros();
-    renderizarEntradas();
+    carregarEntradas();
 });
