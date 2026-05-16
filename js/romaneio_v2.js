@@ -161,6 +161,13 @@ function configurarEventos() {
         if (el) el.oninput = atualizarTotalGeral;
     });
 
+    ['v2-preco-m3-item', 'v2-valor-frete', 'v2-adicional-madeira', 'v2-adicional-frete'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', window.formatCurrencyInput);
+        }
+    });
+
     const btnLimpar = document.getElementById('btn-limpar-romaneio-v2');
     if (btnLimpar) {
         btnLimpar.onclick = () => {
@@ -279,7 +286,7 @@ function calcularPecasAutomatico() {
 function adicionarPacote() {
     const prodId = document.getElementById('v2-select-produto').value;
     const qualidade = document.getElementById('v2-qualidade').value || 'Padrão';
-    const precoM3 = parseFloat(document.getElementById('v2-preco-m3-item').value) || 0;
+    const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     
     const esp = parseFloat(document.getElementById('v2-espessura').value) || 0;
@@ -366,7 +373,7 @@ function salvarEdicaoPacote() {
     if (!pacoteEditandoId) return;
     const prodId = document.getElementById('v2-select-produto').value;
     const qualidade = (document.getElementById('v2-qualidade').value || 'Padrão').toUpperCase();
-    const precoM3 = parseFloat(document.getElementById('v2-preco-m3-item').value) || 0;
+    const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
     const esp = parseFloat(document.getElementById('v2-espessura').value) || 0;
@@ -423,11 +430,11 @@ function atualizarTotalGeral() {
         totalPecasGeral += (p.pecasPorPacote * p.qtdPacotes) || 0;
     });
 
-    const valorFreteUnit = parseFloat(document.getElementById('v2-valor-frete').value) || 0;
+    const valorFreteUnit = window.parseCurrencyValue(document.getElementById('v2-valor-frete').value) || 0;
     let totalFrete = totalM3Frete * valorFreteUnit;
     
-    const addMadeira = parseFloat(document.getElementById('v2-adicional-madeira')?.value) || 0;
-    const addFrete = parseFloat(document.getElementById('v2-adicional-frete')?.value) || 0;
+    const addMadeira = window.parseCurrencyValue(document.getElementById('v2-adicional-madeira')?.value) || 0;
+    const addFrete = window.parseCurrencyValue(document.getElementById('v2-adicional-frete')?.value) || 0;
     
     romaneioAtual.financeiro.adicionalMadeira = addMadeira;
     romaneioAtual.financeiro.obsMadeira = document.getElementById('v2-obs-madeira')?.value || '';
@@ -438,7 +445,7 @@ function atualizarTotalGeral() {
     totalFrete += addFrete;
     const totalMadeiraComAjuste = totalMadeira + addMadeira;
 
-    const taxa = parseFloat(document.getElementById('v2-taxa-nf')?.value) || 0;
+    const taxa = window.parseCurrencyValue(document.getElementById('v2-taxa-nf')?.value) || 0;
     const imposto = totalMadeiraComAjuste * (taxa / 100);
     
     romaneioAtual.financeiro.totalGeral = totalMadeiraComAjuste + imposto;

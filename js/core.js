@@ -8,6 +8,27 @@ window.DB = {
     set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
 };
 
+window.parseCurrencyValue = function(val) {
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'number') return val;
+    let cleanVal = val.toString().replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+    return parseFloat(cleanVal) || 0;
+};
+
+window.formatCurrencyInput = function(e) {
+    let value = e.target.value;
+    if (!value) return;
+    value = value.replace(/\D/g, "");
+    if (!value) {
+        e.target.value = "";
+        return;
+    }
+    value = (parseInt(value, 10) / 100).toFixed(2) + "";
+    value = value.replace(".", ",");
+    value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+    e.target.value = value;
+};
+
 window.changeTheme = function(themeName) {
     const root = document.documentElement;
     if (themeName === 'premium') {

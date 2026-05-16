@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const listaEmpreiteiros = document.getElementById('listaEmpreiteiros');
     const selectEmpreiteiro = document.getElementById('entEmpreiteiro');
     
+    const empValorMetroInput = document.getElementById('empValorMetro');
+    if (empValorMetroInput) {
+        empValorMetroInput.addEventListener('input', window.formatCurrencyInput);
+    }
+    
     let empreiteirosAtuais = [];
 
     async function carregarEmpreiteiros() {
@@ -78,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await addDoc(collection(db, 'empreiteiros'), {
                     nome: document.getElementById('empNome').value.trim(),
                     contato: document.getElementById('empContato').value.trim(),
-                    valorMetro: parseFloat(document.getElementById('empValorMetro').value) || 0,
+                    valorMetro: window.parseCurrencyValue(document.getElementById('empValorMetro').value),
                     pix: document.getElementById('empPix').value.trim(),
                     criadoEm: new Date().toISOString()
                 });
