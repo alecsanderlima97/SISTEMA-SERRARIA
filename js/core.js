@@ -8,10 +8,54 @@ window.DB = {
     set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
 };
 
+window.changeTheme = function(themeName) {
+    const root = document.documentElement;
+    if (themeName === 'premium') {
+        root.style.setProperty('--primary-color', '#4a5d23');
+        root.style.setProperty('--primary-hover', '#3a4a1c');
+        root.style.setProperty('--accent-color', '#6b8e23');
+        root.style.setProperty('--bg-color', '#1a1f16');
+        root.style.setProperty('--panel-bg', 'rgba(255, 255, 255, 0.05)');
+        root.style.setProperty('--panel-border', 'rgba(255, 255, 255, 0.1)');
+        root.style.setProperty('--text-color', '#e6edf3');
+        root.style.setProperty('--text-muted', '#a1a1a1');
+    } else if (themeName === 'dark') {
+        root.style.setProperty('--primary-color', '#3b82f6');
+        root.style.setProperty('--primary-hover', '#2563eb');
+        root.style.setProperty('--accent-color', '#60a5fa');
+        root.style.setProperty('--bg-color', '#0f172a');
+        root.style.setProperty('--panel-bg', 'rgba(255, 255, 255, 0.05)');
+        root.style.setProperty('--panel-border', 'rgba(255, 255, 255, 0.1)');
+        root.style.setProperty('--text-color', '#f8fafc');
+        root.style.setProperty('--text-muted', '#94a3b8');
+    } else if (themeName === 'light') {
+        root.style.setProperty('--primary-color', '#2563eb');
+        root.style.setProperty('--primary-hover', '#1d4ed8');
+        root.style.setProperty('--accent-color', '#3b82f6');
+        root.style.setProperty('--bg-color', '#f1f5f9');
+        root.style.setProperty('--panel-bg', '#ffffff');
+        root.style.setProperty('--panel-border', 'rgba(0, 0, 0, 0.1)');
+        root.style.setProperty('--text-color', '#1e293b');
+        root.style.setProperty('--text-muted', '#64748b');
+    } else {
+        root.style.setProperty('--primary-color', '#e67e22');
+        root.style.setProperty('--primary-hover', '#d35400');
+        root.style.setProperty('--accent-color', '#f1c40f');
+        root.style.setProperty('--bg-color', '#0f0a09');
+        root.style.setProperty('--panel-bg', 'rgba(255, 255, 255, 0.05)');
+        root.style.setProperty('--panel-border', 'rgba(255, 255, 255, 0.1)');
+        root.style.setProperty('--text-color', '#e6edf3');
+        root.style.setProperty('--text-muted', '#a1a1a1');
+    }
+    localStorage.setItem('orquestrasis_theme', themeName);
+};
+
 const App = {
     user: null,
 
     init() {
+        const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
+        window.changeTheme(savedTheme);
         this.checkAuth();
         this.setupNavigation();
     },

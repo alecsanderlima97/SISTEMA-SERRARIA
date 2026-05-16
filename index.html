@@ -1196,15 +1196,19 @@
                         <p style="color: #ccc; font-size: 14px; margin-bottom: 16px;">Escolha o visual que mais combina com seu estilo:</p>
                         
                         <div style="display: flex; gap: 12px; flex-direction: column;">
-                            <button class="btn-theme" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--accent-color); background: rgba(44, 201, 144, 0.1); color: white; cursor: pointer; text-align: left;">
+                            <button class="btn-theme" onclick="window.changeTheme('original')" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
+                                <div style="width: 12px; height: 12px; border-radius: 50%; background: #e67e22;"></div>
+                                <span>Modo Serraria (Laranja Vibrante)</span>
+                            </button>
+                            <button class="btn-theme" onclick="window.changeTheme('premium')" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
                                 <div style="width: 12px; height: 12px; border-radius: 50%; background: #4a5d23;"></div>
                                 <span style="font-weight: bold;">Modo Premium (Verde Musgo)</span>
                             </button>
-                            <button class="btn-theme" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
+                            <button class="btn-theme" onclick="window.changeTheme('dark')" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
                                 <div style="width: 12px; height: 12px; border-radius: 50%; background: #0f172a;"></div>
                                 <span>Modo Escuro (Moderno)</span>
                             </button>
-                            <button class="btn-theme" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
+                            <button class="btn-theme" onclick="window.changeTheme('light')" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: #888; cursor: pointer; text-align: left;">
                                 <div style="width: 12px; height: 12px; border-radius: 50%; background: #f8fafc;"></div>
                                 <span>Modo Claro (Clean)</span>
                             </button>
