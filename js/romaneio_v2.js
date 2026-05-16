@@ -329,7 +329,7 @@ function adicionarPacote() {
             if (el) el.value = '';
         });
         document.getElementById('v2-qtd-pacotes').value = 1;
-        document.getElementById('v2-quantidade').focus();
+        document.getElementById('v2-altura').focus();
     } else {
         limparCamposPacote();
     }
