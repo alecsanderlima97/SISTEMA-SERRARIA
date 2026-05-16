@@ -322,7 +322,17 @@ function adicionarPacote() {
     romaneioAtual.pacotes.push(novoPacote);
     atualizarTotalGeral();
     renderizarTabelaPacotes();
-    limparCamposPacote();
+    
+    if (confirm("Deseja adicionar outro pacote com a mesma cubagem (espessura, largura, comprimento), preço e qualidade?\n\n[OK] = Mantém os dados para informar nova quantidade\n[Cancelar] = Limpa todos os campos")) {
+        ['v2-altura', 'v2-camada', 'v2-amarras', 'v2-quantidade'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('v2-qtd-pacotes').value = 1;
+        document.getElementById('v2-quantidade').focus();
+    } else {
+        limparCamposPacote();
+    }
 }
 
 function editarPacoteV2(id) {

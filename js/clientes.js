@@ -77,6 +77,7 @@ cepInput.addEventListener('blur', function() {
                 } else {
                     cepStatus.textContent = "✓";
                     document.getElementById('cliCidade').value = `${data.localidade} / ${data.uf}`;
+                    if(data.logradouro) document.getElementById('cliLogradouro').value = data.logradouro;
                 }
             })
             .catch(() => {
@@ -108,6 +109,8 @@ formCliente.addEventListener('submit', async function(e) {
         contato: document.getElementById('cliContato').value,
         email: document.getElementById('cliEmail').value,
         cep: document.getElementById('cliCep').value,
+        logradouro: document.getElementById('cliLogradouro').value,
+        numero: document.getElementById('cliNumero').value,
         cidade: document.getElementById('cliCidade').value,
         valorFrete: document.getElementById('cliValorFrete').value,
         porcentagemNF: document.getElementById('cliPorcentagemNF').value,
@@ -163,7 +166,7 @@ formCliente.addEventListener('submit', async function(e) {
 window.verCliente = function(id) {
     let c = clientesAtuais.find(x => x.id === id);
     if(c) {
-        alert(`=== FICHA DO CLIENTE ===\nNome: ${c.nome}\nCNPJ/CPF: ${c.cnpj}\nIE: ${c.ie || 'Isento'}\nContato: ${c.contato}\nE-mail: ${c.email || 'Não inf.'}\nCEP: ${c.cep}\nCidade: ${c.cidade}`);
+        alert(`=== FICHA DO CLIENTE ===\nNome: ${c.nome}\nCNPJ/CPF: ${c.cnpj}\nIE: ${c.ie || 'Isento'}\nContato: ${c.contato}\nE-mail: ${c.email || 'Não inf.'}\nCEP: ${c.cep}\nLogradouro: ${c.logradouro || 'Não inf.'}, Nº ${c.numero || 'S/N'}\nCidade: ${c.cidade}`);
     }
 }
 
@@ -176,6 +179,8 @@ window.editarCliente = function(id) {
         document.getElementById('cliContato').value = c.contato || '';
         document.getElementById('cliEmail').value = c.email || '';
         document.getElementById('cliCep').value = c.cep || '';
+        document.getElementById('cliLogradouro').value = c.logradouro || '';
+        document.getElementById('cliNumero').value = c.numero || '';
         document.getElementById('cliCidade').value = c.cidade || '';
         document.getElementById('cliValorFrete').value = c.valorFrete || '';
         document.getElementById('cliPorcentagemNF').value = c.porcentagemNF || '';
