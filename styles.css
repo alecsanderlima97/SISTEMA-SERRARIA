@@ -953,3 +953,24 @@ tfoot td {
 .text-uppercase-input {
     text-transform: uppercase;
 }
+
+/* Grid Fixo de Duas Colunas para Formulários Complexos */
+.grid-form-fixed-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+    .grid-form-fixed-2 {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .col-span-2 {
+        grid-column: span 1;
+    }
+}

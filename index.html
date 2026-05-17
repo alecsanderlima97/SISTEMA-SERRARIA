@@ -948,8 +948,8 @@
                         <div class="section-title">
                             <h2><i class="fa-solid fa-users"></i> Clientes de Subprodutos</h2>
                         </div>
-                        <form id="formClienteSubproduto" class="grid-form" style="margin-bottom: 20px;">
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                        <form id="formClienteSubproduto" class="grid-form-fixed-2" style="margin-bottom: 20px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Nome / Razão Social *</label>
                                 <input type="text" id="subCliNome" class="text-uppercase-input" required placeholder="Nome do Cliente">
                             </div>
@@ -961,11 +961,11 @@
                                 <label>Inscrição Estadual (IE)</label>
                                 <input type="text" id="subCliIE" class="text-uppercase-input" placeholder="ISENTO ou número">
                             </div>
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Logradouro / Endereço</label>
                                 <input type="text" id="subCliLogradouro" class="text-uppercase-input" placeholder="Ex: Av. Principal, 100">
                             </div>
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:15px;">
+                            <div class="input-group col-span-2" style="margin-bottom:15px;">
                                 <label>Cidade / Estado</label>
                                 <input type="text" id="subCliCidadeEstado" class="text-uppercase-input" placeholder="Ex: Curitiba / PR">
                             </div>
@@ -979,7 +979,7 @@
                                 <input type="text" id="subCliValorPo" required placeholder="R$ 0,00">
                             </div>
 
-                            <div class="section-title" style="grid-column: span 2; margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
                                 <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Logística do Cliente (Opcional)</h3>
                             </div>
                             
@@ -991,12 +991,12 @@
                                 <label>Placa Caminhão</label>
                                 <input type="text" id="subCliPlacaCaminhao" class="text-uppercase-input" placeholder="Ex: ABC-1234">
                             </div>
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Placa Carreta / Reboque</label>
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
                             </div>
                             
-                            <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Altura (m)</label>
                                     <input type="number" id="subCliAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -1011,7 +1011,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-primary" style="grid-column: span 2; padding: 12px;" id="btnSalvarClienteSub">
+                            <button type="submit" class="btn-primary col-span-2" style="padding: 12px;" id="btnSalvarClienteSub">
                                 <i class="fa-solid fa-save"></i> Salvar Cliente
                             </button>
                         </form>
@@ -1044,15 +1044,15 @@
                             <h2><i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo</h2>
                             <button type="button" id="btnToggleGerenciarClientesSub" class="btn-secondary" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users-gear"></i> Gerenciar Clientes</button>
                         </div>
-                        <form id="formCavaco" class="grid-form">
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                        <form id="formCavaco" class="grid-form-fixed-2">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Selecionar Cliente Cadastrado</label>
                                 <select id="calcCavSelectCliente" style="width: 100%;">
                                     <option value="">Preenchimento Manual / Cliente Avulso</option>
                                 </select>
                             </div>
                             
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Cliente / Empresa Compradora *</label>
                                 <input type="text" id="calcCavCliente" class="text-uppercase-input" required placeholder="Ex: Móveis Silva Ltda">
                             </div>
@@ -1083,12 +1083,12 @@
                                 <input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987">
                             </div>
                             
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Motorista do Caminhão</label>
                                 <input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista">
                             </div>
 
-                            <div class="section-title" style="grid-column: span 2; margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
                                 <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Transporte e Cubagem</h3>
                             </div>
 
@@ -1100,13 +1100,13 @@
                                 <label>Placa Caminhão</label>
                                 <input type="text" id="calcCavPlacaCaminhao" class="text-uppercase-input" placeholder="ABC-1234">
                             </div>
-                            <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Placa Carreta / Reboque</label>
                                 <input type="text" id="calcCavPlacaCarreta" class="text-uppercase-input" placeholder="XYZ-9876">
                             </div>
 
                             <!-- 3 Medidas para Calcular Volume em m3 -->
-                            <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
                                     <input type="number" id="calcCavAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -1148,8 +1148,8 @@
                                 <input type="text" id="calcCavValor" placeholder="R$ 0,00">
                             </div>
                             
-                            <button type="button" class="btn-primary"
-                                style="grid-column: span 2; padding: 15px; font-size: 1.1rem; margin-top:15px;"
+                            <button type="button" class="btn-primary col-span-2"
+                                style="padding: 15px; font-size: 1.1rem; margin-top:15px;"
                                 id="btnCalcCavaco">
                                 <i class="fa-solid fa-print"></i> Gerar e Imprimir Recibo
                             </button>
