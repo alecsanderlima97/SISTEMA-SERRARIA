@@ -36,7 +36,7 @@ if (btnCalcDiesel) {
     btnCalcDiesel.addEventListener('click', function () {
         const km = parseFloat(document.getElementById('calcKm').value) || 0;
         const media = parseFloat(document.getElementById('calcMedia').value) || 0;
-        const preco = parseFloat(document.getElementById('calcPrecoDiesel').value) || 0;
+        const preco = window.parseCurrencyValue(document.getElementById('calcPrecoDiesel').value) || 0;
 
         if (km === 0 || media === 0 || preco === 0) {
             resultadoDiesel.textContent = "Dados inválidos!";
@@ -60,7 +60,7 @@ if (btnCalcCavaco) {
         const tipo = document.getElementById('calcCavTipo').value;
         const unidade = document.getElementById('calcCavUnidade').value;
         const qtd = parseFloat(document.getElementById('calcCavQtd').value) || 0;
-        const valorUni = parseFloat(document.getElementById('calcCavValor').value) || 0;
+        const valorUni = window.parseCurrencyValue(document.getElementById('calcCavValor').value) || 0;
 
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
@@ -172,8 +172,8 @@ const resultadoFrete = document.getElementById('resultadoFrete');
 if (btnCalcFrete) {
     btnCalcFrete.addEventListener('click', function () {
         const vol = parseFloat(document.getElementById('freteVol').value) || 0;
-        const valorM3 = parseFloat(document.getElementById('freteValor').value) || 0;
-        const extra = parseFloat(document.getElementById('freteExtra').value) || 0;
+        const valorM3 = window.parseCurrencyValue(document.getElementById('freteValor').value) || 0;
+        const extra = window.parseCurrencyValue(document.getElementById('freteExtra').value) || 0;
 
         if (vol === 0 || valorM3 === 0) {
             resultadoFrete.textContent = "Preencha o volume e valor!";
@@ -187,4 +187,13 @@ if (btnCalcFrete) {
         resultadoFrete.style.color = "var(--accent-color)";
     });
 }
+
+// Inicializar listeners de máscara de R$ para as calculadoras
+const inputsFinanceirosCalc = ['calcPrecoDiesel', 'calcCavValor', 'freteValor', 'freteExtra'];
+inputsFinanceirosCalc.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.formatCurrencyInput);
+    }
+});
 

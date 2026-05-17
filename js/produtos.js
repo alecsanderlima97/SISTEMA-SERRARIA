@@ -21,7 +21,7 @@ formProduto.addEventListener('submit', async function(e) {
         largura: parseFloat(document.getElementById('prodLargura').value) || 0,
         comprimentoVenda: parseFloat(document.getElementById('prodComprimentoVenda').value) || 0,
         comprimentoReal: parseFloat(document.getElementById('prodComprimentoReal').value) || 0,
-        preco: parseFloat(document.getElementById('prodPreco').value),
+        preco: window.parseCurrencyValue(document.getElementById('prodPreco').value),
         atualizadoEm: new Date().toISOString()
     };
 
@@ -72,7 +72,7 @@ window.editarProduto = function(id) {
         document.getElementById('prodLargura').value = p.largura || 0;
         document.getElementById('prodComprimentoVenda').value = p.comprimentoVenda || 0;
         document.getElementById('prodComprimentoReal').value = p.comprimentoReal || 0;
-        document.getElementById('prodPreco').value = p.preco || 0;
+        document.getElementById('prodPreco').value = window.formatCurrencyValue(p.preco);
 
         produtoEditandoId = p.id;
         
@@ -145,6 +145,12 @@ async function carregarProdutos() {
         console.error("Erro ao buscar produtos: ", error);
         listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>`;
     }
+}
+
+// Adicionar listener de máscara de R$ para o preço da madeira
+const prodPrecoInput = document.getElementById('prodPreco');
+if (prodPrecoInput) {
+    prodPrecoInput.addEventListener('input', window.formatCurrencyInput);
 }
 
 carregarProdutos();

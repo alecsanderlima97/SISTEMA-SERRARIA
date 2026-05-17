@@ -226,7 +226,7 @@ async function selecionarClienteCadastrado(e) {
         document.getElementById('v2-taxa-nf').value = cli.porcentagemNF;
     }
     if (cli.valorFrete) {
-        document.getElementById('v2-valor-frete').value = cli.valorFrete;
+        document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(cli.valorFrete);
     }
 
     try {
@@ -249,7 +249,7 @@ async function selecionarClienteCadastrado(e) {
                 document.getElementById('v2-taxa-nf').value = ultimo.financeiro.taxaNF;
             }
             if (!cli.valorFrete && ultimo.logistica && ultimo.logistica.valorFrete) {
-                document.getElementById('v2-valor-frete').value = ultimo.logistica.valorFrete;
+                document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(ultimo.logistica.valorFrete);
             }
         }
     } catch (e) { console.error("Erro histórico cliente:", e); }
@@ -273,7 +273,7 @@ function selecionarMadeiraCadastrada(e) {
     document.getElementById('v2-largura').value = p.largura;
     document.getElementById('v2-comprimento').value = p.comprimentoVenda;
     document.getElementById('v2-comprimento-real').value = p.comprimentoReal || p.comprimentoVenda;
-    document.getElementById('v2-preco-m3-item').value = p.preco || 0;
+    document.getElementById('v2-preco-m3-item').value = window.formatCurrencyValue(p.preco);
 }
 
 function calcularPecasAutomatico() {
@@ -350,7 +350,7 @@ function editarPacoteV2(id) {
     
     document.getElementById('v2-select-produto').value = p.produtoId || '';
     document.getElementById('v2-qualidade').value = p.qualidade || '';
-    document.getElementById('v2-preco-m3-item').value = p.precoM3;
+    document.getElementById('v2-preco-m3-item').value = window.formatCurrencyValue(p.precoM3);
     document.getElementById('v2-qtd-pacotes').value = p.qtdPacotes;
     document.getElementById('v2-espessura').value = p.esp;
     document.getElementById('v2-largura').value = p.larg;

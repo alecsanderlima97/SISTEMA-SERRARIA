@@ -112,16 +112,16 @@ formCliente.addEventListener('submit', async function(e) {
         logradouro: document.getElementById('cliLogradouro').value,
         numero: document.getElementById('cliNumero').value,
         cidade: document.getElementById('cliCidade').value,
-        valorFrete: document.getElementById('cliValorFrete').value,
-        porcentagemNF: document.getElementById('cliPorcentagemNF').value,
+        valorFrete: window.parseCurrencyValue(document.getElementById('cliValorFrete').value),
+        porcentagemNF: parseFloat(document.getElementById('cliPorcentagemNF').value) || 0,
         formaPagamento: document.getElementById('cliFormaPagamento').value,
         prazoPagamento: document.getElementById('cliPrazoPagamento').value,
-        madeira1: document.getElementById('cliMadeira1').value,
-        madeira2: document.getElementById('cliMadeira2').value,
-        madeira3: document.getElementById('cliMadeira3').value,
-        madeiraPinus: document.getElementById('cliMadeiraPinus').value,
+        madeira1: window.parseCurrencyValue(document.getElementById('cliMadeira1').value),
+        madeira2: window.parseCurrencyValue(document.getElementById('cliMadeira2').value),
+        madeira3: window.parseCurrencyValue(document.getElementById('cliMadeira3').value),
+        madeiraPinus: window.parseCurrencyValue(document.getElementById('cliMadeiraPinus').value),
         nomeMadeiraExtra: document.getElementById('cliNomeMadeiraExtra').value,
-        valorMadeiraExtra: document.getElementById('cliValorMadeiraExtra').value,
+        valorMadeiraExtra: window.parseCurrencyValue(document.getElementById('cliValorMadeiraExtra').value),
         observacao: document.getElementById('cliObservacao').value,
         atualizadoEm: new Date().toISOString()
     };
@@ -182,17 +182,17 @@ window.editarCliente = function(id) {
         document.getElementById('cliLogradouro').value = c.logradouro || '';
         document.getElementById('cliNumero').value = c.numero || '';
         document.getElementById('cliCidade').value = c.cidade || '';
-        document.getElementById('cliValorFrete').value = c.valorFrete || '';
+        document.getElementById('cliValorFrete').value = window.formatCurrencyValue(c.valorFrete);
         document.getElementById('cliPorcentagemNF').value = c.porcentagemNF || '';
         document.getElementById('cliFormaPagamento').value = c.formaPagamento || '';
         document.getElementById('containerPrazo').style.display = c.formaPagamento === 'A Prazo' ? 'flex' : 'none';
         document.getElementById('cliPrazoPagamento').value = c.prazoPagamento || '';
-        document.getElementById('cliMadeira1').value = c.madeira1 || '';
-        document.getElementById('cliMadeira2').value = c.madeira2 || '';
-        document.getElementById('cliMadeira3').value = c.madeira3 || '';
-        document.getElementById('cliMadeiraPinus').value = c.madeiraPinus || '';
+        document.getElementById('cliMadeira1').value = window.formatCurrencyValue(c.madeira1);
+        document.getElementById('cliMadeira2').value = window.formatCurrencyValue(c.madeira2);
+        document.getElementById('cliMadeira3').value = window.formatCurrencyValue(c.madeira3);
+        document.getElementById('cliMadeiraPinus').value = window.formatCurrencyValue(c.madeiraPinus);
         document.getElementById('cliNomeMadeiraExtra').value = c.nomeMadeiraExtra || '';
-        document.getElementById('cliValorMadeiraExtra').value = c.valorMadeiraExtra || '';
+        document.getElementById('cliValorMadeiraExtra').value = window.formatCurrencyValue(c.valorMadeiraExtra);
         document.getElementById('cliObservacao').value = c.observacao || '';
 
         clienteEditandoId = c.id;
@@ -261,6 +261,17 @@ async function carregarClientes() {
         listaClientes.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>`;
     }
 }
+
+// Inicializar listeners para os inputs financeiros com máscara de R$
+const inputsFinanceirosCliente = [
+    'cliValorFrete', 'cliMadeira1', 'cliMadeira2', 'cliMadeira3', 'cliMadeiraPinus', 'cliValorMadeiraExtra'
+];
+inputsFinanceirosCliente.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.formatCurrencyInput);
+    }
+});
 
 // Inicializar lista
 carregarClientes();

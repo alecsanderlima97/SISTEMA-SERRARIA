@@ -15,22 +15,37 @@ window.parseCurrencyValue = function(val) {
     return parseFloat(cleanVal) || 0;
 };
 
+window.formatCurrencyValue = function(val) {
+    if (val === null || val === undefined || val === '') return '';
+    let num = parseFloat(val);
+    if (isNaN(num)) return '';
+    
+    let isNegative = num < 0;
+    let value = Math.abs(num).toFixed(2).replace(".", ",");
+    value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+    return "R$ " + (isNegative ? "-" : "") + value;
+};
+
 window.formatCurrencyInput = function(e) {
     let value = e.target.value;
-    if (!value) return;
+    if (!value) {
+        e.target.value = "";
+        return;
+    }
     
-    // Suporte a valores negativos (ajustes de frete/madeira podem ser negativos)
-    let isNegative = value.startsWith('-');
+    // Suporte a valores negativos
+    let isNegative = value.includes('-');
     
     value = value.replace(/\D/g, "");
     if (!value) {
-        e.target.value = isNegative ? "-" : "";
+        e.target.value = isNegative ? "R$ -" : "";
         return;
     }
+    
     value = (parseInt(value, 10) / 100).toFixed(2) + "";
     value = value.replace(".", ",");
     value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-    e.target.value = (isNegative ? "-" : "") + value;
+    e.target.value = "R$ " + (isNegative ? "-" : "") + value;
 };
 
 window.changeTheme = function(themeName) {
