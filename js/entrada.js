@@ -407,65 +407,66 @@ window.imprimirEntrada = function(id) {
     win.print();
 };
 
-function inicializarToggleEmpreiteiros() {
-    const btn = document.getElementById('btnToggleListaEmpreiteiros');
-    const panelLista = document.getElementById('panelListaEmpreiteiros');
-    const gridLayout = document.getElementById('gridEmpreiteirosLayout');
-    const cardForm = document.getElementById('cardFormEmpreiteiro');
+function inicializarTogglesEntrada() {
+    const btnToggleEmp = document.getElementById('btnToggleListaEmpreiteiros');
+    const btnToggleEnt = document.getElementById('btnToggleUltimasEntradas');
+    
+    const panelListaEmp = document.getElementById('panelListaEmpreiteiros');
+    const panelListaEnt = document.getElementById('panelListaEntradas');
+    
+    const gridLayout = document.getElementById('gridEntradasGeralLayout');
+    const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
+    const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
 
-    if (!btn || !panelLista || !gridLayout || !cardForm) return;
+    if (!btnToggleEmp || !btnToggleEnt || !panelListaEmp || !panelListaEnt || !gridLayout || !colEsquerda || !colDireita) return;
 
-    // Inicia oculto por padrão
-    panelLista.style.display = 'none';
-    gridLayout.classList.remove('form-table-grid');
-    cardForm.style.maxWidth = '600px';
-    cardForm.style.margin = '0 auto';
+    // Função interna para atualizar o estado visual do grid
+    function atualizarGridGeral() {
+        const empVisivel = panelListaEmp.style.display !== 'none';
+        const entVisivel = panelListaEnt.style.display !== 'none';
 
-    btn.addEventListener('click', () => {
-        if (panelLista.style.display === 'none') {
-            panelLista.style.display = 'block';
+        if (empVisivel || entVisivel) {
+            // Se pelo menos um painel estiver aberto, ativa o grid bilateral de duas colunas
             gridLayout.classList.add('form-table-grid');
-            cardForm.style.maxWidth = 'none';
-            cardForm.style.margin = '0';
-            btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Empreiteiros';
+            colDireita.style.display = 'flex';
+            colEsquerda.style.maxWidth = 'none';
+            colEsquerda.style.margin = '0';
         } else {
-            panelLista.style.display = 'none';
+            // Se ambos estiverem fechados, remove o grid (coluna única) e centraliza os formulários
             gridLayout.classList.remove('form-table-grid');
-            cardForm.style.maxWidth = '600px';
-            cardForm.style.margin = '0 auto';
-            btn.innerHTML = '<i class="fa-solid fa-users"></i> Gerenciar Empreiteiros';
+            colDireita.style.display = 'none';
+            colEsquerda.style.maxWidth = '650px';
+            colEsquerda.style.margin = '0 auto';
         }
+    }
+
+    // Inicialização - Ambos os painéis iniciam fechados por padrão
+    panelListaEmp.style.display = 'none';
+    panelListaEnt.style.display = 'none';
+    atualizarGridGeral();
+
+    // Evento de clique para o toggle de empreiteiros
+    btnToggleEmp.addEventListener('click', () => {
+        if (panelListaEmp.style.display === 'none') {
+            panelListaEmp.style.display = 'block';
+            btnToggleEmp.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Empreiteiros';
+        } else {
+            panelListaEmp.style.display = 'none';
+            btnToggleEmp.innerHTML = '<i class="fa-solid fa-users"></i> Gerenciar Empreiteiros';
+        }
+        atualizarGridGeral();
     });
-}
 
-function inicializarToggleEntradas() {
-    const btn = document.getElementById('btnToggleUltimasEntradas');
-    const panelLista = document.getElementById('panelListaEntradas');
-    const gridLayout = document.getElementById('gridEntradasLayout');
-    const cardForm = document.getElementById('cardFormEntrada');
-
-    if (!btn || !panelLista || !gridLayout || !cardForm) return;
-
-    // Inicia oculto por padrão
-    panelLista.style.display = 'none';
-    gridLayout.classList.remove('form-table-grid');
-    cardForm.style.maxWidth = '650px';
-    cardForm.style.margin = '0 auto';
-
-    btn.addEventListener('click', () => {
-        if (panelLista.style.display === 'none') {
-            panelLista.style.display = 'block';
-            gridLayout.classList.add('form-table-grid');
-            cardForm.style.maxWidth = 'none';
-            cardForm.style.margin = '0';
-            btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Entradas';
+    // Evento de clique para o toggle de últimas entradas
+    btnToggleEnt.addEventListener('click', () => {
+        if (panelListaEnt.style.display === 'none') {
+            panelListaEnt.style.display = 'block';
+            btnToggleEnt.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Entradas';
         } else {
-            panelLista.style.display = 'none';
-            gridLayout.classList.remove('form-table-grid');
-            cardForm.style.maxWidth = '650px';
-            cardForm.style.margin = '0 auto';
-            btn.innerHTML = '<i class="fa-solid fa-list"></i> Ver Últimas Entradas';
+            panelListaEnt.style.display = 'none';
+            btnToggleEnt.innerHTML = '<i class="fa-solid fa-list"></i> Ver Últimas Entradas';
         }
+        atualizarGridGeral();
     });
 }
 
@@ -502,8 +503,7 @@ function inicializarModuloEntrada() {
         entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
 
-    inicializarToggleEmpreiteiros();
-    inicializarToggleEntradas();
+    inicializarTogglesEntrada();
 
     carregarEmpreiteiros();
     carregarEntradas();

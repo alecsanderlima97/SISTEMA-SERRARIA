@@ -600,18 +600,21 @@ function inicializarToggleClientesSub() {
     const container = document.getElementById('subprodutosContainer');
 
     if (btnToggle && panelCadastro && panelEmissao && container) {
+        // Inicialização - Oculto por padrão
+        panelCadastro.style.display = 'none';
+        container.classList.remove('form-table-grid');
+        container.style.maxWidth = '650px';
+        panelEmissao.style.maxWidth = '100%';
+        panelEmissao.style.margin = '0';
+
         btnToggle.addEventListener('click', function() {
             const isHidden = panelCadastro.style.display === 'none';
             if (isHidden) {
                 // Mostrar painel de gerenciamento lateral
                 panelCadastro.style.display = 'block';
-                // Mudar layout do container para grid de duas colunas
-                container.style.display = 'grid';
-                container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(320px, 1fr))';
-                container.style.gap = '24px';
-                // Remover limites manuais para permitir expansão
-                panelEmissao.style.maxWidth = '100%';
-                panelEmissao.style.margin = '0';
+                // Mudar layout do container para grid bilateral de duas colunas
+                container.classList.add('form-table-grid');
+                container.style.maxWidth = '1350px';
                 btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Gerenciador';
                 btnToggle.classList.add('btn-primary');
                 btnToggle.classList.remove('btn-secondary');
@@ -619,10 +622,9 @@ function inicializarToggleClientesSub() {
                 // Esconder painel de gerenciamento
                 panelCadastro.style.display = 'none';
                 // Remover layout de grid do container
-                container.style.display = 'block';
+                container.classList.remove('form-table-grid');
                 // Voltar limites manuais de centralização da calculadora
-                panelEmissao.style.maxWidth = '600px';
-                panelEmissao.style.margin = '0 auto';
+                container.style.maxWidth = '650px';
                 btnToggle.innerHTML = '<i class="fa-solid fa-users-gear"></i> Gerenciar Clientes';
                 btnToggle.classList.remove('btn-primary');
                 btnToggle.classList.add('btn-secondary');

@@ -740,217 +740,199 @@
             <section id="view-entrada" class="view-section" style="display: none;">
                 <div class="main-header">
                     <h1><i class="fa-solid fa-tree"></i> Entrada de Toras (M³)</h1>
-                    <p>Registro de entrada e cálculo de cubagem de caminhões</p>
-                </div>
-
-                <!-- NOVO PAINEL: CADASTRO DE EMPREITEIROS -->
-                <div class="form-table-grid" id="gridEmpreiteirosLayout">
-                    <div class="glass-panel" id="cardFormEmpreiteiro" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                        <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros</h2>
-                        <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
-                    </div>
-                    <form id="formEmpreiteiro" class="grid-form">
-                        <div class="input-group">
-                            <label for="empNome">Nome do Empreiteiro *</label>
-                            <input type="text" id="empNome" class="text-uppercase-input" required placeholder="Ex: José da Silva">
-                        </div>
-                        <div class="input-group">
-                            <label for="empContato">Contato (Telefone/WhatsApp)</label>
-                            <input type="text" id="empContato" placeholder="(00) 00000-0000">
-                        </div>
-                        <div class="input-group">
-                            <label for="empValorMetro">Valor Pago por Metro (R$ / m³) *</label>
-                            <input type="text" id="empValorMetro" required placeholder="R$ 0,00">
-                        </div>
-                        <div class="input-group">
-                            <label for="empPix">Chave PIX para Pagamento</label>
-                            <input type="text" id="empPix" placeholder="CPF, Celular ou E-mail">
-                        </div>
-                        <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end;">
-                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Empreiteiro</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="glass-panel" id="panelListaEmpreiteiros" style="margin-bottom: 0; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros Cadastrados</h2>
-                        <div class="input-group" style="margin-bottom: 0; width: 220px;">
-                            <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.9rem;">
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Contato</th>
-                                    <th>Valor (R$/m³)</th>
-                                    <th>PIX</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaEmpreiteiros">
-                                <!-- Preenchido via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CALCULADORA E LISTA DE ÚLTIMAS ENTRADAS -->
-            <div class="form-table-grid" id="gridEntradasLayout" style="margin-top: 2rem;">
-                <div class="glass-panel" id="cardFormEntrada" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                        <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³</h2>
-                        <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
-                    </div>
-                    <form id="formEntrada" class="grid-form">
-                        <div class="input-group" style="grid-column: span 2;">
-                            <label for="entEmpreiteiro">Empreiteiro / Fornecedor *</label>
-                            <select id="entEmpreiteiro" required>
-                                <option value="">Selecione o Empreiteiro...</option>
-                                <!-- Preenchido via JS -->
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="entMotorista">Nome do Motorista *</label>
-                            <input type="text" id="entMotorista" class="text-uppercase-input" required placeholder="Ex: Carlos Motorista">
-                        </div>
-                        <div class="input-group">
-                            <label for="entCaminhao">Modelo do Caminhão</label>
-                            <input type="text" id="entCaminhao" class="text-uppercase-input" placeholder="Ex: Scania 113">
-                        </div>
-                        <div class="input-group">
-                            <label for="entPlaca">Placa do Caminhão *</label>
-                            <input type="text" id="entPlaca" class="text-uppercase-input" required placeholder="ABC-1234">
-                        </div>
-                        <div class="input-group">
-                            <label for="entData">Data de Entrada</label>
-                            <input type="date" id="entData" required>
-                        </div>
-                        <div class="input-group">
-                            <label for="entHorario">Horário da Chegada</label>
-                            <input type="time" id="entHorario" required>
-                        </div>
-
-
-                        <!-- Separação Medidas Base -->
-                        <div
-                            style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <h3 style="color:var(--accent-color);"><i class="fa-solid fa-ruler-combined"></i>
-                                Medidas da Carroceria / Carga</h3>
-                        </div>
-
-                        <div class="input-group">
-                            <label>Comprimento Total (m) *</label>
-                            <input type="number" id="entComp" step="0.01" required placeholder="Ex: 5.5">
-                        </div>
-                        <div class="input-group">
-                            <label>Largura Média (m) *</label>
-                            <input type="number" id="entLarg" step="0.01" required placeholder="Ex: 2.6">
-                        </div>
-                        <div class="input-group" style="grid-column: span 2;">
-                            <!-- Placeholder vazio para alinhar grid -->
-                        </div>
-
-                        <!-- Separação Alturas -->
-                        <div style="grid-column: 1 / -1; margin-top: 15px;">
-                            <p style="font-size: 0.9rem; color:#aaa; margin-bottom: 10px;">Preencha apenas as
-                                alturas que conseguir medir. É possível usar apenas 1, 2 ou 3 alturas por lado.
-                                A média será calculada automaticamente.</p>
-                        </div>
-
-                        <!-- Lado Esquerdo -->
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Inicial (m)</label>
-                            <input type="number" id="entAltEsq1" step="0.01" placeholder="Ex: 1.5">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Meio (m)</label>
-                            <input type="number" id="entAltEsq2" step="0.01">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#2cc990;">Lado Esq. Final (m)</label>
-                            <input type="number" id="entAltEsq3" step="0.01">
-                        </div>
-
-                        <!-- Lado Direito -->
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Inicial (m)</label>
-                            <input type="number" id="entAltDir1" step="0.01">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Meio (m)</label>
-                            <input type="number" id="entAltDir2" step="0.01">
-                        </div>
-                        <div class="input-group"
-                            style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <label style="color:#3498db;">Lado Dir. Final (m)</label>
-                            <input type="number" id="entAltDir3" step="0.01">
-                        </div>
-
-                        <!-- Resultado em Real-Time -->
-                        <div
-                            style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
-                            <div style="text-align: center; padding: 20px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
-                                <h4 style="margin: 0; color:#ccc;">Volume Calculado</h4>
-                                <div id="entResultadoVolume"
-                                    style="font-size: 2.5rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">
-                                    0.000 m³</div>
-                                <small id="entInfoMedia" style="color:#aaa;">Altura média: 0.00 m (0 pontos
-                                    medidos)</small>
+                                 <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->
+                <div class="form-table-grid" id="gridEntradasGeralLayout" style="max-width: 1350px; margin: 0 auto; position: relative;">
+                    <!-- Coluna da Esquerda: Formulários -->
+                    <div class="form-column-left" style="display: flex; flex-direction: column; gap: 2rem; width: 100%;">
+                        
+                        <!-- Cadastro de Empreiteiros -->
+                        <div class="glass-panel" id="cardFormEmpreiteiro" style="margin-bottom: 0;">
+                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros</h2>
+                                <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
                             </div>
-                            <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
-                                <h4 style="margin: 0; color:#ccc;">Acerto do Empreiteiro</h4>
-                                <div id="entResultadoFinanceiro"
-                                    style="font-size: 2.5rem; font-weight: bold; color:#3498db; margin-top: 5px;">
-                                    R$ 0,00</div>
-                                <small id="entInfoFinanceira" style="color:#aaa;">Baseado em R$ 0,00 por m³</small>
+                            <form id="formEmpreiteiro" class="grid-form">
+                                <div class="input-group">
+                                    <label for="empNome">Nome do Empreiteiro *</label>
+                                    <input type="text" id="empNome" class="text-uppercase-input" required placeholder="Ex: José da Silva">
+                                </div>
+                                <div class="input-group">
+                                    <label for="empContato">Contato (Telefone/WhatsApp)</label>
+                                    <input type="text" id="empContato" placeholder="(00) 00000-0000">
+                                </div>
+                                <div class="input-group">
+                                    <label for="empValorMetro">Valor Pago por Metro (R$ / m³) *</label>
+                                    <input type="text" id="empValorMetro" required placeholder="R$ 0,00">
+                                </div>
+                                <div class="input-group">
+                                    <label for="empPix">Chave PIX para Pagamento</label>
+                                    <input type="text" id="empPix" placeholder="CPF, Celular ou E-mail">
+                                </div>
+                                <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end;">
+                                    <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Empreiteiro</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Calculadora de Cubagem -->
+                        <div class="glass-panel" id="cardFormEntrada" style="margin-bottom: 0;">
+                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³</h2>
+                                <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
+                            </div>
+                            <form id="formEntrada" class="grid-form">
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label for="entEmpreiteiro">Empreiteiro / Fornecedor *</label>
+                                    <select id="entEmpreiteiro" required>
+                                        <option value="">Selecione o Empreiteiro...</option>
+                                        <!-- Preenchido via JS -->
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="entMotorista">Nome do Motorista *</label>
+                                    <input type="text" id="entMotorista" class="text-uppercase-input" required placeholder="Ex: Carlos Motorista">
+                                </div>
+                                <div class="input-group">
+                                    <label for="entCaminhao">Modelo do Caminhão</label>
+                                    <input type="text" id="entCaminhao" class="text-uppercase-input" placeholder="Ex: Scania 113">
+                                </div>
+                                <div class="input-group">
+                                    <label for="entPlaca">Placa do Caminhão *</label>
+                                    <input type="text" id="entPlaca" class="text-uppercase-input" required placeholder="ABC-1234">
+                                </div>
+                                <div class="input-group">
+                                    <label for="entData">Data de Entrada</label>
+                                    <input type="date" id="entData" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="entHorario">Horário da Chegada</label>
+                                    <input type="time" id="entHorario" required>
+                                </div>
+
+                                <!-- Medidas Base -->
+                                <div style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+                                    <h3 style="color:var(--accent-color); font-size: 0.95rem;"><i class="fa-solid fa-ruler-combined"></i> Medidas da Carroceria / Carga</h3>
+                                </div>
+
+                                <div class="input-group">
+                                    <label>Comprimento (m) *</label>
+                                    <input type="number" id="entComp" step="0.01" required placeholder="Ex: 5.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Largura Média (m) *</label>
+                                    <input type="number" id="entLarg" step="0.01" required placeholder="Ex: 2.6">
+                                </div>
+                                <div class="input-group" style="grid-column: span 2;"></div>
+
+                                <!-- Alturas -->
+                                <div style="grid-column: 1 / -1; margin-top: 10px;">
+                                    <p style="font-size: 0.8rem; color:#aaa; margin-bottom: 5px;">Alturas da carroceria: preencha de 1 a 3 pontos por lado.</p>
+                                </div>
+
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 1 (m)</label>
+                                    <input type="number" id="entAltEsq1" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 2 (m)</label>
+                                    <input type="number" id="entAltEsq2" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 3 (m)</label>
+                                    <input type="number" id="entAltEsq3" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 1 (m)</label>
+                                    <input type="number" id="entAltDir1" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 2 (m)</label>
+                                    <input type="number" id="entAltDir2" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 3 (m)</label>
+                                    <input type="number" id="entAltDir3" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                </div>
+
+                                <!-- Resultado Real-Time -->
+                                <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                    <div style="text-align: center; padding: 15px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
+                                        <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Volume M³</h4>
+                                        <div id="entResultadoVolume" style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">0.000 m³</div>
+                                        <small id="entInfoMedia" style="color:#aaa; font-size: 0.75rem;">Média: 0.00m</small>
+                                    </div>
+                                    <div style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
+                                        <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto</h4>
+                                        <div id="entResultadoFinanceiro" style="font-size: 1.8rem; font-weight: bold; color:#3498db; margin-top: 5px;">R$ 0,00</div>
+                                        <small id="entInfoFinanceira" style="color:#aaa; font-size: 0.75rem;">Base: R$ 0,00/m³</small>
+                                    </div>
+                                </div>
+
+                                <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
+                                    <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 1rem;"><i class="fa-solid fa-save"></i> Registrar Entrada</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita: Listas de Dados -->
+                    <div class="table-column-right" style="display: flex; flex-direction: column; gap: 2rem; width: 100%;">
+                        
+                        <!-- Lista de Empreiteiros -->
+                        <div class="glass-panel" id="panelListaEmpreiteiros" style="margin-bottom: 0; display: none; width: 100%;">
+                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros Cadastrados</h2>
+                                <div class="input-group" style="margin-bottom: 0; width: 180px;">
+                                    <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Contato</th>
+                                            <th>Valor (R$/m³)</th>
+                                            <th>PIX</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listaEmpreiteiros">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        <div class="input-group"
-                            style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
-                            <button type="submit" class="btn-primary" style="padding: 15px 30px; font-size: 1.1rem;"><i
-                                    class="fa-solid fa-save"></i>
-                                Registrar Entrada</button>
+                        <!-- Últimas Entradas -->
+                        <div class="glass-panel" id="panelListaEntradas" style="margin-bottom: 0; display: none; width: 100%;">
+                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <h2><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
+                                <div class="input-group" style="margin-bottom: 0; width: 220px;">
+                                    <input type="text" id="filtroEntradasNome" placeholder="Buscar por Fornecedor..." style="padding: 8px 12px; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Data/Hora</th>
+                                            <th>Fornecedor</th>
+                                            <th>Placa</th>
+                                            <th>Dimensões</th>
+                                            <th>Volume</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listaEntradas">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </form>
                 </div>
-
-                <div class="glass-panel" id="panelListaEntradas" style="margin-bottom: 0; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
-                        <div class="input-group" style="margin-bottom: 0; width: 300px;">
-                            <input type="text" id="filtroEntradasNome" placeholder="Filtrar por Empreiteiro ou Motorista..." style="padding: 8px 12px;">
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Data / Hora</th>
-                                    <th>Empreiteiro / Motorista</th>
-                                    <th>Caminhão / Placa</th>
-                                    <th>Volume / Medidas</th>
-                                    <th>Total Empreiteiro</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaEntradas">
-                                <!-- Preenchido via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
+            </section>
 
             <!-- ====== TELA: VENDA DE CAVACO/PÓ ====== -->
             <section id="view-cavaco" class="view-section" style="display: none;">
