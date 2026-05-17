@@ -1,4 +1,4 @@
-import { db, collection, addDoc } from './firebase-init.js';
+import { db, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from './firebase-init.js';
 
 // --- Ferramentas Auxiliares / Calculadoras ---
 
@@ -7,7 +7,7 @@ const btnCalcCub = document.getElementById('btnCalcCub');
 const resultadoCub = document.getElementById('resultadoCub');
 
 // Forçar letras maiúsculas em tempo real nos campos de subprodutos (Cavaco/Pó)
-['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'calcCavMedidas'].forEach(id => {
+['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'subCliNome', 'subCliIE', 'subCliLogradouro', 'subCliCidadeEstado', 'subCliCaminhao', 'subCliPlacaCaminhao', 'subCliPlacaCarreta', 'calcCavRomaneioCliente', 'calcCavCaminhao', 'calcCavPlacaCaminhao', 'calcCavPlacaCarreta'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         input.addEventListener('input', window.forceUppercaseInput);
@@ -63,6 +63,352 @@ if (btnCalcDiesel) {
 // 3. Venda de Cavaco / Pó de Serra / Subprodutos
 const btnCalcCavaco = document.getElementById('btnCalcCavaco');
 
+let clientesSubprodutosCache = [];
+let clienteSubprodutoEditandoId = null;
+
+// --- Gestão de Clientes de Subprodutos (CRUD & Sync) ---
+
+async function carregarClientesSubprodutos() {
+    const lista = document.getElementById('listaClientesSubprodutos');
+    const select = document.getElementById('calcCavSelectCliente');
+    
+    if (!lista) return;
+    
+    try {
+        const snap = await getDocs(collection(db, 'clientes_subprodutos'));
+        clientesSubprodutosCache = [];
+        lista.innerHTML = '';
+        
+        if (select) {
+            select.innerHTML = '<option value="">Preenchimento Manual / Cliente Avulso</option>';
+        }
+        
+        snap.forEach(d => {
+            const cli = { id: d.id, ...d.data() };
+            clientesSubprodutosCache.push(cli);
+            
+            // Adicionar ao select
+            if (select) {
+                const opt = document.createElement('option');
+                opt.value = cli.id;
+                opt.textContent = cli.nome;
+                select.appendChild(opt);
+            }
+            
+            // Adicionar à lista visual
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            tr.innerHTML = `
+                <td style="padding: 10px 8px; font-weight: bold; color: var(--text-color);">${cli.nome}</td>
+                <td style="padding: 10px 8px; color: var(--accent-color); font-size: 0.8rem; line-height: 1.4;">
+                    Cavaco: R$ ${cli.valorCavaco.toLocaleString('pt-BR', {minimumFractionDigits:2})}<br>
+                    Pó: R$ ${cli.valorPo.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                </td>
+                <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
+                    <button type="button" class="btn-icon" style="color: var(--primary-color); font-size:1rem; margin-right: 8px;" onclick="window.editarClienteSub('${cli.id}')" title="Editar">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button type="button" class="btn-icon" style="color: var(--danger-color); font-size:1rem;" onclick="window.excluirClienteSub('${cli.id}')" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            lista.appendChild(tr);
+        });
+    } catch (e) {
+        console.error("Erro ao carregar clientes de subprodutos:", e);
+    }
+}
+
+// Declarar funções no escopo global para que funcionem nos atributos onclick dos elementos
+window.editarClienteSub = (id) => {
+    const cli = clientesSubprodutosCache.find(x => x.id === id);
+    if (!cli) return;
+    
+    clienteSubprodutoEditandoId = id;
+    
+    document.getElementById('subCliNome').value = cli.nome;
+    document.getElementById('subCliDoc').value = cli.documento;
+    document.getElementById('subCliIE').value = cli.ie || 'ISENTO';
+    document.getElementById('subCliLogradouro').value = cli.logradouro || '';
+    document.getElementById('subCliCidadeEstado').value = cli.cidadeEstado || '';
+    
+    document.getElementById('subCliValorCavaco').value = window.formatCurrencyValue(cli.valorCavaco);
+    document.getElementById('subCliValorPo').value = window.formatCurrencyValue(cli.valorPo);
+    
+    document.getElementById('subCliCaminhao').value = cli.caminhao || '';
+    document.getElementById('subCliPlacaCaminhao').value = cli.placaCaminhao || '';
+    document.getElementById('subCliPlacaCarreta').value = cli.placaCarreta || '';
+    
+    if (cli.medidas) {
+        document.getElementById('subCliAlt').value = cli.medidas.alt || '';
+        document.getElementById('subCliLarg').value = cli.medidas.larg || '';
+        document.getElementById('subCliComp').value = cli.medidas.comp || '';
+    }
+    
+    const btnSalvar = document.getElementById('btnSalvarClienteSub');
+    if (btnSalvar) {
+        btnSalvar.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Cliente';
+        btnSalvar.style.background = '#f59e0b';
+        btnSalvar.style.color = 'black';
+    }
+    
+    document.getElementById('formClienteSubproduto').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.excluirClienteSub = async (id) => {
+    const cli = clientesSubprodutosCache.find(x => x.id === id);
+    if (!cli) return;
+    
+    if (confirm(`Deseja realmente excluir permanentemente o cliente ${cli.nome}?`)) {
+        try {
+            await deleteDoc(doc(db, 'clientes_subprodutos', id));
+            alert("Cliente de subproduto excluído com sucesso!");
+            await carregarClientesSubprodutos();
+        } catch (error) {
+            console.error("Erro ao excluir cliente:", error);
+            alert("Erro ao excluir cliente de subprodutos.");
+        }
+    }
+};
+
+// Cadastro de Cliente de Subproduto
+const formCliSub = document.getElementById('formClienteSubproduto');
+if (formCliSub) {
+    formCliSub.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const nome = document.getElementById('subCliNome').value.toUpperCase().trim();
+        const docNum = document.getElementById('subCliDoc').value.trim();
+        const ie = document.getElementById('subCliIE').value.toUpperCase().trim() || 'ISENTO';
+        const logradouro = document.getElementById('subCliLogradouro').value.toUpperCase().trim();
+        const cidadeEstado = document.getElementById('subCliCidadeEstado').value.toUpperCase().trim();
+        
+        const valorCavaco = window.parseCurrencyValue(document.getElementById('subCliValorCavaco').value);
+        const valorPo = window.parseCurrencyValue(document.getElementById('subCliValorPo').value);
+        
+        const caminhao = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
+        const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
+        const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
+        
+        const alt = parseFloat(document.getElementById('subCliAlt').value) || 0;
+        const larg = parseFloat(document.getElementById('subCliLarg').value) || 0;
+        const comp = parseFloat(document.getElementById('subCliComp').value) || 0;
+        
+        if (!nome || !docNum || valorCavaco <= 0 || valorPo <= 0) {
+            alert("Por favor, preencha todos os campos obrigatórios (*)");
+            return;
+        }
+        
+        const dadosCli = {
+            nome,
+            documento: docNum,
+            ie,
+            logradouro,
+            cidadeEstado,
+            valorCavaco,
+            valorPo,
+            caminhao,
+            placaCaminhao,
+            placaCarreta,
+            medidas: { alt, larg, comp }
+        };
+        
+        const btnSalvar = document.getElementById('btnSalvarClienteSub');
+        const originalHTML = btnSalvar.innerHTML;
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        
+        try {
+            if (clienteSubprodutoEditandoId) {
+                const docRef = doc(db, 'clientes_subprodutos', clienteSubprodutoEditandoId);
+                await updateDoc(docRef, dadosCli);
+                alert("Cliente de subproduto atualizado com sucesso!");
+                clienteSubprodutoEditandoId = null;
+                btnSalvar.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
+                btnSalvar.style.background = '';
+                btnSalvar.style.color = '';
+            } else {
+                await addDoc(collection(db, 'clientes_subprodutos'), dadosCli);
+                alert("Cliente de subproduto cadastrado com sucesso!");
+            }
+            
+            formCliSub.reset();
+            await carregarClientesSubprodutos();
+        } catch (error) {
+            console.error("Erro ao salvar cliente:", error);
+            alert("Erro ao cadastrar ou atualizar cliente de subprodutos.");
+        } finally {
+            btnSalvar.disabled = false;
+            if (!clienteSubprodutoEditandoId) {
+                btnSalvar.innerHTML = originalHTML;
+            }
+        }
+    });
+}
+
+// Busca automática de CNPJ no cadastro de clientes de subprodutos
+const subCliDocInput = document.getElementById('subCliDoc');
+if (subCliDocInput) {
+    subCliDocInput.addEventListener('input', function(e) {
+        let v = e.target.value.replace(/\D/g, "");
+        if (v.length > 11) {
+            v = v.substring(0, 14);
+            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+        } else {
+            v = v.substring(0, 11);
+            v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        }
+        e.target.value = v;
+    });
+
+    subCliDocInput.addEventListener('blur', async function() {
+        let docClean = this.value.replace(/\D/g, '');
+        if (docClean.length === 14) {
+            const nomeInput = document.getElementById('subCliNome');
+            const logradouroInput = document.getElementById('subCliLogradouro');
+            const cidadeEstadoInput = document.getElementById('subCliCidadeEstado');
+
+            if (nomeInput) nomeInput.placeholder = "Buscando dados do CNPJ...";
+            
+            try {
+                const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${docClean}`);
+                const data = await res.json();
+                if (data.razao_social) {
+                    if (nomeInput && !nomeInput.value) nomeInput.value = data.razao_social.toUpperCase();
+                    
+                    let log = (data.logradouro || '').toUpperCase();
+                    if (data.numero) log += `, ${data.numero}`;
+                    if (data.complemento) log += ` - ${data.complemento.toUpperCase()}`;
+                    if (data.bairro) log += ` - ${data.bairro.toUpperCase()}`;
+                    
+                    if (logradouroInput && !logradouroInput.value) logradouroInput.value = log;
+                    
+                    let cidEst = "";
+                    if (data.municipio) cidEst += data.municipio.toUpperCase();
+                    if (data.uf) cidEst += ` / ${data.uf.toUpperCase()}`;
+                    
+                    if (cidadeEstadoInput && !cidadeEstadoInput.value) cidadeEstadoInput.value = cidEst;
+                    
+                    const ieInput = document.getElementById('subCliIE');
+                    if (ieInput && !ieInput.value) ieInput.value = "ISENTO";
+                }
+            } catch (e) {
+                console.error("Erro ao consultar CNPJ via BrasilAPI:", e);
+            } finally {
+                if (nomeInput) nomeInput.placeholder = "Nome / Razão Social *";
+            }
+        }
+    });
+}
+
+// --- Automação do Emissor de Recibo de Vendas de Subprodutos ---
+
+const selectCavCli = document.getElementById('calcCavSelectCliente');
+if (selectCavCli) {
+    selectCavCli.addEventListener('change', function() {
+        const idSelected = this.value;
+        if (!idSelected) {
+            // Limpar para avulso
+            document.getElementById('calcCavCliente').value = '';
+            document.getElementById('calcCavCliente').disabled = false;
+            document.getElementById('calcCavDoc').value = '';
+            document.getElementById('calcCavIE').value = '';
+            document.getElementById('calcCavLogradouro').value = '';
+            document.getElementById('calcCavCidadeEstado').value = '';
+            
+            document.getElementById('calcCavCaminhao').value = '';
+            document.getElementById('calcCavPlacaCaminhao').value = '';
+            document.getElementById('calcCavPlacaCarreta').value = '';
+            
+            document.getElementById('calcCavAlt').value = '';
+            document.getElementById('calcCavLarg').value = '';
+            document.getElementById('calcCavComp').value = '';
+            
+            document.getElementById('calcCavQtd').value = '';
+            document.getElementById('calcCavValor').value = '';
+        } else {
+            const cli = clientesSubprodutosCache.find(x => x.id === idSelected);
+            if (cli) {
+                document.getElementById('calcCavCliente').value = cli.nome;
+                document.getElementById('calcCavCliente').disabled = false;
+                
+                document.getElementById('calcCavDoc').value = cli.documento || '';
+                document.getElementById('calcCavIE').value = cli.ie || 'ISENTO';
+                document.getElementById('calcCavLogradouro').value = cli.logradouro || '';
+                document.getElementById('calcCavCidadeEstado').value = cli.cidadeEstado || '';
+                
+                document.getElementById('calcCavCaminhao').value = cli.caminhao || '';
+                document.getElementById('calcCavPlacaCaminhao').value = cli.placaCaminhao || '';
+                document.getElementById('calcCavPlacaCarreta').value = cli.placaCarreta || '';
+                
+                if (cli.medidas) {
+                    document.getElementById('calcCavAlt').value = cli.medidas.alt || '';
+                    document.getElementById('calcCavLarg').value = cli.medidas.larg || '';
+                    document.getElementById('calcCavComp').value = cli.medidas.comp || '';
+                }
+                
+                atualizarPrecoAcordadoCavacoPo(cli);
+                calcularCubagemCaminhaoTempoReal();
+            }
+        }
+    });
+}
+
+function atualizarPrecoAcordadoCavacoPo(cli) {
+    if (!cli) {
+        const idSelected = document.getElementById('calcCavSelectCliente')?.value;
+        if (idSelected) {
+            cli = clientesSubprodutosCache.find(x => x.id === idSelected);
+        }
+    }
+    
+    if (!cli) return;
+    
+    const tipo = document.getElementById('calcCavTipo').value;
+    const valInput = document.getElementById('calcCavValor');
+    
+    if (valInput) {
+        if (tipo === 'Cavaco / Maravalha') {
+            valInput.value = window.formatCurrencyValue(cli.valorCavaco);
+        } else if (tipo === 'Pó de Serra') {
+            valInput.value = window.formatCurrencyValue(cli.valorPo);
+        }
+    }
+}
+
+// Ouvintes de alteração automática de preços ao trocar o tipo de produto
+const selectCavTipoInput = document.getElementById('calcCavTipo');
+if (selectCavTipoInput) {
+    selectCavTipoInput.addEventListener('change', function() {
+        atualizarPrecoAcordadoCavacoPo();
+    });
+}
+
+// Função de Cubagem Automática em Tempo Real (ALT x LARG x COMP)
+function calcularCubagemCaminhaoTempoReal() {
+    const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
+    const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
+    const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
+    const qtdInput = document.getElementById('calcCavQtd');
+    
+    if (alt > 0 && larg > 0 && comp > 0) {
+        const vol = alt * larg * comp;
+        if (qtdInput) {
+            qtdInput.value = vol.toFixed(3);
+        }
+    }
+}
+
+// Ouvintes de cubagem
+['calcCavAlt', 'calcCavLarg', 'calcCavComp'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', calcularCubagemCaminhaoTempoReal);
+    }
+});
+
+// Emissão de recibos de subprodutos
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
         const tipo = document.getElementById('calcCavTipo').value;
@@ -71,9 +417,21 @@ if (btnCalcCavaco) {
         const valorUni = window.parseCurrencyValue(document.getElementById('calcCavValor').value) || 0;
 
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
+        const romaneioCliente = document.getElementById('calcCavRomaneioCliente').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
+        const docCli = document.getElementById('calcCavDoc').value || '---';
+        const ieCli = document.getElementById('calcCavIE').value || '---';
+        const logradouro = document.getElementById('calcCavLogradouro').value || '---';
+        const cidadeEstado = document.getElementById('calcCavCidadeEstado').value || '---';
+        
         const motorista = document.getElementById('calcCavMotorista').value || '---';
-        const medidas = document.getElementById('calcCavMedidas').value || '---';
+        const caminhao = document.getElementById('calcCavCaminhao').value || '---';
+        const placaCaminhao = document.getElementById('calcCavPlacaCaminhao').value || '---';
+        const placaCarreta = document.getElementById('calcCavPlacaCarreta').value || '---';
+
+        const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
+        const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
+        const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
@@ -91,9 +449,17 @@ if (btnCalcCavaco) {
             const novaVenda = {
                 data: new Date().toISOString().split('T')[0],
                 romaneio: romaneio.toUpperCase().trim(),
+                romaneioCliente: romaneioCliente.toUpperCase().trim(),
                 cliente: cliente.toUpperCase().trim(),
+                documento: docCli,
+                ie: ieCli,
+                logradouro: logradouro.toUpperCase().trim(),
+                cidadeEstado: cidadeEstado.toUpperCase().trim(),
                 motorista: motorista.toUpperCase().trim(),
-                medidas: medidas.toUpperCase().trim(),
+                caminhao: caminhao.toUpperCase().trim(),
+                placaCaminhao: placaCaminhao.toUpperCase().trim(),
+                placaCarreta: placaCarreta.toUpperCase().trim(),
+                medidas: { alt, larg, comp },
                 tipo: tipo,
                 unidade: unidade,
                 quantidade: qtd,
@@ -107,9 +473,23 @@ if (btnCalcCavaco) {
 
             // Preencher área de impressão
             document.getElementById('printCavRomaneio').textContent = romaneio;
+            document.getElementById('printCavRomaneioCliente').textContent = romaneioCliente;
             document.getElementById('printCavCliente').textContent = cliente;
+            document.getElementById('printCavDoc').textContent = docCli;
+            document.getElementById('printCavIE').textContent = ieCli;
+            document.getElementById('printCavLogradouro').textContent = logradouro;
+            document.getElementById('printCavCidadeEstado').textContent = cidadeEstado;
+            
             document.getElementById('printCavMotorista').textContent = motorista;
-            document.getElementById('printCavMedidas').textContent = medidas;
+            document.getElementById('printCavCaminhao').textContent = caminhao;
+            document.getElementById('printCavPlacaCaminhao').textContent = placaCaminhao;
+            document.getElementById('printCavPlacaCarreta').textContent = placaCarreta;
+            
+            let medidasStr = '---';
+            if (alt > 0 && larg > 0 && comp > 0) {
+                medidasStr = `${alt.toFixed(2)}m (Alt) x ${larg.toFixed(2)}m (Larg) x ${comp.toFixed(2)}m (Comp)`;
+            }
+            document.getElementById('printCavMedidas').textContent = medidasStr;
 
             document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
             document.getElementById('printCavTipo').textContent = tipo;
@@ -118,16 +498,19 @@ if (btnCalcCavaco) {
             document.getElementById('printCavValorUni').textContent = valorUni.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('printCavTotal').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-            // Preparar para impressão
             const printArea = document.getElementById('printAreaSubprodutos');
             if (printArea) {
-                // Em vez de substituir o body, vamos usar o CSS print
                 printArea.style.display = 'block';
                 window.print();
                 printArea.style.display = 'none';
                 
-                alert("Venda registrada e enviada para impressão!");
-                location.reload(); // Recarrega para limpar o form e resetar estado
+                alert("Venda de subproduto registrada e enviada para impressão!");
+                
+                // Limpar apenas o formulário de emissão de recibo para manter a SPA fluida
+                document.getElementById('formCavaco').reset();
+                if (document.getElementById('calcCavSelectCliente')) {
+                    document.getElementById('calcCavSelectCliente').value = '';
+                }
             }
         } catch (e) {
             console.error("Erro ao salvar venda de subproduto:", e);
@@ -138,6 +521,9 @@ if (btnCalcCavaco) {
         }
     });
 }
+
+// Iniciar os clientes de subprodutos na carga do script
+carregarClientesSubprodutos();
 
 // 4. Cálculo de Fardo Completo
 const btnCalcFardo = document.getElementById('btnCalcFardo');
@@ -197,7 +583,7 @@ if (btnCalcFrete) {
 }
 
 // Inicializar listeners de máscara de R$ para as calculadoras
-const inputsFinanceirosCalc = ['calcPrecoDiesel', 'calcCavValor', 'freteValor', 'freteExtra'];
+const inputsFinanceirosCalc = ['calcPrecoDiesel', 'calcCavValor', 'freteValor', 'freteExtra', 'subCliValorCavaco', 'subCliValorPo'];
 inputsFinanceirosCalc.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
