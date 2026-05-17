@@ -591,3 +591,48 @@ inputsFinanceirosCalc.forEach(id => {
     }
 });
 
+// Alternância do painel de gerenciamento de clientes de subprodutos
+function inicializarToggleClientesSub() {
+    const btnToggle = document.getElementById('btnToggleGerenciarClientesSub');
+    const panelCadastro = document.getElementById('panelCadastroClientesSub');
+    const panelEmissao = document.getElementById('panelEmissaoCavaco');
+    const container = document.getElementById('subprodutosContainer');
+
+    if (btnToggle && panelCadastro && panelEmissao && container) {
+        btnToggle.addEventListener('click', function() {
+            const isHidden = panelCadastro.style.display === 'none';
+            if (isHidden) {
+                // Mostrar painel de gerenciamento lateral
+                panelCadastro.style.display = 'block';
+                // Mudar layout do container para grid de duas colunas
+                container.style.display = 'grid';
+                container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(320px, 1fr))';
+                container.style.gap = '24px';
+                // Remover limites manuais para permitir expansão
+                panelEmissao.style.maxWidth = '100%';
+                panelEmissao.style.margin = '0';
+                btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Gerenciador';
+                btnToggle.classList.add('btn-primary');
+                btnToggle.classList.remove('btn-secondary');
+            } else {
+                // Esconder painel de gerenciamento
+                panelCadastro.style.display = 'none';
+                // Remover layout de grid do container
+                container.style.display = 'block';
+                // Voltar limites manuais de centralização da calculadora
+                panelEmissao.style.maxWidth = '600px';
+                panelEmissao.style.margin = '0 auto';
+                btnToggle.innerHTML = '<i class="fa-solid fa-users-gear"></i> Gerenciar Clientes';
+                btnToggle.classList.remove('btn-primary');
+                btnToggle.classList.add('btn-secondary');
+            }
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarToggleClientesSub);
+} else {
+    inicializarToggleClientesSub();
+}
+
