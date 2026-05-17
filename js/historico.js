@@ -48,6 +48,7 @@ function aplicarFiltro() {
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
     const termo = (filtroCliente ? filtroCliente.value : '').toLowerCase();
     
+    if (!listaHistorico) return;
     listaHistorico.innerHTML = '';
     
     if (tipoAtivo === 'madeira') {
@@ -88,15 +89,17 @@ function aplicarFiltro() {
                 <td>${volume.toFixed(3)} m³</td>
                 <td style="color:#00ff88; font-weight:bold;">R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td>
-                    <button onclick="verDetalhesRomaneio('${r.id}')" class="btn-icon" style="color:var(--accent); font-size:1.2rem;" title="Ver Detalhes">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button onclick="window.iniciarEditarCarga('${r.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1.2rem; margin-left: 10px;" title="Editar Carga">
-                        <i class="fa-solid fa-pencil"></i>
-                    </button>
-                    <button onclick="window.iniciarExcluirCarga('${r.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.2rem; margin-left: 10px;" title="Excluir Carga">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                        <button onclick="verDetalhesRomaneio('${r.id}')" class="btn-icon" style="color:var(--accent); font-size:1rem; padding: 4px;" title="Ver Detalhes">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button onclick="window.iniciarEditarCarga('${r.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 4px;" title="Editar Carga">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button onclick="window.iniciarExcluirCarga('${r.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1rem; padding: 4px;" title="Excluir Carga">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             listaHistorico.appendChild(tr);
@@ -128,12 +131,14 @@ function aplicarFiltro() {
                 <td>${volumeStr}</td>
                 <td style="color:#00ff88; font-weight:bold;">R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td>
-                    <button onclick="verDetalhesRomaneio('${r.id}')" class="btn-icon" style="color:var(--accent); font-size:1.2rem;" title="Ver Detalhes">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button onclick="window.iniciarExcluirCarga('${r.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.2rem; margin-left: 10px;" title="Excluir Venda">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                        <button onclick="verDetalhesRomaneio('${r.id}')" class="btn-icon" style="color:var(--accent); font-size:1rem; padding: 4px;" title="Ver Detalhes">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button onclick="window.iniciarExcluirCarga('${r.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1rem; padding: 4px;" title="Excluir Venda">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             listaHistorico.appendChild(tr);
@@ -270,7 +275,7 @@ window.verDetalhesRomaneio = async (id) => {
             <small>Taxa aplicada: ${r.financeiro?.taxaNF || 0}%</small>
         </div>
     `;
-};
+}
 
 window.fecharModalDetalhes = () => {
     document.getElementById('modalDetalhesRomaneio').style.display = 'none';
@@ -314,20 +319,6 @@ window.reimprimirReciboSubproduto = (id) => {
         printArea.style.display = 'none';
     }
 };
-
-if(filtroCliente) {
-    filtroCliente.addEventListener('input', aplicarFiltro);
-}
-
-if(filtroTipo) {
-    filtroTipo.addEventListener('change', renderizarHistorico);
-}
-
-// Iniciar
-renderizarHistorico();
-window.renderizarHistorico = renderizarHistorico;
-
-// --- Lógica de Segurança (Editar/Excluir Cargas com Senha) ---
 
 window.fecharModalSeguranca = () => {
     document.getElementById('modalConfirmacaoSeguranca').style.display = 'none';
@@ -394,94 +385,117 @@ window.iniciarExcluirCarga = (id) => {
     }
 };
 
-// Vinculação do clique de confirmação de segurança
-const btnConfirmarSeguranca = document.getElementById('btnConfirmarSeguranca');
-if (btnConfirmarSeguranca) {
-    btnConfirmarSeguranca.onclick = async () => {
-        const senha = document.getElementById('senhaSeguranca').value;
-        if (!senha) {
-            alert("Por favor, digite a senha!");
-            return;
-        }
+// Inicialização segura do módulo histórico
+function inicializarModuloHistorico() {
+    if(filtroCliente) {
+        filtroCliente.removeEventListener('input', aplicarFiltro);
+        filtroCliente.addEventListener('input', aplicarFiltro);
+    }
+    
+    if(filtroTipo) {
+        filtroTipo.removeEventListener('change', renderizarHistorico);
+        filtroTipo.addEventListener('change', renderizarHistorico);
+    }
+    
+    // Vinculação do clique de confirmação de segurança
+    const btnConfirmarSeguranca = document.getElementById('btnConfirmarSeguranca');
+    if (btnConfirmarSeguranca) {
+        btnConfirmarSeguranca.onclick = async () => {
+            const senha = document.getElementById('senhaSeguranca').value;
+            if (!senha) {
+                alert("Por favor, digite a senha!");
+                return;
+            }
 
-        const user = auth.currentUser;
-        if (!user) {
-            alert("Usuário não autenticado ou sessão expirada.");
-            return;
-        }
+            const user = auth.currentUser;
+            if (!user) {
+                alert("Usuário não autenticado ou sessão expirada.");
+                return;
+            }
 
-        btnConfirmarSeguranca.disabled = true;
-        const textoOriginal = btnConfirmarSeguranca.innerHTML;
-        btnConfirmarSeguranca.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Validando senha...';
+            btnConfirmarSeguranca.disabled = true;
+            const textoOriginal = btnConfirmarSeguranca.innerHTML;
+            btnConfirmarSeguranca.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Validando senha...';
 
-        try {
-            // Validar senha fazendo login em background com a mesma conta ativa
-            await signInWithEmailAndPassword(auth, user.email, senha);
-            
-            // Se chegou aqui, a senha está correta!
-            if (acaoPendente === 'editar') {
-                const r = romaneiosCache.find(x => x.id === cargaPendenteId);
-                if (r) {
-                    if (window.carregarRomaneioParaEdicao) {
-                        window.carregarRomaneioParaEdicao(r);
-                        window.fecharModalSeguranca();
-                    } else {
-                        alert("Módulo Romaneio V2 não está carregado ou pronto.");
-                    }
-                }
-            } else if (acaoPendente === 'excluir') {
-                if (tipoPendente === 'subprodutos') {
-                    const r = subprodutosCache.find(x => x.id === cargaPendenteId);
-                    if (r) {
-                        const docRef = doc(db, "vendas_subprodutos", cargaPendenteId);
-                        await deleteDoc(docRef);
-
-                        alert(`Venda de subproduto ${r.romaneio || r.romaneioCliente} excluída com sucesso!`);
-                        window.fecharModalSeguranca();
-                        await renderizarHistorico(); // Atualizar tabela de histórico
-                        
-                        // Disparar evento para atualizar dashboard se estiver aberto
-                        document.dispatchEvent(new Event('historicoUpdated'));
-                    }
-                } else {
+            try {
+                // Validar senha fazendo login em background com a mesma conta ativa
+                await signInWithEmailAndPassword(auth, user.email, senha);
+                
+                // Se chegou aqui, a senha está correta!
+                if (acaoPendente === 'editar') {
                     const r = romaneiosCache.find(x => x.id === cargaPendenteId);
                     if (r) {
-                        // 1. Estornar Estoque das Madeiras do Romaneio antes de deletar
-                        if (r.pacotes) {
-                            for (const p of r.pacotes) {
-                                if (p.produtoId) {
-                                    const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                                    const prodRef = doc(db, "produtos", p.produtoId);
-                                    const prodSnap = await getDoc(prodRef);
-                                    if (prodSnap.exists()) {
-                                        const estoqueEstornado = (prodSnap.data().quantidade || 0) + totalPecasVendidas;
-                                        await updateDoc(prodRef, { quantidade: estoqueEstornado });
+                        if (window.carregarRomaneioParaEdicao) {
+                            window.carregarRomaneioParaEdicao(r);
+                            window.fecharModalSeguranca();
+                        } else {
+                            alert("Módulo Romaneio V2 não está carregado ou pronto.");
+                        }
+                    }
+                } else if (acaoPendente === 'excluir') {
+                    if (tipoPendente === 'subprodutos') {
+                        const r = subprodutosCache.find(x => x.id === cargaPendenteId);
+                        if (r) {
+                            const docRef = doc(db, "vendas_subprodutos", cargaPendenteId);
+                            await deleteDoc(docRef);
+
+                            alert(`Venda de subproduto ${r.romaneio || r.romaneioCliente} excluída com sucesso!`);
+                            window.fecharModalSeguranca();
+                            await renderizarHistorico(); // Atualizar tabela de histórico
+                            
+                            // Disparar evento para atualizar dashboard se estiver aberto
+                            document.dispatchEvent(new Event('historicoUpdated'));
+                        }
+                    } else {
+                        const r = romaneiosCache.find(x => x.id === cargaPendenteId);
+                        if (r) {
+                            // 1. Estornar Estoque das Madeiras do Romaneio antes de deletar
+                            if (r.pacotes) {
+                                for (const p of r.pacotes) {
+                                    if (p.produtoId) {
+                                        const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
+                                        const prodRef = doc(db, "produtos", p.produtoId);
+                                        const prodSnap = await getDoc(prodRef);
+                                        if (prodSnap.exists()) {
+                                            const estoqueEstornado = (prodSnap.data().quantidade || 0) + totalPecasVendidas;
+                                            await updateDoc(prodRef, { quantidade: estoqueEstornado });
+                                        }
                                     }
                                 }
                             }
+
+                            // 2. Excluir o documento do Romaneio no Firestore
+                            const docRef = doc(db, "romaneios", cargaPendenteId);
+                            await deleteDoc(docRef);
+
+                            alert(`Carga ${r.numero || r.numeroCarga} excluída e estoque estornado com sucesso!`);
+                            window.fecharModalSeguranca();
+                            await renderizarHistorico(); // Atualizar tabela de histórico
+                            
+                            // Disparar evento para atualizar dashboard se estiver aberto
+                            document.dispatchEvent(new Event('historicoUpdated'));
                         }
-
-                        // 2. Excluir o documento do Romaneio no Firestore
-                        const docRef = doc(db, "romaneios", cargaPendenteId);
-                        await deleteDoc(docRef);
-
-                        alert(`Carga ${r.numero || r.numeroCarga} excluída e estoque estornado com sucesso!`);
-                        window.fecharModalSeguranca();
-                        await renderizarHistorico(); // Atualizar tabela de histórico
-                        
-                        // Disparar evento para atualizar dashboard se estiver aberto
-                        document.dispatchEvent(new Event('historicoUpdated'));
                     }
                 }
+            } catch (error) {
+                console.error("Erro na validação de segurança:", error);
+                alert("Senha incorreta! Operação de segurança negada.");
+            } finally {
+                btnConfirmarSeguranca.disabled = false;
+                btnConfirmarSeguranca.innerHTML = textoOriginal;
             }
-        } catch (error) {
-            console.error("Erro na validação de segurança:", error);
-            alert("Senha incorreta! Operação de segurança negada.");
-        } finally {
-            btnConfirmarSeguranca.disabled = false;
-            btnConfirmarSeguranca.innerHTML = textoOriginal;
-        }
-    };
+        };
+    }
+    
+    renderizarHistorico();
 }
 
+// Executar de forma segura
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarModuloHistorico);
+} else {
+    inicializarModuloHistorico();
+}
+
+window.renderizarHistorico = renderizarHistorico;
 document.addEventListener('historicoUpdated', renderizarHistorico);

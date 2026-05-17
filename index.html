@@ -172,10 +172,11 @@
                     <p>Cadastre e gerencie os parceiros</p>
                 </div>
 
-                <div class="form-table-grid">
-                    <div class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
+                <div class="form-table-grid" id="gridClientesLayout">
+                    <div class="glass-panel" id="cardFormCliente" style="margin-bottom: 0;">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <h2><i class="fa-solid fa-user-plus"></i> Novo Cliente</h2>
+                        <button type="button" class="btn-secondary" id="btnToggleListaClientes" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Clientes</button>
                     </div>
                     <form id="formCliente" class="grid-form">
                         <div class="input-group">
@@ -278,9 +279,12 @@
                     </form>
                 </div>
 
-                <div class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
+                <div class="glass-panel" id="panelListaClientes" style="margin-bottom: 0; display: none;">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2><i class="fa-solid fa-list"></i> Clientes Cadastrados</h2>
+                        <div class="input-group" style="margin-bottom: 0; width: 250px;">
+                            <input type="text" id="filtroClientesBusca" placeholder="Buscar por Nome, CPF/CNPJ..." style="padding: 8px 12px; font-size: 0.9rem;">
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
@@ -740,10 +744,11 @@
                 </div>
 
                 <!-- NOVO PAINEL: CADASTRO DE EMPREITEIROS -->
-                <div class="form-table-grid">
-                    <div class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
-                        <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros do Corte</h2>
+                <div class="form-table-grid" id="gridEmpreiteirosLayout">
+                    <div class="glass-panel" id="cardFormEmpreiteiro" style="margin-bottom: 0;">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros</h2>
+                        <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
                     </div>
                     <form id="formEmpreiteiro" class="grid-form">
                         <div class="input-group">
@@ -767,9 +772,12 @@
                         </div>
                     </form>
                 </div>
-                <div class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
+                <div class="glass-panel" id="panelListaEmpreiteiros" style="margin-bottom: 0; display: none;">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros Cadastrados</h2>
+                        <div class="input-group" style="margin-bottom: 0; width: 220px;">
+                            <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.9rem;">
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
@@ -791,10 +799,11 @@
             </div>
 
             <!-- CALCULADORA E LISTA DE ÚLTIMAS ENTRADAS -->
-            <div class="form-table-grid" style="margin-top: 2rem;">
-                <div class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
-                        <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³ (Média de Alturas)</h2>
+            <div class="form-table-grid" id="gridEntradasLayout" style="margin-top: 2rem;">
+                <div class="glass-panel" id="cardFormEntrada" style="margin-bottom: 0;">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³</h2>
+                        <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
                     </div>
                     <form id="formEntrada" class="grid-form">
                         <div class="input-group" style="grid-column: span 2;">
@@ -915,7 +924,7 @@
                     </form>
                 </div>
 
-                <div class="glass-panel" style="margin-bottom: 0;">
+                <div class="glass-panel" id="panelListaEntradas" style="margin-bottom: 0; display: none;">
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
                         <div class="input-group" style="margin-bottom: 0; width: 300px;">
@@ -1005,18 +1014,18 @@
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
                             </div>
                             
-                            <div style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
-                                <div class="input-group">
-                                    <label>Altura (m)</label>
-                                    <input type="number" id="subCliAlt" step="0.01" placeholder="Alt (H)">
+                            <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Altura (m)</label>
+                                    <input type="number" id="subCliAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
-                                <div class="input-group">
-                                    <label>Largura (m)</label>
-                                    <input type="number" id="subCliLarg" step="0.01" placeholder="Larg (L)">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Largura (m)</label>
+                                    <input type="number" id="subCliLarg" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
-                                <div class="input-group">
-                                    <label>Comprim. (m)</label>
-                                    <input type="number" id="subCliComp" step="0.01" placeholder="Comp (C)">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Compr. (m)</label>
+                                    <input type="number" id="subCliComp" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                             </div>
 
@@ -1049,20 +1058,16 @@
 
                     <!-- COLUNA 2: EMISSÃO DE RECIBOS [CENTRALIZADA POR PADRÃO] -->
                     <div class="glass-panel" id="panelEmissaoCavaco" style="max-width: 600px; margin: 0 auto;">
-                        <div class="section-title">
-                            <h2><i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo de Venda</h2>
+                        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <h2><i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo</h2>
+                            <button type="button" id="btnToggleGerenciarClientesSub" class="btn-secondary" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users-gear"></i> Gerenciar Clientes</button>
                         </div>
                         <form id="formCavaco" class="grid-form">
                             <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                                 <label>Selecionar Cliente Cadastrado</label>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; width: 100%;">
-                                    <select id="calcCavSelectCliente" style="flex: 1;">
-                                        <option value="">Preenchimento Manual / Cliente Avulso</option>
-                                    </select>
-                                    <button type="button" id="btnToggleGerenciarClientesSub" class="btn-secondary" style="padding: 0 15px; white-space: nowrap; height: 48px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;" title="Cadastrar / Gerenciar Clientes de Subprodutos">
-                                        <i class="fa-solid fa-users-gear"></i> Gerenciar Clientes
-                                    </button>
-                                </div>
+                                <select id="calcCavSelectCliente" style="width: 100%;">
+                                    <option value="">Preenchimento Manual / Cliente Avulso</option>
+                                </select>
                             </div>
                             
                             <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
@@ -1119,18 +1124,18 @@
                             </div>
 
                             <!-- 3 Medidas para Calcular Volume em m3 -->
-                            <div style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
-                                <div class="input-group">
-                                    <label>Altura (ALT)</label>
-                                    <input type="number" id="calcCavAlt" step="0.01" placeholder="m (H)">
+                            <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
+                                    <input type="number" id="calcCavAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
-                                <div class="input-group">
-                                    <label>Largura (LARG)</label>
-                                    <input type="number" id="calcCavLarg" step="0.01" placeholder="m (L)">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Larg (LARG)</label>
+                                    <input type="number" id="calcCavLarg" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
-                                <div class="input-group">
-                                    <label>Comprim. (COMP)</label>
-                                    <input type="number" id="calcCavComp" step="0.01" placeholder="m (C)">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Comp (COMP)</label>
+                                    <input type="number" id="calcCavComp" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                             </div>
                             
