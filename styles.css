@@ -624,6 +624,40 @@ th {
     font-weight: 600;
 }
 
+/* Compactação de tabela premium para evitar quebra de linhas na Entrada de Toras */
+#panelListaEntradas table,
+#panelListaEmpreiteiros table {
+    min-width: auto;
+}
+
+#panelListaEntradas th,
+#panelListaEntradas td,
+#panelListaEmpreiteiros th,
+#panelListaEmpreiteiros td {
+    padding: 6px 8px !important;
+    font-size: 0.76rem !important;
+    white-space: nowrap !important;
+    vertical-align: middle;
+}
+
+#panelListaEntradas td strong,
+#panelListaEmpreiteiros td strong {
+    font-size: 0.82rem;
+}
+
+#panelListaEntradas small,
+#panelListaEmpreiteiros small {
+    font-size: 0.68rem !important;
+}
+
+#panelListaEntradas button,
+#panelListaEmpreiteiros button {
+    padding: 4px 6px !important;
+    font-size: 0.78rem !important;
+    height: auto !important;
+    width: auto !important;
+}
+
 td {
     font-variant-numeric: tabular-nums;
 }

@@ -7,6 +7,7 @@ const listaEmpreiteiros = document.getElementById('listaEmpreiteiros');
 const selectEmpreiteiro = document.getElementById('entEmpreiteiro');
 
 let empreiteirosAtuais = [];
+let empreiteiroEditandoId = null;
 
 async function carregarEmpreiteiros() {
     if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
@@ -51,9 +52,14 @@ function renderizarEmpreiteiros() {
             <td style="color:var(--accent-color); font-weight:bold;">${valorFormatado}</td>
             <td>${emp.pix || '-'}</td>
             <td>
-                <button class="btn-primary" style="background:var(--danger-color); padding: 5px 8px; font-size: 0.9rem;" onclick="deletarEmpreiteiro('${emp.id}')">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <div style="display: flex; gap: 6px; align-items: center; white-space: nowrap;">
+                    <button class="btn-primary" style="background:#f1c40f; color:#000; padding: 5px 8px; font-size: 0.9rem;" onclick="editarEmpreiteiro('${emp.id}')" title="Alterar">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button class="btn-primary" style="background:var(--danger-color); padding: 5px 8px; font-size: 0.9rem;" onclick="deletarEmpreiteiro('${emp.id}')" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         listaEmpreiteiros.appendChild(tr);
@@ -72,6 +78,30 @@ function atualizarSelectEmpreiteiros() {
     });
 }
 
+window.editarEmpreiteiro = function(id) {
+    const emp = empreiteirosAtuais.find(e => e.id === id);
+    if(!emp) return;
+    empreiteiroEditandoId = id;
+    
+    document.getElementById('empNome').value = emp.nome || '';
+    document.getElementById('empContato').value = emp.contato || '';
+    document.getElementById('empValorMetro').value = window.formatCurrencyValue(emp.valorMetro || 0);
+    document.getElementById('empPix').value = emp.pix || '';
+    
+    const btn = formEmpreiteiro.querySelector('button[type="submit"]');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Empreiteiro';
+    
+    // Garante que o card de cadastro de empreiteiros fique visível ao editar
+    const cardCad = document.getElementById('cardFormEmpreiteiro');
+    const btnToggle = document.getElementById('btnToggleCadastroEmpreiteiro');
+    if (cardCad && cardCad.style.display === 'none') {
+        cardCad.style.display = 'block';
+        if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Cadastro';
+    }
+    
+    window.scrollTo({top: formEmpreiteiro.offsetTop - 100, behavior: 'smooth'});
+};
+
 if(formEmpreiteiro) {
     formEmpreiteiro.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -80,22 +110,32 @@ if(formEmpreiteiro) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
         btn.disabled = true;
 
+        const dados = {
+            nome: document.getElementById('empNome').value.toUpperCase().trim(),
+            contato: document.getElementById('empContato').value.trim(),
+            valorMetro: window.parseCurrencyValue(document.getElementById('empValorMetro').value),
+            pix: document.getElementById('empPix').value.trim(),
+            atualizadoEm: new Date().toISOString()
+        };
+
         try {
-            await addDoc(collection(db, 'empreiteiros'), {
-                nome: document.getElementById('empNome').value.toUpperCase().trim(),
-                contato: document.getElementById('empContato').value.trim(),
-                valorMetro: window.parseCurrencyValue(document.getElementById('empValorMetro').value),
-                pix: document.getElementById('empPix').value.trim(),
-                criadoEm: new Date().toISOString()
-            });
+            if (empreiteiroEditandoId) {
+                await updateDoc(doc(db, 'empreiteiros', empreiteiroEditandoId), dados);
+                alert('Empreiteiro atualizado com sucesso!');
+                empreiteiroEditandoId = null;
+                btn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Empreiteiro';
+            } else {
+                dados.criadoEm = new Date().toISOString();
+                await addDoc(collection(db, 'empreiteiros'), dados);
+                alert('Empreiteiro cadastrado com sucesso!');
+            }
             formEmpreiteiro.reset();
             await carregarEmpreiteiros();
-            alert('Empreiteiro cadastrado com sucesso!');
         } catch (error) {
             console.error("Erro ao salvar empreiteiro:", error);
             alert('Erro ao salvar o empreiteiro.');
         } finally {
-            btn.innerHTML = txtOriginal;
+            if(!empreiteiroEditandoId) btn.innerHTML = txtOriginal;
             btn.disabled = false;
         }
     });
@@ -359,21 +399,28 @@ window.alterarEntrada = function(id) {
     document.getElementById('entAltDir2').value = '';
     document.getElementById('entAltDir3').value = '';
     const btn = formEntrada.querySelector('button[type="submit"]');
-    btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
     
     // Garante que a lista de entradas esteja aberta ao editar
     const panelLista = document.getElementById('panelListaEntradas');
-    const gridLayout = document.getElementById('gridEntradasLayout');
-    const cardForm = document.getElementById('cardFormEntrada');
+    const gridLayout = document.getElementById('gridEntradasGeralLayout');
     const btnToggle = document.getElementById('btnToggleUltimasEntradas');
     if (panelLista && panelLista.style.display === 'none') {
         panelLista.style.display = 'block';
-        if (gridLayout) gridLayout.classList.add('form-table-grid');
-        if (cardForm) {
-            cardForm.style.maxWidth = 'none';
-            cardForm.style.margin = '0';
-        }
         if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Entradas';
+    }
+
+    // E atualiza a visibilidade do grid geral
+    const panelListaEmp = document.getElementById('panelListaEmpreiteiros');
+    const cardCad = document.getElementById('cardFormEmpreiteiro');
+    const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
+    const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
+    
+    if (gridLayout && colEsquerda && colDireita && panelListaEmp && panelLista) {
+        gridLayout.classList.add('form-table-grid');
+        colDireita.style.display = 'flex';
+        colEsquerda.style.maxWidth = 'none';
+        colEsquerda.style.margin = '0';
     }
 
     window.scrollTo({top: formEntrada.offsetTop - 100, behavior: 'smooth'});
@@ -408,9 +455,11 @@ window.imprimirEntrada = function(id) {
 };
 
 function inicializarTogglesEntrada() {
+    const btnToggleCad = document.getElementById('btnToggleCadastroEmpreiteiro');
     const btnToggleEmp = document.getElementById('btnToggleListaEmpreiteiros');
     const btnToggleEnt = document.getElementById('btnToggleUltimasEntradas');
     
+    const cardCad = document.getElementById('cardFormEmpreiteiro');
     const panelListaEmp = document.getElementById('panelListaEmpreiteiros');
     const panelListaEnt = document.getElementById('panelListaEntradas');
     
@@ -418,7 +467,7 @@ function inicializarTogglesEntrada() {
     const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
     const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
 
-    if (!btnToggleEmp || !btnToggleEnt || !panelListaEmp || !panelListaEnt || !gridLayout || !colEsquerda || !colDireita) return;
+    if (!btnToggleCad || !btnToggleEmp || !btnToggleEnt || !cardCad || !panelListaEmp || !panelListaEnt || !gridLayout || !colEsquerda || !colDireita) return;
 
     // Função interna para atualizar o estado visual do grid
     function atualizarGridGeral() {
@@ -426,13 +475,13 @@ function inicializarTogglesEntrada() {
         const entVisivel = panelListaEnt.style.display !== 'none';
 
         if (empVisivel || entVisivel) {
-            // Se pelo menos um painel estiver aberto, ativa o grid bilateral de duas colunas
+            // Se pelo menos uma tabela da direita estiver aberta, ativa o grid de 2 colunas
             gridLayout.classList.add('form-table-grid');
             colDireita.style.display = 'flex';
             colEsquerda.style.maxWidth = 'none';
             colEsquerda.style.margin = '0';
         } else {
-            // Se ambos estiverem fechados, remove o grid (coluna única) e centraliza os formulários
+            // Se ambas tabelas estiverem fechadas, centraliza o formulário principal na esquerda
             gridLayout.classList.remove('form-table-grid');
             colDireita.style.display = 'none';
             colEsquerda.style.maxWidth = '650px';
@@ -440,10 +489,29 @@ function inicializarTogglesEntrada() {
         }
     }
 
-    // Inicialização - Ambos os painéis iniciam fechados por padrão
+    // Inicialização - O cadastro de empreiteiro e as tabelas iniciam ocultos por padrão
+    cardCad.style.display = 'none';
     panelListaEmp.style.display = 'none';
     panelListaEnt.style.display = 'none';
     atualizarGridGeral();
+
+    // Evento para toggle do cadastro de empreiteiro
+    btnToggleCad.addEventListener('click', () => {
+        if (cardCad.style.display === 'none') {
+            cardCad.style.display = 'block';
+            btnToggleCad.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Cadastro';
+        } else {
+            cardCad.style.display = 'none';
+            btnToggleCad.innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro';
+            if (empreiteiroEditandoId) {
+                empreiteiroEditandoId = null;
+                const btn = formEmpreiteiro.querySelector('button[type="submit"]');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Empreiteiro';
+                formEmpreiteiro.reset();
+            }
+        }
+        atualizarGridGeral();
+    });
 
     // Evento de clique para o toggle de empreiteiros
     btnToggleEmp.addEventListener('click', () => {
@@ -491,11 +559,15 @@ function inicializarModuloEntrada() {
     });
 
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
+    const btnFiltrarEntradas = document.getElementById('btnFiltrarEntradas');
+    if(btnFiltrarEntradas) btnFiltrarEntradas.addEventListener('click', renderizarEntradas);
 
     const filtroEmpreiteirosBusca = document.getElementById('filtroEmpreiteirosBusca');
     if(filtroEmpreiteirosBusca) {
         filtroEmpreiteirosBusca.addEventListener('input', renderizarEmpreiteiros);
     }
+    const btnFiltrarEmpreiteiros = document.getElementById('btnFiltrarEmpreiteiros');
+    if(btnFiltrarEmpreiteiros) btnFiltrarEmpreiteiros.addEventListener('click', renderizarEmpreiteiros);
 
     if(entData) entData.valueAsDate = new Date();
     if(entHorario) {

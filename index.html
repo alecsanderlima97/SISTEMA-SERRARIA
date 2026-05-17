@@ -735,21 +735,29 @@
                 </div>
             </section>
 
-
             <!-- ====== TELA: ENTRADA DE MADEIRA/TORA ====== -->
             <section id="view-entrada" class="view-section" style="display: none;">
                 <div class="main-header">
                     <h1><i class="fa-solid fa-tree"></i> Entrada de Toras (M³)</h1>
-                                 <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->
+                    <p>Cadastro de empreiteiros, controle de cubagem de cargas e financeiro de extração.</p>
+                </div>
+
+                <!-- BARRA DE TOGGLES LADO A LADO NO TOPO -->
+                <div class="actions-header-row hide-on-print" style="display: flex; gap: 12px; margin: 15px auto 25px auto; justify-content: center; flex-wrap: wrap; max-width: 900px;">
+                    <button type="button" class="btn-secondary" id="btnToggleCadastroEmpreiteiro" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro</button>
+                    <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
+                    <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
+                </div>
+
+                <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->
                 <div class="form-table-grid" id="gridEntradasGeralLayout" style="max-width: 1350px; margin: 0 auto; position: relative;">
                     <!-- Coluna da Esquerda: Formulários -->
                     <div class="form-column-left" style="display: flex; flex-direction: column; gap: 2rem; width: 100%;">
                         
                         <!-- Cadastro de Empreiteiros -->
-                        <div class="glass-panel" id="cardFormEmpreiteiro" style="margin-bottom: 0;">
-                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div class="glass-panel" id="cardFormEmpreiteiro" style="margin-bottom: 0; display: none;">
+                            <div class="section-title">
                                 <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros</h2>
-                                <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
                             </div>
                             <form id="formEmpreiteiro" class="grid-form">
                                 <div class="input-group">
@@ -776,9 +784,8 @@
 
                         <!-- Calculadora de Cubagem -->
                         <div class="glass-panel" id="cardFormEntrada" style="margin-bottom: 0;">
-                            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <div class="section-title">
                                 <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³</h2>
-                                <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
                             </div>
                             <form id="formEntrada" class="grid-form">
                                 <div class="input-group" style="grid-column: span 2;">
@@ -882,9 +889,10 @@
                         <!-- Lista de Empreiteiros -->
                         <div class="glass-panel" id="panelListaEmpreiteiros" style="margin-bottom: 0; display: none; width: 100%;">
                             <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                                <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros Cadastrados</h2>
-                                <div class="input-group" style="margin-bottom: 0; width: 180px;">
-                                    <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.85rem;">
+                                <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros</h2>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.85rem; width: 160px; margin-bottom: 0;">
+                                    <button type="button" id="btnFiltrarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
                                 </div>
                             </div>
                             <div class="table-container">
@@ -909,8 +917,9 @@
                         <div class="glass-panel" id="panelListaEntradas" style="margin-bottom: 0; display: none; width: 100%;">
                             <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                 <h2><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
-                                <div class="input-group" style="margin-bottom: 0; width: 220px;">
-                                    <input type="text" id="filtroEntradasNome" placeholder="Buscar por Fornecedor..." style="padding: 8px 12px; font-size: 0.85rem;">
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="filtroEntradasNome" placeholder="Buscar Fornecedor..." style="padding: 8px 12px; font-size: 0.85rem; width: 180px; margin-bottom: 0;">
+                                    <button type="button" id="btnFiltrarEntradas" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
                                 </div>
                             </div>
                             <div class="table-container">
@@ -931,6 +940,7 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
                 </div>
             </section>
 
