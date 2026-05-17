@@ -18,15 +18,19 @@ window.parseCurrencyValue = function(val) {
 window.formatCurrencyInput = function(e) {
     let value = e.target.value;
     if (!value) return;
+    
+    // Suporte a valores negativos (ajustes de frete/madeira podem ser negativos)
+    let isNegative = value.startsWith('-');
+    
     value = value.replace(/\D/g, "");
     if (!value) {
-        e.target.value = "";
+        e.target.value = isNegative ? "-" : "";
         return;
     }
     value = (parseInt(value, 10) / 100).toFixed(2) + "";
     value = value.replace(".", ",");
     value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-    e.target.value = value;
+    e.target.value = (isNegative ? "-" : "") + value;
 };
 
 window.changeTheme = function(themeName) {
