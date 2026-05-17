@@ -177,6 +177,21 @@ body {
     gap: 1rem;
 }
 
+/* Layout Simétrico de 2 Colunas para Cadastros (Formulário + Tabela) */
+.form-table-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .form-table-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
 .grid-form-items {
     display: grid;
     grid-template-columns: repeat(4, 1fr) auto;
