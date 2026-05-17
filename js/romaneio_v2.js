@@ -615,6 +615,71 @@ window.removerPacoteV2 = (id) => {
 
 window.editarPacoteV2 = editarPacoteV2;
 
+window.carregarRomaneioParaEdicao = function(r) {
+    // 1. Setar o romaneioAtual com os dados carregados
+    romaneioAtual = {
+        idFirebase: r.id, // Guardamos o ID do Firebase para usar no updateDoc depois
+        numero: r.numero || r.numeroCarga,
+        cliente: r.cliente,
+        formaPagamento: r.formaPagamento || '',
+        prazoPagamento: r.prazoPagamento || '',
+        observacaoCliente: r.observacaoCliente || '',
+        logistica: { ...r.logistica },
+        pacotes: [ ...r.pacotes ],
+        financeiro: { ...r.financeiro }
+    };
+    
+    // 2. Preencher os inputs na tela
+    const selectCli = document.getElementById('v2-select-cliente');
+    if (selectCli) {
+        const clienteObj = clientesDisponiveis.find(c => c.nome === r.cliente);
+        selectCli.value = clienteObj ? clienteObj.id : '';
+    }
+    
+    if (document.getElementById('v2-cliente')) document.getElementById('v2-cliente').value = r.cliente;
+    if (document.getElementById('v2-data-carreg')) document.getElementById('v2-data-carreg').value = r.logistica?.dataCarregamento || '';
+    if (document.getElementById('v2-data-descarreg')) document.getElementById('v2-data-descarreg').value = r.logistica?.dataDescarregamento || '';
+    if (document.getElementById('v2-numero-ordem')) document.getElementById('v2-numero-ordem').value = r.numero || r.numeroCarga || '';
+    
+    const selectTransp = document.getElementById('v2-select-transporte');
+    if (selectTransp) {
+        const transpObj = transportadorasDisponiveis.find(t => t.nome === r.logistica?.responsavelFrete);
+        selectTransp.value = transpObj ? transpObj.id : '';
+    }
+    
+    if (document.getElementById('v2-motorista')) document.getElementById('v2-motorista').value = r.logistica?.motorista || '';
+    if (document.getElementById('v2-caminhao')) document.getElementById('v2-caminhao').value = r.logistica?.caminhao || '';
+    if (document.getElementById('v2-placa')) document.getElementById('v2-placa').value = r.logistica?.placa || '';
+    
+    if (document.getElementById('v2-valor-frete')) document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(r.logistica?.valorFrete || 0);
+    if (document.getElementById('v2-adicional-frete')) document.getElementById('v2-adicional-frete').value = window.formatCurrencyValue(r.logistica?.adicionalFrete || 0);
+    if (document.getElementById('v2-adicional-madeira')) document.getElementById('v2-adicional-madeira').value = window.formatCurrencyValue(r.financeiro?.adicionalMadeira || 0);
+    if (document.getElementById('v2-taxa-nf')) document.getElementById('v2-taxa-nf').value = r.financeiro?.taxaNF || 0;
+    
+    if (document.getElementById('v2-obs-madeira')) document.getElementById('v2-obs-madeira').value = r.financeiro?.obsMadeira || '';
+    if (document.getElementById('v2-obs-frete')) document.getElementById('v2-obs-frete').value = r.logistica?.obsFrete || '';
+    
+    // 3. Forçar recálculo e renderização
+    atualizarTotalGeral();
+    renderizarTabelaPacotes();
+    
+    // Mudar estilo do botão de finalizar para indicar edição
+    const btnFinalizar = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
+    if (btnFinalizar) {
+        btnFinalizar.innerHTML = '<i class="fa-solid fa-save"></i> SALVAR ALTERAÇÕES DA CARGA';
+        btnFinalizar.style.background = '#f59e0b'; // Cor Laranja/Alerta
+        btnFinalizar.style.color = 'black';
+    }
+    
+    // 4. Mudar para a aba de Gerar Romaneio
+    const linkRomaneio = document.querySelector('.sidebar nav ul li a[data-target="view-romaneio-v2"]');
+    if (linkRomaneio) {
+        linkRomaneio.click();
+    }
+    
+    alert(`Carga ${r.numero || r.numeroCarga} carregada no editor! Edite o que for necessário e clique em "SALVAR ALTERAÇÕES DA CARGA" no final.`);
+};
+
 window.finalizarRomaneioV2 = async () => {
     const cliente = document.getElementById('v2-cliente').value.toUpperCase().trim();
     if (!cliente || romaneioAtual.pacotes.length === 0) { alert("Dados incompletos."); return; }
@@ -626,29 +691,86 @@ window.finalizarRomaneioV2 = async () => {
     romaneioAtual.logistica.obsFrete = (document.getElementById('v2-obs-frete')?.value || '').toUpperCase().trim();
     romaneioAtual.financeiro.obsMadeira = (document.getElementById('v2-obs-madeira')?.value || '').toUpperCase().trim();
     
+    const btn = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btn.disabled = true;
+    }
+
     try {
-        await addDoc(collection(db, "romaneios"), {
-            ...romaneioAtual,
-            cliente,
-            dataCriacao: new Date().toISOString(),
-            status: 'finalizado'
-        });
-        
-        for (const p of romaneioAtual.pacotes) {
-            if (p.produtoId) {
-                const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                const docRef = doc(db, "produtos", p.produtoId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const novoEstoque = Math.max(0, (docSnap.data().quantidade || 0) - totalPecasVendidas);
-                    await updateDoc(docRef, { quantidade: novoEstoque });
+        if (romaneioAtual.idFirebase) {
+            // --- Edição de Carga Existente ---
+            const docRef = doc(db, "romaneios", romaneioAtual.idFirebase);
+            
+            // 1. Estornar Estoque dos Pacotes da Carga antiga
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const antigo = docSnap.data();
+                if (antigo.pacotes) {
+                    for (const p of antigo.pacotes) {
+                        if (p.produtoId) {
+                            const pecasAntigas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
+                            const prodRef = doc(db, "produtos", p.produtoId);
+                            const prodSnap = await getDoc(prodRef);
+                            if (prodSnap.exists()) {
+                                const estoqueEstornado = (prodSnap.data().quantidade || 0) + pecasAntigas;
+                                await updateDoc(prodRef, { quantidade: estoqueEstornado });
+                            }
+                        }
+                    }
                 }
             }
+            
+            // 2. Debitar Estoque dos Novos Pacotes
+            for (const p of romaneioAtual.pacotes) {
+                if (p.produtoId) {
+                    const pecasNovas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
+                    const prodRef = doc(db, "produtos", p.produtoId);
+                    const prodSnap = await getDoc(prodRef);
+                    if (prodSnap.exists()) {
+                        const estoqueAtualizado = Math.max(0, (prodSnap.data().quantidade || 0) - pecasNovas);
+                        await updateDoc(prodRef, { quantidade: estoqueAtualizado });
+                    }
+                }
+            }
+            
+            // 3. Atualizar o Firestore
+            const dadosNovos = { ...romaneioAtual };
+            delete dadosNovos.idFirebase; // Remover ID local antes de salvar
+            
+            await updateDoc(docRef, {
+                ...dadosNovos,
+                cliente,
+                dataEdicao: new Date().toISOString(),
+                status: 'finalizado'
+            });
+            
+            alert(`Carga ${romaneioAtual.numero} atualizada com sucesso no Firebase!`);
+        } else {
+            // --- Criação de Carga Nova ---
+            await addDoc(collection(db, "romaneios"), {
+                ...romaneioAtual,
+                cliente,
+                dataCriacao: new Date().toISOString(),
+                status: 'finalizado'
+            });
+            
+            for (const p of romaneioAtual.pacotes) {
+                if (p.produtoId) {
+                    const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
+                    const docRef = doc(db, "produtos", p.produtoId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const novoEstoque = Math.max(0, (docSnap.data().quantidade || 0) - totalPecasVendidas);
+                        await updateDoc(docRef, { quantidade: novoEstoque });
+                    }
+                }
+            }
+            alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);
         }
-        // Mostrar modal de sucesso ou aviso melhor que alert
-        alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);
         
-        // Resetar estado sem recarregar a página inteira (SPA style)
+        // Resetar o estado sem idFirebase
+        romaneioAtual.idFirebase = null;
         romaneioAtual.pacotes = [];
         romaneioAtual.numero = `ROM-${Date.now().toString().slice(-6)}`;
         if (document.getElementById('v2-numero-ordem')) document.getElementById('v2-numero-ordem').value = romaneioAtual.numero;
@@ -657,16 +779,21 @@ window.finalizarRomaneioV2 = async () => {
         renderizarTabelaPacotes();
         limparCamposPacote();
         
-        // Disparar evento para atualizar dashboard/historico se estiverem abertos
+        // Resetar visual do botão na aba gerar
+        const btnFinalizar = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
+        if (btnFinalizar) {
+            btnFinalizar.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR CARGA';
+            btnFinalizar.style.background = '#00ff88';
+            btnFinalizar.style.color = 'black';
+        }
+        
         document.dispatchEvent(new Event('historicoUpdated'));
         
     } catch (e) { 
         console.error("Erro ao salvar romaneio:", e);
         alert("Erro ao salvar romaneio. Verifique o console.");
     } finally {
-        const btn = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
         if (btn) {
-            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR E SALVAR CARGA';
             btn.disabled = false;
         }
     }
