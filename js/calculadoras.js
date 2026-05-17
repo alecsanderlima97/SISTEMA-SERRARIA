@@ -470,6 +470,7 @@ if (btnCalcCavaco) {
 
             await addDoc(collection(db, 'vendas_subprodutos'), novaVenda);
             console.log("Calculadoras: Venda de subproduto salva no Firebase");
+            document.dispatchEvent(new Event('historicoUpdated'));
 
             // Preencher área de impressão
             document.getElementById('printCavRomaneio').textContent = romaneio;
