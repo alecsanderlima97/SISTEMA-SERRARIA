@@ -933,3 +933,8 @@ tfoot td {
  
 .profile-dropdown.show { display: block !important; }
 .dropdown-item:hover { background: rgba(255,255,255,0.05); }
+
+/* Injeção premium Orqeustracs: letras maiúsculas instantâneas */
+.text-uppercase-input {
+    text-transform: uppercase;
+}

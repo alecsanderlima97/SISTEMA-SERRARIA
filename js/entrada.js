@@ -2,8 +2,14 @@ import { db, collection, addDoc, getDocs, doc, deleteDoc } from './firebase-init
 
 // ---- MÓDULO: ENTRADA DE MADEIRA E EMPREITEIROS ----
 
-document.addEventListener('DOMContentLoaded', () => {
     // --- 1. GESTÃO DE EMPREITEIROS ---
+    // Forçar letras maiúsculas em tempo real nos campos de Entrada de Toras
+    ['empNome', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', window.forceUppercaseInput);
+        }
+    });
     const formEmpreiteiro = document.getElementById('formEmpreiteiro');
     const listaEmpreiteiros = document.getElementById('listaEmpreiteiros');
     const selectEmpreiteiro = document.getElementById('entEmpreiteiro');
@@ -81,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await addDoc(collection(db, 'empreiteiros'), {
-                    nome: document.getElementById('empNome').value.trim(),
+                    nome: document.getElementById('empNome').value.toUpperCase().trim(),
                     contato: document.getElementById('empContato').value.trim(),
                     valorMetro: window.parseCurrencyValue(document.getElementById('empValorMetro').value),
                     pix: document.getElementById('empPix').value.trim(),
@@ -270,9 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 horario: document.getElementById('entHorario').value,
                 empreiteiroId: empreiteiroId,
                 empreiteiroNome: empreiteiroNome,
-                motorista: document.getElementById('entMotorista').value.trim(),
-                caminhao: document.getElementById('entCaminhao').value.trim(),
-                placa: document.getElementById('entPlaca').value.trim(),
+                motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
+                caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
+                placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
                 comp: calcData.comp,
                 larg: calcData.larg,
                 mediaAltura: calcData.mediaAltura,
@@ -406,4 +412,3 @@ Total a Pagar: R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}
     // Inicialização
     carregarEmpreiteiros();
     carregarEntradas();
-});

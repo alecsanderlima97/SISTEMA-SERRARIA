@@ -9,14 +9,22 @@ const transportesCollection = collection(db, 'transportes');
 let transportesAtuais = [];
 let transporteEditandoId = null;
 
+// Forçar letras maiúsculas em tempo real nos campos de transportadoras
+['transNome', 'transMotorista', 'transCaminhao', 'transPlaca'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.forceUppercaseInput);
+    }
+});
+
 formTransporte.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const dadosTransp = {
-        nome: document.getElementById('transNome').value,
-        motorista: document.getElementById('transMotorista').value,
-        caminhao: document.getElementById('transCaminhao').value,
-        placa: document.getElementById('transPlaca').value,
+        nome: document.getElementById('transNome').value.toUpperCase().trim(),
+        motorista: document.getElementById('transMotorista').value.toUpperCase().trim(),
+        caminhao: document.getElementById('transCaminhao').value.toUpperCase().trim(),
+        placa: document.getElementById('transPlaca').value.toUpperCase().trim(),
         atualizadoEm: new Date().toISOString()
     };
 

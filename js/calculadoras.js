@@ -6,6 +6,14 @@ import { db, collection, addDoc } from './firebase-init.js';
 const btnCalcCub = document.getElementById('btnCalcCub');
 const resultadoCub = document.getElementById('resultadoCub');
 
+// Forçar letras maiúsculas em tempo real nos campos de subprodutos (Cavaco/Pó)
+['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'calcCavMedidas'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.forceUppercaseInput);
+    }
+});
+
 if (btnCalcCub) {
     btnCalcCub.addEventListener('click', function () {
         const esp = parseFloat(document.getElementById('calcEsp').value) || 0;
@@ -82,10 +90,10 @@ if (btnCalcCavaco) {
             // Salvar a venda no Firestore
             const novaVenda = {
                 data: new Date().toISOString().split('T')[0],
-                romaneio: romaneio,
-                cliente: cliente,
-                motorista: motorista,
-                medidas: medidas,
+                romaneio: romaneio.toUpperCase().trim(),
+                cliente: cliente.toUpperCase().trim(),
+                motorista: motorista.toUpperCase().trim(),
+                medidas: medidas.toUpperCase().trim(),
                 tipo: tipo,
                 unidade: unidade,
                 quantidade: qtd,

@@ -9,13 +9,21 @@ const produtosCollection = collection(db, 'produtos');
 let produtosAtuais = [];
 let produtoEditandoId = null;
 
+// Forçar letras maiúsculas em tempo real nos campos de madeiras
+['prodTipo', 'prodNatureza', 'prodQualidade'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.forceUppercaseInput);
+    }
+});
+
 formProduto.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const dadosProd = {
-        tipo: document.getElementById('prodTipo').value,
-        natureza: document.getElementById('prodNatureza').value,
-        qualidade: document.getElementById('prodQualidade').value,
+        tipo: document.getElementById('prodTipo').value.toUpperCase().trim(),
+        natureza: document.getElementById('prodNatureza').value.toUpperCase().trim(),
+        qualidade: document.getElementById('prodQualidade').value.toUpperCase().trim(),
         classe: document.getElementById('prodClasse').value,
         espessura: parseFloat(document.getElementById('prodEspessura').value) || 0,
         largura: parseFloat(document.getElementById('prodLargura').value) || 0,

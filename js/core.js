@@ -48,6 +48,13 @@ window.formatCurrencyInput = function(e) {
     e.target.value = "R$ " + (isNegative ? "-" : "") + value;
 };
 
+window.forceUppercaseInput = function(e) {
+    let start = e.target.selectionStart;
+    let end = e.target.selectionEnd;
+    e.target.value = e.target.value.toUpperCase();
+    e.target.setSelectionRange(start, end);
+};
+
 window.changeTheme = function(themeName) {
     const root = document.documentElement;
     if (themeName === 'premium') {

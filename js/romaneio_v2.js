@@ -168,6 +168,14 @@ function configurarEventos() {
         }
     });
 
+    // Forçar letras maiúsculas em tempo real nos campos de romaneio e observações
+    ['v2-motorista', 'v2-caminhao', 'v2-placa', 'v2-obs-madeira', 'v2-obs-frete'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', window.forceUppercaseInput);
+        }
+    });
+
     const btnLimpar = document.getElementById('btn-limpar-romaneio-v2');
     if (btnLimpar) {
         btnLimpar.onclick = () => {
@@ -608,8 +616,15 @@ window.removerPacoteV2 = (id) => {
 window.editarPacoteV2 = editarPacoteV2;
 
 window.finalizarRomaneioV2 = async () => {
-    const cliente = document.getElementById('v2-cliente').value;
+    const cliente = document.getElementById('v2-cliente').value.toUpperCase().trim();
     if (!cliente || romaneioAtual.pacotes.length === 0) { alert("Dados incompletos."); return; }
+    
+    // Atualizar dados de logística e observações redundantes em maiúsculo
+    romaneioAtual.logistica.motorista = (document.getElementById('v2-motorista')?.value || '').toUpperCase().trim();
+    romaneioAtual.logistica.caminhao = (document.getElementById('v2-caminhao')?.value || '').toUpperCase().trim();
+    romaneioAtual.logistica.placa = (document.getElementById('v2-placa')?.value || '').toUpperCase().trim();
+    romaneioAtual.logistica.obsFrete = (document.getElementById('v2-obs-frete')?.value || '').toUpperCase().trim();
+    romaneioAtual.financeiro.obsMadeira = (document.getElementById('v2-obs-madeira')?.value || '').toUpperCase().trim();
     
     try {
         await addDoc(collection(db, "romaneios"), {
@@ -679,13 +694,18 @@ window.verPreviaRomaneioV2 = () => {
 
     const r = {
         ...romaneioAtual,
-        cliente: document.getElementById('v2-cliente').value || 'Cliente Não Selecionado',
+        cliente: (document.getElementById('v2-cliente').value || 'Cliente Não Selecionado').toUpperCase().trim(),
         logistica: {
             ...romaneioAtual.logistica,
             dataCarregamento: document.getElementById('v2-data-carreg').value,
-            motorista: document.getElementById('v2-motorista').value,
-            caminhao: document.getElementById('v2-caminhao').value,
-            placa: document.getElementById('v2-placa').value
+            motorista: (document.getElementById('v2-motorista').value || '').toUpperCase().trim(),
+            caminhao: (document.getElementById('v2-caminhao').value || '').toUpperCase().trim(),
+            placa: (document.getElementById('v2-placa').value || '').toUpperCase().trim(),
+            obsFrete: (document.getElementById('v2-obs-frete')?.value || '').toUpperCase().trim()
+        },
+        financeiro: {
+            ...romaneioAtual.financeiro,
+            obsMadeira: (document.getElementById('v2-obs-madeira')?.value || '').toUpperCase().trim()
         }
     };
 

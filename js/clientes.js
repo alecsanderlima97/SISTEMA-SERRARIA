@@ -19,6 +19,14 @@ const nomeInput = document.getElementById('cliNome');
 const emailInput = document.getElementById('cliEmail');
 const contatoInput = document.getElementById('cliContato');
 
+// Forçar letras maiúsculas em tempo real nos campos de clientes
+['cliNome', 'cliLogradouro', 'cliPrazoPagamento', 'cliNomeMadeiraExtra'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', window.forceUppercaseInput);
+    }
+});
+
 cnpjInput.addEventListener('blur', function() {
     let cnpj = this.value.replace(/\D/g, '');
     if (cnpj.length === 14) {
@@ -103,24 +111,24 @@ formCliente.addEventListener('submit', async function(e) {
     
     // Objeto Cliente
     const dadosCliente = {
-        nome: document.getElementById('cliNome').value,
+        nome: document.getElementById('cliNome').value.toUpperCase().trim(),
         cnpj: document.getElementById('cliCnpj').value,
         ie: document.getElementById('cliIe').value,
         contato: document.getElementById('cliContato').value,
         email: document.getElementById('cliEmail').value,
         cep: document.getElementById('cliCep').value,
-        logradouro: document.getElementById('cliLogradouro').value,
+        logradouro: document.getElementById('cliLogradouro').value.toUpperCase().trim(),
         numero: document.getElementById('cliNumero').value,
         cidade: document.getElementById('cliCidade').value,
         valorFrete: window.parseCurrencyValue(document.getElementById('cliValorFrete').value),
         porcentagemNF: parseFloat(document.getElementById('cliPorcentagemNF').value) || 0,
         formaPagamento: document.getElementById('cliFormaPagamento').value,
-        prazoPagamento: document.getElementById('cliPrazoPagamento').value,
+        prazoPagamento: document.getElementById('cliPrazoPagamento').value.toUpperCase().trim(),
         madeira1: window.parseCurrencyValue(document.getElementById('cliMadeira1').value),
         madeira2: window.parseCurrencyValue(document.getElementById('cliMadeira2').value),
         madeira3: window.parseCurrencyValue(document.getElementById('cliMadeira3').value),
         madeiraPinus: window.parseCurrencyValue(document.getElementById('cliMadeiraPinus').value),
-        nomeMadeiraExtra: document.getElementById('cliNomeMadeiraExtra').value,
+        nomeMadeiraExtra: document.getElementById('cliNomeMadeiraExtra').value.toUpperCase().trim(),
         valorMadeiraExtra: window.parseCurrencyValue(document.getElementById('cliValorMadeiraExtra').value),
         observacao: document.getElementById('cliObservacao').value,
         atualizadoEm: new Date().toISOString()

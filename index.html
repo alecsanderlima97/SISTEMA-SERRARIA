@@ -179,7 +179,7 @@
                     <form id="formCliente" class="grid-form">
                         <div class="input-group">
                             <label for="cliNome">Nome / Razão Social</label>
-                            <input type="text" id="cliNome" required>
+                            <input type="text" id="cliNome" class="text-uppercase-input" required>
                         </div>
                         <div class="input-group">
                             <label for="cliCnpj">CNPJ / CPF</label>
@@ -203,7 +203,7 @@
                         </div>
                         <div class="input-group">
                             <label for="cliLogradouro">Logradouro (Rua/Estrada) *</label>
-                            <input type="text" id="cliLogradouro" required placeholder="Rua das Flores">
+                            <input type="text" id="cliLogradouro" class="text-uppercase-input" required placeholder="Rua das Flores">
                         </div>
                         <div class="input-group">
                             <label for="cliNumero">Número / KM</label>
@@ -237,7 +237,7 @@
                         </div>
                         <div class="input-group" id="containerPrazo" style="display: none;">
                             <label for="cliPrazoPagamento">Prazo (Ex: 15 dias)</label>
-                            <input type="text" id="cliPrazoPagamento" placeholder="Ex: 15 dias">
+                            <input type="text" id="cliPrazoPagamento" class="text-uppercase-input" placeholder="Ex: 15 dias">
                         </div>
 
                         <div class="input-group">
@@ -258,7 +258,7 @@
                         </div>
                         <div class="input-group">
                             <label for="cliNomeMadeiraExtra">Nome Madeira Extra</label>
-                            <input type="text" id="cliNomeMadeiraExtra" placeholder="Ex: Eucalipto">
+                            <input type="text" id="cliNomeMadeiraExtra" class="text-uppercase-input" placeholder="Ex: Eucalipto">
                         </div>
                         <div class="input-group">
                             <label for="cliValorMadeiraExtra">Valor Madeira Extra (R$ / m³)</label>
@@ -349,19 +349,19 @@
                     <form id="formTransporte" class="grid-form">
                         <div class="input-group">
                             <label>Nome do Contratante / Transportadora *</label>
-                            <input type="text" id="transNome" required placeholder="Líder Transportes">
+                            <input type="text" id="transNome" class="text-uppercase-input" required placeholder="Líder Transportes">
                         </div>
                         <div class="input-group">
                             <label>Nome do Motorista Responsável</label>
-                            <input type="text" id="transMotorista" placeholder="João da Silva">
+                            <input type="text" id="transMotorista" class="text-uppercase-input" placeholder="João da Silva">
                         </div>
                         <div class="input-group">
                             <label>Caminhão / Modelo</label>
-                            <input type="text" id="transCaminhao" placeholder="Scania 113H">
+                            <input type="text" id="transCaminhao" class="text-uppercase-input" placeholder="Scania 113H">
                         </div>
                         <div class="input-group">
                             <label>Placa do Veículo *</label>
-                            <input type="text" id="transPlaca" required placeholder="ABC-1234">
+                            <input type="text" id="transPlaca" class="text-uppercase-input" required placeholder="ABC-1234">
                         </div>
                         <div class="form-actions" style="grid-column: 1 / -1;">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
@@ -405,15 +405,15 @@
                     <form id="formProduto" class="grid-form">
                         <div class="input-group">
                             <label for="prodTipo">Tipo/Nome (ex: Tábua, Caibro)</label>
-                            <input type="text" id="prodTipo" required>
+                            <input type="text" id="prodTipo" class="text-uppercase-input" required>
                         </div>
                         <div class="input-group">
                             <label for="prodNatureza">Natureza / Madeira</label>
-                            <input type="text" id="prodNatureza" placeholder="Ex: Eucalipto, Pinus, etc" required>
+                            <input type="text" id="prodNatureza" class="text-uppercase-input" placeholder="Ex: Eucalipto, Pinus, etc" required>
                         </div>
                         <div class="input-group">
                             <label for="prodQualidade">Qualidade</label>
-                            <input type="text" id="prodQualidade" placeholder="Ex: 1ª Qualidade, BCA, etc">
+                            <input type="text" id="prodQualidade" class="text-uppercase-input" placeholder="Ex: 1ª Qualidade, BCA, etc">
                         </div>
                         <input type="hidden" id="prodClasse" value="Geral"> 
                         <div class="input-group">
@@ -734,7 +734,7 @@
                     <form id="formEmpreiteiro" class="grid-form">
                         <div class="input-group">
                             <label for="empNome">Nome do Empreiteiro *</label>
-                            <input type="text" id="empNome" required placeholder="Ex: José da Silva">
+                            <input type="text" id="empNome" class="text-uppercase-input" required placeholder="Ex: José da Silva">
                         </div>
                         <div class="input-group">
                             <label for="empContato">Contato (Telefone/WhatsApp)</label>
@@ -742,7 +742,7 @@
                         </div>
                         <div class="input-group">
                             <label for="empValorMetro">Valor Pago por Metro (R$ / m³) *</label>
-                            <input type="text" id="empValorMetro" required placeholder="Ex: 35,00">
+                            <input type="text" id="empValorMetro" required placeholder="R$ 0,00">
                         </div>
                         <div class="input-group">
                             <label for="empPix">Chave PIX para Pagamento</label>
@@ -784,15 +784,15 @@
                         </div>
                         <div class="input-group">
                             <label for="entMotorista">Nome do Motorista *</label>
-                            <input type="text" id="entMotorista" required placeholder="Ex: Carlos Motorista">
+                            <input type="text" id="entMotorista" class="text-uppercase-input" required placeholder="Ex: Carlos Motorista">
                         </div>
                         <div class="input-group">
                             <label for="entCaminhao">Modelo do Caminhão</label>
-                            <input type="text" id="entCaminhao" placeholder="Ex: Scania 113">
+                            <input type="text" id="entCaminhao" class="text-uppercase-input" placeholder="Ex: Scania 113">
                         </div>
                         <div class="input-group">
                             <label for="entPlaca">Placa do Caminhão *</label>
-                            <input type="text" id="entPlaca" required placeholder="ABC-1234">
+                            <input type="text" id="entPlaca" class="text-uppercase-input" required placeholder="ABC-1234">
                         </div>
                         <div class="input-group">
                             <label for="entData">Data de Entrada</label>
@@ -934,19 +934,19 @@
                     <form id="formCavaco" class="grid-form">
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Número do Romaneio</label>
-                            <input type="text" id="calcCavRomaneio" placeholder="Ex: 00123">
+                            <input type="text" id="calcCavRomaneio" class="text-uppercase-input" placeholder="Ex: 00123">
                         </div>
                         <div class="input-group" style="grid-column: span 2; margin-bottom:10px;">
                             <label>Cliente / Empresa Compradora</label>
-                            <input type="text" id="calcCavCliente" placeholder="Ex: Móveis Silva Ltda">
+                            <input type="text" id="calcCavCliente" class="text-uppercase-input" placeholder="Ex: Móveis Silva Ltda">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Motorista do Caminhão</label>
-                            <input type="text" id="calcCavMotorista" placeholder="Nome do motorista">
+                            <input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Medidas do Caminhão</label>
-                            <input type="text" id="calcCavMedidas" placeholder="C x L x A (Opcional)">
+                            <input type="text" id="calcCavMedidas" class="text-uppercase-input" placeholder="C x L x A (Opcional)">
                         </div>
                         <div class="input-group" style="margin-bottom:10px;">
                             <label>Tipo de Subproduto</label>
@@ -1065,17 +1065,17 @@
 
                             <div class="input-group-v2" style="margin-top: 15px;">
                                 <label>2. Motorista</label>
-                                <input type="text" id="v2-motorista" class="input-v2" placeholder="Nome do Motorista">
+                                <input type="text" id="v2-motorista" class="input-v2 text-uppercase-input" placeholder="Nome do Motorista">
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                                 <div class="input-group-v2">
                                     <label>3. Caminhão</label>
-                                    <input type="text" id="v2-caminhao" class="input-v2" placeholder="Modelo">
+                                    <input type="text" id="v2-caminhao" class="input-v2 text-uppercase-input" placeholder="Modelo">
                                 </div>
                                 <div class="input-group-v2">
                                     <label>4. Placa</label>
-                                    <input type="text" id="v2-placa" class="input-v2" placeholder="ABC-1234">
+                                    <input type="text" id="v2-placa" class="input-v2 text-uppercase-input" placeholder="ABC-1234">
                                 </div>
                             </div>
 
