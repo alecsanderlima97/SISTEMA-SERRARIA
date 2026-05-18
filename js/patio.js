@@ -25,23 +25,7 @@ function formatDecimalMockup(num, places = 3) {
     return num.toFixed(places).replace('.', ',');
 }
 
-// Avaliar expressões matemáticas simples (ex: 50x14+16)
-function parseMathExpression(expr) {
-    if (!expr) return 0;
-    // Substitui 'x' por '*' para multiplicação e vírgula por ponto (caso digitem)
-    let sanitized = expr.toString().replace(/x/gi, '*').replace(/,/g, '.');
-    // Remove qualquer caractere que não seja número, operador ou parênteses
-    sanitized = sanitized.replace(/[^0-9+\-*/().]/g, '');
-    try {
-        if (!sanitized) return 0;
-        // Avalia a expressão de forma segura
-        const result = new Function('return ' + sanitized)();
-        return Math.round(parseFloat(result)) || 0;
-    } catch (e) {
-        console.error("Erro ao avaliar expressão:", expr, e);
-        return 0;
-    }
-}
+
 
 // Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
 function inicializarPatioListeners() {
@@ -78,6 +62,19 @@ function inicializarPatioListeners() {
     if (btnSalvar) {
         btnSalvar.addEventListener('click', salvarRelatorioPatio);
     }
+
+    // Calculadora de Peças do Pátio (Alt x Cam + Am)
+    const calcInputs = document.querySelectorAll('.calc-patio');
+    calcInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const alt = parseInt(document.getElementById('patioItemAltura').value) || 0;
+            const cam = parseInt(document.getElementById('patioItemCamada').value) || 0;
+            const am = parseInt(document.getElementById('patioItemAmarras').value) || 0;
+            const total = (alt * cam) + am;
+            const patioPecas = document.getElementById('patioItemPecas');
+            if (patioPecas) patioPecas.value = total > 0 ? total : '';
+        });
+    });
 }
 
 if (document.readyState === 'loading') {
@@ -147,8 +144,19 @@ function adicionarItemAoPatio() {
     const largRaw = document.getElementById('patioItemLarg').value;
     const compRaw = document.getElementById('patioItemComp').value;
     const pacotes = parseInt(document.getElementById('patioItemPacotes').value) || 0;
-    const pecasRaw = document.getElementById('patioItemPecas').value;
-    const pecas = parseMathExpression(pecasRaw);
+    const pecas = parseInt(document.getElementById('patioItemPecas').value) || 0;
+
+    const alt = parseInt(document.getElementById('patioItemAltura').value) || 0;
+    const cam = parseInt(document.getElementById('patioItemCamada').value) || 0;
+    const am = parseInt(document.getElementById('patioItemAmarras').value) || 0;
+
+    let pecasRaw = '';
+    if (alt > 0 && cam > 0) {
+        pecasRaw = `${alt}x${cam}`;
+        if (am > 0) pecasRaw += `+${am}`;
+    } else {
+        pecasRaw = pecas.toString();
+    }
 
     const esp = parseDecimal(espRaw);
     const larg = parseDecimal(largRaw);
@@ -191,6 +199,9 @@ function adicionarItemAoPatio() {
     document.getElementById('patioItemComp').value = '';
     document.getElementById('patioItemPacotes').value = '';
     document.getElementById('patioItemPecas').value = '';
+    document.getElementById('patioItemAltura').value = '';
+    document.getElementById('patioItemCamada').value = '';
+    document.getElementById('patioItemAmarras').value = '';
     document.getElementById('patioItemEsp').focus();
 
     renderizarItensPatioTemp();

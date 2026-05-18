@@ -1787,8 +1787,16 @@
                             <input type="number" id="patioItemPacotes" min="1" placeholder="Ex: 2" required>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label><i class="fa-solid fa-layer-group"></i> Peças / Pacote</label>
-                            <input type="text" id="patioItemPecas" placeholder="Ex: 50x14+16 ou 716" required>
+                            <label><i class="fa-solid fa-calculator"></i> Alt x Cam + Am.</label>
+                            <div style="display: flex; gap: 4px;">
+                                <input type="number" id="patioItemAltura" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="Alt">
+                                <input type="number" id="patioItemCamada" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="Cam">
+                                <input type="number" id="patioItemAmarras" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="+">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label><i class="fa-solid fa-layer-group"></i> Peças/Pct</label>
+                            <input type="number" id="patioItemPecas" min="1" placeholder="Total" required style="background: rgba(0,0,0,0.1) !important; color: #fff !important; cursor: not-allowed;" readonly>
                         </div>
                         <div class="btn-add-lote-col" style="margin-bottom: 0;">
                             <button type="submit" class="btn-patio-print" style="padding: 10px; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.2rem; border-radius: 8px; background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;" title="Adicionar Lote">
