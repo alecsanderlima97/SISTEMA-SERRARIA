@@ -54,6 +54,7 @@
                             Estilos</a></li>
                     <li><a href="#" data-target="view-estoque"><i class="fa-solid fa-boxes-stacked"></i> Controle de
                             Estoque</a></li>
+                    <li><a href="#" data-target="view-rh"><i class="fa-solid fa-id-card-clip"></i> RH Funcionários</a></li>
                     <li><a href="#" data-target="view-calculadoras"><i class="fa-solid fa-calculator"></i>
                             Calculadoras</a></li>
                     <li><a href="#" data-target="view-agenda"><i class="fa-solid fa-calendar-days"></i>
@@ -591,6 +592,166 @@
                                 style="font-size: 2rem; color:var(--danger-color); margin-bottom: 10px;"></i>
                             <h3 style="color:var(--danger-color);">Consumo de Diesel</h3>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== TELA: RH FUNCIONÁRIOS ====== -->
+            <section id="view-rh" class="view-section" style="display: none;">
+                <div class="main-header hide-on-print">
+                    <h1><i class="fa-solid fa-id-card-clip"></i> Gestão de Pessoas (RH)</h1>
+                    <p>Controle de funcionários, salários, férias, vales e horas extras.</p>
+                </div>
+
+                <!-- Botão de controle de visibilidade (Limpo e profissional) -->
+                <div class="hide-on-print" style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <button type="button" id="btnToggleFormRH" class="btn-primary" style="padding: 10px 20px; border-radius: 8px;">
+                        <i class="fa-solid fa-user-plus"></i> <span id="txtToggleFormRH">Cadastrar Funcionário</span>
+                    </button>
+                    <button type="button" id="btnLimparBuscaRH" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; display: none;">
+                        <i class="fa-solid fa-list"></i> Ver Todos
+                    </button>
+                </div>
+
+                <!-- CARD DE CADASTRO / EDIÇÃO -->
+                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px; animation: fadeIn 0.4s ease;">
+                    <div class="section-title">
+                        <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo Funcionário</h2>
+                    </div>
+                    <form id="formFuncionario" onsubmit="event.preventDefault();">
+                        <input type="hidden" id="rh-id">
+                        
+                        <!-- Dados Pessoais -->
+                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <i class="fa-solid fa-user"></i> Informações Pessoais
+                        </h3>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="input-group">
+                                <label>Nome Completo *</label>
+                                <input type="text" id="rh-nome" class="text-uppercase-input" required placeholder="Ex: JOÃO DA SILVA">
+                            </div>
+                            <div class="input-group">
+                                <label>Data de Nascimento</label>
+                                <input type="date" id="rh-nascimento">
+                            </div>
+                            <div class="input-group">
+                                <label>CPF *</label>
+                                <input type="text" id="rh-cpf" required placeholder="000.000.000-00">
+                            </div>
+                            <div class="input-group">
+                                <label>RG</label>
+                                <input type="text" id="rh-rg" placeholder="Ex: 12.345.678-9">
+                            </div>
+                            <div class="input-group">
+                                <label>Número para Contato *</label>
+                                <input type="text" id="rh-contato" required placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+
+                        <!-- Dados Contratuais e Pagamento -->
+                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <i class="fa-solid fa-briefcase"></i> Contrato & Financeiro
+                        </h3>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="input-group">
+                                <label>Função / Cargo *</label>
+                                <select id="rh-funcao" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="OPERADOR DE SERRA">OPERADOR DE SERRA (SERRADOR)</option>
+                                    <option value="EMPILHADEIRISTA">EMPILHADEIRISTA</option>
+                                    <option value="MOQUEIRO">MOQUEIRO (ESTUFISTA)</option>
+                                    <option value="MECÂNICO">MECÂNICO DE MANUTENÇÃO</option>
+                                    <option value="AUXILIAR DE PRODUÇÃO">AUXILIAR DE PRODUÇÃO</option>
+                                    <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                                    <option value="OUTRO">OUTRO / ESPECIAL</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Data de Admissão *</label>
+                                <input type="date" id="rh-admissao" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Salário Base R$ *</label>
+                                <input type="text" id="rh-salario" required placeholder="R$ 0,00">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor do Vale Mensal R$</label>
+                                <input type="text" id="rh-vale" placeholder="R$ 0,00">
+                            </div>
+                            <div class="input-group">
+                                <label>Forma de Pagamento *</label>
+                                <select id="rh-forma-pagamento" required>
+                                    <option value="PIX">PIX</option>
+                                    <option value="DINHEIRO">DINHEIRO (ESPÉCIE)</option>
+                                    <option value="TRANSFERENCIA">TRANSFERÊNCIA BANCÁRIA</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label>Chave PIX ou Dados Bancários para Pagamento</label>
+                                <input type="text" id="rh-dados-bancarios" placeholder="Ex: Chave PIX (Celular/CPF) ou Banco/Ag/Cc">
+                            </div>
+                        </div>
+
+                        <!-- Férias -->
+                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <i class="fa-solid fa-umbrella-beach"></i> Controle de Férias
+                        </h3>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="input-group">
+                                <label>Férias Usufruídas (Dias)</label>
+                                <input type="number" id="rh-ferias-dias" min="0" max="60" value="0">
+                            </div>
+                            <div class="input-group">
+                                <label>Início do Período de Férias</label>
+                                <input type="date" id="rh-ferias-inicio">
+                            </div>
+                            <div class="input-group">
+                                <label>Fim do Período de Férias</label>
+                                <input type="date" id="rh-ferias-fim">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                            <button type="button" id="btnCancelarRH" class="btn-secondary" style="padding: 12px 24px; border-radius: 8px;">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="btnSalvarRH" class="btn-primary" style="padding: 12px 30px; border-radius: 8px; font-weight: bold; background: #00ff88; color: black; border-color: #00ff88;">
+                                <i class="fa-solid fa-floppy-disk"></i> SALVAR FUNCIONÁRIO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PAINEL DA LISTA DE CADASTRADOS -->
+                <div id="panelListaRH" class="glass-panel hide-on-print">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários</h2>
+                        <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 400px;">
+                            <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-color);"></i>
+                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou função..." style="width: 100%; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="package-table">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Função / Admissão</th>
+                                    <th>Contato / CPF</th>
+                                    <th>Salário / Vale</th>
+                                    <th>Férias</th>
+                                    <th style="text-align: center;">Painéis e Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaRH">
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Carregando funcionários...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -1632,6 +1793,87 @@
         </main>
     </div>
 
+    <!-- MODAL: CONTROLE DE HORAS EXTRAS -->
+    <div id="modalHorasExtras" class="modal-v2" style="display: none;">
+        <div class="modal-content-v2 card-v2" style="max-width: 600px; width: 95%;">
+            <div class="modal-header-v2">
+                <h2><i class="fa-solid fa-clock"></i> Controle de Horas Extras</h2>
+                <button onclick="window.fecharModalHE()" class="btn-close-v2">&times;</button>
+            </div>
+            <div class="modal-body-v2">
+                <p>Funcionário: <strong id="he-funcionario-nome" style="color: var(--accent-color);">...</strong></p>
+                <input type="hidden" id="he-funcionario-id">
+
+                <!-- Formulário rápido para adicionar HE -->
+                <form id="formHE" onsubmit="event.preventDefault();" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label>Data *</label>
+                            <input type="date" id="he-data" required>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label>Quantidade de Horas *</label>
+                            <input type="number" id="he-horas" step="0.5" min="0.5" max="24" required placeholder="Ex: 2">
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label>Tipo de Dia (Acréscimo)</label>
+                        <select id="he-tipo-dia">
+                            <option value="NORMAL">Dia de Semana / Normal (50% Extra)</option>
+                            <option value="ESPECIAL">Sábado, Domingo ou Feriado (100% Extra) 🟥</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; background: #00ff88; color: black; font-weight: bold; border-color: #00ff88;">
+                        <i class="fa-solid fa-plus"></i> ADICIONAR HORA EXTRA
+                    </button>
+                </form>
+
+                <!-- Tabela de Lançamentos de Horas Extras -->
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="package-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Data / Dia</th>
+                                <th>Horas</th>
+                                <th>Tipo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaHE">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer-v2" style="justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 15px;">
+                <div style="font-size: 1.1rem;">
+                    Total de Horas Extras: <strong id="he-total-soma" style="color: #00ff88;">0h</strong>
+                </div>
+                <button onclick="window.fecharModalHE()" class="btn-v2" style="background: var(--border); color: white;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FICHA / HOLERITE DE PAGAMENTO -->
+    <div id="modalHolerite" class="modal-v2" style="display: none; background: rgba(0,0,0,0.85);">
+        <div class="modal-content-v2 card-v2" style="max-width: 800px; width: 95%; background: white; color: black; padding: 25px; border-radius: 12px; border: 1px solid #ccc; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header-v2 hide-on-print" style="border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 style="color: black;"><i class="fa-solid fa-file-invoice-dollar"></i> Recibo de Pagamento</h2>
+                <button onclick="window.fecharModalHolerite()" class="btn-close-v2" style="color: black;">&times;</button>
+            </div>
+            
+            <!-- Recibo Impresso -->
+            <div id="conteudoHolerite" style="font-family: 'Courier New', Courier, monospace; color: black; font-size: 0.85rem; line-height: 1.4;">
+                <!-- Conteúdo dinâmico gerado via JS -->
+            </div>
+
+            <div class="modal-footer-v2 hide-on-print" style="margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="window.print()" class="btn-v2" style="background: #0ea5e9; color: white;"><i class="fa-solid fa-print"></i> Imprimir Recibo</button>
+                <button onclick="window.fecharModalHolerite()" class="btn-v2" style="background: #94a3b8; color: black;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: DETALHES DO ROMANEIO -->
     <div id="modalDetalhesRomaneio" class="modal-v2" style="display: none;">
         <div class="modal-content-v2 card-v2">
@@ -1916,6 +2158,7 @@
     <script type="module" src="js/romaneio_v2.js"></script>
     <script type="module" src="js/historico.js"></script>
     <script type="module" src="js/patio.js"></script>
+    <script type="module" src="js/rh.js"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js"></script>
     <script type="module" src="dashboard.js"></script>

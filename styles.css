@@ -1491,3 +1491,43 @@ tfoot td {
     transform: scale(1.05);
     box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
 }
+
+/* =========================================
+   RECIBO / HOLERITE PRINT CONFIG
+   ========================================= */
+@media print {
+    body.printing-holerite {
+        background: white !important;
+        color: black !important;
+    }
+    body.printing-holerite .app-wrapper,
+    body.printing-holerite .modal-v2:not(#modalHolerite) {
+        display: none !important;
+    }
+    body.printing-holerite #modalHolerite {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        z-index: 999999 !important;
+    }
+    body.printing-holerite #modalHolerite .modal-content-v2 {
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+        color: black !important;
+    }
+}
