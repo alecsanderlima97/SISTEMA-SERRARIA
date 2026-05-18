@@ -1059,21 +1059,34 @@ tfoot td {
     font-size: 1.3rem !important;
 }
 
-/* --- OTIMIZAÇÃO DE SCROLLBARS (Visual Ultra Premium) --- */
+/* --- OTIMIZAÇÃO DE SCROLLBARS (Visual Ultra Premium - Otimizado e Mais Confortável) --- */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 10px;
+    height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-color);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+}
+
+/* --- BOTÕES FLUTUANTES DE NAVEGAÇÃO DE TELA (Scroll Helper Widget) --- */
+.btn-scroll-helper:hover {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(230, 126, 34, 0.5) !important;
 }
