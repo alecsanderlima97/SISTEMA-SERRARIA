@@ -1061,27 +1061,382 @@ tfoot td {
 
 /* --- OTIMIZAÇÃO DE SCROLLBARS (Visual Ultra Premium - Otimizado e Mais Confortável) --- */
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 14px; /* Barra de scroll maior como solicitado */
+    height: 14px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 6px;
+    background: rgba(230, 126, 34, 0.03); /* Tom suave terroso/alaranjado */
+    border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    border: 2px solid transparent;
+    background: rgba(230, 126, 34, 0.35); /* Laranja amadeirado translúcido */
+    border-radius: 8px;
+    border: 3px solid transparent;
     background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-color);
     background-clip: padding-box;
-    border: 2px solid transparent;
+    border: 3px solid transparent;
 }
+
+/* =========================================================================
+   TEMA AMADEIRADO PREMIUM CONTROLE DE PÁTIO (Orquestracs Wood Theme)
+   ========================================================================= */
+.patio-wood-theme .modal-content-v2 {
+    background: linear-gradient(135deg, #180f0a 0%, #291b10 100%) !important;
+    color: #f5e6d3 !important;
+    border: 2px solid rgba(230, 126, 34, 0.25) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(230, 126, 34, 0.12) !important;
+}
+
+/* Títulos, Cabeçalhos e Subtítulos */
+.patio-wood-theme h2 {
+    color: #faf3e0 !important;
+    font-family: var(--font-heading);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.patio-wood-theme h3 {
+    color: #ffdcb3 !important;
+    font-family: var(--font-heading);
+}
+
+.patio-wood-theme small,
+.patio-wood-theme .text-muted {
+    color: #c4a482 !important;
+}
+
+/* Painéis com Estilo de Vidro Terroso (Warm Earthy Glass) */
+.patio-wood-theme .glass-panel {
+    background: rgba(41, 27, 16, 0.5) !important;
+    border: 1px solid rgba(230, 126, 34, 0.2) !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.2) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.patio-wood-theme .glass-panel:hover {
+    border-color: rgba(230, 126, 34, 0.35) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Grade de Parâmetros e Formulários Alinhados */
+.patio-params-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 2fr;
+    gap: 15px;
+}
+
+.patio-form-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1.4fr 1fr 1fr 1fr 1.1fr 1.1fr 60px;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+@media (max-width: 1100px) {
+    .patio-params-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .patio-form-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    .patio-form-grid .btn-add-lote-col {
+        grid-column: span 4;
+    }
+}
+
+@media (max-width: 700px) {
+    .patio-params-grid {
+        grid-template-columns: 1fr;
+    }
+    .patio-form-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .patio-form-grid .btn-add-lote-col {
+        grid-column: span 2;
+    }
+}
+
+/* Custom KPIs com Contraste Amadeirado */
+.patio-wood-theme .patio-kpi-card {
+    background: linear-gradient(135deg, #2d1d12 0%, #3d2819 100%) !important;
+    border: 1px solid rgba(230, 126, 34, 0.25) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.05) !important;
+    padding: 18px 22px !important;
+    border-radius: 14px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.patio-wood-theme .patio-kpi-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(230, 126, 34, 0.4) !important;
+}
+
+.patio-wood-theme .patio-kpi-card .kpi-label {
+    color: #c4a482 !important;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+}
+
+.patio-wood-theme .patio-kpi-card .kpi-value {
+    color: #faf3e0 !important;
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.patio-wood-theme .patio-kpi-blue {
+    background: linear-gradient(135deg, #182848 0%, #223f6d 100%) !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+}
+.patio-wood-theme .patio-kpi-blue .kpi-label { color: #93c5fd !important; }
+.patio-wood-theme .patio-kpi-blue .kpi-value { color: #eff6ff !important; }
+
+.patio-wood-theme .patio-kpi-green {
+    background: linear-gradient(135deg, #113520 0%, #1a4f30 100%) !important;
+    border: 1.5px solid rgba(34, 197, 94, 0.35) !important;
+}
+.patio-wood-theme .patio-kpi-green .kpi-label { color: #86efac !important; }
+.patio-wood-theme .patio-kpi-green .kpi-value { color: #f0fdf4 !important; }
+
+/* Rótulos e Inputs do Formulário (Olhos Confortáveis) */
+.patio-wood-theme label {
+    color: #c4a482 !important;
+    font-weight: 700;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.patio-wood-theme input,
+.patio-wood-theme select {
+    background: #140b06 !important;
+    border: 1px solid #4a3020 !important;
+    color: #f5e6d3 !important;
+    border-radius: 8px !important;
+    padding: 11px 14px !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.patio-wood-theme input:focus,
+.patio-wood-theme select:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 10px rgba(230, 126, 34, 0.4) !important;
+    background: #1e1008 !important;
+}
+
+.patio-wood-theme input::placeholder {
+    color: #7d5e49 !important;
+}
+
+/* Tabelas e Resultados em Pátio Wood */
+.patio-wood-theme table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.patio-wood-theme th {
+    color: #ffdcb3 !important;
+    font-size: 0.76rem !important;
+    padding: 14px 12px !important;
+    border-bottom: 2px solid #543725 !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.patio-wood-theme td {
+    padding: 14px 12px !important;
+    border-bottom: 1px solid #362215 !important;
+    color: #e8d7c8 !important;
+    font-size: 0.88rem;
+}
+
+.patio-wood-theme tbody tr:hover {
+    background: rgba(230, 126, 34, 0.05) !important;
+}
+
+/* Botões do Pátio Wood */
+.patio-wood-theme .btn-patio-zerar {
+    border: 1.5px solid rgba(196, 164, 130, 0.4) !important;
+    background: rgba(196, 164, 130, 0.08) !important;
+    color: #f5e6d3 !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.6px;
+    padding: 10px 22px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease !important;
+}
+
+.patio-wood-theme .btn-patio-zerar:hover {
+    background: #c4a482 !important;
+    color: #180f0a !important;
+    border-color: #c4a482 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(196, 164, 130, 0.25) !important;
+}
+
+.patio-wood-theme .btn-patio-print {
+    background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.6px;
+    padding: 10px 24px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    border: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.patio-wood-theme .btn-patio-print:hover {
+    background: linear-gradient(135deg, #ff973c 0%, #e67e22 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(230, 126, 34, 0.5) !important;
+}
+
+.patio-wood-theme .btn-patio-exit {
+    border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+    color: #fca5a5 !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.6px;
+    padding: 10px 22px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease !important;
+}
+
+.patio-wood-theme .btn-patio-exit:hover {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4) !important;
+}
+
+.patio-wood-theme .btn-patio-save {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.patio-wood-theme .btn-patio-save:hover {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5) !important;
+}
+
+/* Custom class badges style for Wood theme */
+.patio-wood-theme .patio-tag-1a {
+    color: #60a5fa !important;
+    background: rgba(37, 99, 235, 0.2) !important;
+    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+}
+.patio-wood-theme .patio-tag-2a {
+    color: #fbbf24 !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+    border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+.patio-wood-theme .patio-tag-3a {
+    color: #f87171 !important;
+    background: rgba(239, 68, 68, 0.2) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Ajustes de botões de incremento/decremento de pátio em wood mode */
+.patio-wood-theme .btn-patio-action-minus {
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #fca5a5 !important;
+}
+.patio-wood-theme .btn-patio-action-minus:hover {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+}
+
+.patio-wood-theme .btn-patio-action-plus {
+    background: #e67e22 !important;
+    box-shadow: 0 2px 6px rgba(230, 126, 34, 0.25) !important;
+}
+.patio-wood-theme .btn-patio-action-plus:hover {
+    background: #d35400 !important;
+    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4) !important;
+}
+
+/* Sobrescrita de cores absolutas geradas dinamicamente via JavaScript no Pátio */
+.patio-wood-theme td[style*="color: #475569"],
+.patio-wood-theme td[style*="color: #64748b"],
+.patio-wood-theme td[style*="color: #94a3b8"] {
+    color: #c4a482 !important; /* Marrom suave confortável */
+}
+
+.patio-wood-theme td[style*="color: #0f172a"],
+.patio-wood-theme td div[style*="color: #0f172a"] {
+    color: #faf3e0 !important; /* Creme para alto contraste visual sem cansar a vista */
+}
+
+.patio-wood-theme td div[style*="color: #2563eb"] {
+    color: #60a5fa !important; /* Azul claro brilhante no modo escuro */
+}
+
+.patio-wood-theme td div[style*="color: #16a34a"],
+.patio-wood-theme td span[style*="color: #16a34a"],
+.patio-wood-theme td small[style*="color: #16a34a"] {
+    color: #4ade80 !important; /* Verde menta brilhante */
+}
+
+.patio-wood-theme td small[style*="color: #64748b"],
+.patio-wood-theme td small[style*="color: #94a3b8"] {
+    color: #a68d7a !important; /* Subtexto sépia */
+}
+
+/* Botão Ver/Imprimir do Histórico no modo Wood */
+.patio-wood-theme button[onclick*="imprimirHistoricoPatio"] {
+    background: rgba(37, 99, 235, 0.15) !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    color: #93c5fd !important;
+}
+.patio-wood-theme button[onclick*="imprimirHistoricoPatio"]:hover {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #2563eb !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important;
+}
+
 
 /* --- BOTÕES FLUTUANTES DE NAVEGAÇÃO DE TELA (Scroll Helper Widget) --- */
 .btn-scroll-helper:hover {
