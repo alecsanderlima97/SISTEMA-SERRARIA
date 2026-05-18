@@ -1085,356 +1085,236 @@ tfoot td {
 }
 
 /* =========================================================================
-   TEMA AMADEIRADO PREMIUM CONTROLE DE PÁTIO (Orquestracs Wood Theme)
+   TEMA PÁTIO SIMPLIFICADO (Orquestracs - Clean Dark)
    ========================================================================= */
 .patio-wood-theme .modal-content-v2 {
-    background: linear-gradient(135deg, #180f0a 0%, #291b10 100%) !important;
-    color: #f5e6d3 !important;
-    border: 2px solid rgba(230, 126, 34, 0.25) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(230, 126, 34, 0.12) !important;
+    background: #1e1e24 !important;
+    color: #dde1e7 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Títulos, Cabeçalhos e Subtítulos */
-.patio-wood-theme h2 {
-    color: #faf3e0 !important;
-    font-family: var(--font-heading);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
+.patio-wood-theme h2 { color: #f0f0f5 !important; }
+.patio-wood-theme h3 { color: #c8c8d4 !important; font-size: 0.95rem !important; }
+.patio-wood-theme small { color: #8a8a9a !important; }
 
-.patio-wood-theme h3 {
-    color: #ffdcb3 !important;
-    font-family: var(--font-heading);
-}
-
-.patio-wood-theme small,
-.patio-wood-theme .text-muted {
-    color: #c4a482 !important;
-}
-
-/* Painéis com Estilo de Vidro Terroso (Warm Earthy Glass) */
+/* Painéis internos */
 .patio-wood-theme .glass-panel {
-    background: rgba(41, 27, 16, 0.5) !important;
-    border: 1px solid rgba(230, 126, 34, 0.2) !important;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.2) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: #26262e !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
 }
 
-.patio-wood-theme .glass-panel:hover {
-    border-color: rgba(230, 126, 34, 0.35) !important;
-    transform: translateY(-1px) !important;
-}
-
-/* Grade de Parâmetros e Formulários Alinhados */
+/* Grade de Parâmetros - 4 colunas compactas */
 .patio-params-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 2fr;
-    gap: 15px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
 }
 
+/* Grade do formulário de lançamento - compacta */
 .patio-form-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1.4fr 1fr 1fr 1fr 1.1fr 1.1fr 60px;
-    gap: 12px;
+    grid-template-columns: 1.5fr 1.3fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 48px;
+    gap: 8px;
     align-items: flex-end;
 }
 
-@media (max-width: 1100px) {
-    .patio-params-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    .patio-form-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    .patio-form-grid .btn-add-lote-col {
-        grid-column: span 4;
-    }
+@media (max-width: 1200px) {
+    .patio-params-grid { grid-template-columns: repeat(2, 1fr); }
+    .patio-form-grid { grid-template-columns: repeat(4, 1fr); }
+    .patio-form-grid .btn-add-lote-col { grid-column: span 4; }
 }
-
 @media (max-width: 700px) {
-    .patio-params-grid {
-        grid-template-columns: 1fr;
-    }
-    .patio-form-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    .patio-form-grid .btn-add-lote-col {
-        grid-column: span 2;
-    }
+    .patio-params-grid { grid-template-columns: 1fr 1fr; }
+    .patio-form-grid { grid-template-columns: 1fr 1fr; }
+    .patio-form-grid .btn-add-lote-col { grid-column: span 2; }
 }
 
-/* Custom KPIs com Contraste Amadeirado */
+/* KPI Cards simples */
 .patio-wood-theme .patio-kpi-card {
-    background: linear-gradient(135deg, #2d1d12 0%, #3d2819 100%) !important;
-    border: 1px solid rgba(230, 126, 34, 0.25) !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.05) !important;
-    padding: 18px 22px !important;
-    border-radius: 14px !important;
+    background: #2c2c36 !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 14px 16px !important;
+    border-radius: 10px !important;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    gap: 2px;
 }
-
-.patio-wood-theme .patio-kpi-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(230, 126, 34, 0.4) !important;
-}
-
 .patio-wood-theme .patio-kpi-card .kpi-label {
-    color: #c4a482 !important;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 1.2px;
+    color: #888899 !important;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
-
 .patio-wood-theme .patio-kpi-card .kpi-value {
-    color: #faf3e0 !important;
-    font-size: 2.2rem;
+    color: #f0f0f5 !important;
+    font-size: 1.8rem;
     font-weight: 800;
     line-height: 1.1;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
-
-.patio-wood-theme .patio-kpi-blue {
-    background: linear-gradient(135deg, #182848 0%, #223f6d 100%) !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
-}
+.patio-wood-theme .patio-kpi-blue { border-left: 3px solid #3b82f6 !important; }
 .patio-wood-theme .patio-kpi-blue .kpi-label { color: #93c5fd !important; }
-.patio-wood-theme .patio-kpi-blue .kpi-value { color: #eff6ff !important; }
-
-.patio-wood-theme .patio-kpi-green {
-    background: linear-gradient(135deg, #113520 0%, #1a4f30 100%) !important;
-    border: 1.5px solid rgba(34, 197, 94, 0.35) !important;
-}
+.patio-wood-theme .patio-kpi-blue .kpi-value { color: #bfdbfe !important; }
+.patio-wood-theme .patio-kpi-green { border-left: 3px solid #22c55e !important; }
 .patio-wood-theme .patio-kpi-green .kpi-label { color: #86efac !important; }
-.patio-wood-theme .patio-kpi-green .kpi-value { color: #f0fdf4 !important; }
+.patio-wood-theme .patio-kpi-green .kpi-value { color: #bbf7d0 !important; }
 
-/* Rótulos e Inputs do Formulário (Olhos Confortáveis) */
+/* Labels e campos compactos */
 .patio-wood-theme label {
-    color: #c4a482 !important;
-    font-weight: 700;
-    font-size: 0.76rem;
+    color: #9090a0 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 5px;
+    margin-bottom: 4px;
 }
-
 .patio-wood-theme input,
 .patio-wood-theme select {
-    background: #140b06 !important;
-    border: 1px solid #4a3020 !important;
-    color: #f5e6d3 !important;
-    border-radius: 8px !important;
-    padding: 11px 14px !important;
-    font-size: 0.95rem !important;
-    transition: all 0.2s ease !important;
+    background: #16161c !important;
+    border: 1px solid #383845 !important;
+    color: #dde1e7 !important;
+    border-radius: 6px !important;
+    padding: 7px 10px !important;
+    font-size: 0.88rem !important;
+    width: 100%;
 }
-
 .patio-wood-theme input:focus,
 .patio-wood-theme select:focus {
-    border-color: var(--primary-color) !important;
-    box-shadow: 0 0 10px rgba(230, 126, 34, 0.4) !important;
-    background: #1e1008 !important;
+    border-color: #e67e22 !important;
+    outline: none !important;
 }
+.patio-wood-theme input::placeholder { color: #505060 !important; }
 
-.patio-wood-theme input::placeholder {
-    color: #7d5e49 !important;
-}
-
-/* Tabelas e Resultados em Pátio Wood */
-.patio-wood-theme table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
+/* Tabelas */
 .patio-wood-theme th {
-    color: #ffdcb3 !important;
-    font-size: 0.76rem !important;
-    padding: 14px 12px !important;
-    border-bottom: 2px solid #543725 !important;
-    font-weight: 800;
+    color: #9090a0 !important;
+    font-size: 0.72rem !important;
+    padding: 10px 8px !important;
+    border-bottom: 1px solid #383845 !important;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
 }
-
 .patio-wood-theme td {
-    padding: 14px 12px !important;
-    border-bottom: 1px solid #362215 !important;
-    color: #e8d7c8 !important;
-    font-size: 0.88rem;
+    padding: 10px 8px !important;
+    border-bottom: 1px solid #2a2a35 !important;
+    color: #c8c8d8 !important;
+    font-size: 0.85rem;
 }
+.patio-wood-theme tbody tr:hover { background: rgba(255,255,255,0.03) !important; }
 
-.patio-wood-theme tbody tr:hover {
-    background: rgba(230, 126, 34, 0.05) !important;
-}
-
-/* Botões do Pátio Wood */
+/* Botões do Pátio */
 .patio-wood-theme .btn-patio-zerar {
-    border: 1.5px solid rgba(196, 164, 130, 0.4) !important;
-    background: rgba(196, 164, 130, 0.08) !important;
-    color: #f5e6d3 !important;
-    font-weight: 700 !important;
-    font-size: 0.82rem !important;
-    letter-spacing: 0.6px;
-    padding: 10px 22px !important;
-    border-radius: 30px !important;
+    border: 1px solid #383845 !important;
+    background: #2c2c36 !important;
+    color: #c8c8d4 !important;
+    font-size: 0.8rem !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
     cursor: pointer !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease !important;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.15s !important;
 }
-
 .patio-wood-theme .btn-patio-zerar:hover {
-    background: #c4a482 !important;
-    color: #180f0a !important;
-    border-color: #c4a482 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(196, 164, 130, 0.25) !important;
+    background: #383845 !important;
+    color: #f0f0f5 !important;
 }
 
 .patio-wood-theme .btn-patio-print {
-    background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    font-size: 0.82rem !important;
-    letter-spacing: 0.6px;
-    padding: 10px 24px !important;
-    border-radius: 30px !important;
-    cursor: pointer !important;
+    background: #e67e22 !important;
+    color: #fff !important;
+    font-size: 0.8rem !important;
+    padding: 8px 18px !important;
+    border-radius: 6px !important;
     border: none !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3) !important;
-    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.15s !important;
 }
-
-.patio-wood-theme .btn-patio-print:hover {
-    background: linear-gradient(135deg, #ff973c 0%, #e67e22 100%) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(230, 126, 34, 0.5) !important;
-}
+.patio-wood-theme .btn-patio-print:hover { background: #d35400 !important; }
 
 .patio-wood-theme .btn-patio-exit {
-    border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
-    background: rgba(239, 68, 68, 0.08) !important;
-    color: #fca5a5 !important;
-    font-weight: 700 !important;
-    font-size: 0.82rem !important;
-    letter-spacing: 0.6px;
-    padding: 10px 22px !important;
-    border-radius: 30px !important;
+    border: 1px solid rgba(239,68,68,0.35) !important;
+    background: rgba(239,68,68,0.08) !important;
+    color: #f87171 !important;
+    font-size: 0.8rem !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
     cursor: pointer !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease !important;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.15s !important;
 }
-
 .patio-wood-theme .btn-patio-exit:hover {
     background: #dc2626 !important;
-    color: #ffffff !important;
+    color: #fff !important;
     border-color: #dc2626 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4) !important;
 }
 
 .patio-wood-theme .btn-patio-save {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
-    color: white !important;
+    background: #16a34a !important;
+    color: #fff !important;
     border: none !important;
-    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3) !important;
-    transition: all 0.2s ease !important;
+    transition: background 0.15s !important;
 }
+.patio-wood-theme .btn-patio-save:hover { background: #15803d !important; }
 
-.patio-wood-theme .btn-patio-save:hover {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5) !important;
-}
-
-/* Custom class badges style for Wood theme */
+/* Badges de classe */
 .patio-wood-theme .patio-tag-1a {
     color: #60a5fa !important;
-    background: rgba(37, 99, 235, 0.2) !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: rgba(37,99,235,0.15) !important;
+    border: 1px solid rgba(59,130,246,0.3) !important;
 }
 .patio-wood-theme .patio-tag-2a {
     color: #fbbf24 !important;
-    background: rgba(245, 158, 11, 0.2) !important;
-    border: 1px solid rgba(245, 158, 11, 0.4) !important;
+    background: rgba(245,158,11,0.15) !important;
+    border: 1px solid rgba(245,158,11,0.3) !important;
 }
 .patio-wood-theme .patio-tag-3a {
     color: #f87171 !important;
-    background: rgba(239, 68, 68, 0.2) !important;
-    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+    background: rgba(239,68,68,0.15) !important;
+    border: 1px solid rgba(239,68,68,0.3) !important;
 }
 
-/* Ajustes de botões de incremento/decremento de pátio em wood mode */
+/* Botões +/- de quantidade */
 .patio-wood-theme .btn-patio-action-minus {
-    border-color: rgba(239, 68, 68, 0.3) !important;
-    background: rgba(239, 68, 68, 0.15) !important;
-    color: #fca5a5 !important;
+    border-color: rgba(239,68,68,0.3) !important;
+    background: rgba(239,68,68,0.1) !important;
+    color: #f87171 !important;
 }
 .patio-wood-theme .btn-patio-action-minus:hover {
-    background: #dc2626 !important;
-    color: #ffffff !important;
-    border-color: #dc2626 !important;
+    background: #dc2626 !important; color: #fff !important;
 }
-
 .patio-wood-theme .btn-patio-action-plus {
     background: #e67e22 !important;
-    box-shadow: 0 2px 6px rgba(230, 126, 34, 0.25) !important;
 }
-.patio-wood-theme .btn-patio-action-plus:hover {
-    background: #d35400 !important;
-    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4) !important;
-}
+.patio-wood-theme .btn-patio-action-plus:hover { background: #d35400 !important; }
 
-/* Sobrescrita de cores absolutas geradas dinamicamente via JavaScript no Pátio */
+/* Sobrescrita de cores JS */
 .patio-wood-theme td[style*="color: #475569"],
 .patio-wood-theme td[style*="color: #64748b"],
-.patio-wood-theme td[style*="color: #94a3b8"] {
-    color: #c4a482 !important; /* Marrom suave confortável */
-}
-
+.patio-wood-theme td[style*="color: #94a3b8"] { color: #8a8a9a !important; }
 .patio-wood-theme td[style*="color: #0f172a"],
-.patio-wood-theme td div[style*="color: #0f172a"] {
-    color: #faf3e0 !important; /* Creme para alto contraste visual sem cansar a vista */
-}
-
-.patio-wood-theme td div[style*="color: #2563eb"] {
-    color: #60a5fa !important; /* Azul claro brilhante no modo escuro */
-}
-
+.patio-wood-theme td div[style*="color: #0f172a"] { color: #dde1e7 !important; }
+.patio-wood-theme td div[style*="color: #2563eb"] { color: #60a5fa !important; }
 .patio-wood-theme td div[style*="color: #16a34a"],
 .patio-wood-theme td span[style*="color: #16a34a"],
-.patio-wood-theme td small[style*="color: #16a34a"] {
-    color: #4ade80 !important; /* Verde menta brilhante */
-}
-
+.patio-wood-theme td small[style*="color: #16a34a"] { color: #4ade80 !important; }
 .patio-wood-theme td small[style*="color: #64748b"],
-.patio-wood-theme td small[style*="color: #94a3b8"] {
-    color: #a68d7a !important; /* Subtexto sépia */
-}
+.patio-wood-theme td small[style*="color: #94a3b8"] { color: #6b6b7a !important; }
 
-/* Botão Ver/Imprimir do Histórico no modo Wood */
+/* Botão Ver/Imprimir do Histórico */
 .patio-wood-theme button[onclick*="imprimirHistoricoPatio"] {
-    background: rgba(37, 99, 235, 0.15) !important;
-    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    background: rgba(37,99,235,0.12) !important;
+    border: 1px solid rgba(59,130,246,0.3) !important;
     color: #93c5fd !important;
 }
 .patio-wood-theme button[onclick*="imprimirHistoricoPatio"]:hover {
-    background: #2563eb !important;
-    color: #ffffff !important;
-    border-color: #2563eb !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important;
+    background: #2563eb !important; color: #fff !important;
 }
 
 
