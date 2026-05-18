@@ -25,8 +25,8 @@ function formatDecimalMockup(num, places = 3) {
     return num.toFixed(places).replace('.', ',');
 }
 
-// Inicializar Eventos
-document.addEventListener('DOMContentLoaded', () => {
+// Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
+function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
     const formAdicionar = document.getElementById('formAdicionarItemPatio');
     const btnZerar = document.getElementById('btnZerarEtiquetas');
@@ -60,7 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSalvar) {
         btnSalvar.addEventListener('click', salvarRelatorioPatio);
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarPatioListeners);
+} else {
+    inicializarPatioListeners();
+}
 
 // Abrir Modal do Pátio
 window.abrirModalPatio = async function() {
