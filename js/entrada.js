@@ -161,6 +161,7 @@ const filtroEntradasNome = document.getElementById('filtroEntradasNome');
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
+let entradasSelecionadas = new Set();
 
 const entComp = document.getElementById('entComp');
 const entLarg = document.getElementById('entLarg');
@@ -177,11 +178,42 @@ const infoFinanceira = document.getElementById('entInfoFinanceira');
 const entData = document.getElementById('entData');
 const entHorario = document.getElementById('entHorario');
 
+// --- Funções de Máscara Decimal e Conversão ---
+function formatDecimalValue(val) {
+    if (val === null || val === undefined || val === '') return '';
+    let num = parseFloat(val);
+    if (isNaN(num)) return '';
+    return num.toFixed(2).replace(".", ",");
+}
+
+function parseDecimalValue(val) {
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'number') return val;
+    let cleanVal = val.toString().replace(/\./g, '').replace(',', '.').trim();
+    return parseFloat(cleanVal) || 0;
+}
+
+function formatDecimal2Input(e) {
+    let value = e.target.value;
+    if (!value) {
+        e.target.value = "";
+        return;
+    }
+    value = value.replace(/\D/g, "");
+    if (!value) {
+        e.target.value = "";
+        return;
+    }
+    value = (parseInt(value, 10) / 100).toFixed(2) + "";
+    value = value.replace(".", ",");
+    e.target.value = value;
+}
+
 function calcularVolumeAtual() {
-    const c = parseFloat(entComp?.value) || 0;
-    const l = parseFloat(entLarg?.value) || 0;
+    const c = parseDecimalValue(entComp?.value) || 0;
+    const l = parseDecimalValue(entLarg?.value) || 0;
     
-    const valoresAltura = inputsAlt.map(i => parseFloat(i?.value)).filter(v => !isNaN(v) && v > 0);
+    const valoresAltura = inputsAlt.map(i => parseDecimalValue(i?.value)).filter(v => !isNaN(v) && v > 0);
     
     let mediaAltura = 0;
     let volume = 0;
@@ -195,7 +227,7 @@ function calcularVolumeAtual() {
     }
     
     if (resVolume) resVolume.textContent = volume.toFixed(3) + ' m³';
-    if (resInfo) resInfo.textContent = `Altura média: ${mediaAltura.toFixed(2)} m (${valoresAltura.length} pontos medidos)`;
+    if (resInfo) resInfo.textContent = `Altura média: ${formatDecimalValue(mediaAltura)} m (${valoresAltura.length} pontos medidos)`;
     
     // Calculo Financeiro
     let valorMetro = 0;
@@ -212,16 +244,20 @@ function calcularVolumeAtual() {
 
 async function carregarEntradas() {
     if(!listaEntradas) return;
-    listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
     
     try {
         const querySnapshot = await getDocs(collection(db, 'entradas'));
         window.entradasAtuaisLista = [];
+        entradasSelecionadas.clear(); // Reset selection on reload
+        const checkAll = document.getElementById('checkAllEntradas');
+        if (checkAll) checkAll.checked = false;
+        
         querySnapshot.forEach(doc => window.entradasAtuaisLista.push({ id: doc.id, ...doc.data() }));
         renderizarEntradas();
     } catch (error) {
         console.error(error);
-        listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
+        listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
     }
 }
 
@@ -229,32 +265,51 @@ function renderizarEntradas() {
     if(!listaEntradas) return;
     listaEntradas.innerHTML = '';
     
-    const filtro = filtroEntradasNome ? filtroEntradasNome.value.toLowerCase() : '';
+    const filtroNome = filtroEntradasNome ? filtroEntradasNome.value.toLowerCase().trim() : '';
+    const dataInicio = document.getElementById('filtroEntradasDataInicio')?.value || '';
+    const dataFim = document.getElementById('filtroEntradasDataFim')?.value || '';
+    
     const filtradas = window.entradasAtuaisLista.filter(en => {
+        // Filtro por Nome (Empreiteiro ou Motorista)
         const emp = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
         const mot = (en.motorista || '').toLowerCase();
-        return emp.includes(filtro) || mot.includes(filtro);
+        const bateNome = !filtroNome || emp.includes(filtroNome) || mot.includes(filtroNome);
+        
+        // Filtro por Período de Data
+        let bateData = true;
+        if (dataInicio) {
+            bateData = bateData && (en.data >= dataInicio);
+        }
+        if (dataFim) {
+            bateData = bateData && (en.data <= dataFim);
+        }
+        
+        return bateNome && bateData;
     });
 
     if(filtradas.length === 0) {
-        listaEntradas.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma entrada encontrada.</td></tr>';
+        listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhuma entrada encontrada.</td></tr>';
+        atualizarPainelFechamento();
         return;
     }
     
+    // Ordenar decrescente pela data e hora de entrada
     filtradas.sort((a,b) => new Date(b.data + 'T' + (b.horario || '00:00')) - new Date(a.data + 'T' + (a.horario || '00:00'))).forEach(en => {
         const tr = document.createElement('tr');
         
-        const dtObj = new Date(en.data + 'T12:00:00'); // hack for timezone
+        const dtObj = new Date(en.data + 'T12:00:00'); // hack para timezone
         const dtStr = dtObj.toLocaleDateString('pt-BR');
         const valorTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        const isChecked = entradasSelecionadas.has(en.id) ? 'checked' : '';
         
         tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="check-entrada" data-id="${en.id}" ${isChecked} style="transform: scale(1.25); cursor: pointer;"></td>
             <td>${dtStr} <br><small style="color:#aaa;">${en.horario || '-'}</small></td>
             <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mot: ${en.motorista || '-'}</small></td>
             <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:#aaa;">${en.caminhao || '-'}</small></td>
             <td style="font-size: 0.9em;">
-                C: ${en.comp.toFixed(2)}m | L: ${en.larg.toFixed(2)}m <br>
-                A. Média: ${en.mediaAltura.toFixed(2)}m
+                C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m <br>
+                A. Média: ${formatDecimalValue(en.mediaAltura)}m
             </td>
             <td>
                 <div style="font-size:1.1rem; color:var(--accent-color); font-weight:bold;">${en.volume.toFixed(3)} m³</div>
@@ -279,7 +334,176 @@ function renderizarEntradas() {
         `;
         listaEntradas.appendChild(tr);
     });
+
+    atualizarPainelFechamento();
 }
+
+function atualizarPainelFechamento() {
+    const selected = window.entradasAtuaisLista.filter(en => entradasSelecionadas.has(en.id));
+    const count = selected.length;
+    const totalVolume = selected.reduce((sum, en) => sum + (en.volume || 0), 0);
+    const totalPay = selected.reduce((sum, en) => sum + (en.totalEmpreiteiro || 0), 0);
+    
+    const countBadge = document.getElementById('fechamentoQtdCargas');
+    const volText = document.getElementById('fechamentoVolumeTotal');
+    const payText = document.getElementById('fechamentoValorTotal');
+    
+    if (countBadge) countBadge.textContent = `${count} Carga(s) Selecionada(s)`;
+    if (volText) volText.textContent = totalVolume.toFixed(3) + ' m³';
+    if (payText) payText.textContent = totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+}
+
+window.gerarRelatorioConsolidado = function() {
+    const selected = window.entradasAtuaisLista.filter(en => entradasSelecionadas.has(en.id));
+    if (selected.length === 0) {
+        alert("Nenhuma carga selecionada. Por favor, marque as cargas desejadas nos checkboxes da tabela para gerar o relatório.");
+        return;
+    }
+    
+    // Ordenar pela ordem cronológica
+    selected.sort((a,b) => new Date(a.data + 'T' + (a.horario || '00:00')) - new Date(b.data + 'T' + (b.horario || '00:00')));
+    
+    const count = selected.length;
+    const totalVolume = selected.reduce((sum, en) => sum + (en.volume || 0), 0);
+    const totalPay = selected.reduce((sum, en) => sum + (en.totalEmpreiteiro || 0), 0);
+    
+    const dataInicioInput = document.getElementById('filtroEntradasDataInicio')?.value;
+    const dataFimInput = document.getElementById('filtroEntradasDataFim')?.value;
+    
+    let periodoStr = "Consolidado Geral";
+    if (dataInicioInput || dataFimInput) {
+        const di = dataInicioInput ? new Date(dataInicioInput + 'T12:00:00').toLocaleDateString('pt-BR') : 'Início';
+        const df = dataFimInput ? new Date(dataFimInput + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim';
+        periodoStr = `${di} a ${df}`;
+    }
+    
+    let win = window.open('', '_blank');
+    
+    let tableRowsHtml = '';
+    selected.forEach((en, index) => {
+        const dtObj = new Date(en.data + 'T12:00:00');
+        const dtStr = dtObj.toLocaleDateString('pt-BR');
+        const vTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        const vMetro = en.valorMetroEmpreiteiro ? en.valorMetroEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        
+        tableRowsHtml += `
+            <tr>
+                <td style="text-align:center;">${index + 1}</td>
+                <td>${dtStr} ${en.horario || ''}</td>
+                <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong></td>
+                <td>${en.motorista || '-'}</td>
+                <td style="text-align:center;"><span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span></td>
+                <td style="text-align:center;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m | A: ${formatDecimalValue(en.mediaAltura)}m</td>
+                <td style="text-align:right; font-weight:bold; color:#27ae60;">${en.volume.toFixed(3)} m³</td>
+                <td style="text-align:right;">${vMetro}</td>
+                <td style="text-align:right; font-weight:bold; color:#2980b9;">${vTotal}</td>
+            </tr>
+        `;
+    });
+    
+    win.document.write(`
+<html>
+<head>
+    <title>Fechamento de Extração - Empreiteiros</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; color: #333; font-size: 12px; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .logo-img { max-height: 60px; max-width: 220px; }
+        h1 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; }
+        h2 { margin: 5px 0 0 0; font-size: 13px; color: #555; font-weight: normal; }
+        .summary-box { display: flex; justify-content: space-between; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+        .summary-item { text-align: center; flex: 1; }
+        .summary-item:not(:last-child) { border-right: 1px solid #ddd; }
+        .summary-label { font-size: 11px; color: #666; text-transform: uppercase; }
+        .summary-value { font-size: 18px; font-weight: bold; margin-top: 5px; color: #2c3e50; }
+        table.records { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table.records th { background: #f2f2f2; border: 1px solid #ccc; padding: 8px; font-weight: bold; text-align: left; font-size: 11px; text-transform: uppercase; }
+        table.records td { border: 1px solid #ccc; padding: 8px; font-size: 11px; }
+        table.records tr:nth-child(even) { background: #fafafa; }
+        .total-row { font-weight: bold; background: #eef2f5 !important; font-size: 12px; }
+        .signatures { margin-top: 60px; display: flex; justify-content: space-around; }
+        .signature-line { text-align: center; width: 250px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        @media print {
+            body { margin: 15px; }
+            .summary-box { background: none; border: 1px solid #000; }
+            table.records th { background: #ddd !important; -webkit-print-color-adjust: exact; }
+            .total-row { background: #ddd !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td>
+                <img src="logo.png" alt="Logo Serraria" class="logo-img" onerror="this.style.display='none'">
+            </td>
+            <td style="text-align: right;">
+                <h1>Relatório de Fechamento de Extração</h1>
+                <h2>Período das Cargas: <strong>${periodoStr}</strong></h2>
+                <h2 style="font-size: 11px; color: #888;">Gerado em: ${new Date().toLocaleString('pt-BR')}</h2>
+            </td>
+        </tr>
+    </table>
+
+    <div class="summary-box">
+        <div class="summary-item">
+            <div class="summary-label">Total de Cargas</div>
+            <div class="summary-value">${count} viagen(s)</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">Volume Total</div>
+            <div class="summary-value" style="color:#27ae60;">${totalVolume.toFixed(3)} m³</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">Valor Total Fechado</div>
+            <div class="summary-value" style="color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</div>
+        </div>
+    </div>
+
+    <table class="records">
+        <thead>
+            <tr>
+                <th style="width: 30px; text-align:center;">Nº</th>
+                <th style="width: 80px;">Data/Hora</th>
+                <th>Empreiteiro</th>
+                <th>Motorista</th>
+                <th style="width: 70px; text-align:center;">Placa</th>
+                <th style="text-align:center;">Dimensões da Carga</th>
+                <th style="width: 70px; text-align:right;">Volume</th>
+                <th style="width: 80px; text-align:right;">Preço/m³</th>
+                <th style="width: 90px; text-align:right;">Total Geral</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${tableRowsHtml}
+            <tr class="total-row">
+                <td colspan="6" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
+                <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(3)} m³</td>
+                <td></td>
+                <td style="text-align: right; font-size:12px; color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="signatures">
+        <div class="signature-line">
+            Assinatura do Responsável
+        </div>
+        <div class="signature-line">
+            Assinatura do Empreiteiro
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
+    `);
+    win.document.close();
+};
 
 if (formEntrada) {
     formEntrada.addEventListener('submit', async (e) => {
@@ -307,6 +531,7 @@ if (formEntrada) {
             mediaAltura: calcData.mediaAltura,
             pontos: calcData.pontos,
             volume: calcData.volume,
+            alturas: inputsAlt.map(i => parseDecimalValue(i?.value) || 0), // Salvar alturas individuais
             valorMetroEmpreiteiro: calcData.valorMetro,
             totalEmpreiteiro: calcData.totalFinanceiro,
             atualizadoEm: new Date().toISOString()
@@ -321,6 +546,7 @@ if (formEntrada) {
             if (entradaEditandoId) {
                 await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
                 alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ atualizada com sucesso!`);
+                entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
             } else {
@@ -351,6 +577,7 @@ window.deletarEntrada = async function(id) {
     if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
         try {
             await deleteDoc(doc(db, 'entradas', id));
+            entradasSelecionadas.delete(id);
             await carregarEntradas();
         } catch (error) {
             console.error(error);
@@ -362,6 +589,13 @@ window.deletarEntrada = async function(id) {
 window.visualizarEntrada = function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
+    
+    let alturasStr = "Não gravadas individualmente";
+    if (en.alturas && Array.isArray(en.alturas)) {
+        alturasStr = `Esq: [${formatDecimalValue(en.alturas[0])}m, ${formatDecimalValue(en.alturas[1])}m, ${formatDecimalValue(en.alturas[2])}m]
+Dir: [${formatDecimalValue(en.alturas[3])}m, ${formatDecimalValue(en.alturas[4])}m, ${formatDecimalValue(en.alturas[5])}m]`;
+    }
+    
     alert(`Detalhes da Entrada:
 Empreiteiro: ${en.empreiteiroNome || en.fornecedor || 'N/A'}
 Motorista: ${en.motorista || 'N/A'}
@@ -369,9 +603,11 @@ Data: ${en.data} ${en.horario || ''}
 Caminhão/Placa: ${en.caminhao || 'N/A'} / ${en.placa}
 
 --- MEDIDAS ---
-Comprimento: ${en.comp}m
-Largura: ${en.larg}m
-Altura Média: ${en.mediaAltura}m
+Comprimento: ${formatDecimalValue(en.comp)}m
+Largura: ${formatDecimalValue(en.larg)}m
+Alturas da Carroceria:
+${alturasStr}
+Altura Média: ${formatDecimalValue(en.mediaAltura)}m
 Volume Total: ${en.volume.toFixed(3)}m³
 
 --- FINANCEIRO ---
@@ -390,14 +626,26 @@ window.alterarEntrada = function(id) {
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
     document.getElementById('entPlaca').value = en.placa || '';
-    document.getElementById('entComp').value = en.comp || '';
-    document.getElementById('entLarg').value = en.larg || '';
-    document.getElementById('entAltEsq1').value = '';
-    document.getElementById('entAltEsq2').value = '';
-    document.getElementById('entAltEsq3').value = '';
-    document.getElementById('entAltDir1').value = '';
-    document.getElementById('entAltDir2').value = '';
-    document.getElementById('entAltDir3').value = '';
+    document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
+    document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
+    
+    // Carregar alturas individuais se existirem
+    if (en.alturas && Array.isArray(en.alturas)) {
+        document.getElementById('entAltEsq1').value = formatDecimalValue(en.alturas[0]) || '';
+        document.getElementById('entAltEsq2').value = formatDecimalValue(en.alturas[1]) || '';
+        document.getElementById('entAltEsq3').value = formatDecimalValue(en.alturas[2]) || '';
+        document.getElementById('entAltDir1').value = formatDecimalValue(en.alturas[3]) || '';
+        document.getElementById('entAltDir2').value = formatDecimalValue(en.alturas[4]) || '';
+        document.getElementById('entAltDir3').value = formatDecimalValue(en.alturas[5]) || '';
+    } else {
+        document.getElementById('entAltEsq1').value = '';
+        document.getElementById('entAltEsq2').value = '';
+        document.getElementById('entAltEsq3').value = '';
+        document.getElementById('entAltDir1').value = '';
+        document.getElementById('entAltDir2').value = '';
+        document.getElementById('entAltDir3').value = '';
+    }
+    
     const btn = formEntrada.querySelector('button[type="submit"]');
     if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
     
@@ -443,7 +691,7 @@ window.imprimirEntrada = function(id) {
 <p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p>
 <p><strong>Caminhão:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
 <table><tr><th>Comprimento</th><th>Largura</th><th>Altura Média</th><th>Volume (m³)</th></tr>
-<tr><td>${en.comp}m</td><td>${en.larg}m</td><td>${en.mediaAltura}m</td><td><strong>${en.volume.toFixed(3)}</strong></td></tr></table>
+<tr><td>${formatDecimalValue(en.comp)}m</td><td>${formatDecimalValue(en.larg)}m</td><td>${formatDecimalValue(en.mediaAltura)}m</td><td><strong>${en.volume.toFixed(3)}</strong></td></tr></table>
 <br><p><strong>Valor por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
 <h3><strong>TOTAL A PAGAR:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</h3>
 <br><br><br>
@@ -540,7 +788,7 @@ function inicializarTogglesEntrada() {
 
 // Inicialização segura
 function inicializarModuloEntrada() {
-    // Forçar letras maiúsculas em tempo real nos campos de Entrada de Toras
+    // Forçar letras maiúsculas em tempo real nos campos de texto
     ['empNome', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
@@ -548,20 +796,75 @@ function inicializarModuloEntrada() {
         }
     });
     
+    // Máscara monetária de Empreiteiro
     const empValorMetroInput = document.getElementById('empValorMetro');
     if (empValorMetroInput) {
         empValorMetroInput.addEventListener('input', window.formatCurrencyInput);
     }
 
-    if(selectEmpreiteiro) selectEmpreiteiro.addEventListener('change', calcularVolumeAtual);
-    [entComp, entLarg, ...inputsAlt].forEach(input => {
-        if(input) input.addEventListener('input', calcularVolumeAtual);
+    // Aplicar máscara decimal com 2 casas e escuta de cálculo em tempo real nas medidas
+    const decimalInputs = [entComp, entLarg, ...inputsAlt];
+    decimalInputs.forEach(input => {
+        if(input) {
+            input.addEventListener('input', formatDecimal2Input);
+            input.addEventListener('input', calcularVolumeAtual);
+        }
     });
 
+    if(selectEmpreiteiro) selectEmpreiteiro.addEventListener('change', calcularVolumeAtual);
+
+    // Eventos de Busca e Filtro de Entradas
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
     const btnFiltrarEntradas = document.getElementById('btnFiltrarEntradas');
     if(btnFiltrarEntradas) btnFiltrarEntradas.addEventListener('click', renderizarEntradas);
+    
+    // Eventos de Filtro de Período
+    const filtroEntradasDataInicio = document.getElementById('filtroEntradasDataInicio');
+    const filtroEntradasDataFim = document.getElementById('filtroEntradasDataFim');
+    if(filtroEntradasDataInicio) filtroEntradasDataInicio.addEventListener('change', renderizarEntradas);
+    if(filtroEntradasDataFim) filtroEntradasDataFim.addEventListener('change', renderizarEntradas);
 
+    // Selecionar tudo
+    const checkAll = document.getElementById('checkAllEntradas');
+    if (checkAll) {
+        checkAll.addEventListener('change', (e) => {
+            const checkboxes = listaEntradas.querySelectorAll('.check-entrada');
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+                const id = cb.dataset.id;
+                if (e.target.checked) {
+                    entradasSelecionadas.add(id);
+                } else {
+                    entradasSelecionadas.delete(id);
+                }
+            });
+            atualizarPainelFechamento();
+        });
+    }
+
+    // Delegar evento de clique individual para checkboxes de entradas
+    if (listaEntradas) {
+        listaEntradas.addEventListener('change', (e) => {
+            if (e.target.classList.contains('check-entrada')) {
+                const id = e.target.dataset.id;
+                if (e.target.checked) {
+                    entradasSelecionadas.add(id);
+                } else {
+                    entradasSelecionadas.delete(id);
+                    if (checkAll) checkAll.checked = false;
+                }
+                atualizarPainelFechamento();
+            }
+        });
+    }
+
+    // Botão de gerar relatório consolidado
+    const btnGerarConsolidado = document.getElementById('btnGerarRelatorioConsolidado');
+    if (btnGerarConsolidado) {
+        btnGerarConsolidado.addEventListener('click', window.gerarRelatorioConsolidado);
+    }
+
+    // Filtros de Empreiteiros
     const filtroEmpreiteirosBusca = document.getElementById('filtroEmpreiteirosBusca');
     if(filtroEmpreiteirosBusca) {
         filtroEmpreiteirosBusca.addEventListener('input', renderizarEmpreiteiros);
@@ -569,6 +872,7 @@ function inicializarModuloEntrada() {
     const btnFiltrarEmpreiteiros = document.getElementById('btnFiltrarEmpreiteiros');
     if(btnFiltrarEmpreiteiros) btnFiltrarEmpreiteiros.addEventListener('click', renderizarEmpreiteiros);
 
+    // Inicializar data/horário atual padrão no formulário
     if(entData) entData.valueAsDate = new Date();
     if(entHorario) {
         const now = new Date();
