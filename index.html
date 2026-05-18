@@ -655,16 +655,7 @@
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="input-group">
                                 <label>Função / Cargo *</label>
-                                <select id="rh-funcao" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="OPERADOR DE SERRA">OPERADOR DE SERRA (SERRADOR)</option>
-                                    <option value="EMPILHADEIRISTA">EMPILHADEIRISTA</option>
-                                    <option value="MOQUEIRO">MOQUEIRO (ESTUFISTA)</option>
-                                    <option value="MECÂNICO">MECÂNICO DE MANUTENÇÃO</option>
-                                    <option value="AUXILIAR DE PRODUÇÃO">AUXILIAR DE PRODUÇÃO</option>
-                                    <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
-                                    <option value="OUTRO">OUTRO / ESPECIAL</option>
-                                </select>
+                                <input type="text" id="rh-funcao" class="text-uppercase-input" required placeholder="Ex: SERRADOR / EMPILHADEIRISTA">
                             </div>
                             <div class="input-group">
                                 <label>Data de Admissão *</label>
@@ -689,6 +680,14 @@
                             <div class="input-group" style="grid-column: span 2;">
                                 <label>Chave PIX ou Dados Bancários para Pagamento</label>
                                 <input type="text" id="rh-dados-bancarios" placeholder="Ex: Chave PIX (Celular/CPF) ou Banco/Ag/Cc">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor H. Extra Normal R$ *</label>
+                                <input type="text" id="rh-valor-he-normal" required placeholder="R$ 0,00">
+                            </div>
+                            <div class="input-group">
+                                <label>Valor H. Extra Sáb/Dom/Fer R$ *</label>
+                                <input type="text" id="rh-valor-he-especial" required placeholder="R$ 0,00">
                             </div>
                         </div>
 

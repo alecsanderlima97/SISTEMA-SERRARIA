@@ -73,6 +73,8 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-vale').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.vale || 0) : `R$ ${(func.vale || 0).toFixed(2)}`;
         document.getElementById('rh-forma-pagamento').value = func.formaPagamento || 'PIX';
         document.getElementById('rh-dados-bancarios').value = func.dadosBancarios || '';
+        document.getElementById('rh-valor-he-normal').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.valorHeNormal || 0) : `R$ ${(func.valorHeNormal || 0).toFixed(2)}`;
+        document.getElementById('rh-valor-he-especial').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.valorHeEspecial || 0) : `R$ ${(func.valorHeEspecial || 0).toFixed(2)}`;
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
         document.getElementById('rh-ferias-inicio').value = func.feriasInicio || '';
         document.getElementById('rh-ferias-fim').value = func.feriasFim || '';
@@ -82,6 +84,8 @@ function abrirFormularioRH(func = null) {
         funcionarioEditandoId = null;
         if (formFuncionario) formFuncionario.reset();
         document.getElementById('rh-id').value = '';
+        document.getElementById('rh-valor-he-normal').value = '';
+        document.getElementById('rh-valor-he-especial').value = '';
         document.getElementById('tituloFormRH').innerHTML = `<i class="fa-solid fa-user-plus"></i> Novo Funcionário`;
         if (txtToggleFormRH) txtToggleFormRH.textContent = "Voltar para Lista";
     }
@@ -100,16 +104,16 @@ function fecharFormularioRH() {
 
 // Configuração de máscaras nos inputs e eventos
 function configurarFormulariosRH() {
-    // Máscara de Salário e Vale
-    ['rh-salario', 'rh-vale'].forEach(id => {
+    // Máscara de Salário, Vale e valores de horas extras
+    ['rh-salario', 'rh-vale', 'rh-valor-he-normal', 'rh-valor-he-especial'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.formatCurrencyInput) {
             el.addEventListener('input', window.formatCurrencyInput);
         }
     });
 
-    // Forçar caixa alta no Nome Completo e Dados Bancários
-    ['rh-nome', 'rh-dados-bancarios'].forEach(id => {
+    // Forçar caixa alta no Nome Completo, Função e Dados Bancários
+    ['rh-nome', 'rh-funcao', 'rh-dados-bancarios'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.forceUppercaseInput) {
             el.addEventListener('input', window.forceUppercaseInput);
@@ -306,6 +310,8 @@ async function salvarFuncionario() {
     
     const salario = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('rh-salario').value) : parseFloat(document.getElementById('rh-salario').value.replace(/\D/g, "")) / 100;
     const vale = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('rh-vale').value) : parseFloat(document.getElementById('rh-vale').value.replace(/\D/g, "")) / 100;
+    const valorHeNormal = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('rh-valor-he-normal').value) : parseFloat(document.getElementById('rh-valor-he-normal').value.replace(/\D/g, "")) / 100;
+    const valorHeEspecial = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('rh-valor-he-especial').value) : parseFloat(document.getElementById('rh-valor-he-especial').value.replace(/\D/g, "")) / 100;
     
     const formaPagamento = document.getElementById('rh-forma-pagamento').value;
     const dadosBancarios = document.getElementById('rh-dados-bancarios').value.toUpperCase().trim();
@@ -313,7 +319,7 @@ async function salvarFuncionario() {
     const feriasInicio = document.getElementById('rh-ferias-inicio').value;
     const feriasFim = document.getElementById('rh-ferias-fim').value;
 
-    if (!nome || !cpf || !contato || !funcao || !admissao || !salario) {
+    if (!nome || !cpf || !contato || !funcao || !admissao || !salario || isNaN(valorHeNormal) || isNaN(valorHeEspecial)) {
         alert("Preencha todos os campos obrigatórios (*).");
         return;
     }
@@ -329,6 +335,8 @@ async function salvarFuncionario() {
             nome, nascimento, cpf, rg, contato, funcao, admissao,
             salario: parseFloat(salario) || 0,
             vale: parseFloat(vale) || 0,
+            valorHeNormal: parseFloat(valorHeNormal) || 0,
+            valorHeEspecial: parseFloat(valorHeEspecial) || 0,
             formaPagamento, dadosBancarios, feriasDias, feriasInicio, feriasFim,
             atualizadoEm: new Date().toISOString()
         };
@@ -558,14 +566,14 @@ function gerarHoleriteHtml(f) {
     const container = document.getElementById('conteudoHolerite');
     if (!container) return;
 
-    // Calcular valores de Horas Extras e Holerite baseado em Carga Horária de 220h
+    // Calcular valores de Horas Extras e Holerite baseado nas tarifas acordadas no cadastro
     const salarioBase = f.salario || 0;
     const vale = f.vale || 0;
     const heList = f.horasExtras || [];
 
-    const valorHoraNormal = salarioBase / 220;
-    const valorHE50 = valorHoraNormal * 1.5;
-    const valorHE100 = valorHoraNormal * 2.0;
+    // Tarifas acordadas do cadastro ou fallbacks dinâmicos caso vazio
+    const valorHE50 = f.valorHeNormal !== undefined ? (parseFloat(f.valorHeNormal) || 0) : ((salarioBase / 220) * 1.5);
+    const valorHE100 = f.valorHeEspecial !== undefined ? (parseFloat(f.valorHeEspecial) || 0) : ((salarioBase / 220) * 2.0);
 
     let horas50 = 0;
     let horas100 = 0;
@@ -680,7 +688,7 @@ function gerarHoleriteHtml(f) {
 
             <!-- Líquido a Receber Box -->
             <div style="border: 2.5px solid black; margin-top: 15px; padding: 10px; display: flex; justify-content: space-between; align-items: center; background: #eee;">
-                <span style="font-weight: 900; font-size: 1rem;">LÍQUIDO A RECEBER:</span>
+                <span style="font-weight: 900; font-size: 0.95rem;">LÍQUIDO (SALÁRIO + H. EXTRAS - VALE):</span>
                 <span style="font-weight: 900; font-size: 1.4rem; color: black;">R$ ${valorLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
             </div>
 
@@ -691,9 +699,9 @@ function gerarHoleriteHtml(f) {
             </div>
 
             <!-- Declaração de Recebimento e Assinatura -->
-            <div style="margin-top: 40px; border-top: 1px solid black; padding-top: 15px;">
-                <p style="font-size: 0.75rem; text-align: justify; margin: 0 0 40px 0;">
-                    Declaro ter recebido a importância líquida discriminada neste recibo de pagamento, quitando integralmente todos os proventos acima descritos para todos os fins.
+            <div style="margin-top: 30px; border-top: 1px solid black; padding-top: 10px;">
+                <p style="font-size: 0.72rem; text-align: justify; margin: 0 0 35px 0; color: #333; font-style: italic;">
+                    * OBSERVAÇÃO IMPORTANTE: Este recibo compreende o cálculo do Salário Base e das Horas Extras acumuladas com dedução exclusiva do adiantamento mensal (Vale). <strong>NÃO ESTÃO INCLUÍDAS</strong> deduções oficiais de impostos (como INSS ou FGTS) nem descontos variáveis por faltas operacionais, os quais são ajustados à parte.
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: flex-end;">
                     <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.8rem;">
