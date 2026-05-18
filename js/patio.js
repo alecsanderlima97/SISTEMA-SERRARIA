@@ -25,6 +25,24 @@ function formatDecimalMockup(num, places = 3) {
     return num.toFixed(places).replace('.', ',');
 }
 
+// Avaliar expressões matemáticas simples (ex: 50x14+16)
+function parseMathExpression(expr) {
+    if (!expr) return 0;
+    // Substitui 'x' por '*' para multiplicação e vírgula por ponto (caso digitem)
+    let sanitized = expr.toString().replace(/x/gi, '*').replace(/,/g, '.');
+    // Remove qualquer caractere que não seja número, operador ou parênteses
+    sanitized = sanitized.replace(/[^0-9+\-*/().]/g, '');
+    try {
+        if (!sanitized) return 0;
+        // Avalia a expressão de forma segura
+        const result = new Function('return ' + sanitized)();
+        return Math.round(parseFloat(result)) || 0;
+    } catch (e) {
+        console.error("Erro ao avaliar expressão:", expr, e);
+        return 0;
+    }
+}
+
 // Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
 function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
@@ -129,7 +147,8 @@ function adicionarItemAoPatio() {
     const largRaw = document.getElementById('patioItemLarg').value;
     const compRaw = document.getElementById('patioItemComp').value;
     const pacotes = parseInt(document.getElementById('patioItemPacotes').value) || 0;
-    const pecas = parseInt(document.getElementById('patioItemPecas').value) || 0;
+    const pecasRaw = document.getElementById('patioItemPecas').value;
+    const pecas = parseMathExpression(pecasRaw);
 
     const esp = parseDecimal(espRaw);
     const larg = parseDecimal(largRaw);
@@ -160,6 +179,7 @@ function adicionarItemAoPatio() {
         comprimento: comp,
         pacotes: pacotes,
         pecas: pecas,
+        pecasRaw: pecasRaw,
         totalPecas: pacotes * pecas,
         volumeUnidade: volumeUnidade,
         volume: volumeLinha
@@ -283,7 +303,10 @@ function renderizarItensPatioTemp() {
                 <!-- FORMAÇÃO (Pieces + unit vol) -->
                 <td style="padding: 14px 10px; color: #475569;">
                     <div style="font-weight: 700; color: #0f172a;">${item.pecas} peças</div>
-                    <small style="color: #64748b; font-size: 0.75rem;">(${formatDecimalMockup(item.volumeUnidade)} m³ / pct)</small>
+                    <small style="color: #64748b; font-size: 0.75rem;">
+                        ${item.pecasRaw && item.pecasRaw !== item.pecas.toString() ? `Fórm: ${item.pecasRaw}<br>` : ''}
+                        (${formatDecimalMockup(item.volumeUnidade)} m³ / pct)
+                    </small>
                 </td>
                 <!-- VOLUME TOTAL -->
                 <td style="padding: 14px 10px; text-align: right;">
