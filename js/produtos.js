@@ -9,6 +9,31 @@ const produtosCollection = collection(db, 'produtos');
 let produtosAtuais = [];
 let produtoEditandoId = null;
 
+// Toggles de layout Produtos / Madeiras
+const cardFormProduto = document.getElementById('cardFormProduto');
+const panelListaProdutos = document.getElementById('panelListaProdutos');
+const btnToggleListaProdutos = document.getElementById('btnToggleListaProdutos');
+const btnToggleFormProduto = document.getElementById('btnToggleFormProduto');
+
+if (btnToggleListaProdutos) {
+    btnToggleListaProdutos.addEventListener('click', () => {
+        cardFormProduto.style.display = 'none';
+        panelListaProdutos.style.display = 'block';
+    });
+}
+
+if (btnToggleFormProduto) {
+    btnToggleFormProduto.addEventListener('click', () => {
+        panelListaProdutos.style.display = 'none';
+        cardFormProduto.style.display = 'block';
+        formProduto.reset();
+        produtoEditandoId = null;
+        const submitBtn = formProduto.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
+        submitBtn.classList.replace('btn-secondary', 'btn-primary');
+    });
+}
+
 // Forçar letras maiúsculas em tempo real nos campos de madeiras
 ['prodTipo', 'prodNatureza', 'prodQualidade'].forEach(id => {
     const input = document.getElementById(id);
@@ -72,6 +97,10 @@ formProduto.addEventListener('submit', async function(e) {
 window.editarProduto = function(id) {
     let p = produtosAtuais.find(x => x.id === id);
     if(p) {
+        // Mudar para o formulário
+        if (panelListaProdutos) panelListaProdutos.style.display = 'none';
+        if (cardFormProduto) cardFormProduto.style.display = 'block';
+
         document.getElementById('prodTipo').value = p.tipo || '';
         document.getElementById('prodNatureza').value = p.natureza || '';
         document.getElementById('prodQualidade').value = p.qualidade || '';

@@ -156,7 +156,7 @@ function configurarEventos() {
     const selectTransp = document.getElementById('v2-select-transporte');
     if (selectTransp) selectTransp.onchange = selecionarTransportadoraCadastrada;
 
-    ['v2-taxa-nf', 'v2-valor-frete', 'v2-adicional-madeira', 'v2-adicional-frete', 'v2-obs-madeira', 'v2-obs-frete'].forEach(id => {
+    ['v2-taxa-nf', 'v2-valor-frete', 'v2-adicional-madeira', 'v2-adicional-frete', 'v2-obs-madeira', 'v2-obs-frete', 'v2-obs-carga'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.oninput = atualizarTotalGeral;
     });
@@ -450,10 +450,13 @@ function atualizarTotalGeral() {
     romaneioAtual.logistica.adicionalFrete = addFrete;
     romaneioAtual.logistica.obsFrete = document.getElementById('v2-obs-frete')?.value || '';
 
+    romaneioAtual.observacaoCarga = document.getElementById('v2-obs-carga')?.value || '';
+
     totalFrete += addFrete;
     const totalMadeiraComAjuste = totalMadeira + addMadeira;
 
-    const taxa = window.parseCurrencyValue(document.getElementById('v2-taxa-nf')?.value) || 0;
+    const taxaStr = (document.getElementById('v2-taxa-nf')?.value || "0").toString().replace(',', '.');
+    const taxa = parseFloat(taxaStr) || 0;
     const imposto = totalMadeiraComAjuste * (taxa / 100);
     
     romaneioAtual.financeiro.totalGeral = totalMadeiraComAjuste + imposto;
@@ -658,6 +661,7 @@ window.carregarRomaneioParaEdicao = function(r) {
     
     if (document.getElementById('v2-obs-madeira')) document.getElementById('v2-obs-madeira').value = r.financeiro?.obsMadeira || '';
     if (document.getElementById('v2-obs-frete')) document.getElementById('v2-obs-frete').value = r.logistica?.obsFrete || '';
+    if (document.getElementById('v2-obs-carga')) document.getElementById('v2-obs-carga').value = r.observacaoCarga || '';
     
     // 3. Forçar recálculo e renderização
     atualizarTotalGeral();
@@ -690,6 +694,7 @@ window.finalizarRomaneioV2 = async () => {
     romaneioAtual.logistica.placa = (document.getElementById('v2-placa')?.value || '').toUpperCase().trim();
     romaneioAtual.logistica.obsFrete = (document.getElementById('v2-obs-frete')?.value || '').toUpperCase().trim();
     romaneioAtual.financeiro.obsMadeira = (document.getElementById('v2-obs-madeira')?.value || '').toUpperCase().trim();
+    romaneioAtual.observacaoCarga = (document.getElementById('v2-obs-carga')?.value || '').toUpperCase().trim();
     
     const btn = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
     if (btn) {
@@ -833,7 +838,8 @@ window.verPreviaRomaneioV2 = () => {
         financeiro: {
             ...romaneioAtual.financeiro,
             obsMadeira: (document.getElementById('v2-obs-madeira')?.value || '').toUpperCase().trim()
-        }
+        },
+        observacaoCarga: (document.getElementById('v2-obs-carga')?.value || '').toUpperCase().trim()
     };
 
     let pacotesHtml = `
@@ -946,6 +952,12 @@ window.verPreviaRomaneioV2 = () => {
                 </p>
             </div>
         </div>
+
+        ${r.observacaoCarga ? `
+        <div style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #fff; color: black; page-break-inside: avoid;">
+            <p style="margin: 0; font-weight: bold; font-size: 1rem; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px;">Observações da Carga</p>
+            <p style="margin: 0; font-size: 0.95rem; white-space: pre-wrap;">${r.observacaoCarga}</p>
+        </div>` : ''}
         <div class="show-on-print" style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Motorista</div>
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Recebedor</div>

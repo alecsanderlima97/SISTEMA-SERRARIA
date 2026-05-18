@@ -9,6 +9,31 @@ const transportesCollection = collection(db, 'transportes');
 let transportesAtuais = [];
 let transporteEditandoId = null;
 
+// Toggles de layout Transportadoras
+const cardFormTransporte = document.getElementById('cardFormTransporte');
+const panelListaTransportes = document.getElementById('panelListaTransportes');
+const btnToggleListaTransportes = document.getElementById('btnToggleListaTransportes');
+const btnToggleFormTransporte = document.getElementById('btnToggleFormTransporte');
+
+if (btnToggleListaTransportes) {
+    btnToggleListaTransportes.addEventListener('click', () => {
+        cardFormTransporte.style.display = 'none';
+        panelListaTransportes.style.display = 'block';
+    });
+}
+
+if (btnToggleFormTransporte) {
+    btnToggleFormTransporte.addEventListener('click', () => {
+        panelListaTransportes.style.display = 'none';
+        cardFormTransporte.style.display = 'block';
+        formTransporte.reset();
+        transporteEditandoId = null;
+        const submitBtn = formTransporte.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
+        submitBtn.classList.replace('btn-secondary', 'btn-primary');
+    });
+}
+
 // Forçar letras maiúsculas em tempo real nos campos de transportadoras
 ['transNome', 'transMotorista', 'transCaminhao', 'transPlaca'].forEach(id => {
     const input = document.getElementById(id);
@@ -67,6 +92,10 @@ formTransporte.addEventListener('submit', async function(e) {
 window.editarTransporte = function(id) {
     let t = transportesAtuais.find(x => x.id === id);
     if(t) {
+        // Mudar para o formulário
+        if (panelListaTransportes) panelListaTransportes.style.display = 'none';
+        if (cardFormTransporte) cardFormTransporte.style.display = 'block';
+
         document.getElementById('transNome').value = t.nome || '';
         document.getElementById('transMotorista').value = t.motorista || '';
         document.getElementById('transCaminhao').value = t.caminhao || '';

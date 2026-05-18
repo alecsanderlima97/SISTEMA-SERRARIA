@@ -270,6 +270,7 @@ window.verDetalhesRomaneio = async (id) => {
             </div>
         </div>
         ${pacotesHtml}
+        ${r.observacaoCarga ? `<div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);"><p style="margin:0; font-weight:bold; color:var(--warning);">Observação da Carga:</p><p style="margin: 5px 0 0 0; font-size:0.9rem; color:#eee; white-space:pre-wrap;">${r.observacaoCarga}</p></div>` : ''}
         <div style="margin-top: 20px; text-align: right; background: rgba(0,255,136,0.1); padding: 15px; border-radius: 8px;">
             <p style="font-size: 1.2rem; color: #00ff88; font-weight: 800; margin: 0;">TOTAL DA CARGA: R$ ${(r.financeiro?.totalGeral || r.valorFinal || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
             <small>Taxa aplicada: ${r.financeiro?.taxaNF || 0}%</small>

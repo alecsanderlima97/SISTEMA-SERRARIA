@@ -372,14 +372,8 @@
                     <p>Gerencie seus motoristas e caminhões</p>
                 </div>
 
-                <div class="form-table-grid" id="gridTransportesLayout" style="display: block;">
-                    <div class="glass-panel form-panel" id="cardFormTransporte" style="margin-bottom: 20px; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                        <h2><i class="fa-solid fa-truck-ramp-box"></i> Nova Transportadora</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleListaTransportes" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-list"></i> Gerenciar Transportadoras
-                        </button>
-                    </div>
+                <div class="form-table-grid">
+                    <div class="glass-panel form-panel" style="margin-bottom: 0;">
                     <form id="formTransporte" class="grid-form">
                         <div class="input-group">
                             <label>Nome do Contratante / Transportadora *</label>
@@ -404,13 +398,8 @@
                     </form>
                 </div>
 
-                <div class="glass-panel list-panel" id="panelListaTransportes" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h2><i class="fa-solid fa-list"></i> Transportadoras Cadastradas</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleFormTransporte" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-plus-circle"></i> Cadastrar Transportadora
-                        </button>
-                    </div>
+                <div class="glass-panel list-panel" style="margin-bottom: 0;">
+                    <h2><i class="fa-solid fa-list"></i> Transportadoras Cadastradas</h2>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -438,13 +427,10 @@
                     <p>Cadastre os tipos de madeira e o valor do m³</p>
                 </div>
 
-                <div class="form-table-grid" id="gridProdutosLayout" style="display: block;">
-                    <div class="glass-panel" id="cardFormProduto" style="margin-bottom: 20px; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <div class="form-table-grid">
+                    <div class="glass-panel" style="margin-bottom: 0;">
+                    <div class="section-title">
                         <h2><i class="fa-solid fa-plus-circle"></i> Novo Tipo Sorteado</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleListaProdutos" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-list"></i> Gerenciar Madeiras
-                        </button>
                     </div>
                     <form id="formProduto" class="grid-form">
                         <div class="input-group">
@@ -487,12 +473,9 @@
                     </form>
                 </div>
 
-                <div class="glass-panel" id="panelListaProdutos" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div class="glass-panel" style="margin-bottom: 0;">
+                    <div class="section-title">
                         <h2><i class="fa-solid fa-list-check"></i> Madeiras Cadastradas</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleFormProduto" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-plus-circle"></i> Nova Madeira
-                        </button>
                     </div>
                     <div class="table-container">
                         <table>
@@ -1077,7 +1060,7 @@
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
                             </div>
                             
-                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Altura (m)</label>
                                     <input type="number" id="subCliAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -1157,10 +1140,6 @@
                                 <input type="text" id="calcCavCidadeEstado" class="text-uppercase-input" placeholder="Cidade / UF">
                             </div>
 
-                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
-                                <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Transporte e Cubagem</h3>
-                            </div>
-
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>Nosso Romaneio *</label>
                                 <input type="text" id="calcCavRomaneio" class="text-uppercase-input" required placeholder="Ex: 00123">
@@ -1169,9 +1148,14 @@
                                 <label>Romaneio do Cliente (Deles)</label>
                                 <input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987">
                             </div>
+                            
                             <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Motorista do Caminhão</label>
                                 <input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista">
+                            </div>
+
+                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                                <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Transporte e Cubagem</h3>
                             </div>
 
                             <div class="input-group" style="margin-bottom:10px;">
@@ -1188,7 +1172,7 @@
                             </div>
 
                             <!-- 3 Medidas para Calcular Volume em m3 -->
-                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
                                     <input type="number" id="calcCavAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -1465,14 +1449,6 @@
                         </div>
                     </div>
 
-                    <!-- Observação Geral da Carga -->
-                    <div class="card-v2" style="margin-top: 15px;">
-                        <span class="card-title">Observação da Carga</span>
-                        <div class="input-group-v2">
-                            <textarea id="v2-obs-carga" class="input-v2" style="width: 100%; min-height: 80px; resize: vertical; padding: 10px;" placeholder="Adicione informações importantes sobre a carga, cliente ou motorista..."></textarea>
-                        </div>
-                    </div>
-
                     <div class="finance-footer" style="margin-top: 15px;">
                         <!-- O conteúdo detalhado e cálculos são gerados pelo js/romaneio_v2.js -->
                         <p style="text-align: center; width: 100%;">Carregando cálculos...</p>
@@ -1669,14 +1645,7 @@
             </div>
             <div class="modal-footer-v2">
                 <button id="btnConfirmarSeguranca" class="btn-v2" style="background: var(--danger-color); color: white; font-weight: bold; flex: 1;">
-                    Confirmar Ação
-                </button>
-                <button onclick="fecharModalSeguranca()" class="btn-v2 btn-secondary-v2" style="flex: 1;">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: CONTROLE DE PRODUÇÃO E CONTAGEM DE PÁTIO -->
+                  <!-- MODAL: CONTROLE DE PRODUÇÃO E CONTAGEM DE PÁTIO -->
     <div id="modalControleProducao" class="modal-v2 patio-wood-theme" style="display: none; overflow-y: auto; background: rgba(0, 0, 0, 0.88); z-index: 9999;">
         <div class="modal-content-v2" style="max-width: 1200px; width: 95%; padding: 25px; border-radius: 16px; border: none; font-family: var(--font-main);">
             
@@ -1811,16 +1780,8 @@
                             <input type="number" id="patioItemPacotes" min="1" placeholder="Ex: 2" required>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label><i class="fa-solid fa-calculator"></i> Alt x Cam + Am.</label>
-                            <div style="display: flex; gap: 4px;">
-                                <input type="number" id="patioItemAltura" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="Alt">
-                                <input type="number" id="patioItemCamada" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="Cam">
-                                <input type="number" id="patioItemAmarras" class="calc-patio" style="width: 33%; padding: 7px 5px !important; text-align: center;" placeholder="+">
-                            </div>
-                        </div>
-                        <div class="input-group" style="margin-bottom: 0;">
-                            <label><i class="fa-solid fa-layer-group"></i> Peças/Pct</label>
-                            <input type="number" id="patioItemPecas" min="1" placeholder="Total" required style="background: rgba(0,0,0,0.1) !important; color: #fff !important; cursor: not-allowed;" readonly>
+                            <label><i class="fa-solid fa-layer-group"></i> Peças / Pacote</label>
+                            <input type="number" id="patioItemPecas" min="1" placeholder="Ex: 100" required>
                         </div>
                         <div class="btn-add-lote-col" style="margin-bottom: 0;">
                             <button type="submit" class="btn-patio-print" style="padding: 10px; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.2rem; border-radius: 8px; background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;" title="Adicionar Lote">
