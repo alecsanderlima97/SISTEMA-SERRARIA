@@ -429,31 +429,51 @@ window.fecharModalHE = () => {
 function renderizarTabelaHE(func) {
     const tbody = document.getElementById('listaHE');
     const totalSoma = document.getElementById('he-total-soma');
+    const totalValor = document.getElementById('he-total-valor');
     if (!tbody) return;
 
     const heList = func.horasExtras || [];
+    
+    // Tarifas acordadas ou fallbacks
+    const valorHE50 = func.valorHeNormal !== undefined ? (parseFloat(func.valorHeNormal) || 0) : (((func.salario || 0) / 220) * 1.5);
+    const valorHE100 = func.valorHeEspecial !== undefined ? (parseFloat(func.valorHeEspecial) || 0) : (((func.salario || 0) / 220) * 2.0);
+
     if (heList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#aaa; padding:15px;">Nenhuma hora extra registrada.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:15px;">Nenhuma hora extra registrada.</td></tr>';
         if (totalSoma) totalSoma.textContent = '0h';
+        if (totalValor) totalValor.textContent = 'R$ 0,00';
         return;
     }
 
     // Ordenar por data decrescente
     heList.sort((a,b) => new Date(b.data) - new Date(a.data));
 
+    let somaHoras = 0;
+    let somaValores = 0;
+
     tbody.innerHTML = heList.map(h => {
         const diaFormatado = new Date(h.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
         const badgeCor = h.tipo === 'ESPECIAL' ? 'rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#ff7b72;' : 'rgba(0,255,136,0.05); border:1px solid #00ff88; color:#00ff88;';
         const labelTipo = h.tipo === 'ESPECIAL' ? '100% Extra 🟥' : '50% Extra';
         
+        const tarifa = h.tipo === 'ESPECIAL' ? valorHE100 : valorHE50;
+        const valorCalculado = (parseFloat(h.horas) || 0) * tarifa;
+
+        somaHoras += parseFloat(h.horas) || 0;
+        somaValores += valorCalculado;
+
         return `
             <tr>
                 <td><strong>${diaFormatado.toUpperCase()}</strong></td>
-                <td><span style="font-size:1.05rem; font-weight:bold; color:white;">${h.horas} horas</span></td>
+                <td><span style="font-size:1.05rem; font-weight:bold; color:white;">${h.horas}h</span></td>
                 <td>
                     <span style="padding:4px 8px; border-radius:12px; font-size:0.75rem; display:inline-block; font-weight:bold; ${badgeCor}">
                         ${labelTipo}
                     </span>
+                </td>
+                <td>
+                    <strong style="color:#00ff88; font-size:0.95rem;">${valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><br>
+                    <small style="color:#aaa;">(Tarifa: ${tarifa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h)</small>
                 </td>
                 <td>
                     <button onclick="window.removerHoraExtra('${h.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Hora Extra">
@@ -464,8 +484,8 @@ function renderizarTabelaHE(func) {
         `;
     }).join('');
 
-    const soma = heList.reduce((acc, h) => acc + (parseFloat(h.horas) || 0), 0);
-    if (totalSoma) totalSoma.textContent = `${soma}h`;
+    if (totalSoma) totalSoma.textContent = `${somaHoras}h`;
+    if (totalValor) totalValor.textContent = somaValores.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 async function adicionarHoraExtra() {

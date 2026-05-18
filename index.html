@@ -1804,6 +1804,7 @@
                 <input type="hidden" id="he-funcionario-id">
 
                 <!-- Formulário rápido para adicionar HE -->
+                <!-- Formulário rápido para adicionar HE -->
                 <form id="formHE" onsubmit="event.preventDefault();" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                         <div class="input-group" style="margin-bottom: 0;">
@@ -1815,13 +1816,7 @@
                             <input type="number" id="he-horas" step="0.5" min="0.5" max="24" required placeholder="Ex: 2">
                         </div>
                     </div>
-                    <div class="input-group" style="margin-bottom: 12px;">
-                        <label>Tipo de Dia (Acréscimo)</label>
-                        <select id="he-tipo-dia">
-                            <option value="NORMAL">Dia de Semana / Normal (50% Extra)</option>
-                            <option value="ESPECIAL">Sábado, Domingo ou Feriado (100% Extra) 🟥</option>
-                        </select>
-                    </div>
+                    <input type="hidden" id="he-tipo-dia" value="NORMAL">
                     <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; background: #00ff88; color: black; font-weight: bold; border-color: #00ff88;">
                         <i class="fa-solid fa-plus"></i> ADICIONAR HORA EXTRA
                     </button>
@@ -1835,6 +1830,7 @@
                                 <th>Data / Dia</th>
                                 <th>Horas</th>
                                 <th>Tipo</th>
+                                <th>Valor a Receber</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -1845,8 +1841,10 @@
                 </div>
             </div>
             <div class="modal-footer-v2" style="justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 15px;">
-                <div style="font-size: 1.1rem;">
-                    Total de Horas Extras: <strong id="he-total-soma" style="color: #00ff88;">0h</strong>
+                <div style="font-size: 1.05rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span>Horas: <strong id="he-total-soma" style="color: #00ff88;">0h</strong></span>
+                    <span style="color: rgba(255,255,255,0.3);">|</span>
+                    <span>Total a Receber: <strong id="he-total-valor" style="color: #00ff88;">R$ 0,00</strong></span>
                 </div>
                 <button onclick="window.fecharModalHE()" class="btn-v2" style="background: var(--border); color: white;">Fechar</button>
             </div>
