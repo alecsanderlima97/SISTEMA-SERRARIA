@@ -267,6 +267,11 @@ input::placeholder {
     padding: 1.5rem 0;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
     z-index: 10;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    align-self: flex-start;
 }
 
 .brand {
@@ -460,8 +465,8 @@ input::placeholder {
 .kpi-card {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.2rem;
+    gap: 0.8rem;
+    padding: 1rem;
     transition: transform 0.3s ease;
 }
 
@@ -470,20 +475,20 @@ input::placeholder {
 }
 
 .kpi-icon {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-    border-radius: 10px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #fff;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .kpi-data h3 {
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     font-weight: 800;
     margin: 0;
     color: #fff;
@@ -491,7 +496,7 @@ input::placeholder {
 
 .kpi-data p {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.6);
 }
 
