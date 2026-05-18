@@ -67,7 +67,12 @@
         <!-- CONTEÚDO PRINCIPAL -->
         <main class="main-content">
             <!-- Global Header -->
-            <div class="global-header hide-on-print" style="display: flex; justify-content: flex-end; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
+            <div class="global-header hide-on-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
+                <!-- Botão de Recolher Sidebar -->
+                <button type="button" id="btnToggleSidebar" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--panel-border); color: #fff; cursor: pointer; padding: 8px 12px; font-size: 1.1rem; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-main);">
+                    <i class="fa-solid fa-bars"></i> <span style="font-size: 0.85rem; font-weight: bold;">Recolher Menu</span>
+                </button>
+
                 <div class="header-user-group" style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 12px;" onclick="const d = document.getElementById('profile-dropdown'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
                     <div class="header-user-text" style="text-align: right;">
                         <div class="header-user-name" style="color: var(--text-light); font-weight: bold; font-size: 14px;" id="userNameHeader">Administrador</div>

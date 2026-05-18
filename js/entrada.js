@@ -155,28 +155,11 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-const formEntrada = document.getElementById('formEntrada');
-const listaEntradas = document.getElementById('listaEntradas');
-const filtroEntradasNome = document.getElementById('filtroEntradasNome');
+let formEntrada, listaEntradas, filtroEntradasNome, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
 let entradasSelecionadas = new Set();
-
-const entComp = document.getElementById('entComp');
-const entLarg = document.getElementById('entLarg');
-const inputsAlt = [
-    document.getElementById('entAltEsq1'), document.getElementById('entAltEsq2'), document.getElementById('entAltEsq3'),
-    document.getElementById('entAltDir1'), document.getElementById('entAltDir2'), document.getElementById('entAltDir3')
-];
-
-const resVolume = document.getElementById('entResultadoVolume');
-const resInfo = document.getElementById('entInfoMedia');
-const resFinanceiro = document.getElementById('entResultadoFinanceiro');
-const infoFinanceira = document.getElementById('entInfoFinanceira');
-
-const entData = document.getElementById('entData');
-const entHorario = document.getElementById('entHorario');
 
 // --- Funções de Máscara Decimal e Conversão ---
 function formatDecimalValue(val) {
@@ -226,7 +209,7 @@ function calcularVolumeAtual() {
         volume = c * l * mediaAltura;
     }
     
-    if (resVolume) resVolume.textContent = volume.toFixed(3) + ' m³';
+    if (resVolume) resVolume.textContent = volume.toFixed(2).replace('.', ',') + ' m³';
     if (resInfo) resInfo.textContent = `Altura média: ${formatDecimalValue(mediaAltura)} m (${valoresAltura.length} pontos medidos)`;
     
     // Calculo Financeiro
@@ -312,7 +295,7 @@ function renderizarEntradas() {
                 A. Média: ${formatDecimalValue(en.mediaAltura)}m
             </td>
             <td>
-                <div style="font-size:1.1rem; color:var(--accent-color); font-weight:bold;">${en.volume.toFixed(3)} m³</div>
+                <div style="font-size:1.1rem; color:var(--accent-color); font-weight:bold;">${en.volume.toFixed(2).replace('.', ',')} m³</div>
                 <div style="color:#3498db; font-size:0.9rem;">${valorTotal}</div>
             </td>
             <td>
@@ -349,7 +332,7 @@ function atualizarPainelFechamento() {
     const payText = document.getElementById('fechamentoValorTotal');
     
     if (countBadge) countBadge.textContent = `${count} Carga(s) Selecionada(s)`;
-    if (volText) volText.textContent = totalVolume.toFixed(3) + ' m³';
+    if (volText) volText.textContent = totalVolume.toFixed(2).replace('.', ',') + ' m³';
     if (payText) payText.textContent = totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 }
 
@@ -394,7 +377,7 @@ window.gerarRelatorioConsolidado = function() {
                 <td>${en.motorista || '-'}</td>
                 <td style="text-align:center;"><span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span></td>
                 <td style="text-align:center;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m | A: ${formatDecimalValue(en.mediaAltura)}m</td>
-                <td style="text-align:right; font-weight:bold; color:#27ae60;">${en.volume.toFixed(3)} m³</td>
+                <td style="text-align:right; font-weight:bold; color:#27ae60;">${en.volume.toFixed(2).replace('.', ',')} m³</td>
                 <td style="text-align:right;">${vMetro}</td>
                 <td style="text-align:right; font-weight:bold; color:#2980b9;">${vTotal}</td>
             </tr>
@@ -452,7 +435,7 @@ window.gerarRelatorioConsolidado = function() {
         </div>
         <div class="summary-item">
             <div class="summary-label">Volume Total</div>
-            <div class="summary-value" style="color:#27ae60;">${totalVolume.toFixed(3)} m³</div>
+            <div class="summary-value" style="color:#27ae60;">${totalVolume.toFixed(2).replace('.', ',')} m³</div>
         </div>
         <div class="summary-item">
             <div class="summary-label">Valor Total Fechado</div>
@@ -478,7 +461,7 @@ window.gerarRelatorioConsolidado = function() {
             ${tableRowsHtml}
             <tr class="total-row">
                 <td colspan="6" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
-                <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(3)} m³</td>
+                <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(2).replace('.', ',')} m³</td>
                 <td></td>
                 <td style="text-align: right; font-size:12px; color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
             </tr>
@@ -545,14 +528,14 @@ if (formEntrada) {
         try {
             if (entradaEditandoId) {
                 await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
-                alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ atualizada com sucesso!`);
+                alert(`✅ Entrada de ${calcData.volume.toFixed(2).replace('.', ',')}m³ updated successfully!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
             } else {
                 novaEntrada.criadoEm = new Date().toISOString();
                 await addDoc(collection(db, 'entradas'), novaEntrada);
-                alert(`✅ Entrada de ${calcData.volume.toFixed(3)}m³ registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
+                alert(`✅ Entrada de ${calcData.volume.toFixed(2).replace('.', ',')}m³ registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
             }
             
             formEntrada.reset();
@@ -608,7 +591,7 @@ Largura: ${formatDecimalValue(en.larg)}m
 Alturas da Carroceria:
 ${alturasStr}
 Altura Média: ${formatDecimalValue(en.mediaAltura)}m
-Volume Total: ${en.volume.toFixed(3)}m³
+Volume Total: ${en.volume.toFixed(2).replace('.', ',')}m³
 
 --- FINANCEIRO ---
 Valor/Metro: R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}
@@ -691,7 +674,7 @@ window.imprimirEntrada = function(id) {
 <p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p>
 <p><strong>Caminhão:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
 <table><tr><th>Comprimento</th><th>Largura</th><th>Altura Média</th><th>Volume (m³)</th></tr>
-<tr><td>${formatDecimalValue(en.comp)}m</td><td>${formatDecimalValue(en.larg)}m</td><td>${formatDecimalValue(en.mediaAltura)}m</td><td><strong>${en.volume.toFixed(3)}</strong></td></tr></table>
+<tr><td>${formatDecimalValue(en.comp)}m</td><td>${formatDecimalValue(en.larg)}m</td><td>${formatDecimalValue(en.mediaAltura)}m</td><td><strong>${en.volume.toFixed(2).replace('.', ',')}</strong></td></tr></table>
 <br><p><strong>Valor por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
 <h3><strong>TOTAL A PAGAR:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</h3>
 <br><br><br>
@@ -788,6 +771,23 @@ function inicializarTogglesEntrada() {
 
 // Inicialização segura
 function inicializarModuloEntrada() {
+    // Resolver referências dos elementos dinamicamente para garantir que não fiquem nulos
+    formEntrada = document.getElementById('formEntrada');
+    listaEntradas = document.getElementById('listaEntradas');
+    filtroEntradasNome = document.getElementById('filtroEntradasNome');
+    entComp = document.getElementById('entComp');
+    entLarg = document.getElementById('entLarg');
+    inputsAlt = [
+        document.getElementById('entAltEsq1'), document.getElementById('entAltEsq2'), document.getElementById('entAltEsq3'),
+        document.getElementById('entAltDir1'), document.getElementById('entAltDir2'), document.getElementById('entAltDir3')
+    ];
+    resVolume = document.getElementById('entResultadoVolume');
+    resInfo = document.getElementById('entInfoMedia');
+    resFinanceiro = document.getElementById('entResultadoFinanceiro');
+    infoFinanceira = document.getElementById('entInfoFinanceira');
+    entData = document.getElementById('entData');
+    entHorario = document.getElementById('entHorario');
+
     // Forçar letras maiúsculas em tempo real nos campos de texto
     ['empNome', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
         const input = document.getElementById(id);

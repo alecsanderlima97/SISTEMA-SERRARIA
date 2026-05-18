@@ -40,9 +40,9 @@ body {
     color: var(--text-color);
     font-family: var(--font-main);
     line-height: 1.6;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
-    min-height: 100vh;
+    height: 100vh;
 }
 
 /* Bolhas de Fundo Animadas - Tema Sunset */
@@ -1007,4 +1007,73 @@ tfoot td {
     .col-span-2 {
         grid-column: span 1;
     }
+}
+
+/* --- SIDEBAR RETRÁTIL & CLEAN LAYOUT (Orquestracs Premium Upgrade) --- */
+.sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* Estado de Menu Recolhido */
+.app-wrapper.sidebar-collapsed .sidebar {
+    width: 70px;
+    padding: 1.5rem 0;
+}
+
+.app-wrapper.sidebar-collapsed .sidebar .brand {
+    padding-bottom: 1.5rem;
+}
+
+/* Ocultar logotipo textual em collapse */
+.app-wrapper.sidebar-collapsed .sidebar .brand div span:nth-child(2),
+.app-wrapper.sidebar-collapsed .sidebar .brand div:nth-child(2) {
+    display: none !important;
+}
+
+.app-wrapper.sidebar-collapsed .sidebar .brand div span:first-child {
+    font-size: 28px !important;
+}
+
+/* Alinhamento de Ícones no Menu */
+.app-wrapper.sidebar-collapsed .sidebar nav ul li a {
+    padding: 1rem 0;
+    justify-content: center;
+    border-left-width: 4px;
+    font-size: 0 !important; /* Oculta o texto do link */
+    gap: 0;
+}
+
+.app-wrapper.sidebar-collapsed .sidebar nav ul li a i {
+    font-size: 1.3rem !important;
+    margin: 0;
+    width: auto;
+}
+
+.app-wrapper.sidebar-collapsed .sidebar nav ul li a.logout-link {
+    font-size: 0 !important;
+}
+
+.app-wrapper.sidebar-collapsed .sidebar nav ul li a.logout-link i {
+    font-size: 1.3rem !important;
+}
+
+/* --- OTIMIZAÇÃO DE SCROLLBARS (Visual Ultra Premium) --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
 }

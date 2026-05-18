@@ -164,6 +164,46 @@ const App = {
         window.changeTheme(savedTheme);
         this.checkAuth();
         this.setupNavigation();
+        this.setupSidebarCollapse();
+    },
+
+    setupSidebarCollapse() {
+        const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+        const appWrapper = document.querySelector('.app-wrapper');
+        if (btnToggleSidebar && appWrapper) {
+            const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+            if (isCollapsed) {
+                appWrapper.classList.add('sidebar-collapsed');
+                const btnSpan = btnToggleSidebar.querySelector('span');
+                if (btnSpan) btnSpan.textContent = "Expandir";
+                const btnIcon = btnToggleSidebar.querySelector('i');
+                if (btnIcon) {
+                    btnIcon.classList.remove('fa-bars');
+                    btnIcon.classList.add('fa-chevron-right');
+                }
+            }
+
+            btnToggleSidebar.addEventListener('click', () => {
+                appWrapper.classList.toggle('sidebar-collapsed');
+                const collapsed = appWrapper.classList.contains('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed', collapsed);
+                
+                const btnSpan = btnToggleSidebar.querySelector('span');
+                if (btnSpan) {
+                    btnSpan.textContent = collapsed ? "Expandir" : "Recolher Menu";
+                }
+                const btnIcon = btnToggleSidebar.querySelector('i');
+                if (btnIcon) {
+                    if (collapsed) {
+                        btnIcon.classList.remove('fa-bars');
+                        btnIcon.classList.add('fa-chevron-right');
+                    } else {
+                        btnIcon.classList.remove('fa-chevron-right');
+                        btnIcon.classList.add('fa-bars');
+                    }
+                }
+            });
+        }
     },
 
     checkAuth() {
