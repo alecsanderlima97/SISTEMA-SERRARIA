@@ -1136,3 +1136,117 @@ tfoot td {
     transform: translateY(-1px) scale(1.0) !important;
     box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3) !important;
 }
+
+/* --- ESTILOS EXCLUSIVOS DO MOCKUP CONTROLE DE PÁTIO (Light Clean Workspace) --- */
+.btn-patio-light {
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.5px !important;
+    padding: 10px 20px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+.btn-patio-light:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #1e293b !important;
+    transform: translateY(-1px) !important;
+}
+
+.btn-patio-red {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.5px !important;
+    padding: 10px 22px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-patio-red:hover {
+    background: #b91c1c !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 15px rgba(220, 38, 38, 0.35) !important;
+}
+
+.btn-patio-save:hover {
+    background: #15803d !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 15px rgba(22, 163, 74, 0.35) !important;
+}
+
+/* Custom class badges style */
+.patio-tag-classe {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 0.78rem;
+    text-align: center;
+}
+.patio-tag-1a {
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+}
+.patio-tag-2a {
+    color: #b45309 !important;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+}
+.patio-tag-3a {
+    color: #dc2626 !important;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+}
+
+/* Quantity controls */
+.btn-patio-action-minus {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #fca5a5 !important;
+    background: #fef2f2 !important;
+    color: #ef4444 !important;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+.btn-patio-action-minus:hover {
+    background: #fee2e2 !important;
+    transform: scale(1.08);
+}
+
+.btn-patio-action-plus {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: none !important;
+    background: #2563eb !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    transition: all 0.15s ease;
+}
+.btn-patio-action-plus:hover {
+    background: #1d4ed8 !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}

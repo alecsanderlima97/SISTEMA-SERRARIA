@@ -1645,56 +1645,96 @@
             </div>
             <div class="modal-footer-v2">
                 <button id="btnConfirmarSeguranca" class="btn-v2" style="background: var(--danger-color); color: white; font-weight: bold; flex: 1;">
-                    Confirmar Ação
-                </button>
-                <button onclick="fecharModalSeguranca()" class="btn-v2 btn-secondary-v2" style="flex: 1;">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: CONTROLE DE PRODUÇÃO E CONTAGEM DE PÁTIO -->
-    <div id="modalControleProducao" class="modal-v2" style="display: none; overflow-y: auto;">
-        <div class="modal-content-v2 card-v2" style="max-width: 1100px; width: 95%;">
-            <div class="modal-header-v2">
-                <h2><i class="fa-solid fa-industry"></i> Controle de Produção & Pátio</h2>
-                <button onclick="window.fecharModalPatio()" class="btn-close-v2">&times;</button>
-            </div>
+                  <!-- MODAL: CONTROLE DE PRODUÇÃO E CONTAGEM DE PÁTIO -->
+    <div id="modalControleProducao" class="modal-v2" style="display: none; overflow-y: auto; background: rgba(0, 0, 0, 0.85); z-index: 9999;">
+        <div class="modal-content-v2" style="max-width: 1200px; width: 95%; background: #f8fafc; color: #1e293b; padding: 25px; border-radius: 16px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); font-family: var(--font-main);">
             
-            <div class="modal-body-v2" style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
-                <!-- SEÇÃO 1: CABEÇALHO DO RELATÓRIO DO PÁTIO -->
-                <div class="glass-panel" style="margin-bottom: 0; padding: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div class="input-group" style="margin-bottom: 0;">
-                        <label>Data da Contagem</label>
-                        <input type="date" id="patioData" style="width:100%;" required>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 0;">
-                        <label>Período / Turno</label>
-                        <select id="patioPeriodo" style="width:100%;">
-                            <option value="Manhã (Início do Dia)">Manhã (Início do Dia)</option>
-                            <option value="Tarde (Fechamento do Pátio)">Tarde (Fechamento do Pátio)</option>
-                            <option value="Contagem Especial">Contagem Especial</option>
-                        </select>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 0;">
-                        <label>Horário da Contagem (Atual)</label>
-                        <input type="time" id="patioHorario" style="width:100%;" required>
-                    </div>
-                    <div class="input-group col-span-2" style="margin-bottom: 0; grid-column: span 2;">
-                        <label>Madeira Serrada no Momento *</label>
-                        <input type="text" id="patioSerrando" class="text-uppercase-input" style="width:100%;" placeholder="Ex: TÁBUA DE 1,7 / 8,5 / 1,20" required>
+            <!-- TOPO DA TELA (BOTÕES DE AÇÃO DO MOCKUP) -->
+            <div class="patio-header-actions hide-on-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fa-solid fa-boxes-stacked" style="font-size: 2rem; color: #e67e22;"></i>
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #0f172a;">Controle de Pátio & Etiquetas</h2>
+                        <small style="color: #64748b; font-weight: 600;">Gerenciamento de pacotes físicos e cubagem em tempo real</small>
                     </div>
                 </div>
+                
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" id="btnZerarEtiquetas" class="btn-patio-light">
+                        Zerar Quantidades
+                    </button>
+                    
+                    <button type="button" id="btnImprimirEtiquetas" class="btn-patio-red">
+                        <i class="fa-solid fa-print"></i> Imprimir Etiquetas
+                    </button>
+                    
+                    <button type="button" onclick="window.fecharModalPatio()" class="btn-patio-light" style="border: 1px solid #fee2e2 !important; background: #fef2f2 !important; color: #dc2626 !important;">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
+                    </button>
+                </div>
+            </div>
 
-                <!-- SEÇÃO 2: FORMULÁRIO DENTRO DA TABELA DILATADA PARA ADICIONAR ITENS -->
-                <div class="glass-panel" style="margin-bottom: 0; padding: 20px;">
-                    <div class="section-title" style="margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
-                        <h3 style="margin:0; font-size:1rem; color:var(--accent-color);"><i class="fa-solid fa-plus-minus"></i> Lançamento de Pacotes / Lotes no Pátio</h3>
-                    </div>
+            <!-- SEÇÃO DE PARÂMETROS GERAIS -->
+            <div class="glass-panel hide-on-print" style="margin-bottom: 25px; padding: 15px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block;">Data da Contagem</label>
+                    <input type="date" id="patioData" style="width:100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #f8fafc;" required>
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block;">Período / Turno</label>
+                    <select id="patioPeriodo" style="width:100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #f8fafc;">
+                        <option value="Manhã (Início do Dia)">Manhã (Início do Dia)</option>
+                        <option value="Tarde (Fechamento do Pátio)">Tarde (Fechamento do Pátio)</option>
+                        <option value="Contagem Especial">Contagem Especial</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block;">Horário da Contagem (Atual)</label>
+                    <input type="time" id="patioHorario" style="width:100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #f8fafc;" required>
+                </div>
+                <div class="input-group" style="margin-bottom: 0; grid-column: span 2;">
+                    <label style="color: #64748b; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block;">Madeira Serrada no Momento *</label>
+                    <input type="text" id="patioSerrando" class="text-uppercase-input" style="width:100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #f8fafc;" placeholder="Ex: TÁBUA DE 1,7 / 8,5 / 1,20" required>
+                </div>
+            </div>
+
+            <!-- CARDS DE CONTAGEM / KPIS DO MOCKUP -->
+            <div class="patio-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                <!-- TOTAL PCTS -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; color: #64748b;">TOTAL PCTS</div>
+                    <div id="lblTotalPacotes" style="font-size: 2.2rem; font-weight: 800; color: #0f172a; line-height: 1.1;">0</div>
+                </div>
+                
+                <!-- TOTAL M³ -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; color: #64748b;">TOTAL M³</div>
+                    <div id="lblTotalVolume" style="font-size: 2.2rem; font-weight: 800; color: #0f172a; line-height: 1.1;">0,000</div>
+                </div>
+                
+                <!-- PCTS HOJE -->
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; color: #2563eb;">PCTS HOJE</div>
+                    <div id="lblPacotesHoje" style="font-size: 2.2rem; font-weight: 800; color: #2563eb; line-height: 1.1;">0</div>
+                </div>
+                
+                <!-- HOJE M³ -->
+                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; color: #16a34a;">HOJE M³</div>
+                    <div id="lblVolumeHoje" style="font-size: 2.2rem; font-weight: 800; color: #16a34a; line-height: 1.1;">0,000</div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO DE LANÇAMENTO E TABELA -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px;">
+                <!-- FORMULÁRIO DE LANÇAMENTO -->
+                <div class="hide-on-print" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed #e2e8f0;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #0f172a; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-plus-circle" style="color:#e67e22;"></i> Cadastrar Novo Lote no Pátio</h3>
                     
                     <form id="formAdicionarItemPatio" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) 60px; gap: 10px; align-items: flex-end;">
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Tipo de Madeira</label>
-                            <select id="patioItemTipo" style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Tipo de Madeira</label>
+                            <select id="patioItemTipo" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                                 <option value="TÁBUA">TÁBUA</option>
                                 <option value="VIGA">VIGA</option>
                                 <option value="VIGOTA">VIGOTA</option>
@@ -1704,140 +1744,110 @@
                             </select>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Qualidade / Classe</label>
-                            <select id="patioItemClasse" style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Qualidade / Classe</label>
+                            <select id="patioItemClasse" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                                 <option value="1ª CLASSE">1ª Classe (Verde)</option>
                                 <option value="2ª CLASSE">2ª Classe (Amarelo)</option>
                                 <option value="3ª CLASSE">3ª Classe (Vermelho)</option>
                             </select>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Espessura (cm)</label>
-                            <input type="text" id="patioItemEsp" placeholder="Ex: 1,7" required style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Espessura (cm)</label>
+                            <input type="text" id="patioItemEsp" placeholder="Ex: 1,8" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Largura (cm)</label>
-                            <input type="text" id="patioItemLarg" placeholder="Ex: 8,5" required style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Largura (cm)</label>
+                            <input type="text" id="patioItemLarg" placeholder="Ex: 7,0" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Comprimento (m)</label>
-                            <input type="text" id="patioItemComp" placeholder="Ex: 1,20" required style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Comprimento (m)</label>
+                            <input type="text" id="patioItemComp" placeholder="Ex: 2,40" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Nº Pacotes</label>
-                            <input type="number" id="patioItemPacotes" min="1" placeholder="Ex: 5" required style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Qtd Pacotes</label>
+                            <input type="number" id="patioItemPacotes" min="1" placeholder="Ex: 2" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label style="font-size:0.75rem; color:#ccc;">Peças / Pacote</label>
-                            <input type="number" id="patioItemPecas" min="1" placeholder="Ex: 100" required style="width: 100%; padding: 8px;">
+                            <label style="font-size: 0.75rem; color: #475569; font-weight: bold; margin-bottom: 5px; display: block;">Peças / Pacote</label>
+                            <input type="number" id="patioItemPecas" min="1" placeholder="Ex: 100" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; background: #ffffff;">
                         </div>
-                        <button type="submit" class="btn-primary" style="padding: 10px; height: 38px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.1rem; border-radius: 8px;" title="Adicionar Linha ao Pátio">
+                        <button type="submit" class="btn-primary" style="padding: 10px; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.1rem; border-radius: 8px; background: #2563eb; color: white;" title="Adicionar Lote">
                             <i class="fa-solid fa-plus-circle"></i>
                         </button>
                     </form>
                 </div>
 
-                <!-- SEÇÃO 3: TABELA DE ITENS ATUAIS DO PÁTIO -->
-                <div class="glass-panel" style="margin-bottom: 0; padding: 20px;">
-                    <div class="section-title" style="margin-bottom: 12px;">
-                        <h3 style="margin:0; font-size:1rem; color:var(--text-light);"><i class="fa-solid fa-boxes-stacked"></i> Relação de Madeira Serrada no Pátio (Para Venda)</h3>
+                <!-- LISTA DE PÁTIO (MOCKUP STYLE) -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-regular fa-file-lines" style="color: #64748b;"></i> LISTA DE PÁTIO
+                        </h3>
+                        <button type="button" id="btnLimparTudoPatio" class="hide-on-print" style="background: none; border: none; color: #dc2626; font-weight: bold; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
+                            LIMPAR TUDO
+                        </button>
                     </div>
                     
-                    <div class="table-container">
-                        <table style="width: 100%; border-collapse: collapse;">
+                    <div class="table-container" style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
-                                <tr>
-                                    <th>Tipo</th>
-                                    <th style="text-align:center;">Classe</th>
-                                    <th>Dimensões (Esp x Larg x Comp)</th>
-                                    <th style="text-align:center;">Pacotes</th>
-                                    <th style="text-align:center;">Peças/Pacote</th>
-                                    <th style="text-align:center;">Total Peças</th>
-                                    <th style="text-align:right;">Volume m³</th>
-                                    <th style="text-align:center; width: 60px;">Excluir</th>
+                                <tr style="border-bottom: 1.5px solid #e2e8f0;">
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">DATA</th>
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">CLASSE</th>
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">QUANT.</th>
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">MEDIDAS</th>
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">FORMAÇÃO</th>
+                                    <th style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: right;">VOLUME (M³)</th>
+                                    <th class="hide-on-print" style="color: #64748b; font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">AÇÕES</th>
                                 </tr>
                             </thead>
                             <tbody id="listaItensPatioTemp">
                                 <tr>
-                                    <td colspan="8" style="text-align:center; color:#aaa; padding: 20px;">Nenhum lote lançado no pátio. Insira os dados acima para iniciar a contagem!</td>
+                                    <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- SEÇÃO 4: RESUMO CONSOLIDADO DA PRODUÇÃO POR CLASSE -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-                    <!-- 1ª Classe - Verde -->
-                    <div class="kpi-card" style="background: rgba(44, 201, 144, 0.08); border: 1px solid rgba(44, 201, 144, 0.35); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; color: #2cc990; display:flex; align-items:center; gap: 5px;">
-                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2cc990;"></span> 1ª Classe (Verde)
-                        </div>
-                        <div id="resPatioClasse1Vol" style="font-size: 1.6rem; font-weight: 800; color: #2cc990;">0,00 m³</div>
-                        <div id="resPatioClasse1Detalhes" style="font-size: 0.8rem; color:#aaa;">0 pacotes / 0 peças</div>
-                    </div>
-                    <!-- 2ª Classe - Amarelo -->
-                    <div class="kpi-card" style="background: rgba(241, 196, 15, 0.08); border: 1px solid rgba(241, 196, 15, 0.35); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; color: #f1c40f; display:flex; align-items:center; gap: 5px;">
-                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f1c40f;"></span> 2ª Classe (Amarelo)
-                        </div>
-                        <div id="resPatioClasse2Vol" style="font-size: 1.6rem; font-weight: 800; color: #f1c40f;">0,00 m³</div>
-                        <div id="resPatioClasse2Detalhes" style="font-size: 0.8rem; color:#aaa;">0 pacotes / 0 peças</div>
-                    </div>
-                    <!-- 3ª Classe - Vermelho -->
-                    <div class="kpi-card" style="background: rgba(231, 76, 60, 0.08); border: 1px solid rgba(231, 76, 60, 0.35); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; color: #e74c3c; display:flex; align-items:center; gap: 5px;">
-                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#e74c3c;"></span> 3ª Classe (Vermelho)
-                        </div>
-                        <div id="resPatioClasse3Vol" style="font-size: 1.6rem; font-weight: 800; color: #e74c3c;">0,00 m³</div>
-                        <div id="resPatioClasse3Detalhes" style="font-size: 0.8rem; color:#aaa;">0 pacotes / 0 peças</div>
-                    </div>
-                    <!-- Total Geral -->
-                    <div class="kpi-card" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.35); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; color: #3b82f6; display:flex; align-items:center; gap: 5px;">
-                            <i class="fa-solid fa-chart-pie"></i> Consolidado Geral
-                        </div>
-                        <div id="resPatioGeralVol" style="font-size: 1.6rem; font-weight: 800; color: #3b82f6;">0,00 m³</div>
-                        <div id="resPatioGeralDetalhes" style="font-size: 0.8rem; color:#aaa;">0 pacotes / 0 peças</div>
-                    </div>
+            <!-- SEÇÃO DE PERSISTÊNCIA -->
+            <div class="hide-on-print" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 25px;">
+                <button type="button" id="btnSalvarRelatorioPatio" class="btn-patio-save" style="padding: 12px 28px; font-weight: bold; border-radius: 8px; border: none; background: #16a34a; color: white; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25); transition: all 0.2s;">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Lançamento do Pátio
+                </button>
+            </div>
+
+            <!-- HISTÓRICO DE CONTAGENS -->
+            <div class="glass-panel hide-on-print" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: #64748b;"></i> Histórico de Contagens Recentes (Pátio Diário)
+                </h3>
+                
+                <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1.5px solid #e2e8f0;">
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold;">DATA / HORA</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold;">PERÍODO</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold;">MADEIRA SERRANDO</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold; text-align: center;">PACOTES</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold; text-align: center;">PEÇAS</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold; text-align: right;">VOLUME</th>
+                                <th style="color: #64748b; font-size: 0.75rem; padding: 10px 8px; font-weight: bold; text-align: center;">AÇÕES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaHistoricoPatio">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Carregando histórico...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-
-                <!-- SEÇÃO 5: BOTÕES DE SALVAMENTO E IMPRESSÃO -->
-                <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content: flex-end;">
-                    <button type="button" id="btnSalvarRelatorioPatio" class="btn-primary" style="padding:12px 24px; display:flex; align-items:center; gap: 8px;">
-                        <i class="fa-solid fa-floppy-disk"></i> Salvar Contagem do Pátio
-                    </button>
-                    <button type="button" id="btnImprimirRelatorioPatio" class="btn-primary" style="padding:12px 24px; background:var(--accent-color); color:#000; font-weight:bold; display:flex; align-items:center; gap: 8px;">
-                        <i class="fa-solid fa-print"></i> Imprimir Relação
-                    </button>
-                </div>
-
-                <!-- SEÇÃO 6: HISTÓRICO DE CONTAGENS DO PÁTIO -->
-                <div class="glass-panel" style="margin-bottom: 0; padding: 20px; border-top: 2px dashed rgba(255,255,255,0.1); margin-top:15px;">
-                    <div class="section-title" style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin:0; font-size:1.05rem; color:#fff;"><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Contagens Recentes (Pátio Diário)</h3>
-                    </div>
-                    
-                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Data / Hora</th>
-                                    <th>Período</th>
-                                    <th>Madeira Serrando</th>
-                                    <th style="text-align:center;">Pacotes Totais</th>
-                                    <th style="text-align:center;">Peças Totais</th>
-                                    <th style="text-align:right;">Volume Total</th>
-                                    <th style="text-align:center; width: 140px;">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaHistoricoPatio">
-                                <tr>
-                                    <td colspan="7" style="text-align:center; color:#aaa; padding: 20px;">Carregando histórico...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            </div>
+            
+        </div>
+    </div>
                 </div>
             </div>
             
