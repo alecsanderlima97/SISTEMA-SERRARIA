@@ -427,6 +427,10 @@ window.abrirModalHE = (id) => {
         document.getElementById('he-tipo-dia').value = (dayOfWeek === 0 || dayOfWeek === 6) ? 'ESPECIAL' : 'NORMAL';
     }
     document.getElementById('he-horas').value = '';
+    document.getElementById('he-adicional').value = '';
+    document.getElementById('he-observacao').value = '';
+    const presetDropdown = document.getElementById('he-preset');
+    if (presetDropdown) presetDropdown.value = 'NENHUM';
 
     renderizarTabelaHE(f);
 
@@ -555,6 +559,8 @@ async function adicionarHoraExtra() {
         document.getElementById('he-horas').value = '';
         document.getElementById('he-adicional').value = '';
         document.getElementById('he-observacao').value = '';
+        const presetDropdown = document.getElementById('he-preset');
+        if (presetDropdown) presetDropdown.value = 'NENHUM';
         document.getElementById('he-horas').focus();
         
         // Atualizar tabela principal de funcionários
@@ -653,11 +659,11 @@ function renderizarTabelaFaltas(func) {
 async function adicionarFalta() {
     const idFunc = document.getElementById('falta-funcionario-id').value;
     const data = document.getElementById('falta-data').value;
-    const valorRaw = document.getElementById('falta-valor').value;
-    const valor = window.parseCurrencyValue ? window.parseCurrencyValue(valorRaw) : parseFloat(valorRaw.replace(/\D/g, "")) / 100;
+    const valorRaw = document.getElementById('falta-valor').value || '';
+    const valor = valorRaw.trim() !== '' ? (window.parseCurrencyValue ? window.parseCurrencyValue(valorRaw) : parseFloat(valorRaw.replace(/\D/g, "")) / 100) : 0;
 
-    if (!idFunc || !data || isNaN(valor) || valor <= 0) {
-        alert("Preencha a data e o valor de referência da falta.");
+    if (!idFunc || !data) {
+        alert("Preencha a data da falta.");
         return;
     }
 
@@ -945,6 +951,41 @@ function gerarHoleriteHtml(f) {
 }
 
 
+window.aplicarPresetHE = (tipo) => {
+    const inputHoras = document.getElementById('he-horas');
+    const inputAdicional = document.getElementById('he-adicional');
+    const inputObservacao = document.getElementById('he-observacao');
+    const inputTipoDia = document.getElementById('he-tipo-dia');
+
+    if (!inputHoras || !inputAdicional || !inputObservacao || !inputTipoDia) return;
+
+    if (tipo === 'MEIO') {
+        inputHoras.value = '0';
+        inputAdicional.value = '50,00';
+        inputObservacao.value = 'DIÁRIA MEIO PERÍODO';
+        inputTipoDia.value = 'ESPECIAL';
+    } else if (tipo === 'INTEGRAL') {
+        inputHoras.value = '0';
+        inputAdicional.value = '100,00';
+        inputObservacao.value = 'DIÁRIA INTEGRAL';
+        inputTipoDia.value = 'ESPECIAL';
+    } else {
+        inputHoras.value = '';
+        inputAdicional.value = '';
+        inputObservacao.value = '';
+        // Reseta o tipo de dia baseado na data atual
+        const dataInput = document.getElementById('he-data');
+        if (dataInput && dataInput.value) {
+            const d = new Date(dataInput.value + 'T12:00:00');
+            const dayOfWeek = d.getDay();
+            inputTipoDia.value = (dayOfWeek === 0 || dayOfWeek === 6) ? 'ESPECIAL' : 'NORMAL';
+        } else {
+            inputTipoDia.value = 'NORMAL';
+        }
+    }
+};
+
+
 // Auto-inicializar ao carregar o DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarModuloRH);
@@ -958,3 +999,4 @@ window.abrirModalHE = window.abrirModalHE;
 window.abrirModalHolerite = window.abrirModalHolerite;
 window.abrirModalFaltas = window.abrirModalFaltas;
 window.removerFalta = window.removerFalta;
+window.aplicarPresetHE = window.aplicarPresetHE;
