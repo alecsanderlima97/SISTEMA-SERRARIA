@@ -1017,7 +1017,8 @@ tfoot td {
 /* --- SIDEBAR RETRÁTIL & CLEAN LAYOUT (Orquestracs Premium Upgrade) --- */
 .sidebar {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     flex-shrink: 0;
 }
 
