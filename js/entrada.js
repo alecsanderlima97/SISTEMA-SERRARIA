@@ -155,7 +155,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, filtroEntradasNome, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario;
+let formEntrada, listaEntradas, filtroEntradasNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -288,7 +288,10 @@ function renderizarEntradas() {
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="check-entrada" data-id="${en.id}" ${isChecked} style="transform: scale(1.25); cursor: pointer;"></td>
             <td>${dtStr} <br><small style="color:#aaa;">${en.horario || '-'}</small></td>
-            <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mot: ${en.motorista || '-'}</small></td>
+            <td>
+                <strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br>
+                <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'} | Mot: ${en.motorista || '-'}</small>
+            </td>
             <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:#aaa;">${en.caminhao || '-'}</small></td>
             <td style="font-size: 0.9em;">
                 C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m <br>
@@ -373,9 +376,13 @@ window.gerarRelatorioConsolidado = function() {
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
                 <td>${dtStr} ${en.horario || ''}</td>
+                <td style="font-weight:bold;">${en.romaneioNum || '-'}</td>
                 <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong></td>
                 <td>${en.motorista || '-'}</td>
-                <td style="text-align:center;"><span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span></td>
+                <td style="text-align:center;">
+                    <span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span>
+                    <br><small style="color:#555;">${en.caminhao || '-'}</small>
+                </td>
                 <td style="text-align:center;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m | A: ${formatDecimalValue(en.mediaAltura)}m</td>
                 <td style="text-align:right; font-weight:bold; color:#27ae60;">${en.volume.toFixed(2).replace('.', ',')} m³</td>
                 <td style="text-align:right;">${vMetro}</td>
@@ -448,9 +455,10 @@ window.gerarRelatorioConsolidado = function() {
             <tr>
                 <th style="width: 30px; text-align:center;">Nº</th>
                 <th style="width: 80px;">Data/Hora</th>
+                <th style="width: 80px; text-align:left;">Nº Romaneio</th>
                 <th>Empreiteiro</th>
                 <th>Motorista</th>
-                <th style="width: 70px; text-align:center;">Placa</th>
+                <th style="width: 145px; text-align:center;">Veículo (Placa/Modelo)</th>
                 <th style="text-align:center;">Dimensões da Carga</th>
                 <th style="width: 70px; text-align:right;">Volume</th>
                 <th style="width: 80px; text-align:right;">Preço/m³</th>
@@ -460,7 +468,7 @@ window.gerarRelatorioConsolidado = function() {
         <tbody>
             ${tableRowsHtml}
             <tr class="total-row">
-                <td colspan="6" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
+                <td colspan="7" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
                 <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(2).replace('.', ',')} m³</td>
                 <td></td>
                 <td style="text-align: right; font-size:12px; color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
@@ -506,6 +514,7 @@ if (formEntrada) {
             horario: document.getElementById('entHorario').value,
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
+            romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
             placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
@@ -528,14 +537,14 @@ if (formEntrada) {
         try {
             if (entradaEditandoId) {
                 await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
-                alert(`✅ Entrada de ${calcData.volume.toFixed(2).replace('.', ',')}m³ updated successfully!`);
+                alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) atualizada com sucesso!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
             } else {
                 novaEntrada.criadoEm = new Date().toISOString();
                 await addDoc(collection(db, 'entradas'), novaEntrada);
-                alert(`✅ Entrada de ${calcData.volume.toFixed(2).replace('.', ',')}m³ registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
+                alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
             }
             
             formEntrada.reset();
@@ -580,6 +589,7 @@ Dir: [${formatDecimalValue(en.alturas[3])}m, ${formatDecimalValue(en.alturas[4])
     }
     
     alert(`Detalhes da Entrada:
+Romaneio: ${en.romaneioNum || 'N/A'}
 Empreiteiro: ${en.empreiteiroNome || en.fornecedor || 'N/A'}
 Motorista: ${en.motorista || 'N/A'}
 Data: ${en.data} ${en.horario || ''}
@@ -606,6 +616,7 @@ window.alterarEntrada = function(id) {
     document.getElementById('entData').value = en.data || '';
     document.getElementById('entHorario').value = en.horario || '';
     if(selectEmpreiteiro) selectEmpreiteiro.value = en.empreiteiroId || '';
+    document.getElementById('entRomaneio').value = en.romaneioNum || '';
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
     document.getElementById('entPlaca').value = en.placa || '';
@@ -669,10 +680,11 @@ window.imprimirEntrada = function(id) {
 <style>body{font-family: Arial, sans-serif; padding: 20px;} table{width: 100%; border-collapse: collapse; margin-top: 20px;} th, td{border: 1px solid #ccc; padding: 8px; text-align: left;}</style>
 </head><body>
 <h2>Recibo de Entrada de Toras</h2>
+<p><strong>Nº Romaneio:</strong> ${en.romaneioNum || 'N/A'}</p>
 <p><strong>Empreiteiro:</strong> ${en.empreiteiroNome || en.fornecedor || 'N/A'}</p>
 <p><strong>Motorista:</strong> ${en.motorista || 'N/A'}</p>
 <p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p>
-<p><strong>Caminhão:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
+<p><strong>Veículo:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
 <table><tr><th>Comprimento</th><th>Largura</th><th>Altura Média</th><th>Volume (m³)</th></tr>
 <tr><td>${formatDecimalValue(en.comp)}m</td><td>${formatDecimalValue(en.larg)}m</td><td>${formatDecimalValue(en.mediaAltura)}m</td><td><strong>${en.volume.toFixed(2).replace('.', ',')}</strong></td></tr></table>
 <br><p><strong>Valor por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
@@ -775,6 +787,7 @@ function inicializarModuloEntrada() {
     formEntrada = document.getElementById('formEntrada');
     listaEntradas = document.getElementById('listaEntradas');
     filtroEntradasNome = document.getElementById('filtroEntradasNome');
+    entRomaneio = document.getElementById('entRomaneio');
     entComp = document.getElementById('entComp');
     entLarg = document.getElementById('entLarg');
     inputsAlt = [
@@ -789,7 +802,7 @@ function inicializarModuloEntrada() {
     entHorario = document.getElementById('entHorario');
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+    ['empNome', 'entRomaneio', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);
