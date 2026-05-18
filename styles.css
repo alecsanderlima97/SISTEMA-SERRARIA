@@ -1090,3 +1090,49 @@ tfoot td {
     transform: scale(1.1);
     box-shadow: 0 0 15px rgba(230, 126, 34, 0.5) !important;
 }
+
+/* --- BOTÕES DE AÇÃO PREMIUM EM CARD (Card Action Buttons - Orquestracs Premium Upgrade) --- */
+.btn-action-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(230, 126, 34, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+    border: 1px solid rgba(230, 126, 34, 0.35) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    padding: 11px 22px !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.btn-action-card i {
+    font-size: 1.05rem !important;
+    color: var(--accent-color) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn-action-card:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #e67e22 100%) !important;
+    border-color: var(--primary-color) !important;
+    color: #ffffff !important;
+    transform: translateY(-4px) scale(1.04) !important;
+    box-shadow: 0 10px 25px rgba(230, 126, 34, 0.5) !important;
+}
+
+.btn-action-card:hover i {
+    color: #ffffff !important;
+    transform: scale(1.2) rotate(10deg) !important;
+}
+
+.btn-action-card:active {
+    transform: translateY(-1px) scale(1.0) !important;
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3) !important;
+}

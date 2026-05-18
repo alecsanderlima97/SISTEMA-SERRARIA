@@ -69,8 +69,8 @@
             <!-- Global Header -->
             <div class="global-header hide-on-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
                 <!-- Botão de Recolher Sidebar -->
-                <button type="button" id="btnToggleSidebar" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--panel-border); color: #fff; cursor: pointer; padding: 8px 12px; font-size: 1.1rem; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-main);">
-                    <i class="fa-solid fa-bars"></i> <span style="font-size: 0.85rem; font-weight: bold;">Recolher Menu</span>
+                <button type="button" id="btnToggleSidebar" class="btn-action-card" style="padding: 10px 20px;">
+                    <i class="fa-solid fa-bars"></i> <span>Recolher Menu</span>
                 </button>
 
                 <div class="header-user-group" style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 12px;" onclick="const d = document.getElementById('profile-dropdown'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
@@ -181,7 +181,9 @@
                     <div class="glass-panel" id="cardFormCliente" style="margin-bottom: 0;">
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <h2><i class="fa-solid fa-user-plus"></i> Novo Cliente</h2>
-                        <button type="button" class="btn-secondary" id="btnToggleListaClientes" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-users"></i> Gerenciar Clientes</button>
+                        <button type="button" class="btn-action-card" id="btnToggleListaClientes" style="padding: 8px 16px; font-size: 0.82rem;">
+                            <i class="fa-solid fa-users"></i> Gerenciar Clientes
+                        </button>
                     </div>
                     <form id="formCliente" class="grid-form">
                         <div class="input-group">
@@ -748,10 +750,10 @@
                 </div>
 
                 <!-- BARRA DE TOGGLES LADO A LADO NO TOPO -->
-                <div class="actions-header-row hide-on-print" style="display: flex; gap: 12px; margin: 15px auto 25px auto; justify-content: center; flex-wrap: wrap; max-width: 900px;">
-                    <button type="button" class="btn-secondary" id="btnToggleCadastroEmpreiteiro" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro</button>
-                    <button type="button" class="btn-secondary" id="btnToggleListaEmpreiteiros" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
-                    <button type="button" class="btn-secondary" id="btnToggleUltimasEntradas" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; font-size: 0.9rem; min-width: 210px;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
+                <div class="actions-header-row hide-on-print" style="display: flex; gap: 16px; margin: 15px auto 30px auto; justify-content: center; flex-wrap: wrap; max-width: 950px;">
+                    <button type="button" class="btn-action-card" id="btnToggleCadastroEmpreiteiro" style="min-width: 230px;"><i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro</button>
+                    <button type="button" class="btn-action-card" id="btnToggleListaEmpreiteiros" style="min-width: 230px;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
+                    <button type="button" class="btn-action-card" id="btnToggleUltimasEntradas" style="min-width: 230px;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
                 </div>
 
                 <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->
