@@ -104,8 +104,8 @@ function fecharFormularioRH() {
 
 // Configuração de máscaras nos inputs e eventos
 function configurarFormulariosRH() {
-    // Máscara de Salário, Vale e valores de horas extras
-    ['rh-salario', 'rh-vale', 'rh-valor-he-normal', 'rh-valor-he-especial'].forEach(id => {
+    // Máscara de Salário, Vale, valores de horas extras, adicionais e faltas
+    ['rh-salario', 'rh-vale', 'rh-valor-he-normal', 'rh-valor-he-especial', 'he-adicional', 'falta-valor'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.formatCurrencyInput) {
             el.addEventListener('input', window.formatCurrencyInput);
@@ -113,7 +113,7 @@ function configurarFormulariosRH() {
     });
 
     // Forçar caixa alta no Nome Completo, Função e Dados Bancários
-    ['rh-nome', 'rh-funcao', 'rh-dados-bancarios'].forEach(id => {
+    ['rh-nome', 'rh-funcao', 'rh-dados-bancarios', 'he-observacao'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.forceUppercaseInput) {
             el.addEventListener('input', window.forceUppercaseInput);
@@ -154,7 +154,7 @@ function configurarFormulariosRH() {
         });
     }
 
-    // Evento de submit do formulário
+    // Evento de submit do formulário de funcionário
     if (formFuncionario) {
         formFuncionario.onsubmit = async (e) => {
             e.preventDefault();
@@ -186,6 +186,15 @@ function configurarFormulariosRH() {
         formHE.onsubmit = async (e) => {
             e.preventDefault();
             await adicionarHoraExtra();
+        };
+    }
+
+    // Form de faltas submit
+    const formFalta = document.getElementById('formFalta');
+    if (formFalta) {
+        formFalta.onsubmit = async (e) => {
+            e.preventDefault();
+            await adicionarFalta();
         };
     }
 }
@@ -222,6 +231,7 @@ function renderizarFuncionarios(lista) {
     listaRH.innerHTML = lista.map(f => {
         const adm = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
         const heTotal = f.horasExtras ? f.horasExtras.reduce((acc, h) => acc + (parseFloat(h.horas) || 0), 0) : 0;
+        const faltasTotal = f.faltas ? f.faltas.length : 0;
         
         const fSalario = f.salario ? f.salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
         const fVale = f.vale ? f.vale.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
@@ -263,12 +273,15 @@ function renderizarFuncionarios(lista) {
                 </td>
                 <td>${feriasInfo}</td>
                 <td>
-                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: nowrap;">
+                    <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap;">
                         <button onclick="window.abrirModalHolerite('${f.id}')" class="btn-icon" style="color:#0ea5e9; font-size:1.1rem; padding: 4px;" title="Ver Holerite / Ficha">
                             <i class="fa-solid fa-file-invoice-dollar"></i>
                         </button>
                         <button onclick="window.abrirModalHE('${f.id}')" class="btn-icon" style="color:#e67e22; font-size:1.1rem; padding: 4px;" title="Horas Extras (${heTotal}h)">
                             <i class="fa-solid fa-clock"></i> <span style="font-size: 0.8rem; font-weight:bold;">${heTotal}h</span>
+                        </button>
+                        <button onclick="window.abrirModalFaltas('${f.id}')" class="btn-icon" style="color:#f43f5e; font-size:1.1rem; padding: 4px;" title="Controle de Faltas (${faltasTotal})">
+                            <i class="fa-solid fa-user-slash"></i> <span style="font-size: 0.8rem; font-weight:bold;">${faltasTotal}</span>
                         </button>
                         <button onclick="window.iniciarEditarRH('${f.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Funcionário">
                             <i class="fa-solid fa-user-pen"></i>
@@ -439,7 +452,7 @@ function renderizarTabelaHE(func) {
     const valorHE100 = func.valorHeEspecial !== undefined ? (parseFloat(func.valorHeEspecial) || 0) : (((func.salario || 0) / 220) * 2.0);
 
     if (heList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:15px;">Nenhuma hora extra registrada.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#aaa; padding:15px;">Nenhum registro lançado.</td></tr>';
         if (totalSoma) totalSoma.textContent = '0h';
         if (totalValor) totalValor.textContent = 'R$ 0,00';
         return;
@@ -457,10 +470,18 @@ function renderizarTabelaHE(func) {
         const labelTipo = h.tipo === 'ESPECIAL' ? '100% Extra 🟥' : '50% Extra';
         
         const tarifa = h.tipo === 'ESPECIAL' ? valorHE100 : valorHE50;
-        const valorCalculado = (parseFloat(h.horas) || 0) * tarifa;
+        const adicional = parseFloat(h.adicional) || 0;
+        const valorCalculado = ((parseFloat(h.horas) || 0) * tarifa) + adicional;
 
         somaHoras += parseFloat(h.horas) || 0;
         somaValores += valorCalculado;
+
+        let adicionalTexto = '-';
+        if (adicional > 0) {
+            adicionalTexto = `<span style="color:#00ff88; font-weight:bold;">+ R$ ${adicional.toFixed(2)}</span>`;
+        } else if (adicional < 0) {
+            adicionalTexto = `<span style="color:#ef4444; font-weight:bold;">- R$ ${Math.abs(adicional).toFixed(2)}</span>`;
+        }
 
         return `
             <tr>
@@ -471,12 +492,14 @@ function renderizarTabelaHE(func) {
                         ${labelTipo}
                     </span>
                 </td>
+                <td>${adicionalTexto}</td>
+                <td><span style="font-size:0.8rem; color:#eee;">${h.observacao || '-'}</span></td>
                 <td>
                     <strong style="color:#00ff88; font-size:0.95rem;">${valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><br>
                     <small style="color:#aaa;">(Tarifa: ${tarifa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h)</small>
                 </td>
                 <td>
-                    <button onclick="window.removerHoraExtra('${h.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Hora Extra">
+                    <button onclick="window.removerHoraExtra('${h.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Lançamento">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </td>
@@ -491,11 +514,19 @@ function renderizarTabelaHE(func) {
 async function adicionarHoraExtra() {
     const idFunc = document.getElementById('he-funcionario-id').value;
     const data = document.getElementById('he-data').value;
-    const horas = parseFloat(document.getElementById('he-horas').value);
+    const horas = parseFloat(document.getElementById('he-horas').value) || 0;
     const tipo = document.getElementById('he-tipo-dia').value;
 
-    if (!idFunc || !data || isNaN(horas) || horas <= 0) {
-        alert("Preencha a data e o total de horas extras.");
+    // Campos Adicionais
+    const adicionalRaw = document.getElementById('he-adicional').value || '0';
+    let adicional = window.parseCurrencyValue ? window.parseCurrencyValue(adicionalRaw) : parseFloat(adicionalRaw.replace(/\D/g, "")) / 100;
+    if (adicionalRaw.trim().startsWith('-')) {
+        adicional = -Math.abs(adicional);
+    }
+    const observacao = document.getElementById('he-observacao').value.toUpperCase().trim();
+
+    if (!idFunc || !data) {
+        alert("Preencha ao menos a data da folha.");
         return;
     }
 
@@ -507,8 +538,10 @@ async function adicionarHoraExtra() {
     const novoLote = {
         id: Date.now().toString(),
         data,
-        horas,
-        tipo
+        horas: parseFloat(horas) || 0,
+        tipo,
+        adicional: parseFloat(adicional) || 0,
+        observacao
     };
 
     f.horasExtras.push(novoLote);
@@ -520,6 +553,8 @@ async function adicionarHoraExtra() {
         // Atualizar lista em memória local e UI
         renderizarTabelaHE(f);
         document.getElementById('he-horas').value = '';
+        document.getElementById('he-adicional').value = '';
+        document.getElementById('he-observacao').value = '';
         document.getElementById('he-horas').focus();
         
         // Atualizar tabela principal de funcionários
@@ -535,7 +570,7 @@ window.removerHoraExtra = async (idHE) => {
     const f = funcionariosAtuais.find(x => x.id === idFunc);
     if (!f || !f.horasExtras) return;
 
-    if (confirm("Deseja realmente excluir este lançamento de hora extra?")) {
+    if (confirm("Deseja realmente excluir este lançamento?")) {
         f.horasExtras = f.horasExtras.filter(h => h.id !== idHE);
         try {
             const docRef = doc(db, 'funcionarios', idFunc);
@@ -547,6 +582,131 @@ window.removerHoraExtra = async (idHE) => {
         } catch (e) {
             console.error("Erro ao remover hora extra:", e);
             alert("Erro ao remover lançamento.");
+        }
+    }
+};
+
+
+// --- MÓDULO DE FALTAS ---
+
+window.abrirModalFaltas = (id) => {
+    const f = funcionariosAtuais.find(x => x.id === id);
+    if (!f) return;
+    
+    document.getElementById('falta-funcionario-id').value = f.id;
+    document.getElementById('falta-funcionario-nome').textContent = f.nome;
+    document.getElementById('falta-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('falta-valor').value = '';
+
+    renderizarTabelaFaltas(f);
+    
+    const modal = document.getElementById('modalFaltas');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.fecharModalFaltas = () => {
+    const modal = document.getElementById('modalFaltas');
+    if (modal) modal.style.display = 'none';
+};
+
+function renderizarTabelaFaltas(func) {
+    const tbody = document.getElementById('listaFaltas');
+    const totalQtd = document.getElementById('falta-total-qtd');
+    const totalDesconto = document.getElementById('falta-total-valor');
+    if (!tbody) return;
+
+    const faltas = func.faltas || [];
+    if (faltas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#aaa; padding:15px;">Nenhuma falta registrada.</td></tr>';
+        if (totalQtd) totalQtd.textContent = '0';
+        if (totalDesconto) totalDesconto.textContent = 'R$ 0,00';
+        return;
+    }
+
+    // Ordenar por data decrescente
+    faltas.sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    let somaValores = 0;
+
+    tbody.innerHTML = faltas.map(f => {
+        const dataFormatada = new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR');
+        const valor = parseFloat(f.valor) || 0;
+        somaValores += valor;
+
+        return `
+            <tr>
+                <td><strong>${dataFormatada}</strong></td>
+                <td><strong style="color:#f43f5e; font-size:0.95rem;">${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
+                <td>
+                    <button onclick="window.removerFalta('${f.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Falta">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (totalQtd) totalQtd.textContent = faltas.length;
+    if (totalDesconto) totalDesconto.textContent = somaValores.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+async function adicionarFalta() {
+    const idFunc = document.getElementById('falta-funcionario-id').value;
+    const data = document.getElementById('falta-data').value;
+    const valorRaw = document.getElementById('falta-valor').value;
+    const valor = window.parseCurrencyValue ? window.parseCurrencyValue(valorRaw) : parseFloat(valorRaw.replace(/\D/g, "")) / 100;
+
+    if (!idFunc || !data || isNaN(valor) || valor <= 0) {
+        alert("Preencha a data e o valor de referência da falta.");
+        return;
+    }
+
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f) return;
+
+    if (!f.faltas) f.faltas = [];
+
+    const novaFalta = {
+        id: Date.now().toString(),
+        data,
+        valor: parseFloat(valor) || 0
+    };
+
+    f.faltas.push(novaFalta);
+
+    try {
+        const docRef = doc(db, 'funcionarios', idFunc);
+        await updateDoc(docRef, { faltas: f.faltas });
+        
+        // Atualizar UI
+        renderizarTabelaFaltas(f);
+        document.getElementById('falta-valor').value = '';
+        
+        // Atualizar tabela principal de funcionários
+        filtrarFuncionarios();
+    } catch (e) {
+        console.error("Erro ao registrar falta no Firebase:", e);
+        alert("Erro ao salvar falta no banco de dados.");
+    }
+}
+
+window.removerFalta = async (idFalta) => {
+    const idFunc = document.getElementById('falta-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f || !f.faltas) return;
+
+    if (confirm("Deseja realmente excluir esta falta?")) {
+        f.faltas = f.faltas.filter(x => x.id !== idFalta);
+        try {
+            const docRef = doc(db, 'funcionarios', idFunc);
+            await updateDoc(docRef, { faltas: f.faltas });
+            renderizarTabelaFaltas(f);
+            
+            // Atualizar tabela principal de funcionários
+            filtrarFuncionarios();
+        } catch (e) {
+            console.error("Erro ao remover falta:", e);
+            alert("Erro ao remover falta.");
         }
     }
 };
@@ -586,10 +746,17 @@ function gerarHoleriteHtml(f) {
     const container = document.getElementById('conteudoHolerite');
     if (!container) return;
 
-    // Calcular valores de Horas Extras e Holerite baseado nas tarifas acordadas no cadastro
     const salarioBase = f.salario || 0;
     const vale = f.vale || 0;
     const heList = f.horasExtras || [];
+    const faltasCount = f.faltas ? f.faltas.length : 0;
+
+    // Calcular dias trabalhados reais pelos lançamentos
+    const datasNormais = new Set(heList.filter(h => h.tipo === 'NORMAL').map(h => h.data));
+    const totalDiasNormais = datasNormais.size;
+
+    const datasEspeciais = new Set(heList.filter(h => h.tipo === 'ESPECIAL').map(h => h.data));
+    const totalDiasEspeciais = datasEspeciais.size;
 
     // Tarifas acordadas do cadastro ou fallbacks dinâmicos caso vazio
     const valorHE50 = f.valorHeNormal !== undefined ? (parseFloat(f.valorHeNormal) || 0) : ((salarioBase / 220) * 1.5);
@@ -597,6 +764,8 @@ function gerarHoleriteHtml(f) {
 
     let horas50 = 0;
     let horas100 = 0;
+    let ganhoAdicionais = 0;
+    let descontosAdicionais = 0;
 
     heList.forEach(h => {
         if (h.tipo === 'ESPECIAL') {
@@ -604,12 +773,23 @@ function gerarHoleriteHtml(f) {
         } else {
             horas50 += parseFloat(h.horas) || 0;
         }
+        
+        const adicional = parseFloat(h.adicional) || 0;
+        if (adicional > 0) {
+            ganhoAdicionais += adicional;
+        } else if (adicional < 0) {
+            descontosAdicionais += Math.abs(adicional);
+        }
     });
 
     const ganhoHE50 = horas50 * valorHE50;
     const ganhoHE100 = horas100 * valorHE100;
-    const totalVencimentos = salarioBase + ganhoHE50 + ganhoHE100;
-    const totalDescontos = vale;
+    
+    // Cálculo do total de vencimentos (PROVENTOS) excluindo o salário base!
+    const totalVencimentos = ganhoHE50 + ganhoHE100 + ganhoAdicionais;
+    
+    // Cálculo do total de descontos (DESCONTOS) incluindo o vale e descontos diários
+    const totalDescontos = vale + descontosAdicionais;
     const valorLiquido = totalVencimentos - totalDescontos;
 
     const dataAdmissao = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
@@ -622,7 +802,7 @@ function gerarHoleriteHtml(f) {
         <div style="border: 2px solid black; padding: 15px; color: black; background: white;">
             <!-- Linha Dupla de Topo -->
             <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; letter-spacing: 1px;">RECIBO DE PAGAMENTO DE SALÁRIO</h2>
+                <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; letter-spacing: 1px;">EXTRATO E RECIBO DE HORAS EXTRAS / ADICIONAIS</h2>
                 <small>SERRARIA ORQUESTRA.CS - SISTEMAS DE ALTA PERFORMANCE</small>
             </div>
 
@@ -651,6 +831,22 @@ function gerarHoleriteHtml(f) {
                 </div>
             </div>
 
+            <!-- Resumo do Período (Dias e Faltas) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid black; padding: 10px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; gap: 5px; background: #fafafa;">
+                <div>
+                    <strong>DIAS NORMAIS TRABALHADOS</strong><br>
+                    <span style="font-size: 1.25rem; font-weight: 900; color: black;">${totalDiasNormais} dias</span>
+                </div>
+                <div>
+                    <strong>SÁB/DOM/FER TRABALHADOS</strong><br>
+                    <span style="font-size: 1.25rem; font-weight: 900; color: black;">${totalDiasEspeciais} dias</span>
+                </div>
+                <div style="border-left: 1px dashed black;">
+                    <strong style="color: #e11d48;">FALTAS NO MÊS</strong><br>
+                    <span style="font-size: 1.25rem; font-weight: 900; color: #e11d48;">${faltasCount} faltas</span>
+                </div>
+            </div>
+
             <!-- Cabeçalho da Tabela de Proventos/Descontos -->
             <div style="font-family: monospace; font-size: 0.82rem;">
                 <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 6px;">
@@ -660,18 +856,10 @@ function gerarHoleriteHtml(f) {
                     <div style="text-align: right;">DESCONTOS</div>
                 </div>
 
-                <!-- Salário Base -->
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
-                    <div>001 SALÁRIO BASE INTEGRAL</div>
-                    <div style="text-align: center;">30d</div>
-                    <div style="text-align: right;">R$ ${salarioBase.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                    <div style="text-align: right;">-</div>
-                </div>
-
                 <!-- Horas Extras 50% -->
                 ${horas50 > 0 ? `
                 <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
-                    <div>150 HORAS EXTRAS 50%</div>
+                    <div>150 HORAS EXTRAS 50% (NORMAL)</div>
                     <div style="text-align: center;">${horas50}h</div>
                     <div style="text-align: right;">R$ ${ganhoHE50.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                     <div style="text-align: right;">-</div>
@@ -681,9 +869,19 @@ function gerarHoleriteHtml(f) {
                 <!-- Horas Extras 100% -->
                 ${horas100 > 0 ? `
                 <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
-                    <div>151 HORAS EXTRAS 100% (DOM/FER)</div>
+                    <div>151 HORAS EXTRAS 100% (DOM/SÁB/FER)</div>
                     <div style="text-align: center;">${horas100}h</div>
                     <div style="text-align: right;">R$ ${ganhoHE100.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div style="text-align: right;">-</div>
+                </div>
+                ` : ''}
+
+                <!-- Adicionais Diários / Prêmios -->
+                ${ganhoAdicionais > 0 ? `
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                    <div>300 VALORES ADICIONAIS / PRÊMIOS DIÁRIOS</div>
+                    <div style="text-align: center;">-</div>
+                    <div style="text-align: right;">R$ ${ganhoAdicionais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                     <div style="text-align: right;">-</div>
                 </div>
                 ` : ''}
@@ -697,18 +895,28 @@ function gerarHoleriteHtml(f) {
                     <div style="text-align: right;">R$ ${vale.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
                 ` : ''}
+
+                <!-- Descontos Diários Adicionais -->
+                ${descontosAdicionais > 0 ? `
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                    <div>905 DESCONTOS DIÁRIOS ADICIONAIS</div>
+                    <div style="text-align: center;">-</div>
+                    <div style="text-align: right;">-</div>
+                    <div style="text-align: right;">R$ ${descontosAdicionais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                </div>
+                ` : ''}
             </div>
 
             <!-- Linha de Totais -->
             <div style="display: grid; grid-template-columns: 4.5fr 1.2fr 1.2fr; border-top: 1px solid black; padding-top: 5px; margin-top: 20px; font-weight: bold;">
-                <div>TOTAIS</div>
+                <div>TOTAIS EXTRATO</div>
                 <div style="text-align: right; color: black;">R$ ${totalVencimentos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 <div style="text-align: right; color: black;">R$ ${totalDescontos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
             </div>
 
             <!-- Líquido a Receber Box -->
             <div style="border: 2.5px solid black; margin-top: 15px; padding: 10px; display: flex; justify-content: space-between; align-items: center; background: #eee;">
-                <span style="font-weight: 900; font-size: 0.95rem;">LÍQUIDO (SALÁRIO + H. EXTRAS - VALE):</span>
+                <span style="font-weight: 900; font-size: 0.95rem;">LÍQUIDO A RECEBER (H. EXTRAS + ADIC. - VALE):</span>
                 <span style="font-weight: 900; font-size: 1.4rem; color: black;">R$ ${valorLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
             </div>
 
@@ -721,7 +929,7 @@ function gerarHoleriteHtml(f) {
             <!-- Declaração de Recebimento e Assinatura -->
             <div style="margin-top: 30px; border-top: 1px solid black; padding-top: 10px;">
                 <p style="font-size: 0.72rem; text-align: justify; margin: 0 0 35px 0; color: #333; font-style: italic;">
-                    * OBSERVAÇÃO IMPORTANTE: Este recibo compreende o cálculo do Salário Base e das Horas Extras acumuladas com dedução exclusiva do adiantamento mensal (Vale). <strong>NÃO ESTÃO INCLUÍDAS</strong> deduções oficiais de impostos (como INSS ou FGTS) nem descontos variáveis por faltas operacionais, os quais são ajustados à parte.
+                    * OBSERVAÇÃO IMPORTANTE: Este recibo compreende o cálculo do acúmulo de Horas Extras e prêmios diários informados, deduzindo o adiantamento de Vale. <strong>O SALÁRIO BASE INTEGRAL NÃO ESTÁ INCLUÍDO</strong> neste documento de fechamento extra, sendo pago via contracheque mensal padrão.
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: flex-end;">
                     <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.8rem;">
@@ -748,3 +956,5 @@ window.iniciarEditarRH = window.iniciarEditarRH;
 window.iniciarExcluirRH = window.iniciarExcluirRH;
 window.abrirModalHE = window.abrirModalHE;
 window.abrirModalHolerite = window.abrirModalHolerite;
+window.abrirModalFaltas = window.abrirModalFaltas;
+window.removerFalta = window.removerFalta;
