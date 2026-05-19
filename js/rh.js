@@ -976,31 +976,30 @@ function gerarRelatorioHEHtml(f) {
 
     const salarioBase = f.salario || 0;
     const heList = f.horasExtras || [];
-    const faltasCount = f.faltas ? f.faltas.length : 0;
 
-    // Calcular dias trabalhados reais pelos lançamentos
-    const datasNormais = new Set(heList.filter(h => h.tipo === 'NORMAL').map(h => h.data));
-    const totalDiasNormais = datasNormais.size;
-
-    const datasEspeciais = new Set(heList.filter(h => h.tipo === 'ESPECIAL').map(h => h.data));
-    const totalDiasEspeciais = datasEspeciais.size;
+    // Calcular dias com lançamentos
+    const totalDiasComHE = heList.length;
 
     // Tarifas acordadas do cadastro ou fallbacks dinâmicos caso vazio
     const valorHE50 = f.valorHeNormal !== undefined ? (parseFloat(f.valorHeNormal) || 0) : ((salarioBase / 220) * 1.5);
     const valorHE100 = f.valorHeEspecial !== undefined ? (parseFloat(f.valorHeEspecial) || 0) : ((salarioBase / 220) * 2.0);
 
-    let horas50 = 0;
-    let horas100 = 0;
+    let horasTotal = 0;
+    let ganhoHE50 = 0;
+    let ganhoHE100 = 0;
     let ganhoAdicionais = 0;
     let descontosAdicionais = 0;
 
     const sortedList = [...heList].sort((a, b) => new Date(a.data) - new Date(b.data));
 
     sortedList.forEach(h => {
+        const horasNum = parseFloat(h.horas) || 0;
+        horasTotal += horasNum;
+
         if (h.tipo === 'ESPECIAL') {
-            horas100 += parseFloat(h.horas) || 0;
+            ganhoHE100 += horasNum * valorHE100;
         } else {
-            horas50 += parseFloat(h.horas) || 0;
+            ganhoHE50 += horasNum * valorHE50;
         }
         
         const adicional = parseFloat(h.adicional) || 0;
@@ -1011,17 +1010,8 @@ function gerarRelatorioHEHtml(f) {
         }
     });
 
-    const ganhoHE50 = horas50 * valorHE50;
-    const ganhoHE100 = horas100 * valorHE100;
-    
     // Cálculo das Horas Extras + Prêmios
     const totalHorasExtras = ganhoHE50 + ganhoHE100 + ganhoAdicionais - descontosAdicionais;
-    
-    // Custo Operacional Bruto Total (Salário Base + Horas Extras e prêmios)
-    const custoBrutoTotal = salarioBase + totalHorasExtras;
-
-    const dataAdmissao = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
-    const nascimento = f.nascimento ? new Date(f.nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
     
     // Mes de referencia atual
     const opcoesMes = { month: 'long', year: 'numeric' };
@@ -1041,138 +1031,90 @@ function gerarRelatorioHEHtml(f) {
         const subtotal = (horasNum * taxaUnit) + adicionalVal;
 
         return `
-            <tr style="border-bottom: 1px solid #ccc; font-size: 0.85rem;">
-                <td style="padding: 6px; font-weight: bold; color: black;">${dataFormatada} (${diaSemana})</td>
-                <td style="padding: 6px; text-align: center; color: black;">${horasNum > 0 ? horasNum + 'h' : '-'}</td>
-                <td style="padding: 6px; text-align: center; font-weight: bold; color: ${isEspecial ? '#b91c1c' : '#374151'};">${isEspecial ? 'ESPECIAL' : 'NORMAL'}</td>
-                <td style="padding: 6px; text-align: right; color: black;">R$ ${taxaUnit.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="padding: 6px; text-align: right; font-weight: bold; color: ${adicionalVal >= 0 ? 'black' : '#b91c1c'};">${adicionalVal !== 0 ? (adicionalVal > 0 ? '+' : '') + 'R$ ' + adicionalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                <td style="padding: 6px; font-size: 0.78rem; text-transform: uppercase; color: #4b5563;">${h.observacao || '-'}</td>
-                <td style="padding: 6px; text-align: right; font-weight: 900; color: black;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <tr style="border-bottom: 1px solid #ddd; font-size: 0.9rem;">
+                <td style="padding: 8px; font-weight: bold; color: black;">${dataFormatada} (${diaSemana})</td>
+                <td style="padding: 8px; text-align: center; color: black; font-weight: bold;">${horasNum > 0 ? horasNum + 'h' : '-'}</td>
+                <td style="padding: 8px; text-align: center; font-weight: bold; color: ${isEspecial ? '#b91c1c' : '#1e293b'};">${isEspecial ? 'ESPECIAL' : 'NORMAL'}</td>
+                <td style="padding: 8px; text-align: right; color: black; font-weight: bold;">${adicionalVal !== 0 ? (adicionalVal > 0 ? '+' : '') + 'R$ ' + adicionalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                <td style="padding: 8px; font-size: 0.82rem; text-transform: uppercase; color: #4b5563;">${h.observacao || '-'}</td>
+                <td style="padding: 8px; text-align: right; font-weight: 900; color: black;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             </tr>
         `;
     }).join('');
 
     container.innerHTML = `
-        <div style="border: 2px solid black; padding: 20px; color: black; background: white;">
-            <!-- Cabeçalho Principal -->
-            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 12px;">
-                <h2 style="margin: 0; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">RELATÓRIO OPERACIONAL DE FECHAMENTO MENSAL - FISCAL</h2>
-                <small style="font-weight: bold; font-size: 0.75rem;">SERRARIA ORQUESTRA.CS - SISTEMAS DE ALTA PERFORMANCE</small>
-            </div>
-
+        <div style="border: 2px solid black; padding: 25px; color: black; background: white; font-family: Arial, sans-serif;">
+            
             <!-- Dados da Empresa e Referência -->
-            <div style="display: grid; grid-template-columns: 2.2fr 1fr; border-bottom: 1px solid black; padding-bottom: 8px; margin-bottom: 12px; gap: 10px; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid black; padding-bottom: 12px; margin-bottom: 15px;">
                 <div>
-                    <strong>EMPRESA:</strong> ORQUESTRACS SERRARIA INTEGRADA LTDA<br>
-                    <strong>CNPJ:</strong> 12.345.678/0001-99<br>
-                    <strong>ENDEREÇO:</strong> ZONA INDUSTRIAL DE LOGÍSTICA, S/N - PÁTIO SERRARIA
+                    <h2 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">SERRARIA ORQUESTRACS</h2>
+                    <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">CNPJ: 12.345.678/0001-99</span>
                 </div>
                 <div style="text-align: right;">
-                    <strong>REFERÊNCIA MÊS:</strong><br>
+                    <span style="font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #4b5563;">RELATÓRIO MENSAL DE HORAS EXTRAS</span><br>
                     <span style="font-size: 1.15rem; font-weight: 900; color: black;">${mesReferencia}</span>
                 </div>
             </div>
 
-            <!-- Ficha Cadastral Completa do Colaborador -->
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); border: 1.5px solid black; padding: 10px; margin-bottom: 15px; font-size: 0.85rem; gap: 8px; background: #fafafa;">
+            <!-- Dados do Colaborador -->
+            <div style="border: 1.5px solid black; padding: 12px; margin-bottom: 20px; font-size: 0.9rem; background: #fafafa; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px;">
                 <div>
-                    <strong>NOME COMPLETO:</strong> ${f.nome}<br>
-                    <strong>CARGO / FUNÇÃO:</strong> ${f.funcao || 'OPERÁRIO'}<br>
-                    <strong>DATA DE ADMISSÃO:</strong> ${dataAdmissao}<br>
-                    <strong>FORMA PAGTO:</strong> ${f.formaPagamento || 'PIX'}
+                    <strong>COLABORADOR:</strong> <span style="font-weight: 900; font-size: 1rem;">${f.nome}</span><br>
+                    <strong>CARGO:</strong> ${f.funcao || 'OPERÁRIO'}
                 </div>
                 <div>
                     <strong>CPF:</strong> ${f.cpf || '-'}<br>
-                    <strong>RG:</strong> ${f.rg || '-'}<br>
-                    <strong>NASCIMENTO:</strong> ${nascimento}<br>
-                    <strong>VALE DE CONTRATO:</strong> R$ ${(f.vale || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    <strong>RG:</strong> ${f.rg || '-'}
+                </div>
+                <div style="text-align: right;">
+                    <strong>PAGTO:</strong> ${f.formaPagamento || 'PIX'}
                 </div>
             </div>
 
-            <!-- Tabela Cronológica de Lançamentos do Mês -->
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 4px; margin-bottom: 8px;">1. DETALHAMENTO DOS DIAS TRABALHADOS E HORAS EXTRAS</h3>
-                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif;">
+            <!-- Tabela de Lançamentos de Horas Extras -->
+            <div style="margin-bottom: 25px;">
+                <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
                     <thead>
-                        <tr style="background: #e5e7eb; border-bottom: 2px solid black; font-size: 0.82rem; font-weight: bold; text-align: left;">
-                            <th style="padding: 6px;">DATA / DIA</th>
-                            <th style="padding: 6px; text-align: center;">HORAS</th>
-                            <th style="padding: 6px; text-align: center;">TIPO</th>
-                            <th style="padding: 6px; text-align: right;">TARIFA UNIT.</th>
-                            <th style="padding: 6px; text-align: right;">ADIC./BÔNUS</th>
-                            <th style="padding: 6px;">OBSERVAÇÃO / MOTIVO</th>
-                            <th style="padding: 6px; text-align: right;">SUBTOTAL</th>
+                        <tr style="background: #f3f4f6; border-bottom: 2px solid black; font-size: 0.85rem; font-weight: bold; text-align: left;">
+                            <th style="padding: 8px;">DATA / DIA</th>
+                            <th style="padding: 8px; text-align: center;">HORAS</th>
+                            <th style="padding: 8px; text-align: center;">TIPO</th>
+                            <th style="padding: 8px; text-align: right;">ADIC./DESCONTO</th>
+                            <th style="padding: 8px;">OBSERVAÇÃO</th>
+                            <th style="padding: 8px; text-align: right;">SUBTOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${linhasTabela || '<tr><td colspan="7" style="padding:15px; text-align:center; color:#666;">Nenhum lançamento diário de horas extras ou prêmios no período.</td></tr>'}
+                        ${linhasTabela || '<tr><td colspan="6" style="padding:15px; text-align:center; color:#666;">Nenhum lançamento de horas extras no período.</td></tr>'}
                     </tbody>
                 </table>
             </div>
 
-            <!-- Resumo e Consolidação Fiscal de Despesas -->
-            <div style="margin-bottom: 25px;">
-                <h3 style="font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 4px; margin-bottom: 10px;">2. CONSOLIDAÇÃO FINANCEIRA OPERACIONAL</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: stretch;">
-                    
-                    <!-- Fatos e Estatísticas -->
-                    <div style="border: 1px solid #ccc; padding: 12px; border-radius: 6px; font-size: 0.82rem; display: flex; flex-direction: column; justify-content: space-between; background: #fafafa;">
-                        <div>
-                            <strong>ESTATÍSTICAS DO PERÍODO:</strong><br>
-                            <ul style="margin: 6px 0; padding-left: 18px; line-height: 1.5;">
-                                <li>Dias Normais Trabalhados (HE): <strong>${totalDiasNormais} dias</strong></li>
-                                <li>Dias Finais de Semana / Fer: <strong>${totalDiasEspeciais} dias</strong></li>
-                                <li>Total de Faltas Registradas: <strong style="color: #b91c1c;">${faltasCount} faltas</strong></li>
-                                <li>Quantidade Horas Extras Realizadas: <strong>${(horas50 + horas100)} horas</strong></li>
-                            </ul>
-                        </div>
-                        <div style="font-size: 0.74rem; color: #4b5563; font-style: italic; border-top: 1px dashed #ccc; padding-top: 6px; margin-top: 6px;">
-                            * As faltas listadas servem para análise de assiduidade fiscal, não estando descontadas no custo bruto operacional deste relatório.
-                        </div>
-                    </div>
-
-                    <!-- Resumo Financeiro de Custos Corporativos -->
-                    <div style="border: 2px solid black; padding: 15px; background: #f9fafb; display: flex; flex-direction: column; justify-content: space-between;">
-                        <div style="font-size: 0.95rem; line-height: 1.6;">
-                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 4px;">
-                                <span>SALÁRIO BASE BRUTO:</span>
-                                <strong>R$ ${salarioBase.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 4px; padding-top: 4px;">
-                                <span>HORAS EXTRAS & PRÊMIOS:</span>
-                                <strong>R$ ${totalHorasExtras.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-                            </div>
-                        </div>
-
-                        <!-- CUSTO BRUTO TOTAL CORPORATIVO -->
-                        <div style="border: 2.5px solid black; padding: 10px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; background: #000; color: white;">
-                            <span style="font-weight: bold; font-size: 0.9rem; letter-spacing: 0.5px;">CUSTO OPERACIONAL BRUTO:</span>
-                            <span style="font-weight: 900; font-size: 1.45rem; color: #00ff88;">R$ ${custoBrutoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                        </div>
-                    </div>
-
+            <!-- Totais Consolidados (Apenas Horas Extras) -->
+            <div style="border: 2px solid black; padding: 15px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; margin-bottom: 30px;">
+                <div>
+                    <span>SOMA TOTAL DE DIAS:</span> <strong style="font-size: 1.1rem; margin-right: 20px;">${totalDiasComHE} dias</strong>
+                    <span>TOTAL HORAS REALIZADAS:</span> <strong style="font-size: 1.1rem;">${horasTotal}h</strong>
+                </div>
+                <div style="border-left: 2px solid black; padding-left: 20px; text-align: right;">
+                    <span style="font-size: 0.85rem; font-weight: bold; display: block; color: #4b5563; text-transform: uppercase;">TOTAL HORAS EXTRAS A PAGAR</span>
+                    <span style="font-weight: 900; font-size: 1.6rem; color: black;">R$ ${totalHorasExtras.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
             </div>
 
-            <!-- Assinaturas e Liberação Fiscal -->
-            <div style="margin-top: 40px; border-top: 1px solid black; padding-top: 20px; font-size: 0.85rem;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
-                    <div style="border-top: 1px solid black; padding-top: 5px;">
-                        <strong>RESPONSÁVEL OPERACIONAL</strong><br>
-                        <small>Serraria - Orquestracs</small>
+            <!-- Rodapé de Assinaturas Simplificado -->
+            <div style="margin-top: 50px; border-top: 1.5px solid black; padding-top: 20px; font-size: 0.85rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center;">
+                    <div style="border-top: 1px solid black; padding-top: 6px; font-weight: bold; color: black;">
+                        RESPONSÁVEL OPERACIONAL
                     </div>
-                    <div style="border-top: 1px solid black; padding-top: 5px;">
-                        <strong>COLABORADOR (FISCAL)</strong><br>
-                        <small>Declaração de Horas Feitas</small>
-                    </div>
-                    <div style="border-top: 1px solid black; padding-top: 5px;">
-                        <strong>CONTABILIDADE / FISCAL</strong><br>
-                        <small>Assinatura de Recebimento</small>
+                    <div style="border-top: 1px solid black; padding-top: 6px; font-weight: bold; color: black;">
+                        COLABORADOR
                     </div>
                 </div>
             </div>
-        </div>
+        </div>`;
     `;
 }
 
