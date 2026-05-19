@@ -13,13 +13,16 @@ const eventListEl = document.getElementById('eventList');
 const formEvento = document.getElementById('formEvento');
 const eventTextInp = document.getElementById('eventText');
 
-function setupCalendarEvents() {
-    document.getElementById('prevMonth')?.addEventListener('click', () => {
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    initCalendar();
+    
+    document.getElementById('prevMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
         renderCalendar();
     });
 
-    document.getElementById('nextMonth')?.addEventListener('click', () => {
+    document.getElementById('nextMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() + 1);
         renderCalendar();
     });
@@ -30,17 +33,7 @@ function setupCalendarEvents() {
             addEvent();
         });
     }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initCalendar();
-        setupCalendarEvents();
-    });
-} else {
-    initCalendar();
-    setupCalendarEvents();
-}
+});
 
 async function initCalendar() {
     await carregarEventosFirestore();

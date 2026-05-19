@@ -18,56 +18,6 @@
 </head>
 
 <body>
-    <!-- Fallback de Navegação Resiliente e Imediata - Orquestracs Premium -->
-    <script>
-        (function() {
-            window.App = window.App || {
-                showSection: function(id) {
-                    const sections = document.querySelectorAll('.view-section');
-                    let found = false;
-                    sections.forEach(s => {
-                        if (s.id === id) {
-                            s.style.display = 'block';
-                            s.classList.add('active-section');
-                            found = true;
-                        } else {
-                            s.style.display = 'none';
-                            s.classList.remove('active-section');
-                        }
-                    });
-                    if (!found && id !== 'view-dashboard') {
-                        console.warn("Fallback: Seção não encontrada: " + id);
-                    }
-                }
-            };
-
-            window.navegarPara = window.navegarPara || function(targetId) {
-                console.log("Navegando via Fallback para:", targetId);
-                if (window.App && typeof window.App.showSection === 'function') {
-                    window.App.showSection(targetId);
-                    
-                    // Atualizar classe ativa na sidebar
-                    document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
-                    const link = document.querySelector(`.sidebar nav ul li a[data-target="${targetId}"]`);
-                    if (link) link.classList.add('active');
-                    
-                    // Esconder dropdown de perfil se estiver aberto
-                    const d = document.getElementById('profile-dropdown');
-                    if (d) d.style.display = 'none';
-                    
-                    // Responsividade: recolher a sidebar em mobile
-                    if (window.innerWidth <= 768) {
-                        const appWrapper = document.querySelector('.app-wrapper');
-                        if (appWrapper && !appWrapper.classList.contains('sidebar-collapsed')) {
-                            const btnToggle = document.getElementById('btnToggleSidebar');
-                            if (btnToggle) btnToggle.click();
-                        }
-                    }
-                }
-            };
-        })();
-    </script>
-
     <div class="background-elements hide-on-print">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>

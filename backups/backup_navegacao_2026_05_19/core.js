@@ -251,13 +251,29 @@ const App = {
     setupNavigation() {
         console.log("Core: Ativando escuta de navegação...");
         
-        // Escuta de cliques para ações específicas como Logout
+        // Uso de Delegação de Eventos: Mais robusto que querySelectorAll direto
         document.addEventListener('click', (e) => {
-            const link = e.target.closest('#btnLogout');
-            if (link) {
+            const link = e.target.closest('.sidebar nav ul li a, .dropdown-item[data-target]');
+            if (!link) return;
+
+            const targetId = link.getAttribute('data-target');
+            
+            if (link.id === 'btnLogout') {
                 e.preventDefault();
-                console.log("Core: Efetuando logout do sistema...");
                 this.logout();
+                return;
+            }
+
+            if (targetId) {
+                e.preventDefault();
+                console.log("Core: Navegando para " + targetId);
+                this.showSection(targetId);
+                
+                // Atualizar classe ativa apenas para os links da sidebar
+                document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
+                if (link.closest('.sidebar')) {
+                    link.classList.add('active');
+                }
             }
         });
 

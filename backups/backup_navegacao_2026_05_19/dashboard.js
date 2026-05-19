@@ -1,11 +1,9 @@
 import { db, getDocs, collection } from './js/firebase-init.js';
 
 // dashboard.js - Lógica de indicadores e gráficos
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDashboard);
-} else {
+document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
-}
+});
 
 // Listener para quando dados mudarem
 document.addEventListener('historicoUpdated', initDashboard);
