@@ -45,15 +45,19 @@ body {
     height: 100vh;
 }
 
-/* Bolhas de Fundo Animadas - Tema Sunset */
+/* Elementos de Fundo */
 .background-elements {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
+    z-index: -1;
+    background-image: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url('bg-floresta.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 .blob {
@@ -379,6 +383,10 @@ input::placeholder {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
+    background-image: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.9)), url('bg-floresta.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 .login-container {
