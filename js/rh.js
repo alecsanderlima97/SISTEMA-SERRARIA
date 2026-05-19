@@ -854,8 +854,8 @@ function gerarHoleriteHtml(f) {
             </div>
 
             <!-- Cabeçalho da Tabela de Proventos/Descontos -->
-            <div style="font-family: monospace; font-size: 0.82rem;">
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 6px;">
+            <div style="font-family: monospace; font-size: 0.92rem;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 6px; margin-bottom: 8px; font-size: 0.98rem; color: black;">
                     <div>DESCRIÇÃO</div>
                     <div style="text-align: center;">REF.</div>
                     <div style="text-align: right;">PROVENTOS</div>
@@ -864,7 +864,7 @@ function gerarHoleriteHtml(f) {
 
                 <!-- Horas Extras 50% -->
                 ${horas50 > 0 ? `
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 6px; font-size: 0.95rem; font-weight: bold; color: black;">
                     <div>150 HORAS EXTRAS 50% (NORMAL)</div>
                     <div style="text-align: center;">${horas50}h</div>
                     <div style="text-align: right;">R$ ${ganhoHE50.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
@@ -874,7 +874,7 @@ function gerarHoleriteHtml(f) {
 
                 <!-- Horas Extras 100% -->
                 ${horas100 > 0 ? `
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 6px; font-size: 0.95rem; font-weight: bold; color: black;">
                     <div>151 HORAS EXTRAS 100% (DOM/SÁB/FER)</div>
                     <div style="text-align: center;">${horas100}h</div>
                     <div style="text-align: right;">R$ ${ganhoHE100.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
@@ -884,7 +884,7 @@ function gerarHoleriteHtml(f) {
 
                 <!-- Adicionais Diários / Prêmios -->
                 ${ganhoAdicionais > 0 ? `
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 6px; font-size: 0.95rem; font-weight: bold; color: black;">
                     <div>300 VALORES ADICIONAIS / PRÊMIOS DIÁRIOS</div>
                     <div style="text-align: center;">-</div>
                     <div style="text-align: right;">R$ ${ganhoAdicionais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
@@ -894,41 +894,51 @@ function gerarHoleriteHtml(f) {
 
                 <!-- Vale Mensal / Adiantamento -->
                 ${vale > 0 ? `
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 6px; font-size: 0.95rem; font-weight: bold; color: black;">
                     <div>901 VALE DE ADIANTAMENTO MENSAL</div>
                     <div style="text-align: center;">-</div>
                     <div style="text-align: right;">-</div>
-                    <div style="text-align: right;">R$ ${vale.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div style="text-align: right; color: #b91c1c;">R$ ${vale.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
                 ` : ''}
 
                 <!-- Descontos Diários Adicionais -->
                 ${descontosAdicionais > 0 ? `
-                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 4px;">
+                <div style="display: grid; grid-template-columns: 3.5fr 1fr 1.2fr 1.2fr; margin-bottom: 6px; font-size: 0.95rem; font-weight: bold; color: black;">
                     <div>905 DESCONTOS DIÁRIOS ADICIONAIS</div>
                     <div style="text-align: center;">-</div>
                     <div style="text-align: right;">-</div>
-                    <div style="text-align: right;">R$ ${descontosAdicionais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div style="text-align: right; color: #b91c1c;">R$ ${descontosAdicionais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
                 ` : ''}
             </div>
 
+            <!-- Total de Horas Extras (Apenas Vencimentos/Ganhos) -->
+            <div style="border: 2.5px solid black; padding: 12px; margin-top: 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #eee;">
+                <span style="font-weight: 900; font-size: 1.05rem; color: black; text-transform: uppercase;">TOTAL HORAS EXTRAS A PAGAR:</span>
+                <span style="font-weight: 900; font-size: 1.55rem; color: black;">R$ ${totalVencimentos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+
+            ${vale > 0 ? `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.05rem; padding: 10px 12px; background: #fff; border: 1.5px solid #000; font-weight: bold; color: black;">
+                <span style="text-transform: uppercase;">VALE ADIANTAMENTO JÁ ENTREGUE:</span>
+                <span style="color: #b91c1c;">R$ ${vale.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+            ` : ''}
+
             <!-- Informações Bancárias / Chave Pix -->
-            <div style="margin-top: 15px; border-top: 1px dashed black; padding-top: 8px; font-size: 0.8rem;">
+            <div style="margin-top: 15px; border-top: 1px dashed black; padding-top: 8px; font-size: 0.9rem; color: black;">
                 <strong>FORMA DE PAGAMENTO:</strong> ${f.formaPagamento || 'PIX'}<br>
                 <strong>DADOS PARA DEPÓSITO:</strong> ${f.dadosBancarios || 'Chave cadastrada no perfil'}
             </div>
 
             <!-- Declaração de Recebimento e Assinatura -->
-            <div style="margin-top: 30px; border-top: 1px solid black; padding-top: 10px;">
-                <p style="font-size: 0.72rem; text-align: justify; margin: 0 0 35px 0; color: #333; font-style: italic;">
-                    * OBSERVAÇÃO IMPORTANTE: Este documento compreende o demonstrativo individualizado de Horas Extras e adiantamento de Vale do período. <strong>O SALÁRIO BASE INTEGRAL NÃO ESTÁ INCLUÍDO</strong> neste extrato extra, sendo pago via contracheque mensal padrão.
-                </p>
+            <div style="margin-top: 40px; border-top: 1px solid black; padding-top: 15px;">
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: flex-end;">
-                    <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.8rem;">
+                    <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.85rem; font-weight: bold; color: black;">
                         Data: ____/____/_______
                     </div>
-                    <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.8rem;">
+                    <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.85rem; font-weight: bold; color: black;">
                         Assinatura do Funcionário: _________________________________________
                     </div>
                 </div>
