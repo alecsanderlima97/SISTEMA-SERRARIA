@@ -473,23 +473,6 @@ function salvarAbastecimento() {
         itemEstoque.quantidade -= qtd;
         salvarBanco(KEYS.ESTOQUE, estoque);
         console.log(`Estoque deduzido para ${estoqueNome}: novo saldo ${itemEstoque.quantidade}`);
-
-        // Registrar transação de saída no log de estoque
-        if (window.registrarMovimentacaoEstoque) {
-            const v = frota.find(item => item.id === veiculoId);
-            window.registrarMovimentacaoEstoque({
-                tipo: 'SAÍDA',
-                itemId: itemEstoque.id,
-                itemNome: itemEstoque.nome,
-                categoria: itemEstoque.categoria,
-                quantidade: qtd,
-                unitario: preco,
-                frotaId: veiculoId,
-                frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
-                destino: `Consumo Frota: ${v ? v.modelo : 'Veículo'}`,
-                observacao: `Abastecimento de veículo. Horímetro/KM: ${horimetro}`
-            });
-        }
     }
 
     abastecimentos.push(novo);
@@ -524,9 +507,8 @@ function renderizarAbastecimentosVeiculo(veiculoId) {
             <td style="padding: 8px 6px; text-align: center; color: white;">${a.qtd.toFixed(1)}</td>
             <td style="padding: 8px 6px; text-align: right; font-weight: bold; color: white;">R$ ${a.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             <td style="padding: 8px 6px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">${a.horimetro}</td>
-            <td style="padding: 8px 6px; text-align: center; display: flex; gap: 4px; justify-content: center;">
-                <button type="button" class="btn-action-card" onclick="window.imprimirAbastecimento('${a.id}', '${veiculoId}')" title="Imprimir Comprovante" style="padding: 4px 8px; color: #60a5fa;"><i class="fa-solid fa-print"></i></button>
-                <button type="button" class="btn-action-card" onclick="window.excluirAbastecimento('${a.id}', '${veiculoId}')" title="Estornar Registro" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
+            <td style="padding: 8px 6px; text-align: center;">
+                <button type="button" class="btn-action-card" onclick="window.excluirAbastecimento('${a.id}', '${veiculoId}')" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -549,23 +531,6 @@ window.excluirAbastecimento = function(id, veiculoId) {
         if (itemEstoque) {
             itemEstoque.quantidade += ab.qtd;
             salvarBanco(KEYS.ESTOQUE, estoque);
-
-            // Registrar transação de entrada de estorno no log de estoque
-            if (window.registrarMovimentacaoEstoque) {
-                const v = frota.find(item => item.id === veiculoId);
-                window.registrarMovimentacaoEstoque({
-                    tipo: 'ENTRADA',
-                    itemId: itemEstoque.id,
-                    itemNome: itemEstoque.nome,
-                    categoria: itemEstoque.categoria,
-                    quantidade: ab.qtd,
-                    unitario: ab.preco,
-                    frotaId: veiculoId,
-                    frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
-                    destino: `Estorno Consumo: ${v ? v.modelo : 'Veículo'}`,
-                    observacao: `Estorno de abastecimento realizado via controle de frotas.`
-                });
-            }
         }
     }
 
@@ -826,23 +791,6 @@ function salvarManutencao() {
                 console.warn(`Alerta de Estoque Baixo para ${p.nome}: Saldo ficará negativo.`);
             }
             itemEstoque.quantidade -= p.qtd;
-
-            // Registrar transação de saída no log de estoque
-            if (window.registrarMovimentacaoEstoque) {
-                const v = frota.find(item => item.id === veiculoId);
-                window.registrarMovimentacaoEstoque({
-                    tipo: 'SAÍDA',
-                    itemId: itemEstoque.id,
-                    itemNome: itemEstoque.nome,
-                    categoria: itemEstoque.categoria,
-                    quantidade: p.qtd,
-                    unitario: p.preco,
-                    frotaId: veiculoId,
-                    frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
-                    destino: `Manutenção Frota: ${v ? v.modelo : 'Veículo'}`,
-                    observacao: `Peça aplicada na manutenção. OS: ${nova.id}`
-                });
-            }
         }
     });
 
@@ -884,9 +832,8 @@ function renderizarManutencoesVeiculo(veiculoId) {
                 <td style="padding: 8px 6px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted);" title="${checklistStr}">${checklistStr}</td>
                 <td style="padding: 8px 6px; line-height: 1.3; color: white;">${pecasStr}</td>
                 <td style="padding: 8px 6px; text-align: center; color: white;">${m.horimetro}</td>
-                <td style="padding: 8px 6px; text-align: center; display: flex; gap: 4px; justify-content: center;">
-                    <button type="button" class="btn-action-card" onclick="window.imprimirManutencao('${m.id}', '${veiculoId}')" title="Imprimir Ordem/Checklist" style="padding: 4px 8px; color: #60a5fa;"><i class="fa-solid fa-print"></i></button>
-                    <button type="button" class="btn-action-card" onclick="window.excluirManutencao('${m.id}', '${veiculoId}')" title="Excluir Registro" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
+                <td style="padding: 8px 6px; text-align: center;">
+                    <button type="button" class="btn-action-card" onclick="window.excluirManutencao('${m.id}', '${veiculoId}')" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
         `;
@@ -904,23 +851,6 @@ window.excluirManutencao = function(id, veiculoId) {
             const itemEstoque = estoque.find(i => i.id === p.id);
             if (itemEstoque) {
                 itemEstoque.quantidade += p.qtd;
-
-                // Registrar transação de entrada de estorno no log de estoque
-                if (window.registrarMovimentacaoEstoque) {
-                    const v = frota.find(item => item.id === veiculoId);
-                    window.registrarMovimentacaoEstoque({
-                        tipo: 'ENTRADA',
-                        itemId: itemEstoque.id,
-                        itemNome: itemEstoque.nome,
-                        categoria: itemEstoque.categoria,
-                        quantidade: p.qtd,
-                        unitario: p.preco,
-                        frotaId: veiculoId,
-                        frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
-                        destino: `Estorno Peça: ${v ? v.modelo : 'Veículo'}`,
-                        observacao: `Estorno de peça por exclusão da OS de manutenção ${m.id}.`
-                    });
-                }
             }
         });
         salvarBanco(KEYS.ESTOQUE, estoque);
@@ -932,270 +862,4 @@ window.excluirManutencao = function(id, veiculoId) {
     // Recarregar saldo de peças e histórico
     carregarPecasEstoqueSelect();
     renderizarManutencoesVeiculo(veiculoId);
-};
-
-window.imprimirAbastecimento = function(id, veiculoId) {
-    const v = frota.find(item => item.id === veiculoId);
-    if (!v) return;
-    const ab = abastecimentos.find(a => a.id === id);
-    if (!ab) return;
-
-    const dtObj = new Date(ab.data + 'T12:00:00');
-    const dtStr = dtObj.toLocaleDateString('pt-BR');
-    
-    let win = window.open('', '_blank');
-    win.document.write(`
-<html>
-<head>
-    <title>Comprovante de Abastecimento - ${v.placa}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; color: #333; font-size: 13px; line-height: 1.5; }
-        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        h1 { margin: 0; font-size: 18px; text-transform: uppercase; }
-        h2 { margin: 5px 0 0 0; font-size: 12px; color: #666; font-weight: normal; }
-        .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; background: #f2f2f2; padding: 6px; margin: 20px 0 10px 0; border: 1px solid #ccc; }
-        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .info-item { padding: 4px 0; }
-        .info-label { font-weight: bold; color: #555; }
-        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table.data-table th { background: #f2f2f2; border: 1px solid #ccc; padding: 8px; font-weight: bold; font-size: 11px; text-transform: uppercase; text-align: left; }
-        table.data-table td { border: 1px solid #ccc; padding: 8px; font-size: 12px; }
-        .total-row { font-weight: bold; background: #eef2f5 !important; font-size: 13px; }
-        .signatures { margin-top: 50px; display: flex; justify-content: space-around; }
-        .signature-line { text-align: center; width: 220px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-        @media print {
-            body { margin: 15px; }
-            table.data-table th { background: #ddd !important; -webkit-print-color-adjust: exact; }
-            .section-title { background: #ddd !important; -webkit-print-color-adjust: exact; }
-        }
-    </style>
-</head>
-<body>
-    <table class="header-table">
-        <tr>
-            <td>
-                <span style="font-weight: 900; font-size: 22px; color: #2563eb;">Orquestra.cs</span><br>
-                <span style="font-size: 9px; color: #666; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Sistemas Personalizados</span>
-            </td>
-            <td style="text-align: right;">
-                <h1>Recibo de Consumo de Insumo</h1>
-                <h2>Controle de Frotas & Almoxarifado</h2>
-                <h2 style="font-size: 11px; color: #888;">Emissão: ${new Date().toLocaleString('pt-BR')}</h2>
-            </td>
-        </tr>
-    </table>
-
-    <div class="section-title">Dados do Veículo / Equipamento</div>
-    <div class="info-grid">
-        <div class="info-item"><span class="info-label">Modelo/Descrição:</span> ${v.modelo}</div>
-        <div class="info-item"><span class="info-label">Placa / Prefixo:</span> ${v.placa}</div>
-        <div class="info-item"><span class="info-label">Setor / Grupo:</span> ${v.grupo}</div>
-        <div class="info-item"><span class="info-label">Ano Fabricação:</span> ${v.ano}</div>
-    </div>
-
-    <div class="section-title">Detalhes do Abastecimento / Lançamento</div>
-    <div class="info-grid">
-        <div class="info-item"><span class="info-label">Data do Registro:</span> ${dtStr}</div>
-        <div class="info-item"><span class="info-label">Horímetro / KM no Lançamento:</span> ${ab.horimetro}</div>
-    </div>
-
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Item / Insumo</th>
-                <th style="text-align: center;">Quantidade</th>
-                <th style="text-align: right;">Preço Unitário</th>
-                <th style="text-align: right;">Valor Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>${ab.tipo}</strong></td>
-                <td style="text-align: center;">${ab.qtd.toFixed(2)} Litros/Kg</td>
-                <td style="text-align: right;">R$ ${ab.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="text-align: right; font-weight: bold;">R$ ${ab.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-            </tr>
-            <tr class="total-row">
-                <td colspan="3" style="text-align: right; text-transform: uppercase;"><strong>Total Pago / Debitado:</strong></td>
-                <td style="text-align: right; color: #1e3a8a;">R$ ${ab.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="signatures">
-        <div class="signature-line">
-            Operador / Motorista
-        </div>
-        <div class="signature-line">
-            Responsável pelo Registro
-        </div>
-    </div>
-
-    <script>
-        window.onload = function() {
-            window.print();
-        }
-    </script>
-</body>
-</html>
-    `);
-    win.document.close();
-};
-
-window.imprimirManutencao = function(id, veiculoId) {
-    const v = frota.find(item => item.id === veiculoId);
-    if (!v) return;
-    const manut = manutencoes.find(m => m.id === id);
-    if (!manut) return;
-
-    const dtObj = new Date(manut.data + 'T12:00:00');
-    const dtStr = dtObj.toLocaleDateString('pt-BR');
-    
-    // Checklist items formatting
-    const allChecklistItems = [
-        "ÓLEO E FILTROS",
-        "SISTEMA DE FREIOS",
-        "PNEUS / LAGARTAS",
-        "ELÉTRICA E FARÓIS",
-        "ARREFECIMENTO",
-        "CHASSI / ESTRUTURAL"
-    ];
-    
-    let checklistHtml = '';
-    allChecklistItems.forEach(item => {
-        const isOk = manut.checklist.some(chItem => chItem.toUpperCase().includes(item.split(' ')[0]));
-        const icon = isOk ? '☑' : '☐';
-        const status = isOk ? '<span style="color: #16a34a; font-weight: bold;">OK</span>' : '<span style="color: #777;">Não Marcado</span>';
-        checklistHtml += `
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed #ddd; padding: 6px 0;">
-                <span>${icon} <strong>${item}</strong></span>
-                <span>${status}</span>
-            </div>
-        `;
-    });
-
-    // Parts list formatting
-    let partsRowsHtml = '';
-    if (manut.pecas && manut.pecas.length > 0) {
-        manut.pecas.forEach(p => {
-            partsRowsHtml += `
-                <tr>
-                    <td>${p.nome}</td>
-                    <td style="text-align: center;">${p.qtd}</td>
-                    <td style="text-align: right;">R$ ${p.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td style="text-align: right; font-weight: bold;">R$ ${p.subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                </tr>
-            `;
-        });
-    } else {
-        partsRowsHtml = `<tr><td colspan="4" style="text-align: center; color: #666; font-style: italic;">Nenhuma peça utilizada nesta manutenção.</td></tr>`;
-    }
-
-    const totalPecas = manut.totalPecas || 0;
-
-    let win = window.open('', '_blank');
-    win.document.write(`
-<html>
-<head>
-    <title>Checklist de Manutenção - ${v.placa}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; color: #333; font-size: 13px; line-height: 1.5; }
-        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        h1 { margin: 0; font-size: 18px; text-transform: uppercase; }
-        h2 { margin: 5px 0 0 0; font-size: 12px; color: #666; font-weight: normal; }
-        .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; background: #f2f2f2; padding: 6px; margin: 20px 0 10px 0; border: 1px solid #ccc; }
-        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .info-item { padding: 4px 0; }
-        .info-label { font-weight: bold; color: #555; }
-        .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; border: 1px solid #ccc; padding: 15px; border-radius: 4px; }
-        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table.data-table th { background: #f2f2f2; border: 1px solid #ccc; padding: 8px; font-weight: bold; font-size: 11px; text-transform: uppercase; text-align: left; }
-        table.data-table td { border: 1px solid #ccc; padding: 8px; font-size: 12px; }
-        .total-row { font-weight: bold; background: #eef2f5 !important; font-size: 13px; }
-        .obs-box { border: 1px solid #ccc; padding: 12px; border-radius: 4px; background: #f9f9f9; min-height: 50px; font-style: italic; white-space: pre-wrap; }
-        .signatures { margin-top: 50px; display: flex; justify-content: space-around; }
-        .signature-line { text-align: center; width: 220px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-        @media print {
-            body { margin: 15px; }
-            table.data-table th { background: #ddd !important; -webkit-print-color-adjust: exact; }
-            .section-title { background: #ddd !important; -webkit-print-color-adjust: exact; }
-            .obs-box { background: none; }
-        }
-    </style>
-</head>
-<body>
-    <table class="header-table">
-        <tr>
-            <td>
-                <span style="font-weight: 900; font-size: 22px; color: #2563eb;">Orquestra.cs</span><br>
-                <span style="font-size: 9px; color: #666; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Sistemas Personalizados</span>
-            </td>
-            <td style="text-align: right;">
-                <h1>Ordem de Manutenção & Checklist</h1>
-                <h2>Controle de Frotas & Equipamentos</h2>
-                <h2 style="font-size: 11px; color: #888;">Emissão: ${new Date().toLocaleString('pt-BR')}</h2>
-            </td>
-        </tr>
-    </table>
-
-    <div class="section-title">Dados do Veículo / Equipamento</div>
-    <div class="info-grid">
-        <div class="info-item"><span class="info-label">Modelo/Descrição:</span> ${v.modelo}</div>
-        <div class="info-item"><span class="info-label">Placa / Prefixo:</span> ${v.placa}</div>
-        <div class="info-item"><span class="info-label">Setor / Grupo:</span> ${v.grupo}</div>
-        <div class="info-item"><span class="info-label">Ano Fabricação:</span> ${v.ano}</div>
-    </div>
-
-    <div class="section-title">Detalhes da Manutenção</div>
-    <div class="info-grid">
-        <div class="info-item"><span class="info-label">Data da Execução:</span> ${dtStr}</div>
-        <div class="info-item"><span class="info-label">Tipo de Manutenção:</span> ${manut.tipo}</div>
-        <div class="info-item"><span class="info-label">Horímetro / KM no Lançamento:</span> ${manut.horimetro}</div>
-    </div>
-
-    <div class="section-title">Checklist de Inspeção</div>
-    <div class="checklist-grid">
-        ${checklistHtml}
-    </div>
-
-    <div class="section-title">Peças e Materiais Utilizados</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Descrição da Peça / Insumo</th>
-                <th style="text-align: center; width: 80px;">Quantidade</th>
-                <th style="text-align: right; width: 120px;">Valor Unitário</th>
-                <th style="text-align: right; width: 120px;">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${partsRowsHtml}
-            <tr class="total-row">
-                <td colspan="3" style="text-align: right; text-transform: uppercase;"><strong>Custo Total de Peças:</strong></td>
-                <td style="text-align: right; color: #1e3a8a;">R$ ${totalPecas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="section-title">Diagnóstico Técnico / Observações</div>
-    <div class="obs-box">${manut.observacao || 'NENHUMA OBSERVAÇÃO REGISTRADA'}</div>
-
-    <div class="signatures">
-        <div class="signature-line">
-            Técnico / Mecânico
-        </div>
-        <div class="signature-line">
-            Supervisor / Operador
-        </div>
-    </div>
-
-    <script>
-        window.onload = function() {
-            window.print();
-        }
-    </script>
-</body>
-</html>
-    `);
-    win.document.close();
 };

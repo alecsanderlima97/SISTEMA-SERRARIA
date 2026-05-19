@@ -515,233 +515,119 @@
             </div>
         </section>
 
-        <!-- ====== TELA: CONTROLE DE ESTOQUE ====== -->
-        <section id="view-estoque" class="view-section" style="display: none;">
-            <div class="main-header">
-                <h1><i class="fa-solid fa-boxes-stacked"></i> Almoxarifado & Controle de Estoque</h1>
-                <p>Gestão unificada de recursos, peças de reposição e simuladores de tanques virtuais</p>
-            </div>
-
-                <!-- TABS DE ESTOQUE -->
-                <div class="tabs-container" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
-                    <button type="button" class="btn-tab-estoque active" onclick="window.switchTabEstoque('inventario')" id="btnTabEstoqueInventario" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-cubes"></i> Inventário Físico
-                    </button>
-                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('tanques')" id="btnTabEstoqueTanques" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-gas-pump"></i> Simulador de Tanques & Níveis
-                    </button>
-                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('movimentacoes')" id="btnTabEstoqueMovimentacoes" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-right-left"></i> Histórico de Movimentações (E/S)
-                    </button>
+            <!-- ====== TELA: CONTROLE DE ESTOQUE ====== -->
+            <section id="view-estoque" class="view-section" style="display: none;">
+                <div class="main-header">
+                    <h1><i class="fa-solid fa-boxes-stacked"></i> Controle de Estoque</h1>
+                    <p>Gerenciamento de recursos e materiais da madeireira</p>
                 </div>
 
-                <!-- SUB-VIEW 1: INVENTÁRIO FÍSICO -->
-                <div id="subview-estoque-inventario" class="subview-estoque-section">
-                    <!-- Categorias de Atalho Rápido -->
-                    <div class="glass-panel" style="margin-bottom: 2rem; padding: 20px;">
-                        <div class="section-title" style="margin-bottom: 15px;">
-                            <h2><i class="fa-solid fa-filter"></i> Filtrar por Categoria</h2>
-                        </div>
-                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; text-align:center;">
-                            <div class="category-card-estoque active" onclick="window.filtrarPorCategoriaEstoque('TODAS')" id="catCard_TODAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--accent-color); transition: all 0.2s;">
-                                <i class="fa-solid fa-border-all" style="font-size: 1.4rem; color: var(--accent-color); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: bold; color: white;">TODAS</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('PEÇAS')" id="catCard_PEÇAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-screwdriver-wrench" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Peças</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('FILTROS')" id="catCard_FILTROS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-filter" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Filtros</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('LUBRIFICANTES')" id="catCard_LUBRIFICANTES" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-oil-can" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Lubrificantes</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('DIESEL')" id="catCard_DIESEL" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-gas-pump" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Diesel</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('CORREIAS INDUSTRIAIS')" id="catCard_CORREIAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-gears" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.76rem; font-weight: 500; white-space: nowrap;">Correias</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('EPI\'S')" id="catCard_EPIS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-helmet-safety" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">EPI's</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('ESCRITÓRIO')" id="catCard_ESCRITORIO" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-stapler" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Escritório</span>
-                            </div>
-                        </div>
+                <div class="glass-panel" style="margin-bottom: 2rem;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-layer-group"></i> Categorias de Estoque</h2>
                     </div>
-
-                    <!-- Inventário e Filtros Dinâmicos -->
-                    <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-                            <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-cubes" style="color: var(--accent-color);"></i> Inventário Físico & Almoxarifado
-                            </h3>
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <!-- Busca -->
-                                <input type="text" id="buscaEstoque" placeholder="🔍 Buscar item..." oninput="window.filtrarEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 180px;">
-                                
-                                <!-- Toggle de Acabando -->
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; color: #f87171;">
-                                    <input type="checkbox" id="chkEstoqueAcabando" onchange="window.filtrarEstoque()" style="accent-color: #ef4444;">
-                                    <span>⚠️ Somente Estoque Baixo</span>
-                                </label>
-
-                                <button type="button" class="btn-primary" onclick="window.abrirModalNovoItemEstoque()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fa-solid fa-plus"></i> Novo Item
-                                </button>
-                            </div>
+                    <div class="grid-form"
+                        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); text-align:center;">
+                        <!-- Category Cards placeholder layout for future detailed logic -->
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-helmet-safety"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>EPI's</h3>
                         </div>
-
-                        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                                <thead>
-                                    <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
-                                        <th style="padding: 10px 8px;">CATEGORIA</th>
-                                        <th style="padding: 10px 8px;">NOME DO ITEM</th>
-                                        <th style="padding: 10px 8px; text-align: center;">STATUS</th>
-                                        <th style="padding: 10px 8px; text-align: center;">SALDO ATUAL</th>
-                                        <th style="padding: 10px 8px; text-align: center;">MÍNIMO ALERTA</th>
-                                        <th style="padding: 10px 8px; text-align: right;">VALOR DE COMPRA UN.</th>
-                                        <th style="padding: 10px 8px; text-align: right;">VALOR TOTAL</th>
-                                        <th style="padding: 10px 8px; text-align: center;">AÇÕES</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="corpoTabelaEstoque">
-                                    <!-- Preenchido dinamicamente via estoque.js -->
-                                </tbody>
-                            </table>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-gears"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Correias Industriais</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-oil-can"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Lubrificantes</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-stapler"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Escritório</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-pump-soap"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Higiene</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-screwdriver-wrench"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Peças</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-filter"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Filtros</h3>
+                        </div>
+                        <div class="glass-panel" style="cursor: pointer; padding: 20px; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-industry"
+                                style="font-size: 2rem; color:var(--accent-color); margin-bottom: 10px;"></i>
+                            <h3>Serraria</h3>
+                        </div>
+                        <div class="glass-panel"
+                            style="cursor: pointer; padding: 20px; transition: transform 0.2s; border:1px dashed var(--danger-color);"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-gas-pump"
+                                style="font-size: 2rem; color:var(--danger-color); margin-bottom: 10px;"></i>
+                            <h3 style="color:var(--danger-color);">Consumo de Diesel</h3>
                         </div>
                     </div>
                 </div>
 
-                <!-- SUB-VIEW 2: SIMULADOR DE TANQUES (INSUMOS) -->
-                <div id="subview-estoque-tanques" class="subview-estoque-section" style="display: none;">
-                    <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-                        
-                        <!-- SIMULADOR TANQUE DE DIESEL (5.000 L) -->
-                        <div class="glass-panel" style="padding: 25px; border-radius: 16px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
-                                <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fa-solid fa-gas-pump" style="color: #eab308;"></i> Tanque Principal de Diesel
-                                </h3>
-                            </div>
-                            
-                            <div style="display: flex; gap: 20px; align-items: center; margin: 20px 0;">
-                                <!-- Tanque Visual Vertical -->
-                                <div style="width: 80px; height: 180px; border: 3px solid rgba(255,255,255,0.2); border-radius: 40px; position: relative; background: rgba(0,0,0,0.3); overflow: hidden; box-shadow: inset 0 0 15px rgba(0,0,0,0.8);">
-                                    <!-- Medidor de Nível Líquido -->
-                                    <div id="dieselLiquidLevel" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(0deg, #b45309 0%, #eab308 100%); transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px #eab308;">
-                                        <!-- Animação de Onda -->
-                                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: rgba(255,255,255,0.3); animation: waveAnim 2s infinite linear;"></div>
-                                    </div>
-                                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 15px 0; font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none;">
-                                        <span>5k L</span>
-                                        <span>3.5k L</span>
-                                        <span>2.5k L</span>
-                                        <span>1k L</span>
-                                        <span>0 L</span>
-                                    </div>
-                                </div>
-
-                                <!-- Estatísticas do Diesel -->
-                                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Percentual de Volume:</span>
-                                        <div style="font-size: 1.8rem; font-weight: 800; color: #eab308;" id="dieselPercentText">0%</div>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Saldo Físico no Tanque:</span>
-                                        <div style="font-size: 1.2rem; font-weight: bold; color: white;" id="dieselLitersText">0 Litros</div>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Capacidade Máxima:</span>
-                                        <div style="font-size: 0.9rem; font-weight: bold; color: white;">5.000 Litros</div>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Espaço Disponível (Vazio):</span>
-                                        <div style="font-size: 0.9rem; font-weight: bold; color: #60a5fa;" id="dieselSpaceLeftText">0 Litros</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Caixa de Sugestão de Compra -->
-                            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px; font-size: 0.85rem;" id="dieselOrderAdvice">
-                                <span style="font-weight: bold; color: #60a5fa; display: block; margin-bottom: 2px;"><i class="fa-solid fa-circle-info"></i> Sugestão de Compra</span>
-                                <span id="dieselAdviceText">Aguardando dados...</span>
-                            </div>
-                        </div>
-
-                        <!-- SIMULADORES DE LUBRIFICANTES (CONVERSÃO DE BALDES 20L) -->
-                        <div class="glass-panel" style="padding: 25px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
-                                <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fa-solid fa-oil-can" style="color: #60a5fa;"></i> Tanques Virtuais de Lubrificantes
-                                </h3>
-                            </div>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 15px;" id="containerLubrificantesTanques">
-                                <!-- Gerado dinamicamente via JS -->
-                            </div>
-
-                            <div style="margin-top: 15px; font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px dashed var(--panel-border); padding: 10px; border-radius: 8px; line-height: 1.4;">
-                                <i class="fa-solid fa-circle-question"></i> <strong>Como funciona?</strong> Os lubrificantes e fluidos são comprados comercialmente em baldes de 20 litros. O almoxarifado gerencia as saídas de forma fracionada (litro a litro) e o simulador faz o desdobramento visual do saldo em Baldes Fechados + Litros restantes.
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- SUB-VIEW 3: HISTÓRICO DE MOVIMENTAÇÕES -->
-                <div id="subview-estoque-movimentacoes" class="subview-estoque-section" style="display: none;">
-                    <div class="glass-panel" style="padding: 20px; border-radius: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-                            <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-right-left" style="color: var(--accent-color);"></i> Log de Entradas & Saídas
-                            </h3>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <input type="text" id="buscaMovimentacao" placeholder="🔍 Filtrar item ou frota..." oninput="window.renderizarMovimentacoesEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 180px;">
-                                <select id="filtroMovTipo" onchange="window.renderizarMovimentacoesEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 8px 12px; font-size: 0.85rem;">
-                                    <option value="TODOS">TODOS LANÇAMENTOS</option>
-                                    <option value="ENTRADA">📈 ENTRADAS</option>
-                                    <option value="SAÍDA">📉 SAÍDAS</option>
-                                </select>
-                                <button type="button" class="btn-primary" onclick="window.abrirModalNovaMovimentacao()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; background: var(--primary-color);">
-                                    <i class="fa-solid fa-plus-minus"></i> Novo Lançamento (Manual)
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="table-container" style="max-height: 450px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                                <thead>
-                                    <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
-                                        <th style="padding: 10px 8px;">DATA / HORA</th>
-                                        <th style="padding: 10px 8px; text-align: center;">TIPO</th>
-                                        <th style="padding: 10px 8px;">ITEM / INSUMO</th>
-                                        <th style="padding: 10px 8px; text-align: center;">QTD</th>
-                                        <th style="padding: 10px 8px; text-align: right;">VALOR UN.</th>
-                                        <th style="padding: 10px 8px; text-align: right;">TOTAL</th>
-                                        <th style="padding: 10px 8px;">DESTINO / FROTA</th>
-                                        <th style="padding: 10px 8px;">OBSERVAÇÃO</th>
-                                        <th style="padding: 10px 8px; text-align: center;">AÇÕES</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="corpoTabelaMovimentacoesEstoque">
-                                    <!-- Preenchido dinamicamente via estoque.js -->
-                                </tbody>
-                            </table>
+                <!-- Painel de Gerenciamento do Estoque Real -->
+                <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px; margin-top: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-cubes" style="color: var(--accent-color);"></i> Inventário Físico & Almoxarifado
+                        </h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="buscaEstoque" placeholder="🔍 Buscar item..." oninput="window.filtrarEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 200px;">
+                            <button type="button" class="btn-primary" onclick="window.abrirModalNovoItemEstoque()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-plus"></i> Novo Item
+                            </button>
                         </div>
                     </div>
-                </div>
 
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
+                                    <th style="padding: 10px 8px;">CATEGORIA</th>
+                                    <th style="padding: 10px 8px;">NOME DO ITEM</th>
+                                    <th style="padding: 10px 8px; text-align: center;">SALDO ATUAL</th>
+                                    <th style="padding: 10px 8px; text-align: right;">VALOR DE COMPRA UN.</th>
+                                    <th style="padding: 10px 8px; text-align: right;">VALOR TOTAL</th>
+                                    <th style="padding: 10px 8px; text-align: center;">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabelaEstoque">
+                                <!-- Preenchido dinamicamente via estoque.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- ====== MODAL: NOVO ITEM NO ESTOQUE ====== -->
@@ -775,18 +661,13 @@
                         </div>
 
                         <div class="input-group" style="grid-column: span 1.5;">
-                            <label for="estQtd">Quantidade Atual</label>
+                            <label for="estQtd">Quantidade</label>
                             <input type="number" id="estQtd" step="0.01" required placeholder="Ex: 10">
                         </div>
 
                         <div class="input-group" style="grid-column: span 1.5;">
                             <label for="estUnitario">Valor Unitário (R$)</label>
                             <input type="text" id="estUnitario" required placeholder="R$ 0,00" oninput="window.formatCurrencyInput(event)">
-                        </div>
-
-                        <div class="input-group" style="grid-column: span 3;">
-                            <label for="estAlerta">Mínimo para Alerta (Aviso de Acabando)</label>
-                            <input type="number" id="estAlerta" step="0.01" placeholder="Ex: 3 (Vazio assume padrão)">
                         </div>
 
                         <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
@@ -797,12 +678,10 @@
                 </div>
             </div>
 
-                </div>
-
             <!-- ====== TELA: CONTROLE DE FROTAS ====== -->
             <section id="view-frotas" class="view-section" style="display: none;">
                 <div class="main-header hide-on-print">
-                    <h1><i class="fa-solid fa-truck-pickup"></i> Controle de Frota &amp; Equipamentos</h1>
+                    <h1><i class="fa-solid fa-truck-pickup"></i> Controle de Frota & Equipamentos</h1>
                     <p>Gestão de veículos por setor, abastecimentos e manutenções com integração de estoque.</p>
                 </div>
 
@@ -2770,76 +2649,6 @@
                 </div>
             </div>
             
-        </div>
-    </div>
-
-    <!-- ====== MODAL: NOVA MOVIMENTAÇÃO MANUAL DE ESTOQUE ====== -->
-    <div id="modalNovaMovimentacao" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
-        <div class="modal-content-v2" style="width: 100%; max-width: 600px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0; color: white; display: flex; align-items: center; gap: 10px;">
-                    <i class="fa-solid fa-plus-minus" style="color: var(--accent-color);"></i> Lançamento Manual de Estoque
-                </h2>
-                <button type="button" class="btn-action-card" onclick="window.fecharModalNovaMovimentacao()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <form id="formNovaMovimentacao" class="grid-form" style="grid-template-columns: 1fr 1fr 1fr;">
-
-                <div class="input-group" style="grid-column: span 3;">
-                    <label for="movTipo">Tipo de Movimentação</label>
-                    <select id="movTipo" onchange="window.onChangeMovTipo()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
-                        <option value="ENTRADA">📈 ENTRADA (Compra / Reposição)</option>
-                        <option value="SAÍDA">📉 SAÍDA (Consumo / Uso)</option>
-                    </select>
-                </div>
-
-                <div class="input-group" style="grid-column: span 3;">
-                    <label for="movItemId">Item do Estoque *</label>
-                    <select id="movItemId" onchange="window.onChangeMovItem()" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
-                        <option value="">-- SELECIONE O ITEM --</option>
-                    </select>
-                </div>
-
-                <div class="input-group">
-                    <label for="movData">Data</label>
-                    <input type="date" id="movData" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
-                </div>
-
-                <div class="input-group">
-                    <label for="movQtd">Quantidade *</label>
-                    <input type="number" id="movQtd" step="0.01" min="0.01" placeholder="Ex: 5" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
-                </div>
-
-                <div class="input-group">
-                    <label for="movUnitario">Valor Unitário (R$) *</label>
-                    <input type="text" id="movUnitario" placeholder="R$ 0,00" required oninput="window.formatCurrencyInput(event)" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
-                </div>
-
-                <div class="input-group" id="containerMovFrota" style="grid-column: span 3; display: none;">
-                    <label for="movFrotaId">Veículo / Máquina da Frota (Opcional)</label>
-                    <select id="movFrotaId" onchange="window.onChangeMovFrota()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
-                        <option value="">-- SELECIONE SE FOI USADO NA FROTA --</option>
-                    </select>
-                </div>
-
-                <div class="input-group" style="grid-column: span 3;">
-                    <label for="movDestino">Destino / Finalidade</label>
-                    <input type="text" id="movDestino" class="text-uppercase-input" placeholder="Ex: MANUTENÇÃO SERRARIA / REPOSIÇÃO GERAL" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
-                </div>
-
-                <div class="input-group" style="grid-column: span 3;">
-                    <label for="movObs">Observação</label>
-                    <textarea id="movObs" rows="2" class="text-uppercase-input" placeholder="Detalhes adicionais sobre este lançamento..." style="width: 100%; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px; resize: vertical;"></textarea>
-                </div>
-
-                <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                    <button type="button" class="btn-secondary" onclick="window.fecharModalNovaMovimentacao()" style="padding: 10px 20px; border-radius: 8px;">Cancelar</button>
-                    <button type="submit" class="btn-primary" style="padding: 10px 25px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-check"></i> Confirmar Lançamento
-                    </button>
-                </div>
-
-            </form>
         </div>
     </div>
 
