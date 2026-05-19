@@ -290,4 +290,28 @@ if (document.readyState === 'loading') {
     App.init();
 }
 
+window.App = App;
+window.navegarPara = function(targetId) {
+    if (App && typeof App.showSection === 'function') {
+        App.showSection(targetId);
+        
+        // Atualizar classe ativa na sidebar
+        document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.sidebar nav ul li a[data-target="${targetId}"]`);
+        if (link) link.classList.add('active');
+        
+        // Esconder dropdown de perfil se estiver aberto
+        const d = document.getElementById('profile-dropdown');
+        if (d) d.style.display = 'none';
+        
+        // Em telas pequenas, recolher a sidebar ao clicar em um link
+        if (window.innerWidth <= 768) {
+            const appWrapper = document.querySelector('.app-wrapper');
+            if (appWrapper && !appWrapper.classList.contains('sidebar-collapsed')) {
+                document.getElementById('btnToggleSidebar')?.click();
+            }
+        }
+    }
+};
+
 export { App };
