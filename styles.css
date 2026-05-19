@@ -12,8 +12,8 @@
     /* Terroso escuro */
     --panel-bg: rgba(255, 255, 255, 0.05);
     --panel-border: rgba(255, 255, 255, 0.1);
-    --text-color: #e6edf3;
-    --text-muted: #a1a1a1;
+    --text-color: #ffffff; /* Texto 100% visível e brilhante */
+    --text-muted: #cbd5e1; /* Texto secundário com maior contraste */
     --danger-color: #f85149;
     --danger-hover: #da3633;
 
@@ -54,7 +54,8 @@ body {
     height: 100vh;
     overflow: hidden;
     z-index: -1;
-    background-image: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url('bg-floresta.png');
+    /* Fundo mais escuro para garantir total leitura do texto */
+    background-image: linear-gradient(rgba(10, 15, 28, 0.92), rgba(10, 15, 28, 0.97)), url('bg-floresta.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -262,7 +263,7 @@ input::placeholder {
 /* SIDEBAR */
 .sidebar {
     width: 260px;
-    background: rgba(15, 20, 25, 0.75);
+    background: rgba(22, 43, 28, 0.95); /* Verde musgo escuro */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -383,7 +384,7 @@ input::placeholder {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background-image: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.9)), url('bg-floresta.png');
+    background-image: linear-gradient(rgba(10, 15, 28, 0.85), rgba(10, 15, 28, 0.94)), url('bg-floresta.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
