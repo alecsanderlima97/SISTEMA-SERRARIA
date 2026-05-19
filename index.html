@@ -54,6 +54,7 @@
                             Estilos</a></li>
                     <li><a href="#" data-target="view-estoque"><i class="fa-solid fa-boxes-stacked"></i> Controle de
                             Estoque</a></li>
+                    <li><a href="#" data-target="view-frotas"><i class="fa-solid fa-truck-pickup"></i> Controle de Frota</a></li>
                     <li><a href="#" data-target="view-rh"><i class="fa-solid fa-id-card-clip"></i> RH Funcionários</a></li>
                     <li><a href="#" data-target="view-calculadoras"><i class="fa-solid fa-calculator"></i>
                             Calculadoras</a></li>
@@ -594,7 +595,414 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Painel de Gerenciamento do Estoque Real -->
+                <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px; margin-top: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-cubes" style="color: var(--accent-color);"></i> Inventário Físico & Almoxarifado
+                        </h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="buscaEstoque" placeholder="🔍 Buscar item..." oninput="window.filtrarEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 200px;">
+                            <button type="button" class="btn-primary" onclick="window.abrirModalNovoItemEstoque()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-plus"></i> Novo Item
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
+                                    <th style="padding: 10px 8px;">CATEGORIA</th>
+                                    <th style="padding: 10px 8px;">NOME DO ITEM</th>
+                                    <th style="padding: 10px 8px; text-align: center;">SALDO ATUAL</th>
+                                    <th style="padding: 10px 8px; text-align: right;">VALOR DE COMPRA UN.</th>
+                                    <th style="padding: 10px 8px; text-align: right;">VALOR TOTAL</th>
+                                    <th style="padding: 10px 8px; text-align: center;">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabelaEstoque">
+                                <!-- Preenchido dinamicamente via estoque.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
+
+            <!-- ====== MODAL: NOVO ITEM NO ESTOQUE ====== -->
+            <div id="modalNovoItemEstoque" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
+                <div class="modal-content-v2" style="width: 100%; max-width: 450px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 id="tituloModalEstoque" style="margin: 0; color: white;"><i class="fa-solid fa-box" style="color: var(--accent-color);"></i> Novo Item de Estoque</h2>
+                        <button type="button" class="btn-action-card" onclick="window.fecharModalNovoItemEstoque()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <form id="formNovoItemEstoque" class="grid-form">
+                        <input type="hidden" id="estoqueItemId">
+                        
+                        <div class="input-group" style="grid-column: span 3;">
+                            <label for="estNome">Nome do Item / Descrição</label>
+                            <input type="text" id="estNome" required class="text-uppercase-input" placeholder="Ex: FILTRO DE COMBUSTÍVEL VOLVO">
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 3;">
+                            <label for="estCategoria">Categoria</label>
+                            <select id="estCategoria" required>
+                                <option value="PEÇAS">PEÇAS / ACESSÓRIOS</option>
+                                <option value="FILTROS">FILTROS</option>
+                                <option value="CORREIAS INDUSTRIAIS">CORREIAS INDUSTRIAIS</option>
+                                <option value="LUBRIFICANTES">LUBRIFICANTES</option>
+                                <option value="DIESEL">DIESEL / COMBUSTÍVEIS</option>
+                                <option value="EPI'S">EPI'S</option>
+                                <option value="ESCRITÓRIO">ESCRITÓRIO</option>
+                                <option value="HIGIENE">HIGIENE</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 1.5;">
+                            <label for="estQtd">Quantidade</label>
+                            <input type="number" id="estQtd" step="0.01" required placeholder="Ex: 10">
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 1.5;">
+                            <label for="estUnitario">Valor Unitário (R$)</label>
+                            <input type="text" id="estUnitario" required placeholder="R$ 0,00" oninput="window.formatCurrencyInput(event)">
+                        </div>
+
+                        <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                            <button type="button" class="btn-secondary" onclick="window.fecharModalNovoItemEstoque()" style="padding: 10px 20px;">Cancelar</button>
+                            <button type="submit" class="btn-primary" style="padding: 10px 25px;">Salvar Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ====== TELA: CONTROLE DE FROTAS ====== -->
+            <section id="view-frotas" class="view-section" style="display: none;">
+                <div class="main-header hide-on-print">
+                    <h1><i class="fa-solid fa-truck-pickup"></i> Controle de Frota & Equipamentos</h1>
+                    <p>Gestão de veículos por setor, abastecimentos e manutenções com integração de estoque.</p>
+                </div>
+
+                <!-- KPI / Contadores da Frota -->
+                <div class="dashboard-grid hide-on-print" style="margin-bottom: 25px;">
+                    <div class="kpi-card glass-panel" style="padding: 15px;">
+                        <div class="kpi-icon" style="background: rgba(37,99,235,0.1); color: #2563eb;"><i class="fa-solid fa-truck-moving"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="frota-kpi-total">0</h3>
+                            <p>Frota Cadastrada</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" style="padding: 15px;">
+                        <div class="kpi-icon" style="background: rgba(16,185,129,0.1); color: #10b981;"><i class="fa-solid fa-industry"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="frota-kpi-serraria">0</h3>
+                            <p>Setor Serraria</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" style="padding: 15px;">
+                        <div class="kpi-icon" style="background: rgba(245,158,11,0.1); color: #f59e0b;"><i class="fa-solid fa-tree"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="frota-kpi-florestal">0</h3>
+                            <p>Setor Florestal</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" style="padding: 15px;">
+                        <div class="kpi-icon" style="background: rgba(239,68,68,0.1); color: #ef4444;"><i class="fa-solid fa-trowel-rebuild"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="frota-kpi-terraplanagem">0</h3>
+                            <p>Terraplanagem</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Ações & Filtros -->
+                <div class="hide-on-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <!-- Setor Filtros Tabs -->
+                    <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 10px; border: 1px solid var(--panel-border);">
+                        <button type="button" class="btn-action-card active" onclick="window.filtrarFrota('TODOS')" id="btn-frota-todos" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Todos</button>
+                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('SERRARIA')" id="btn-frota-serraria" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Serraria</button>
+                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('FLORESTAL')" id="btn-frota-florestal" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Florestal</button>
+                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('TERRAPLANAGEM')" id="btn-frota-terraplanagem" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Terraplanagem</button>
+                    </div>
+
+                    <!-- Novo Veículo Triggers -->
+                    <button type="button" id="btnToggleFormFrota" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-plus"></i> Novo Veículo / Máquina
+                    </button>
+                </div>
+
+                <!-- Formulário Cadastro de Veículo (Expansível) -->
+                <div class="glass-panel hide-on-print" id="cardFormFrota" style="display: none; margin-bottom: 20px; padding: 20px;">
+                    <h3 style="margin: 0 0 15px 0;" id="formFrotaTitulo"><i class="fa-solid fa-truck-pickup"></i> Novo Veículo</h3>
+                    <form id="formFrota" class="grid-form">
+                        <input type="hidden" id="veiculoId">
+                        
+                        <div class="input-group">
+                            <label for="veicModelo">Modelo / Descrição</label>
+                            <input type="text" id="veicModelo" placeholder="Ex: CAMINHÃO VOLVO VM 270" required class="text-uppercase-input">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="veicPlaca">Placa / Prefixo</label>
+                            <input type="text" id="veicPlaca" placeholder="Ex: ABC-1234 ou MAQ-02" required class="text-uppercase-input">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="veicGrupo">Setor / Grupo</label>
+                            <select id="veicGrupo" required>
+                                <option value="SERRARIA">SERRARIA</option>
+                                <option value="FLORESTAL">FLORESTAL</option>
+                                <option value="TERRAPLANAGEM">TERRAPLANAGEM</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="veicAno">Ano de Fabricação</label>
+                            <input type="number" id="veicAno" min="1980" max="2030" placeholder="Ex: 2021" required>
+                        </div>
+
+                        <!-- Anexar Documento do Veículo -->
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="veicDocumento">Documento do Veículo (PDF / Imagem)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="file" id="veicDocumento" style="display: none;" onchange="window.handleDocumentoUpload(event)">
+                                <button type="button" class="btn-secondary" onclick="document.getElementById('veicDocumento').click()" style="padding: 10px 16px; border-radius: 8px;">
+                                    <i class="fa-solid fa-paperclip"></i> Anexar Documento
+                                </button>
+                                <span id="lblDocumentoNome" style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Nenhum arquivo anexado</span>
+                                <input type="hidden" id="veicDocumentoBase64">
+                            </div>
+                        </div>
+
+                        <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                            <button type="button" class="btn-secondary" id="btnCancelarFrota" style="padding: 10px 20px;">Cancelar</button>
+                            <button type="submit" class="btn-primary" style="padding: 10px 25px;">Salvar Veículo</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Grid de Veículos / Máquinas Cadastradas -->
+                <div class="grid-form" id="gridVeiculosFrota" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; display: grid;">
+                    <!-- Preenchido dinamicamente via JS -->
+                </div>
+            </section>
+
+            <!-- ====== MODAL: LANÇAMENTO DE ABASTECIMENTO (DIESEL / LUBRIFICANTES) ====== -->
+            <div id="modalAbastecimento" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
+                <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lançar Diesel / Lubrificantes</h2>
+                        <button type="button" class="btn-action-card" onclick="window.fecharModalAbastecimento()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div id="abastVeiculoCard" style="border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.03); display: flex; justify-content: space-between; font-size: 0.9rem;">
+                        <!-- Preenchido via JS -->
+                    </div>
+
+                    <form id="formAbastecimento" class="grid-form" style="margin-bottom: 20px;">
+                        <input type="hidden" id="abastVeiculoId">
+
+                        <div class="input-group">
+                            <label for="abastData">Data do Lançamento</label>
+                            <input type="date" id="abastData" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="abastTipo">Insumo / Combustível</label>
+                            <select id="abastTipo" required onchange="window.atualizarPrecoUnitarioEstoque()">
+                                <option value="DIESEL">DIESEL (Litros)</option>
+                                <option value="LUBRIFICANTE">LUBRIFICANTE (Litros)</option>
+                                <option value="HIDRAULICO">ÓLEO HIDRÁULICO (Litros)</option>
+                                <option value="GRAXA">GRAXA (Kg)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="abastQtd">Quantidade (L/Kg)</label>
+                            <input type="number" id="abastQtd" step="0.01" placeholder="Ex: 50" required oninput="window.calcularTotalAbastecimento()">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="abastPreco">Preço Unitário (R$)</label>
+                            <input type="text" id="abastPreco" placeholder="R$ 0,00" required oninput="window.calcularTotalAbastecimento()">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="abastTotal">Valor Total Calculado</label>
+                            <input type="text" id="abastTotal" placeholder="R$ 0,00" readonly style="background: rgba(255,255,255,0.05); font-weight: bold; color: var(--accent-color);">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="abastHorimetro">Horímetro / KM Atual</label>
+                            <input type="number" id="abastHorimetro" placeholder="Ex: 154200" required>
+                        </div>
+
+                        <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                            <button type="button" class="btn-secondary" onclick="window.fecharModalAbastecimento()" style="padding: 10px 20px;">Fechar</button>
+                            <button type="submit" class="btn-primary" style="padding: 10px 25px; background: var(--danger-color) !important; box-shadow: 0 0 10px rgba(239,68,68,0.25);">Registrar Consumo</button>
+                        </div>
+                    </form>
+
+                    <!-- Histórico de Consumo do Veículo -->
+                    <h3 style="font-size: 0.95rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px; margin-bottom: 10px; color: white;">Historico de Consumo Recente</h3>
+                    <div class="table-container" style="max-height: 180px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--panel-border);">
+                                    <th style="padding: 6px; color: var(--text-muted);">Data</th>
+                                    <th style="padding: 6px; color: var(--text-muted);">Tipo</th>
+                                    <th style="padding: 6px; text-align: center; color: var(--text-muted);">Qtd</th>
+                                    <th style="padding: 6px; text-align: right; color: var(--text-muted);">Total</th>
+                                    <th style="padding: 6px; text-align: center; color: var(--text-muted);">Horímetro</th>
+                                    <th style="padding: 6px; text-align: center; color: var(--text-muted);">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaAbastecimentosVeiculo">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== MODAL: CHECKLIST & MANUTENÇÃO (ESTOQUE DE PEÇAS LINKED) ====== -->
+            <div id="modalManutencao" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
+                <div class="modal-content-v2" style="width: 100%; max-width: 750px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-screwdriver-wrench" style="color: var(--accent-color);"></i> Manutenção & Checklist</h2>
+                        <button type="button" class="btn-action-card" onclick="window.fecharModalManutencao()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div id="manutVeiculoCard" style="border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.03); display: flex; justify-content: space-between; font-size: 0.9rem;">
+                        <!-- Preenchido via JS -->
+                    </div>
+
+                    <form id="formManutencao" class="grid-form" style="margin-bottom: 20px;">
+                        <input type="hidden" id="manutVeiculoId">
+
+                        <div class="input-group">
+                            <label for="manutData">Data da Manutenção</label>
+                            <input type="date" id="manutData" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="manutTipo">Tipo de Serviço</label>
+                            <select id="manutTipo" required>
+                                <option value="CORRETIVA">CORRETIVA</option>
+                                <option value="PREVENTIVA">PREVENTIVA / REVISÃO</option>
+                                <option value="CHECKLIST">CHECKLIST PERIÓDICO</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="manutHorimetro">Horímetro / KM Atual</label>
+                            <input type="number" id="manutHorimetro" placeholder="Ex: 154200" required>
+                        </div>
+
+                        <!-- Itens do Checklist Rápido -->
+                        <div style="grid-column: span 3; border: 1px solid var(--panel-border); border-radius: 8px; padding: 15px; background: rgba(255,255,255,0.02);">
+                            <h4 style="margin: 0 0 10px 0; color: white; font-size: 0.9rem;"><i class="fa-solid fa-list-check"></i> Checklist de Inspeção Visual</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkOleo" value="Óleo e Filtros"> Óleo & Filtros Ok
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkFreios" value="Sistema de Freios"> Sistema de Freios Ok
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkPneus" value="Pneus / Lagartas"> Pneus / Rodagem Ok
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkEletrica" value="Elétrica e Faróis"> Sistema Elétrico Ok
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkArrefecimento" value="Arrefecimento"> Arrefecimento Ok
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="chkEstrutural" value="Chassi / Implementos"> Chassi / Caçamba Ok
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Peças do Estoque Utilizadas -->
+                        <div style="grid-column: span 3; border: 1.5px solid var(--panel-border); border-radius: 8px; padding: 15px; background: rgba(255,255,255,0.02);">
+                            <h4 style="margin: 0 0 10px 0; color: white; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fa-solid fa-cubes"></i> Peças Utilizadas (Dedução Automática do Estoque)</span>
+                                <small style="color: var(--accent-color); font-size: 0.75rem; font-style: italic;">* Vinculado ao almoxarifado</small>
+                            </h4>
+                            <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end;">
+                                <div style="flex: 2;">
+                                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Selecionar Peça / Item do Estoque</label>
+                                    <select id="manutItemEstoque" style="width: 100%; border-radius: 6px; padding: 8px;" onchange="window.atualizarPrecoPecaDinamica()">
+                                        <!-- Carregado do Estoque via JS -->
+                                    </select>
+                                </div>
+                                <div style="flex: 0.8;">
+                                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Quantidade</label>
+                                    <input type="number" id="manutItemQtd" min="1" value="1" style="width: 100%; border-radius: 6px; padding: 8px;">
+                                </div>
+                                <div style="flex: 1.2;">
+                                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Preço Unitário (R$)</label>
+                                    <input type="text" id="manutItemPreco" placeholder="R$ 0,00" style="width: 100%; border-radius: 6px; padding: 8px;">
+                                </div>
+                                <button type="button" class="btn-primary" onclick="window.adicionarPecaManutencao()" style="padding: 10px 16px; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+
+                            <!-- Lista de Peças Selecionadas -->
+                            <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; max-height: 100px; overflow-y: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);">
+                                            <th style="padding: 4px;">Item / Peça</th>
+                                            <th style="padding: 4px; text-align: center;">Qtd</th>
+                                            <th style="padding: 4px; text-align: right;">Unitário</th>
+                                            <th style="padding: 4px; text-align: right;">Subtotal</th>
+                                            <th style="padding: 4px; text-align: center;">Remover</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listaPecasManutencaoTemp">
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 8px;">Nenhuma peça selecionada ainda.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 3;">
+                            <label for="manutObs">Descrição dos Serviços / Diagnóstico</label>
+                            <textarea id="manutObs" placeholder="Ex: Substituição de pastilhas de freio dianteiras, troca de filtros de óleo e diesel..." rows="2" style="width: 100%; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px;" class="text-uppercase-input"></textarea>
+                        </div>
+
+                        <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
+                            <button type="button" class="btn-secondary" onclick="window.fecharModalManutencao()" style="padding: 10px 20px;">Fechar</button>
+                            <button type="submit" class="btn-primary" style="padding: 10px 25px; background: var(--accent-color) !important;">Salvar Registro</button>
+                        </div>
+                    </form>
+
+                    <!-- Histórico de Manutenções do Veículo -->
+                    <h3 style="font-size: 0.95rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px; margin-bottom: 10px; color: white;">Histórico de Manutenções</h3>
+                    <div class="table-container" style="max-height: 180px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--panel-border);">
+                                    <th style="padding: 6px; color: var(--text-muted);">Data</th>
+                                    <th style="padding: 6px; color: var(--text-muted);">Tipo</th>
+                                    <th style="padding: 6px; color: var(--text-muted);">Checklist</th>
+                                    <th style="padding: 6px; color: var(--text-muted);">Peças Utilizadas</th>
+                                    <th style="padding: 6px; text-align: center; color: var(--text-muted);">Horímetro</th>
+                                    <th style="padding: 6px; text-align: center; color: var(--text-muted);">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaManutencoesVeiculo">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <!-- ====== TELA: RH FUNCIONÁRIOS ====== -->
             <section id="view-rh" class="view-section" style="display: none;">
@@ -2253,6 +2661,7 @@
     <script type="module" src="js/historico.js"></script>
     <script type="module" src="js/patio.js"></script>
     <script type="module" src="js/rh.js"></script>
+    <script type="module" src="js/frotas.js"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js"></script>
     <script type="module" src="dashboard.js"></script>

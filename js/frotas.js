@@ -1,0 +1,806 @@
+// --- CONTROLE DE FROTAS & EQUIPAMENTOS JS ---
+// Arquitetura SaaS Premium com persistência de dados offline-first (localStorage)
+// Integrado com controle de estoque e consumo de insumos (diesel e lubrificantes)
+
+console.log("Módulo de Frotas carregado com sucesso. Inicializando...");
+
+// --- PERSISTÊNCIA & ALIMENTAÇÃO DE DADOS PADRÕES ---
+const KEYS = {
+    FROTA: 'orquestra_frota',
+    ABASTECIMENTOS: 'orquestra_frota_abastecimentos',
+    MANUTENCOES: 'orquestra_frota_manutencoes',
+    ESTOQUE: 'orquestra_estoque' // Chave unificada para simular o almoxarifado
+};
+
+// Inicialização de dados default no Estoque para demonstrar a vinculação
+const DEFAULT_ESTOQUE = [
+    { id: 'est_01', nome: 'FILTRO DE AR DE MOTOR', categoria: 'FILTROS', quantidade: 15, unitario: 180.00 },
+    { id: 'est_02', nome: 'FILTRO DE COMBUSTÍVEL', categoria: 'FILTROS', quantidade: 22, unitario: 90.00 },
+    { id: 'est_03', nome: 'PASTILHA DE FREIO DIANTEIRA', categoria: 'PEÇAS', quantidade: 8, unitario: 320.00 },
+    { id: 'est_04', nome: 'CORREIA DO ALTERNADOR', categoria: 'CORREIAS INDUSTRIAIS', quantidade: 12, unitario: 75.00 },
+    { id: 'est_05', nome: 'ÓLEO LUBRIFICANTE 15W40', categoria: 'LUBRIFICANTES', quantidade: 250, unitario: 28.00 },
+    { id: 'est_06', nome: 'ÓLEO HIDRÁULICO ISO 68', categoria: 'LUBRIFICANTES', quantidade: 400, unitario: 32.00 },
+    { id: 'est_07', nome: 'GRAXA DE CHASSI MP2', categoria: 'LUBRIFICANTES', quantidade: 50, unitario: 24.00 },
+    { id: 'est_08', nome: 'BICO INJETOR DIESEL', categoria: 'PEÇAS', quantidade: 6, unitario: 650.00 },
+    { id: 'est_09', nome: 'DIESEL COMUM', categoria: 'DIESEL', quantidade: 5000, unitario: 5.89 }
+];
+
+const DEFAULT_FROTA = [
+    { id: 'v_01', modelo: 'CAMINHÃO VOLVO FH 540', placa: 'ABC-5F40', grupo: 'FLORESTAL', ano: 2021, documento: '', documentoNome: '' },
+    { id: 'v_02', modelo: 'PÁ CARREGADEIRA CAT 924K', placa: 'PC-02', grupo: 'SERRARIA', ano: 2019, documento: '', documentoNome: '' },
+    { id: 'v_03', modelo: 'ESCADA DE ESTEIRA KOMATSU D61', placa: 'TR-05', grupo: 'TERRAPLANAGEM', ano: 2022, documento: '', documentoNome: '' }
+];
+
+// Carregar e persistir iniciais se vazios
+function obterBanco(key, defaults = []) {
+    const dados = localStorage.getItem(key);
+    if (!dados) {
+        localStorage.setItem(key, JSON.stringify(defaults));
+        return defaults;
+    }
+    return JSON.parse(dados);
+}
+
+function salvarBanco(key, dados) {
+    localStorage.setItem(key, JSON.stringify(dados));
+}
+
+// Estados Locais
+let frota = obterBanco(KEYS.FROTA, DEFAULT_FROTA);
+let abastecimentos = obterBanco(KEYS.ABASTECIMENTOS, []);
+let manutencoes = obterBanco(KEYS.MANUTENCOES, []);
+let estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+
+// Lista temporária de peças para o modal de manutenção
+let pecasManutencaoTemp = [];
+
+// --- FILTRO DE GRUPO ---
+let setorFiltroAtual = 'TODOS';
+
+// --- INICIALIZADOR DO MÓDULO ---
+document.addEventListener('DOMContentLoaded', () => {
+    inicializarEventosFrotas();
+    renderizarFrota();
+    atualizarKPIsFrota();
+});
+
+// Registrar eventos
+function inicializarEventosFrotas() {
+    const btnToggle = document.getElementById('btnToggleFormFrota');
+    const cardForm = document.getElementById('cardFormFrota');
+    const btnCancelar = document.getElementById('btnCancelarFrota');
+    const form = document.getElementById('formFrota');
+
+    if (btnToggle && cardForm) {
+        btnToggle.addEventListener('click', () => {
+            const isHidden = cardForm.style.display === 'none';
+            cardForm.style.display = isHidden ? 'block' : 'none';
+            btnToggle.innerHTML = isHidden 
+                ? '<i class="fa-solid fa-minus"></i> Ocultar Formulário' 
+                : '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
+            limparFormFrota();
+        });
+    }
+
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', () => {
+            cardForm.style.display = 'none';
+            if (btnToggle) {
+                btnToggle.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
+            }
+            limparFormFrota();
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            salvarVeiculo();
+        });
+    }
+
+    // Registrar submits de modals
+    const formAbast = document.getElementById('formAbastecimento');
+    if (formAbast) {
+        formAbast.addEventListener('submit', (e) => {
+            e.preventDefault();
+            salvarAbastecimento();
+        });
+    }
+
+    const formManut = document.getElementById('formManutencao');
+    if (formManut) {
+        formManut.addEventListener('submit', (e) => {
+            e.preventDefault();
+            salvarManutencao();
+        });
+    }
+}
+
+// --- CONTROLE DE CADASTRO DE VEÍCULOS ---
+function limparFormFrota() {
+    document.getElementById('veiculoId').value = '';
+    document.getElementById('veicModelo').value = '';
+    document.getElementById('veicPlaca').value = '';
+    document.getElementById('veicGrupo').value = 'SERRARIA';
+    document.getElementById('veicAno').value = '';
+    document.getElementById('veicDocumento').value = '';
+    document.getElementById('lblDocumentoNome').textContent = 'Nenhum arquivo anexado';
+    document.getElementById('veicDocumentoBase64').value = '';
+    document.getElementById('formFrotaTitulo').innerHTML = '<i class="fa-solid fa-truck-pickup"></i> Novo Veículo';
+}
+
+// Conversão do documento para base64 para salvar no localStorage
+window.handleDocumentoUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const label = document.getElementById('lblDocumentoNome');
+    if (label) label.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Data = e.target.result;
+        document.getElementById('veicDocumentoBase64').value = base64Data;
+    };
+    reader.readAsDataURL(file);
+};
+
+function salvarVeiculo() {
+    const id = document.getElementById('veiculoId').value;
+    const modelo = document.getElementById('veicModelo').value.trim().toUpperCase();
+    const placa = document.getElementById('veicPlaca').value.trim().toUpperCase();
+    const grupo = document.getElementById('veicGrupo').value;
+    const ano = parseInt(document.getElementById('veicAno').value) || new Date().getFullYear();
+    const documento = document.getElementById('veicDocumentoBase64').value;
+    const documentoNome = document.getElementById('lblDocumentoNome').textContent;
+
+    if (!modelo || !placa) {
+        alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+
+    if (id) {
+        // Editar existente
+        frota = frota.map(v => v.id === id ? { ...v, modelo, placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome } : v);
+    } else {
+        // Novo veículo
+        const novo = {
+            id: 'v_' + new Date().getTime(),
+            modelo,
+            placa,
+            grupo,
+            ano,
+            documento,
+            documentoNome: documento ? documentoNome : 'Sem Anexo'
+        };
+        frota.push(novo);
+    }
+
+    salvarBanco(KEYS.FROTA, frota);
+    renderizarFrota();
+    atualizarKPIsFrota();
+
+    // Fechar formulário
+    document.getElementById('cardFormFrota').style.display = 'none';
+    const btnToggle = document.getElementById('btnToggleFormFrota');
+    if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
+    limparFormFrota();
+}
+
+window.editarVeiculo = function(id) {
+    const v = frota.find(item => item.id === id);
+    if (!v) return;
+
+    document.getElementById('veiculoId').value = v.id;
+    document.getElementById('veicModelo').value = v.modelo;
+    document.getElementById('veicPlaca').value = v.placa;
+    document.getElementById('veicGrupo').value = v.grupo;
+    document.getElementById('veicAno').value = v.ano;
+    document.getElementById('veicDocumentoBase64').value = v.documento || '';
+    document.getElementById('lblDocumentoNome').textContent = v.documentoNome || 'Sem Anexo';
+
+    document.getElementById('formFrotaTitulo').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Veículo: ${v.placa}`;
+
+    // Mostrar form
+    document.getElementById('cardFormFrota').style.display = 'block';
+    const btnToggle = document.getElementById('btnToggleFormFrota');
+    if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-minus"></i> Ocultar Formulário';
+
+    // Rolar até o form
+    document.getElementById('cardFormFrota').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.excluirVeiculo = function(id) {
+    if (!confirm("Tem certeza que deseja excluir este veículo? Isso não apagará o histórico de abastecimentos e manutenções dele, mas ele não constará na listagem principal.")) return;
+
+    frota = frota.filter(v => v.id !== id);
+    salvarBanco(KEYS.FROTA, frota);
+    renderizarFrota();
+    atualizarKPIsFrota();
+};
+
+// --- FILTRAR FROTA ---
+window.filtrarFrota = function(grupo) {
+    setorFiltroAtual = grupo;
+    
+    // Atualizar classes ativas dos botões
+    const botoes = ['todos', 'serraria', 'florestal', 'terraplanagem'];
+    botoes.forEach(b => {
+        const el = document.getElementById(`btn-frota-${b}`);
+        if (el) el.classList.remove('active');
+    });
+
+    const activeEl = document.getElementById(`btn-frota-${grupo.toLowerCase()}`);
+    if (activeEl) activeEl.classList.add('active');
+
+    renderizarFrota();
+};
+
+// --- RENDERIZAR GRID DE CARD DE VEÍCULOS ---
+function renderizarFrota() {
+    const grid = document.getElementById('gridVeiculosFrota');
+    if (!grid) return;
+
+    const filtrados = frota.filter(v => setorFiltroAtual === 'TODOS' || v.grupo === setorFiltroAtual);
+
+    if (filtrados.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: span 3; text-align: center; color: var(--text-muted); padding: 40px;" class="glass-panel">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.5rem; margin-bottom: 10px; color: var(--accent-color);"></i>
+                <p>Nenhum veículo ou equipamento cadastrado para o setor <strong>${setorFiltroAtual}</strong>.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = filtrados.map(v => {
+        // Definir cores HSL vibrantes de badges com base no setor
+        let badgeColor = '';
+        let iconHtml = '<i class="fa-solid fa-truck"></i>';
+        if (v.grupo === 'SERRARIA') {
+            badgeColor = 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.2);';
+            iconHtml = '<i class="fa-solid fa-forklift"></i>';
+        } else if (v.grupo === 'FLORESTAL') {
+            badgeColor = 'background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2);';
+            iconHtml = '<i class="fa-solid fa-tractor"></i>';
+        } else {
+            badgeColor = 'background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);';
+            iconHtml = '<i class="fa-solid fa-trowel-rebuild"></i>';
+        }
+
+        // Link de documento
+        const docLinkHtml = v.documento 
+            ? `<button class="btn-action-card" onclick="window.visualizarDocumento('${v.id}')" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); color: #60a5fa;"><i class="fa-solid fa-file-pdf"></i> Doc Anexo</button>`
+            : `<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sem Documento</span>`;
+
+        return `
+            <div class="glass-panel" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div>
+                    <!-- Header Card -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--accent-color);">
+                            ${iconHtml}
+                        </div>
+                        <span style="font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; ${badgeColor}">
+                            ${v.grupo}
+                        </span>
+                    </div>
+
+                    <!-- Dados Principal -->
+                    <h3 style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px; color: white;">${v.modelo}</h3>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px;">
+                        <span>PLACA / PREFIXO: <strong style="color: white;">${v.placa}</strong></span><br>
+                        <span>ANO FABRICAÇÃO: <strong style="color: white;">${v.ano}</strong></span><br>
+                        <span style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">DOCUMENTO: ${docLinkHtml}</span>
+                    </div>
+                </div>
+
+                <!-- Ações Rápidas de Frota -->
+                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-primary" onclick="window.abrirModalAbastecimento('${v.id}')" style="flex: 1; padding: 8px 12px; font-size: 0.78rem; border-radius: 8px; background: #ef4444 !important; border: none; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(239,68,68,0.2);">
+                            <i class="fa-solid fa-gas-pump"></i> ⛽ Abastecer
+                        </button>
+                        <button type="button" class="btn-primary" onclick="window.abrirModalManutencao('${v.id}')" style="flex: 1; padding: 8px 12px; font-size: 0.78rem; border-radius: 8px; background: #3b82f6 !important; border: none; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.2);">
+                            <i class="fa-solid fa-screwdriver-wrench"></i> 🔧 Manutenção
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px;">
+                        <button class="btn-action-card" onclick="window.editarVeiculo('${v.id}')" title="Editar Veículo" style="padding: 6px 10px;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+                        <button class="btn-action-card" onclick="window.excluirVeiculo('${v.id}')" title="Excluir Veículo" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Download/Visualização do documento anexo em base64
+window.visualizarDocumento = function(id) {
+    const v = frota.find(item => item.id === id);
+    if (!v || !v.documento) return;
+
+    try {
+        const newTab = window.open();
+        if (newTab) {
+            newTab.document.write(`<iframe src="${v.documento}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%; position:fixed;" allowfullscreen></iframe>`);
+            newTab.document.title = `Documento - ${v.modelo} (${v.placa})`;
+        } else {
+            // Trigger download se popups bloqueados
+            const link = document.createElement('a');
+            link.href = v.documento;
+            link.download = v.documentoNome || 'documento_veiculo';
+            link.click();
+        }
+    } catch (e) {
+        alert("Não foi possível abrir o documento. Baixando arquivo...");
+    }
+};
+
+// --- CONTROLAR ATUALIZAÇÃO DE KPIS ---
+function atualizarKPIsFrota() {
+    const totalEl = document.getElementById('frota-kpi-total');
+    const serrariaEl = document.getElementById('frota-kpi-serraria');
+    const florestalEl = document.getElementById('frota-kpi-florestal');
+    const terraplanagemEl = document.getElementById('frota-kpi-terraplanagem');
+
+    if (totalEl) totalEl.textContent = frota.length;
+    if (serrariaEl) serrariaEl.textContent = frota.filter(v => v.grupo === 'SERRARIA').length;
+    if (florestalEl) florestalEl.textContent = frota.filter(v => v.grupo === 'FLORESTAL').length;
+    if (terraplanagemEl) terraplanagemEl.textContent = frota.filter(v => v.grupo === 'TERRAPLANAGEM').length;
+}
+
+
+// =========================================================================
+// MÓDULO ABASTECIMENTO (DIESEL / LUBRIFICANTES LINKED COM ESTOQUE)
+// =========================================================================
+
+window.abrirModalAbastecimento = function(veiculoId) {
+    const v = frota.find(item => item.id === veiculoId);
+    if (!v) return;
+
+    document.getElementById('abastVeiculoId').value = v.id;
+    document.getElementById('abastData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('abastQtd').value = '';
+    document.getElementById('abastPreco').value = '';
+    document.getElementById('abastTotal').value = '';
+    document.getElementById('abastHorimetro').value = obterUltimoHorimetro(v.id);
+    document.getElementById('abastTipo').value = 'DIESEL';
+
+    // Informações no Header do modal
+    document.getElementById('abastVeiculoCard').innerHTML = `
+        <div>
+            <strong>VEÍCULO:</strong> ${v.modelo}<br>
+            <strong>PLACA / PREFIXO:</strong> ${v.placa}
+        </div>
+        <div style="text-align: right;">
+            <strong>SETOR:</strong> ${v.grupo}<br>
+            <strong>ANO:</strong> ${v.ano}
+        </div>
+    `;
+
+    // Atualizar preço unitário com base no estoque
+    atualizarPrecoUnitarioEstoque();
+    
+    // Renderizar tabela recente do veículo
+    renderizarAbastecimentosVeiculo(v.id);
+
+    document.getElementById('modalAbastecimento').style.display = 'flex';
+};
+
+window.fecharModalAbastecimento = function() {
+    document.getElementById('modalAbastecimento').style.display = 'none';
+};
+
+// Autopreencher preço unitário se houver no estoque virtual
+window.atualizarPrecoUnitarioEstoque = function() {
+    const tipo = document.getElementById('abastTipo').value;
+    const inputPreco = document.getElementById('abastPreco');
+    if (!inputPreco) return;
+
+    let estoqueNome = '';
+    if (tipo === 'DIESEL') estoqueNome = 'DIESEL COMUM';
+    else if (tipo === 'LUBRIFICANTE') estoqueNome = 'ÓLEO LUBRIFICANTE 15W40';
+    else if (tipo === 'HIDRAULICO') estoqueNome = 'ÓLEO HIDRÁULICO ISO 68';
+    else if (tipo === 'GRAXA') estoqueNome = 'GRAXA DE CHASSI MP2';
+
+    const item = estoque.find(i => i.nome === estoqueNome);
+    if (item) {
+        inputPreco.value = window.formatCurrencyValue(item.unitario);
+    } else {
+        inputPreco.value = '';
+    }
+    calcularTotalAbastecimento();
+};
+
+window.calcularTotalAbastecimento = function() {
+    const qtd = parseFloat(document.getElementById('abastQtd').value) || 0;
+    const preco = window.parseCurrencyValue(document.getElementById('abastPreco').value) || 0;
+    const inputTotal = document.getElementById('abastTotal');
+
+    if (inputTotal) {
+        inputTotal.value = window.formatCurrencyValue(qtd * preco);
+    }
+};
+
+// Obter o último horímetro/KM lançado
+function obterUltimoHorimetro(veiculoId) {
+    const filtrados = abastecimentos.filter(a => a.veiculoId === veiculoId);
+    const filtradosManut = manutencoes.filter(m => m.veiculoId === veiculoId);
+    
+    let max = 0;
+    filtrados.forEach(a => { if (a.horimetro > max) max = a.horimetro; });
+    filtradosManut.forEach(m => { if (m.horimetro > max) max = m.horimetro; });
+    
+    return max > 0 ? max : '';
+}
+
+function salvarAbastecimento() {
+    const veiculoId = document.getElementById('abastVeiculoId').value;
+    const data = document.getElementById('abastData').value;
+    const tipo = document.getElementById('abastTipo').value;
+    const qtd = parseFloat(document.getElementById('abastQtd').value) || 0;
+    const preco = window.parseCurrencyValue(document.getElementById('abastPreco').value) || 0;
+    const horimetro = parseInt(document.getElementById('abastHorimetro').value) || 0;
+
+    if (qtd <= 0 || preco <= 0 || horimetro <= 0) {
+        alert("Por favor, preencha a quantidade, preço unitário e horímetro de forma correta.");
+        return;
+    }
+
+    const novo = {
+        id: 'ab_' + new Date().getTime(),
+        veiculoId,
+        data,
+        tipo,
+        qtd,
+        preco,
+        total: qtd * preco,
+        horimetro
+    };
+
+    // --- INTEGRAR E DEDUZIR DO ESTOQUE ---
+    let estoqueNome = '';
+    if (tipo === 'DIESEL') estoqueNome = 'DIESEL COMUM';
+    else if (tipo === 'LUBRIFICANTE') estoqueNome = 'ÓLEO LUBRIFICANTE 15W40';
+    else if (tipo === 'HIDRAULICO') estoqueNome = 'ÓLEO HIDRÁULICO ISO 68';
+    else if (tipo === 'GRAXA') estoqueNome = 'GRAXA DE CHASSI MP2';
+
+    estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+    let itemEstoque = estoque.find(i => i.nome === estoqueNome);
+    
+    if (itemEstoque) {
+        if (itemEstoque.quantidade < qtd) {
+            alert(`Atenção: A quantidade lançada (${qtd}) é maior do que o saldo atual em estoque (${itemEstoque.quantidade}). O estoque ficará negativo.`);
+        }
+        itemEstoque.quantidade -= qtd;
+        salvarBanco(KEYS.ESTOQUE, estoque);
+        console.log(`Estoque deduzido para ${estoqueNome}: novo saldo ${itemEstoque.quantidade}`);
+    }
+
+    abastecimentos.push(novo);
+    salvarBanco(KEYS.ABASTECIMENTOS, abastecimentos);
+    
+    // Atualizar tabela e limpar form do modal
+    renderizarAbastecimentosVeiculo(veiculoId);
+    document.getElementById('abastQtd').value = '';
+    document.getElementById('abastTotal').value = '';
+    document.getElementById('abastHorimetro').value = horimetro; // Manter o último
+
+    alert("Consumo registrado com sucesso! O estoque de almoxarifado foi devidamente deduzido.");
+}
+
+function renderizarAbastecimentosVeiculo(veiculoId) {
+    const tbody = document.getElementById('listaAbastecimentosVeiculo');
+    if (!tbody) return;
+
+    const filtrados = abastecimentos
+        .filter(a => a.veiculoId === veiculoId)
+        .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 15px; color: var(--text-muted);">Nenhum consumo registrado anteriormente para este veículo.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtrados.map(a => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 8px 6px; color: white;">${new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+            <td style="padding: 8px 6px;"><span style="font-weight: bold; color: ${a.tipo === 'DIESEL' ? '#ef4444' : '#60a5fa'}; font-size: 0.78rem;">${a.tipo}</span></td>
+            <td style="padding: 8px 6px; text-align: center; color: white;">${a.qtd.toFixed(1)}</td>
+            <td style="padding: 8px 6px; text-align: right; font-weight: bold; color: white;">R$ ${a.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td style="padding: 8px 6px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">${a.horimetro}</td>
+            <td style="padding: 8px 6px; text-align: center;">
+                <button type="button" class="btn-action-card" onclick="window.excluirAbastecimento('${a.id}', '${veiculoId}')" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.excluirAbastecimento = function(id, veiculoId) {
+    if (!confirm("Tem certeza que deseja estornar este abastecimento? Isso reverterá a quantidade correspondente de volta ao estoque.")) return;
+
+    const ab = abastecimentos.find(a => a.id === id);
+    if (ab) {
+        // Devolver estoque
+        let estoqueNome = '';
+        if (ab.tipo === 'DIESEL') estoqueNome = 'DIESEL COMUM';
+        else if (ab.tipo === 'LUBRIFICANTE') estoqueNome = 'ÓLEO LUBRIFICANTE 15W40';
+        else if (ab.tipo === 'HIDRAULICO') estoqueNome = 'ÓLEO HIDRÁULICO ISO 68';
+        else if (ab.tipo === 'GRAXA') estoqueNome = 'GRAXA DE CHASSI MP2';
+
+        estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+        let itemEstoque = estoque.find(i => i.nome === estoqueNome);
+        if (itemEstoque) {
+            itemEstoque.quantidade += ab.qtd;
+            salvarBanco(KEYS.ESTOQUE, estoque);
+        }
+    }
+
+    abastecimentos = abastecimentos.filter(a => a.id !== id);
+    salvarBanco(KEYS.ABASTECIMENTOS, abastecimentos);
+    renderizarAbastecimentosVeiculo(veiculoId);
+};
+
+
+// =========================================================================
+// MÓDULO MANUTENÇÃO & CHECKLIST (VINCULADO COM PEÇAS DE ESTOQUE)
+// =========================================================================
+
+window.abrirModalManutencao = function(veiculoId) {
+    const v = frota.find(item => item.id === veiculoId);
+    if (!v) return;
+
+    document.getElementById('manutVeiculoId').value = v.id;
+    document.getElementById('manutData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('manutHorimetro').value = obterUltimoHorimetro(v.id);
+    document.getElementById('manutObs').value = '';
+    
+    // Reseta checklist
+    document.getElementById('chkOleo').checked = false;
+    document.getElementById('chkFreios').checked = false;
+    document.getElementById('chkPneus').checked = false;
+    document.getElementById('chkEletrica').checked = false;
+    document.getElementById('chkArrefecimento').checked = false;
+    document.getElementById('chkEstrutural').checked = false;
+
+    // Reseta peças temporárias
+    pecasManutencaoTemp = [];
+    renderizarPecasManutencaoTemp();
+
+    // Informações do Header
+    document.getElementById('manutVeiculoCard').innerHTML = `
+        <div>
+            <strong>VEÍCULO / EQUIPAMENTO:</strong> ${v.modelo}<br>
+            <strong>PLACA / PREFIXO:</strong> ${v.placa}
+        </div>
+        <div style="text-align: right;">
+            <strong>SETOR:</strong> ${v.grupo}<br>
+            <strong>ANO:</strong> ${v.ano}
+        </div>
+    `;
+
+    // Carregar itens do almoxarifado/estoque no select
+    carregarPecasEstoqueSelect();
+    
+    // Renderizar histórico de manutenções
+    renderizarManutencoesVeiculo(v.id);
+
+    document.getElementById('modalManutencao').style.display = 'flex';
+};
+
+window.fecharModalManutencao = function() {
+    document.getElementById('modalManutencao').style.display = 'none';
+};
+
+// Carregar select de estoque com itens reais de peças
+function carregarPecasEstoqueSelect() {
+    const select = document.getElementById('manutItemEstoque');
+    if (!select) return;
+
+    estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+
+    // Filtrar apenas categorias de peças, correias e filtros
+    const itensValidos = estoque.filter(i => ['PEÇAS', 'FILTROS', 'CORREIAS INDUSTRIAIS', 'LUBRIFICANTES'].includes(i.categoria));
+
+    select.innerHTML = '<option value="">-- SELECIONE UMA PEÇA / INSUMO --</option>' + 
+        itensValidos.map(i => `<option value="${i.id}">${i.nome} (Saldo: ${i.quantidade.toFixed(0)})</option>`).join('');
+
+    document.getElementById('manutItemQtd').value = 1;
+    document.getElementById('manutItemPreco').value = '';
+}
+
+window.atualizarPrecoPecaDinamica = function() {
+    const itemId = document.getElementById('manutItemEstoque').value;
+    const inputPreco = document.getElementById('manutItemPreco');
+    if (!inputPreco) return;
+
+    const item = estoque.find(i => i.id === itemId);
+    if (item) {
+        inputPreco.value = window.formatCurrencyValue(item.unitario);
+    } else {
+        inputPreco.value = '';
+    }
+};
+
+window.adicionarPecaManutencao = function() {
+    const itemId = document.getElementById('manutItemEstoque').value;
+    const qtd = parseInt(document.getElementById('manutItemQtd').value) || 0;
+    const preco = window.parseCurrencyValue(document.getElementById('manutItemPreco').value) || 0;
+
+    if (!itemId || qtd <= 0 || preco <= 0) {
+        alert("Selecione um item válido e preencha a quantidade e o preço unitário.");
+        return;
+    }
+
+    const item = estoque.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Verificar se já existe na lista temporária
+    const jaExiste = pecasManutencaoTemp.find(p => p.id === itemId);
+    if (jaExiste) {
+        jaExiste.qtd += qtd;
+        jaExiste.subtotal = jaExiste.qtd * jaExiste.preco;
+    } else {
+        pecasManutencaoTemp.push({
+            id: item.id,
+            nome: item.nome,
+            qtd,
+            preco,
+            subtotal: qtd * preco
+        });
+    }
+
+    renderizarPecasManutencaoTemp();
+
+    // Resetar inputs de peças
+    document.getElementById('manutItemEstoque').value = '';
+    document.getElementById('manutItemQtd').value = 1;
+    document.getElementById('manutItemPreco').value = '';
+};
+
+function renderizarPecasManutencaoTemp() {
+    const tbody = document.getElementById('listaPecasManutencaoTemp');
+    if (!tbody) return;
+
+    if (pecasManutencaoTemp.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 8px;">Nenhuma peça selecionada ainda.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = pecasManutencaoTemp.map(p => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+            <td style="padding: 6px 4px; color: white;">${p.nome}</td>
+            <td style="padding: 6px 4px; text-align: center; color: white;">${p.qtd}</td>
+            <td style="padding: 6px 4px; text-align: right; color: white;">R$ ${p.preco.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+            <td style="padding: 6px 4px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${p.subtotal.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+            <td style="padding: 6px 4px; text-align: center;">
+                <button type="button" class="btn-action-card" onclick="window.removerPecaManutencaoTemp('${p.id}')" style="padding: 2px 6px; color: #f87171;"><i class="fa-solid fa-xmark"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.removerPecaManutencaoTemp = function(id) {
+    pecasManutencaoTemp = pecasManutencaoTemp.filter(p => p.id !== id);
+    renderizarPecasManutencaoTemp();
+};
+
+function salvarManutencao() {
+    const veiculoId = document.getElementById('manutVeiculoId').value;
+    const data = document.getElementById('manutData').value;
+    const tipo = document.getElementById('manutTipo').value;
+    const horimetro = parseInt(document.getElementById('manutHorimetro').value) || 0;
+    const obs = document.getElementById('manutObs').value.trim().toUpperCase();
+
+    if (horimetro <= 0) {
+        alert("Preencha o horímetro / KM do veículo corretamente.");
+        return;
+    }
+
+    // Coletar itens do checklist ok
+    const chks = ['chkOleo', 'chkFreios', 'chkPneus', 'chkEletrica', 'chkArrefecimento', 'chkEstrutural'];
+    const checklistOk = [];
+    chks.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.checked) {
+            checklistOk.push(el.value);
+        }
+    });
+
+    const nova = {
+        id: 'mn_' + new Date().getTime(),
+        veiculoId,
+        data,
+        tipo,
+        horimetro,
+        checklist: checklistOk,
+        pecas: [...pecasManutencaoTemp],
+        totalPecas: pecasManutencaoTemp.reduce((acc, p) => acc + p.subtotal, 0),
+        observacao: obs || 'MANUTENÇÃO PERIÓDICA REALIZADA'
+    };
+
+    // --- INTEGRAR E DEDUZIR PEÇAS DO ESTOQUE DEFINITIVAMENTE ---
+    estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+
+    pecasManutencaoTemp.forEach(p => {
+        const itemEstoque = estoque.find(i => i.id === p.id);
+        if (itemEstoque) {
+            if (itemEstoque.quantidade < p.qtd) {
+                console.warn(`Alerta de Estoque Baixo para ${p.nome}: Saldo ficará negativo.`);
+            }
+            itemEstoque.quantidade -= p.qtd;
+        }
+    });
+
+    salvarBanco(KEYS.ESTOQUE, estoque);
+    manutencoes.push(nova);
+    salvarBanco(KEYS.MANUTENCOES, manutencoes);
+
+    // Resetar campos e atualizar históricos
+    pecasManutencaoTemp = [];
+    renderizarPecasManutencaoTemp();
+    document.getElementById('manutObs').value = '';
+    carregarPecasEstoqueSelect(); // recarrega saldo
+    renderizarManutencoesVeiculo(veiculoId);
+
+    alert("Registro de manutenção e checklist salvo com sucesso! As peças foram deduzidas no almoxarifado.");
+}
+
+function renderizarManutencoesVeiculo(veiculoId) {
+    const tbody = document.getElementById('listaManutencoesVeiculo');
+    if (!tbody) return;
+
+    const filtrados = manutencoes
+        .filter(m => m.veiculoId === veiculoId)
+        .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 15px; color: var(--text-muted);">Nenhum histórico de manutenção encontrado para este veículo.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtrados.map(m => {
+        const checklistStr = m.checklist.length > 0 ? m.checklist.join(', ') : 'Nenhum';
+        const pecasStr = m.pecas.length > 0 ? m.pecas.map(p => `${p.qtd}x ${p.nome}`).join('<br>') : 'Nenhuma';
+        
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem;">
+                <td style="padding: 8px 6px; color: white;">${new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                <td style="padding: 8px 6px;"><span style="font-weight: bold; color: var(--accent-color);">${m.tipo}</span></td>
+                <td style="padding: 8px 6px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted);" title="${checklistStr}">${checklistStr}</td>
+                <td style="padding: 8px 6px; line-height: 1.3; color: white;">${pecasStr}</td>
+                <td style="padding: 8px 6px; text-align: center; color: white;">${m.horimetro}</td>
+                <td style="padding: 8px 6px; text-align: center;">
+                    <button type="button" class="btn-action-card" onclick="window.excluirManutencao('${m.id}', '${veiculoId}')" style="padding: 4px 8px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.excluirManutencao = function(id, veiculoId) {
+    if (!confirm("Tem certeza que deseja excluir esta manutenção? Isso devolverá todas as peças utilizadas de volta ao estoque.")) return;
+
+    const m = manutencoes.find(item => item.id === id);
+    if (m && m.pecas && m.pecas.length > 0) {
+        // Devolver peças
+        estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
+        m.pecas.forEach(p => {
+            const itemEstoque = estoque.find(i => i.id === p.id);
+            if (itemEstoque) {
+                itemEstoque.quantidade += p.qtd;
+            }
+        });
+        salvarBanco(KEYS.ESTOQUE, estoque);
+    }
+
+    manutencoes = manutencoes.filter(item => item.id !== id);
+    salvarBanco(KEYS.MANUTENCOES, manutencoes);
+    
+    // Recarregar saldo de peças e histórico
+    carregarPecasEstoqueSelect();
+    renderizarManutencoesVeiculo(veiculoId);
+};
