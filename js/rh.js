@@ -736,16 +736,38 @@ window.fecharModalHolerite = () => {
     document.body.classList.remove('printing-holerite');
 };
 
+window.abrirRelatorioMensalHE = () => {
+    const idFunc = document.getElementById('he-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f) return;
+
+    gerarRelatorioHEHtml(f);
+
+    const modal = document.getElementById('modalRelatorioHE');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.fecharModalRelatorioHE = () => {
+    const modal = document.getElementById('modalRelatorioHE');
+    if (modal) modal.style.display = 'none';
+    document.body.classList.remove('printing-relatorio');
+};
+
 // Listeners de impressão para garantir ocultação perfeita de todo o resto
 window.addEventListener('beforeprint', () => {
-    const modal = document.getElementById('modalHolerite');
-    if (modal && modal.style.display === 'flex') {
+    const modalH = document.getElementById('modalHolerite');
+    const modalR = document.getElementById('modalRelatorioHE');
+    if (modalH && modalH.style.display === 'flex') {
         document.body.classList.add('printing-holerite');
+    }
+    if (modalR && modalR.style.display === 'flex') {
+        document.body.classList.add('printing-relatorio');
     }
 });
 
 window.addEventListener('afterprint', () => {
     document.body.classList.remove('printing-holerite');
+    document.body.classList.remove('printing-relatorio');
 });
 
 function gerarHoleriteHtml(f) {
@@ -948,6 +970,213 @@ function gerarHoleriteHtml(f) {
 }
 
 
+function gerarRelatorioHEHtml(f) {
+    const container = document.getElementById('conteudoRelatorioHE');
+    if (!container) return;
+
+    const salarioBase = f.salario || 0;
+    const heList = f.horasExtras || [];
+    const faltasCount = f.faltas ? f.faltas.length : 0;
+
+    // Calcular dias trabalhados reais pelos lançamentos
+    const datasNormais = new Set(heList.filter(h => h.tipo === 'NORMAL').map(h => h.data));
+    const totalDiasNormais = datasNormais.size;
+
+    const datasEspeciais = new Set(heList.filter(h => h.tipo === 'ESPECIAL').map(h => h.data));
+    const totalDiasEspeciais = datasEspeciais.size;
+
+    // Tarifas acordadas do cadastro ou fallbacks dinâmicos caso vazio
+    const valorHE50 = f.valorHeNormal !== undefined ? (parseFloat(f.valorHeNormal) || 0) : ((salarioBase / 220) * 1.5);
+    const valorHE100 = f.valorHeEspecial !== undefined ? (parseFloat(f.valorHeEspecial) || 0) : ((salarioBase / 220) * 2.0);
+
+    let horas50 = 0;
+    let horas100 = 0;
+    let ganhoAdicionais = 0;
+    let descontosAdicionais = 0;
+
+    const sortedList = [...heList].sort((a, b) => new Date(a.data) - new Date(b.data));
+
+    sortedList.forEach(h => {
+        if (h.tipo === 'ESPECIAL') {
+            horas100 += parseFloat(h.horas) || 0;
+        } else {
+            horas50 += parseFloat(h.horas) || 0;
+        }
+        
+        const adicional = parseFloat(h.adicional) || 0;
+        if (adicional > 0) {
+            ganhoAdicionais += adicional;
+        } else if (adicional < 0) {
+            descontosAdicionais += Math.abs(adicional);
+        }
+    });
+
+    const ganhoHE50 = horas50 * valorHE50;
+    const ganhoHE100 = horas100 * valorHE100;
+    
+    // Cálculo das Horas Extras + Prêmios
+    const totalHorasExtras = ganhoHE50 + ganhoHE100 + ganhoAdicionais - descontosAdicionais;
+    
+    // Custo Operacional Bruto Total (Salário Base + Horas Extras e prêmios)
+    const custoBrutoTotal = salarioBase + totalHorasExtras;
+
+    const dataAdmissao = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    const nascimento = f.nascimento ? new Date(f.nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
+    
+    // Mes de referencia atual
+    const opcoesMes = { month: 'long', year: 'numeric' };
+    const mesReferencia = new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
+
+    // Gerar linhas da tabela de lançamentos diários
+    const linhasTabela = sortedList.map(h => {
+        const dataFormatada = new Date(h.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const diaSemana = new Date(h.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase();
+        
+        const isEspecial = h.tipo === 'ESPECIAL';
+        const taxaUnit = isEspecial ? valorHE100 : valorHE50;
+        const horasNum = parseFloat(h.horas) || 0;
+        const adicionalVal = parseFloat(h.adicional) || 0;
+        
+        // Subtotal diário: (Horas * Tarifa) + Adicional (positivo ou negativo)
+        const subtotal = (horasNum * taxaUnit) + adicionalVal;
+
+        return `
+            <tr style="border-bottom: 1px solid #ccc; font-size: 0.85rem;">
+                <td style="padding: 6px; font-weight: bold; color: black;">${dataFormatada} (${diaSemana})</td>
+                <td style="padding: 6px; text-align: center; color: black;">${horasNum > 0 ? horasNum + 'h' : '-'}</td>
+                <td style="padding: 6px; text-align: center; font-weight: bold; color: ${isEspecial ? '#b91c1c' : '#374151'};">${isEspecial ? 'ESPECIAL' : 'NORMAL'}</td>
+                <td style="padding: 6px; text-align: right; color: black;">R$ ${taxaUnit.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 6px; text-align: right; font-weight: bold; color: ${adicionalVal >= 0 ? 'black' : '#b91c1c'};">${adicionalVal !== 0 ? (adicionalVal > 0 ? '+' : '') + 'R$ ' + adicionalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                <td style="padding: 6px; font-size: 0.78rem; text-transform: uppercase; color: #4b5563;">${h.observacao || '-'}</td>
+                <td style="padding: 6px; text-align: right; font-weight: 900; color: black;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="border: 2px solid black; padding: 20px; color: black; background: white;">
+            <!-- Cabeçalho Principal -->
+            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 12px;">
+                <h2 style="margin: 0; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">RELATÓRIO OPERACIONAL DE FECHAMENTO MENSAL - FISCAL</h2>
+                <small style="font-weight: bold; font-size: 0.75rem;">SERRARIA ORQUESTRA.CS - SISTEMAS DE ALTA PERFORMANCE</small>
+            </div>
+
+            <!-- Dados da Empresa e Referência -->
+            <div style="display: grid; grid-template-columns: 2.2fr 1fr; border-bottom: 1px solid black; padding-bottom: 8px; margin-bottom: 12px; gap: 10px; font-size: 0.85rem;">
+                <div>
+                    <strong>EMPRESA:</strong> ORQUESTRACS SERRARIA INTEGRADA LTDA<br>
+                    <strong>CNPJ:</strong> 12.345.678/0001-99<br>
+                    <strong>ENDEREÇO:</strong> ZONA INDUSTRIAL DE LOGÍSTICA, S/N - PÁTIO SERRARIA
+                </div>
+                <div style="text-align: right;">
+                    <strong>REFERÊNCIA MÊS:</strong><br>
+                    <span style="font-size: 1.15rem; font-weight: 900; color: black;">${mesReferencia}</span>
+                </div>
+            </div>
+
+            <!-- Ficha Cadastral Completa do Colaborador -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); border: 1.5px solid black; padding: 10px; margin-bottom: 15px; font-size: 0.85rem; gap: 8px; background: #fafafa;">
+                <div>
+                    <strong>NOME COMPLETO:</strong> ${f.nome}<br>
+                    <strong>CARGO / FUNÇÃO:</strong> ${f.funcao || 'OPERÁRIO'}<br>
+                    <strong>DATA DE ADMISSÃO:</strong> ${dataAdmissao}<br>
+                    <strong>FORMA PAGTO:</strong> ${f.formaPagamento || 'PIX'}
+                </div>
+                <div>
+                    <strong>CPF:</strong> ${f.cpf || '-'}<br>
+                    <strong>RG:</strong> ${f.rg || '-'}<br>
+                    <strong>NASCIMENTO:</strong> ${nascimento}<br>
+                    <strong>VALE DE CONTRATO:</strong> R$ ${(f.vale || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </div>
+            </div>
+
+            <!-- Tabela Cronológica de Lançamentos do Mês -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 4px; margin-bottom: 8px;">1. DETALHAMENTO DOS DIAS TRABALHADOS E HORAS EXTRAS</h3>
+                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif;">
+                    <thead>
+                        <tr style="background: #e5e7eb; border-bottom: 2px solid black; font-size: 0.82rem; font-weight: bold; text-align: left;">
+                            <th style="padding: 6px;">DATA / DIA</th>
+                            <th style="padding: 6px; text-align: center;">HORAS</th>
+                            <th style="padding: 6px; text-align: center;">TIPO</th>
+                            <th style="padding: 6px; text-align: right;">TARIFA UNIT.</th>
+                            <th style="padding: 6px; text-align: right;">ADIC./BÔNUS</th>
+                            <th style="padding: 6px;">OBSERVAÇÃO / MOTIVO</th>
+                            <th style="padding: 6px; text-align: right;">SUBTOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${linhasTabela || '<tr><td colspan="7" style="padding:15px; text-align:center; color:#666;">Nenhum lançamento diário de horas extras ou prêmios no período.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumo e Consolidação Fiscal de Despesas -->
+            <div style="margin-bottom: 25px;">
+                <h3 style="font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 4px; margin-bottom: 10px;">2. CONSOLIDAÇÃO FINANCEIRA OPERACIONAL</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: stretch;">
+                    
+                    <!-- Fatos e Estatísticas -->
+                    <div style="border: 1px solid #ccc; padding: 12px; border-radius: 6px; font-size: 0.82rem; display: flex; flex-direction: column; justify-content: space-between; background: #fafafa;">
+                        <div>
+                            <strong>ESTATÍSTICAS DO PERÍODO:</strong><br>
+                            <ul style="margin: 6px 0; padding-left: 18px; line-height: 1.5;">
+                                <li>Dias Normais Trabalhados (HE): <strong>${totalDiasNormais} dias</strong></li>
+                                <li>Dias Finais de Semana / Fer: <strong>${totalDiasEspeciais} dias</strong></li>
+                                <li>Total de Faltas Registradas: <strong style="color: #b91c1c;">${faltasCount} faltas</strong></li>
+                                <li>Quantidade Horas Extras Realizadas: <strong>${(horas50 + horas100)} horas</strong></li>
+                            </ul>
+                        </div>
+                        <div style="font-size: 0.74rem; color: #4b5563; font-style: italic; border-top: 1px dashed #ccc; padding-top: 6px; margin-top: 6px;">
+                            * As faltas listadas servem para análise de assiduidade fiscal, não estando descontadas no custo bruto operacional deste relatório.
+                        </div>
+                    </div>
+
+                    <!-- Resumo Financeiro de Custos Corporativos -->
+                    <div style="border: 2px solid black; padding: 15px; background: #f9fafb; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="font-size: 0.95rem; line-height: 1.6;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 4px;">
+                                <span>SALÁRIO BASE BRUTO:</span>
+                                <strong>R$ ${salarioBase.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 4px; padding-top: 4px;">
+                                <span>HORAS EXTRAS & PRÊMIOS:</span>
+                                <strong>R$ ${totalHorasExtras.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                            </div>
+                        </div>
+
+                        <!-- CUSTO BRUTO TOTAL CORPORATIVO -->
+                        <div style="border: 2.5px solid black; padding: 10px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; background: #000; color: white;">
+                            <span style="font-weight: bold; font-size: 0.9rem; letter-spacing: 0.5px;">CUSTO OPERACIONAL BRUTO:</span>
+                            <span style="font-weight: 900; font-size: 1.45rem; color: #00ff88;">R$ ${custoBrutoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Assinaturas e Liberação Fiscal -->
+            <div style="margin-top: 40px; border-top: 1px solid black; padding-top: 20px; font-size: 0.85rem;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+                    <div style="border-top: 1px solid black; padding-top: 5px;">
+                        <strong>RESPONSÁVEL OPERACIONAL</strong><br>
+                        <small>Serraria - Orquestracs</small>
+                    </div>
+                    <div style="border-top: 1px solid black; padding-top: 5px;">
+                        <strong>COLABORADOR (FISCAL)</strong><br>
+                        <small>Declaração de Horas Feitas</small>
+                    </div>
+                    <div style="border-top: 1px solid black; padding-top: 5px;">
+                        <strong>CONTABILIDADE / FISCAL</strong><br>
+                        <small>Assinatura de Recebimento</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
 window.aplicarPresetHE = (tipo) => {
     const inputHoras = document.getElementById('he-horas');
     const inputAdicional = document.getElementById('he-adicional');
@@ -997,3 +1226,5 @@ window.abrirModalHolerite = window.abrirModalHolerite;
 window.abrirModalFaltas = window.abrirModalFaltas;
 window.removerFalta = window.removerFalta;
 window.aplicarPresetHE = window.aplicarPresetHE;
+window.abrirRelatorioMensalHE = window.abrirRelatorioMensalHE;
+window.fecharModalRelatorioHE = window.fecharModalRelatorioHE;
