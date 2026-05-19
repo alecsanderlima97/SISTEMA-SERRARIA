@@ -547,6 +547,18 @@
                                 <i class="fa-solid fa-border-all" style="font-size: 1.4rem; color: var(--accent-color); margin-bottom: 6px; display: block;"></i>
                                 <span style="font-size: 0.8rem; font-weight: bold; color: white;">TODAS</span>
                             </div>
+                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('ESCRITÓRIO')" id="catCard_ESCRITORIO" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
+                                <i class="fa-solid fa-stapler" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
+                                <span style="font-size: 0.8rem; font-weight: 500;">Escritório</span>
+                            </div>
+                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('EPI\'S')" id="catCard_EPIS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
+                                <i class="fa-solid fa-helmet-safety" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
+                                <span style="font-size: 0.8rem; font-weight: 500;">EPI's</span>
+                            </div>
+                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('CORREIAS INDUSTRIAIS')" id="catCard_CORREIAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
+                                <i class="fa-solid fa-gears" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
+                                <span style="font-size: 0.76rem; font-weight: 500; white-space: nowrap;">Correias</span>
+                            </div>
                             <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('PEÇAS')" id="catCard_PEÇAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
                                 <i class="fa-solid fa-screwdriver-wrench" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
                                 <span style="font-size: 0.8rem; font-weight: 500;">Peças</span>
@@ -562,18 +574,6 @@
                             <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('DIESEL')" id="catCard_DIESEL" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
                                 <i class="fa-solid fa-gas-pump" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
                                 <span style="font-size: 0.8rem; font-weight: 500;">Diesel</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('CORREIAS INDUSTRIAIS')" id="catCard_CORREIAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-gears" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.76rem; font-weight: 500; white-space: nowrap;">Correias</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('EPI\'S')" id="catCard_EPIS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-helmet-safety" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">EPI's</span>
-                            </div>
-                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('ESCRITÓRIO')" id="catCard_ESCRITORIO" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
-                                <i class="fa-solid fa-stapler" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
-                                <span style="font-size: 0.8rem; font-weight: 500;">Escritório</span>
                             </div>
                         </div>
                     </div>
@@ -763,13 +763,13 @@
                         <div class="input-group" style="grid-column: span 3;">
                             <label for="estCategoria">Categoria</label>
                             <select id="estCategoria" required>
+                                <option value="ESCRITÓRIO">ESCRITÓRIO</option>
+                                <option value="EPI'S">EPI'S</option>
+                                <option value="CORREIAS INDUSTRIAIS">CORREIAS INDUSTRIAIS</option>
                                 <option value="PEÇAS">PEÇAS / ACESSÓRIOS</option>
                                 <option value="FILTROS">FILTROS</option>
-                                <option value="CORREIAS INDUSTRIAIS">CORREIAS INDUSTRIAIS</option>
                                 <option value="LUBRIFICANTES">LUBRIFICANTES</option>
                                 <option value="DIESEL">DIESEL / COMBUSTÍVEIS</option>
-                                <option value="EPI'S">EPI'S</option>
-                                <option value="ESCRITÓRIO">ESCRITÓRIO</option>
                                 <option value="HIGIENE">HIGIENE</option>
                             </select>
                         </div>
@@ -2839,6 +2839,74 @@
                     </button>
                 </div>
 
+            </form>
+        </div>
+    </div>
+
+    <!-- ====== MODAL: MOVIMENTAÇÃO MANUAL DE ESTOQUE ====== -->
+    <div id="modalNovaMovimentacao" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
+        <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b; max-height: 92vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-color);"></i> Registrar Saída / Entrada de Estoque
+                </h2>
+                <button type="button" class="btn-action-card" onclick="window.fecharModalNovaMovimentacao()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formNovaMovimentacao" class="grid-form" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="input-group" style="grid-column: span 3;">
+                    <label for="movTipo">Tipo de Lançamento</label>
+                    <select id="movTipo" onchange="window.onChangeMovTipo()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
+                        <option value="SAÍDA">📉 SAÍDA — Retirada / Consumo / EPI Entregue</option>
+                        <option value="ENTRADA">📈 ENTRADA — Compra / Reposição</option>
+                    </select>
+                </div>
+                <div class="input-group" style="grid-column: span 3;">
+                    <label for="movItemId">Item do Estoque *</label>
+                    <select id="movItemId" onchange="window.onChangeMovItem()" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
+                        <option value="">-- SELECIONE O ITEM --</option>
+                    </select>
+                </div>
+                <div class="input-group" style="grid-column: span 3;">
+                    <label for="movRetiradoPor"><i class="fa-solid fa-user"></i> Retirado por / Responsável</label>
+                    <input type="text" id="movRetiradoPor" class="text-uppercase-input" placeholder="Ex: JOÃO DA SILVA" style="border-radius: 8px; border: 1px solid rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: white; padding: 10px 14px;">
+                </div>
+                <div class="input-group" style="grid-column: span 3;">
+                    <label for="movDestino"><i class="fa-solid fa-location-dot"></i> Destino / Setor</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <button type="button" onclick="document.getElementById('movDestino').value='SERRARIA'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(245,158,11,0.5); background: rgba(245,158,11,0.1); color: #f59e0b; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🏭 SERRARIA</button>
+                        <button type="button" onclick="document.getElementById('movDestino').value='FLORESTAL'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(74,222,128,0.5); background: rgba(74,222,128,0.1); color: #4ade80; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🌳 FLORESTAL</button>
+                        <button type="button" onclick="document.getElementById('movDestino').value='TERRAPLANAGEM'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(248,113,113,0.5); background: rgba(248,113,113,0.1); color: #f87171; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🏗️ TERRAPLANAGEM</button>
+                        <button type="button" onclick="document.getElementById('movDestino').value='ESCRITÓRIO'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(96,165,250,0.5); background: rgba(96,165,250,0.1); color: #60a5fa; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🏢 ESCRITÓRIO</button>
+                        <button type="button" onclick="document.getElementById('movDestino').value='SETOR MECÂNICO'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(167,139,250,0.5); background: rgba(167,139,250,0.1); color: #a78bfa; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🔧 MECÂNICA</button>
+                    </div>
+                    <input type="text" id="movDestino" class="text-uppercase-input" placeholder="Ou digite manualmente..." style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                </div>
+                <div class="input-group">
+                    <label for="movData">Data</label>
+                    <input type="date" id="movData" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                </div>
+                <div class="input-group">
+                    <label for="movQtd">Quantidade *</label>
+                    <input type="number" id="movQtd" step="0.01" min="0.01" placeholder="Ex: 1" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                </div>
+                <div class="input-group">
+                    <label for="movUnitario">Valor Unit. (R$) *</label>
+                    <input type="text" id="movUnitario" placeholder="R$ 0,00" required oninput="window.formatCurrencyInput(event)" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                </div>
+                <div class="input-group" id="containerMovFrota" style="grid-column: span 3; display: none;">
+                    <label for="movFrotaId"><i class="fa-solid fa-truck-pickup"></i> Veículo / Máquina (se consumo de frota)</label>
+                    <select id="movFrotaId" onchange="window.onChangeMovFrota()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
+                        <option value="">-- NENHUM / NÃO SE APLICA --</option>
+                    </select>
+                </div>
+                <div class="input-group" style="grid-column: span 3;">
+                    <label for="movObs">Observação</label>
+                    <textarea id="movObs" rows="2" class="text-uppercase-input" placeholder="Ex: CORREIA A27 SUBSTITUÍDA NA SERRA PRINCIPAL..." style="width: 100%; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px; resize: vertical;"></textarea>
+                </div>
+                <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button type="button" class="btn-secondary" onclick="window.fecharModalNovaMovimentacao()" style="padding: 10px 20px; border-radius: 8px;">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="padding: 10px 25px; border-radius: 8px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-check"></i> Confirmar Lançamento</button>
+                </div>
             </form>
         </div>
     </div>

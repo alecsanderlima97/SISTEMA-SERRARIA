@@ -236,9 +236,10 @@ function renderizarEstoque() {
                 <td style="padding: 12px 8px; text-align: right; color: white;">R$ ${item.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center;">
-                    <div style="display: flex; gap: 8px; justify-content: center;">
-                        <button type="button" class="btn-action-card" onclick="window.editarItemEstoque('${item.id}')" title="Editar item" style="padding: 6px 10px;"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button type="button" class="btn-action-card" onclick="window.excluirItemEstoque('${item.id}')" title="Remover item" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
+                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" class="btn-action-card" onclick="window.abrirSaidaRapida('${item.id}')" title="Registrar Saída" style="padding: 5px 9px; color: #f59e0b; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); font-size: 0.78rem;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Saída</button>
+                        <button type="button" class="btn-action-card" onclick="window.editarItemEstoque('${item.id}')" title="Editar item" style="padding: 5px 9px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button type="button" class="btn-action-card" onclick="window.excluirItemEstoque('${item.id}')" title="Remover item" style="padding: 5px 9px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </td>
             </tr>
@@ -435,12 +436,13 @@ window.registrarMovimentacaoEstoque = function({
     frotaId = '',
     frotaPlaca = '',
     destino = '',
+    retiradoPor = '',
     observacao = ''
 }) {
     let movs = JSON.parse(localStorage.getItem(MOV_KEY)) || [];
     const nova = {
         id: 'mov_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000),
-        tipo, // 'ENTRADA' ou 'SAÍDA'
+        tipo,
         data: new Date().toISOString().split('T')[0],
         dataHora: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
         itemId,
@@ -452,20 +454,23 @@ window.registrarMovimentacaoEstoque = function({
         frotaId,
         frotaPlaca,
         destino,
+        retiradoPor,
         observacao
     };
-    movs.unshift(nova); // Newest first
+    movs.unshift(nova);
     localStorage.setItem(MOV_KEY, JSON.stringify(movs));
     console.log(`[Almoxarifado] Transação gravada: ${tipo} de ${quantidade} ${itemNome}`);
 };
 
 window.abrirModalNovaMovimentacao = function() {
-    document.getElementById('movTipo').value = 'ENTRADA';
+    document.getElementById('movTipo').value = 'SAÍDA';
     document.getElementById('movData').value = new Date().toISOString().split('T')[0];
     document.getElementById('movQtd').value = '';
     document.getElementById('movUnitario').value = '';
     document.getElementById('movDestino').value = '';
     document.getElementById('movObs').value = '';
+    const retEl = document.getElementById('movRetiradoPor');
+    if (retEl) retEl.value = '';
 
     // Populate dropdown with inventory items
     const selectItem = document.getElementById('movItemId');
@@ -489,6 +494,16 @@ window.abrirModalNovaMovimentacao = function() {
 
 window.fecharModalNovaMovimentacao = function() {
     document.getElementById('modalNovaMovimentacao').style.display = 'none';
+};
+
+// Atalho: abre o modal já configurado para SAÍDA com o item pré-selecionado
+window.abrirSaidaRapida = function(itemId) {
+    window.abrirModalNovaMovimentacao();
+    const st = document.getElementById('movTipo');
+    if (st) { st.value = 'SAÍDA'; window.onChangeMovTipo(); }
+    const si = document.getElementById('movItemId');
+    if (si && itemId) { si.value = itemId; window.onChangeMovItem(); }
+    setTimeout(() => document.getElementById('movRetiradoPor')?.focus(), 150);
 };
 
 window.onChangeMovTipo = function() {
@@ -537,6 +552,7 @@ function salvarNovaMovimentacaoManual(e) {
     const data = document.getElementById('movData').value || new Date().toISOString().split('T')[0];
     const quantidade = parseFloat(document.getElementById('movQtd').value) || 0;
     const unitario = window.parseCurrencyValue(document.getElementById('movUnitario').value) || 0;
+    const retiradoPor = (document.getElementById('movRetiradoPor')?.value || '').trim().toUpperCase();
     const frotaSelect = document.getElementById('movFrotaId');
     const frotaId = frotaSelect ? frotaSelect.value : '';
     let frotaPlaca = '';
@@ -587,7 +603,8 @@ function salvarNovaMovimentacaoManual(e) {
         frotaId,
         frotaPlaca,
         destino,
-        observacao: observacao + ' (Manual)'
+        retiradoPor,
+        observacao: (retiradoPor ? `Retirado por: ${retiradoPor}. ` : '') + observacao + ' (Manual)'
     });
 
     // Close and refresh
@@ -659,6 +676,7 @@ window.renderizarMovimentacoesEstoque = function() {
                 <td style="padding: 10px 8px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${totalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 10px 8px; color: #60a5fa; font-weight: 500;">
                     ${mov.frotaPlaca ? `<i class="fa-solid fa-truck-pickup" style="font-size: 0.75rem;"></i> ${mov.frotaPlaca}` : mov.destino || 'Uso Geral'}
+                    ${mov.retiradoPor ? `<br><span style="font-size: 0.72rem; color: #a78bfa;"><i class="fa-solid fa-user"></i> ${mov.retiradoPor}</span>` : ''}
                 </td>
                 <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${mov.observacao}">${mov.observacao}</td>
                 <td style="padding: 10px 8px; text-align: center;">
