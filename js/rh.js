@@ -913,19 +913,6 @@ function gerarHoleriteHtml(f) {
                 ` : ''}
             </div>
 
-            <!-- Linha de Totais -->
-            <div style="display: grid; grid-template-columns: 4.5fr 1.2fr 1.2fr; border-top: 1px solid black; padding-top: 5px; margin-top: 20px; font-weight: bold;">
-                <div>TOTAIS EXTRATO</div>
-                <div style="text-align: right; color: black;">R$ ${totalVencimentos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                <div style="text-align: right; color: black;">R$ ${totalDescontos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-            </div>
-
-            <!-- Líquido a Receber Box -->
-            <div style="border: 2.5px solid black; margin-top: 15px; padding: 10px; display: flex; justify-content: space-between; align-items: center; background: #eee;">
-                <span style="font-weight: 900; font-size: 0.95rem;">LÍQUIDO A RECEBER (H. EXTRAS + ADIC. - VALE):</span>
-                <span style="font-weight: 900; font-size: 1.4rem; color: black;">R$ ${valorLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-            </div>
-
             <!-- Informações Bancárias / Chave Pix -->
             <div style="margin-top: 15px; border-top: 1px dashed black; padding-top: 8px; font-size: 0.8rem;">
                 <strong>FORMA DE PAGAMENTO:</strong> ${f.formaPagamento || 'PIX'}<br>
@@ -935,7 +922,7 @@ function gerarHoleriteHtml(f) {
             <!-- Declaração de Recebimento e Assinatura -->
             <div style="margin-top: 30px; border-top: 1px solid black; padding-top: 10px;">
                 <p style="font-size: 0.72rem; text-align: justify; margin: 0 0 35px 0; color: #333; font-style: italic;">
-                    * OBSERVAÇÃO IMPORTANTE: Este recibo compreende o cálculo do acúmulo de Horas Extras e prêmios diários informados, deduzindo o adiantamento de Vale. <strong>O SALÁRIO BASE INTEGRAL NÃO ESTÁ INCLUÍDO</strong> neste documento de fechamento extra, sendo pago via contracheque mensal padrão.
+                    * OBSERVAÇÃO IMPORTANTE: Este documento compreende o demonstrativo individualizado de Horas Extras e adiantamento de Vale do período. <strong>O SALÁRIO BASE INTEGRAL NÃO ESTÁ INCLUÍDO</strong> neste extrato extra, sendo pago via contracheque mensal padrão.
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: flex-end;">
                     <div style="border-top: 1px solid black; text-align: center; padding-top: 5px; font-size: 0.8rem;">
