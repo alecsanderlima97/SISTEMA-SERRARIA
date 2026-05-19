@@ -178,6 +178,14 @@ const App = {
                 imgPreview.style.display = 'block';
                 icon.style.display = 'none';
             }
+            // Atualizar o avatar da barra superior também
+            const imgHeader = document.getElementById('imgHeaderAvatar');
+            const iconHeader = document.getElementById('iconHeaderAvatar');
+            if (imgHeader && iconHeader) {
+                imgHeader.src = savedPic;
+                imgHeader.style.display = 'block';
+                iconHeader.style.display = 'none';
+            }
         }
     },
 
@@ -279,9 +287,11 @@ const App = {
         sections.forEach(s => {
             if (s.id === id) {
                 s.style.display = 'block';
+                s.classList.add('active-section');
                 found = true;
             } else {
                 s.style.display = 'none';
+                s.classList.remove('active-section');
             }
         });
         
@@ -333,9 +343,17 @@ window.previewFotoPerfil = function(event) {
                 imgPreview.src = e.target.result;
                 imgPreview.style.display = 'block';
                 icon.style.display = 'none';
-                // Salvar base64 no localStorage ou preparar para Firebase
-                localStorage.setItem('orquestrasis_profile_pic', e.target.result);
             }
+            // Atualizar o avatar da barra superior também
+            const imgHeader = document.getElementById('imgHeaderAvatar');
+            const iconHeader = document.getElementById('iconHeaderAvatar');
+            if (imgHeader && iconHeader) {
+                imgHeader.src = e.target.result;
+                imgHeader.style.display = 'block';
+                iconHeader.style.display = 'none';
+            }
+            // Salvar base64 no localStorage ou preparar para Firebase
+            localStorage.setItem('orquestrasis_profile_pic', e.target.result);
         };
         reader.readAsDataURL(file);
     }

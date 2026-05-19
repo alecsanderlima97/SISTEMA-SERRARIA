@@ -69,8 +69,9 @@
                         <div class="header-user-name" style="color: var(--text-light); font-weight: bold; font-size: 14px;" id="userNameHeader">Administrador</div>
                         <div class="header-user-role" style="color: var(--accent-color); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Serraria</div>
                     </div>
-                    <div class="header-avatar" style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; box-shadow: var(--shadow-sm); overflow: hidden;">
-                        <i class="fa-solid fa-user"></i>
+                    <div class="header-avatar" style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; box-shadow: var(--shadow-sm); overflow: hidden; position: relative;">
+                        <img id="imgHeaderAvatar" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <i id="iconHeaderAvatar" class="fa-solid fa-user"></i>
                     </div>
 
                     <div id="profile-dropdown" class="profile-dropdown" style="display: none; position: absolute; top: 50px; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; width: 200px; padding: 8px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 200;">

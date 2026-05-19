@@ -362,6 +362,10 @@ input::placeholder {
 .view-section {
     max-width: 1200px;
     margin: 0 auto;
+    display: none;
+}
+
+.view-section.active-section {
     animation: fadeIn 0.4s ease forwards;
 }
 
