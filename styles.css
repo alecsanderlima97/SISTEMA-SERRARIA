@@ -2,12 +2,10 @@
    VARIÁVEIS DESENHO MODERNO (GLASSMORPHISM)
    ========================================= */
 :root {
-    --primary-color: #e67e22;
-    /* Laranja vibrante */
-    --primary-hover: #d35400;
+    --primary-color: #00a8ff; /* Azul vibrante da letra O (Orquestracs) */
+    --primary-hover: #0097e6;
     --secondary-color: #2b2e38;
-    --accent-color: #f1c40f;
-    /* Dourado */
+    --accent-color: #00d2ff; /* Azul claro / ciano */
     --bg-color: #0f0a09;
     /* Terroso escuro */
     --panel-bg: rgba(255, 255, 255, 0.05);
