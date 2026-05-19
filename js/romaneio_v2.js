@@ -147,11 +147,23 @@ function configurarEventos() {
         if (el) el.oninput = calcularPecasAutomatico;
     });
 
+    // Inputs que afetam o volume exibido em tempo real
+    const inputsVolume = ['v2-espessura', 'v2-largura', 'v2-comprimento', 'v2-quantidade', 'v2-qtd-pacotes'];
+    inputsVolume.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', atualizarVolumePreview);
+    });
+
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.onchange = selecionarMadeiraCadastrada;
 
     const selectCli = document.getElementById('v2-select-cliente');
     if (selectCli) selectCli.onchange = selecionarClienteCadastrado;
+
+    // Ao mudar a qualidade, preencher preco automaticamente
+    const inputQualidade = document.getElementById('v2-qualidade');
+    if (inputQualidade) inputQualidade.addEventListener('blur', preencherPrecoPorQualidade);
+    if (inputQualidade) inputQualidade.addEventListener('input', preencherPrecoPorQualidade);
 
     const selectTransp = document.getElementById('v2-select-transporte');
     if (selectTransp) selectTransp.onchange = selecionarTransportadoraCadastrada;
@@ -282,6 +294,68 @@ function selecionarMadeiraCadastrada(e) {
     document.getElementById('v2-comprimento').value = p.comprimentoVenda;
     document.getElementById('v2-comprimento-real').value = p.comprimentoReal || p.comprimentoVenda;
     document.getElementById('v2-preco-m3-item').value = window.formatCurrencyValue(p.preco);
+    
+    // Ao selecionar produto, verificar se já tem qualidade preenchida e tentar preencher preço
+    preencherPrecoPorQualidade();
+    atualizarVolumePreview();
+}
+
+// Preenche o Preço m³ automaticamente com base na qualidade selecionada e cliente
+function preencherPrecoPorQualidade() {
+    const qualStr = (document.getElementById('v2-qualidade')?.value || '').toUpperCase().trim();
+    if (!qualStr) return;
+
+    const clienteId = document.getElementById('v2-select-cliente')?.value;
+    if (!clienteId) return;
+
+    const cli = clientesDisponiveis.find(x => x.id === clienteId);
+    if (!cli) return;
+
+    let precoAcordado = null;
+
+    if (qualStr.includes('1') || qualStr.includes('1ª') || qualStr.includes('MAD 1') || qualStr === '1A') {
+        precoAcordado = cli.madeira1;
+    } else if (qualStr.includes('2') || qualStr.includes('2ª') || qualStr.includes('MAD 2') || qualStr === '2A') {
+        precoAcordado = cli.madeira2;
+    } else if (qualStr.includes('3') || qualStr.includes('3ª') || qualStr.includes('MAD 3') || qualStr === '3A') {
+        precoAcordado = cli.madeira3;
+    } else if (qualStr.includes('PINUS')) {
+        precoAcordado = cli.madeiraPinus;
+    } else if (cli.nomeMadeiraExtra && qualStr.includes(cli.nomeMadeiraExtra.toUpperCase())) {
+        precoAcordado = cli.valorMadeiraExtra;
+    }
+
+    if (precoAcordado && precoAcordado > 0) {
+        const inputPreco = document.getElementById('v2-preco-m3-item');
+        if (inputPreco) {
+            inputPreco.value = window.formatCurrencyValue(precoAcordado);
+            // Destaque visual para indicar preenchimento automático
+            inputPreco.style.borderColor = 'var(--accent)';
+            inputPreco.style.boxShadow = '0 0 8px rgba(0,255,136,0.3)';
+            setTimeout(() => {
+                inputPreco.style.borderColor = '';
+                inputPreco.style.boxShadow = '';
+            }, 2000);
+        }
+    }
+}
+
+// Atualiza o preview de volume em tempo real no card de adicionar pacotes
+function atualizarVolumePreview() {
+    const esp = parseFloat(document.getElementById('v2-espessura')?.value) || 0;
+    const larg = parseFloat(document.getElementById('v2-largura')?.value) || 0;
+    const comp = parseFloat(document.getElementById('v2-comprimento')?.value) || 0;
+    const pecas = parseInt(document.getElementById('v2-quantidade')?.value) || 0;
+    const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes')?.value) || 1;
+
+    const m3Unit = (esp / 100) * (larg / 100) * comp * pecas;
+    const m3Total = m3Unit * qtdPacotes;
+
+    const elUnit = document.getElementById('v2-volume-unit');
+    const elTotal = document.getElementById('v2-volume-total');
+
+    if (elUnit) elUnit.textContent = m3Unit.toFixed(3) + ' m³';
+    if (elTotal) elTotal.textContent = m3Total.toFixed(3) + ' m³';
 }
 
 function calcularPecasAutomatico() {
@@ -289,6 +363,7 @@ function calcularPecasAutomatico() {
     const cam = parseInt(document.getElementById('v2-camada').value) || 0;
     const amarras = parseInt(document.getElementById('v2-amarras').value) || 0;
     document.getElementById('v2-quantidade').value = (alt * cam) + amarras;
+    atualizarVolumePreview();
 }
 
 function adicionarPacote() {
@@ -993,6 +1068,11 @@ function limparCamposPacote() {
     });
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.value = '';
+    // Resetar preview de volume
+    const elUnit = document.getElementById('v2-volume-unit');
+    const elTotal = document.getElementById('v2-volume-total');
+    if (elUnit) elUnit.textContent = '0,000 m³';
+    if (elTotal) elTotal.textContent = '0,000 m³';
 }
 
 // CHAMADA IMEDIATA

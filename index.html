@@ -2264,6 +2264,15 @@
                                 <label>Qtd Pacotes</label>
                                 <input type="number" id="v2-qtd-pacotes" class="input-v2" value="1" min="1">
                             </div>
+                             <div class="input-group-v2" style="grid-column: span 2;">
+                                <label style="color: var(--accent); font-weight: 700;"><i class="fa-solid fa-cube" style="margin-right:5px;"></i>Volume do Item (m³) — calculado automaticamente</label>
+                                <div style="display: flex; align-items: center; gap: 12px; background: rgba(0,255,136,0.05); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 16px;">
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Por pacote:</span>
+                                    <strong id="v2-volume-unit" style="color: var(--accent); font-size: 1.1rem;">0,000 m³</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 20px;">Total (todos os pacotes):</span>
+                                    <strong id="v2-volume-total" style="color: #00ff88; font-size: 1.2rem;">0,000 m³</strong>
+                                </div>
+                            </div>
 
                             <div style="display: flex; gap: 10px; align-items: flex-end; grid-column: span 2;">
                                 <button id="btn-add-pacote-v2" class="btn-v2 btn-primary-v2" style="flex: 1;">
