@@ -1,6 +1,6 @@
 // --- CONTROLE DE ESTOQUE SAAS PREMIUM & INTEGRADO ---
 // Sincronizado com os módulos de Frotas (Manutenção de Peças e Insumos)
-// Desenvolvido para a Orquestracs - Madeireira & Serraria
+// Desenvolvido por: Orquestra.cs - sistemas industrial personalizado
 
 console.log("Módulo de Estoque Premium: Inicializando almoxarifado unificado...");
 

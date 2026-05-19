@@ -10,8 +10,8 @@
     /* Dourado */
     --bg-color: #0f0a09;
     /* Terroso escuro */
-    --panel-bg: rgba(18, 12, 10, 0.88);
-    --panel-border: rgba(255, 255, 255, 0.08);
+    --panel-bg: rgba(255, 255, 255, 0.05);
+    --panel-border: rgba(255, 255, 255, 0.1);
     --text-color: #ffffff; /* Texto 100% visível e brilhante */
     --text-muted: #cbd5e1; /* Texto secundário com maior contraste */
     --danger-color: #f85149;
@@ -146,8 +146,8 @@ body {
 /* Glass Panels */
 .glass-panel {
     background: var(--panel-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-lg);
     padding: 2rem;
@@ -1027,7 +1027,7 @@ tfoot td {
     }
 }
 
-/* --- SIDEBAR RETRÁTIL & CLEAN LAYOUT (Orquestra.cs Premium Upgrade) --- */
+/* --- SIDEBAR RETRÁTIL & CLEAN LAYOUT (Orquestracs Premium Upgrade) --- */
 .sidebar {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-x: hidden;
@@ -1104,7 +1104,7 @@ tfoot td {
 }
 
 /* =========================================================================
-   TEMA PÁTIO SIMPLIFICADO (Orquestra.cs - Clean Dark)
+   TEMA PÁTIO SIMPLIFICADO (Orquestracs - Clean Dark)
    ========================================================================= */
 .patio-wood-theme .modal-content-v2 {
     background: #1e1e24 !important;
@@ -1345,7 +1345,7 @@ tfoot td {
     box-shadow: 0 0 15px rgba(230, 126, 34, 0.5) !important;
 }
 
-/* --- BOTÕES DE AÇÃO PREMIUM EM CARD (Card Action Buttons - Orquestra.cs Premium Upgrade) --- */
+/* --- BOTÕES DE AÇÃO PREMIUM EM CARD (Card Action Buttons - Orquestracs Premium Upgrade) --- */
 .btn-action-card {
     display: inline-flex;
     align-items: center;

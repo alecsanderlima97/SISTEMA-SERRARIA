@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orquestrasis - sistema para serrarias</title>
+    <title>Serraria Vanmarte - Orquestra.cs</title>
     <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap"
@@ -18,7 +18,7 @@
 </head>
 
 <body>
-    <!-- Fallback, Diagnósticos e Autocorreção Estrutural - Orquestracs Premium -->
+    <!-- Fallback, Diagnósticos e Autocorreção Estrutural - Orquestra.cs Premium -->
     <script>
         (function() {
             // 1. CAPTURADOR GLOBAL DE ERROS (Exibe na tela)
@@ -97,10 +97,10 @@
 
             // 2. AUTOCORREÇÃO ESTRUTURAL DO DOM (Resolve tags HTML fechadas incorretamente de forma dinâmica)
             function autocorrigirEstruturaDOM() {
-                console.log("Orquestracs: Iniciando verificação estrutural do DOM...");
+                console.log("Orquestra.cs: Iniciando verificação estrutural do DOM...");
                 const mainContent = document.querySelector('.main-content');
                 if (!mainContent) {
-                    console.error("Orquestracs: Container .main-content não encontrado!");
+                    console.error("Orquestra.cs: Container .main-content não encontrado!");
                     return;
                 }
 
@@ -109,14 +109,14 @@
                 sections.forEach(s => {
                     // Se a seção não for filha direta de .main-content, ela foi aninhada incorretamente no HTML
                     if (s.parentElement !== mainContent) {
-                        console.warn(`Orquestracs: Seção "${s.id}" estava incorretamente aninhada dentro de <${s.parentElement.tagName} id="${s.parentElement.id || ''}" class="${s.parentElement.className || ''}">. Corrigindo...`);
+                        console.warn(`Orquestra.cs: Seção "${s.id}" estava incorretamente aninhada dentro de <${s.parentElement.tagName} id="${s.parentElement.id || ''}" class="${s.parentElement.className || ''}">. Corrigindo...`);
                         mainContent.appendChild(s);
                         corrigidos++;
                     }
                 });
 
                 if (corrigidos > 0) {
-                    console.log(`Orquestracs: ${corrigidos} seções foram corrigidas estruturalmente no DOM em tempo real.`);
+                    console.log(`Orquestra.cs: ${corrigidos} seções foram corrigidas estruturalmente no DOM em tempo real.`);
                 }
             }
 

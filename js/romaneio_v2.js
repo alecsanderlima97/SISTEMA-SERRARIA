@@ -963,7 +963,7 @@ window.verPreviaRomaneioV2 = () => {
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Recebedor</div>
         </div>
         <div class="show-on-print" style="text-align: center; margin-top: 40px; font-size: 0.65rem; color: #777;">
-            Desenvolvido por: Orquestra.cs - sistemas personalizados
+            Desenvolvido por: Orquestra.cs - sistemas industrial personalizado
         </div>
     `;
 };

@@ -578,7 +578,7 @@ function imprimirEtiquetasFisicas() {
             etiquetasHtml += `
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <div class="ticket-brand">ORQUESTRACS</div>
+                        <div class="ticket-brand">VANMARTE</div>
                         <div class="ticket-title">CONTROLE DE PÁTIO</div>
                     </div>
                     

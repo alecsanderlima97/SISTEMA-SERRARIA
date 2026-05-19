@@ -831,13 +831,13 @@ function gerarHoleriteHtml(f) {
             <!-- Linha Dupla de Topo -->
             <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
                 <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; letter-spacing: 1px;">EXTRATO E RECIBO DE HORAS EXTRAS / ADICIONAIS</h2>
-                <small>SERRARIA ORQUESTRA.CS - SISTEMAS DE ALTA PERFORMANCE</small>
+                <small>SERRARIA VANMARTE | Suporte: Orquestra.cs - sistemas industrial personalizado</small>
             </div>
 
             <!-- Dados da Empresa e Período -->
             <div style="display: grid; grid-template-columns: 2fr 1fr; border-bottom: 1px solid black; padding-bottom: 8px; margin-bottom: 8px; gap: 10px;">
                 <div>
-                    <strong>EMPRESA:</strong> ORQUESTRACS SERRARIA INTEGRADA LTDA<br>
+                    <strong>EMPRESA:</strong> VANMARTE SERRARIA INTEGRADA LTDA<br>
                     <strong>CNPJ:</strong> 12.345.678/0001-99<br>
                     <strong>ENDEREÇO:</strong> ZONA INDUSTRIAL DE LOGÍSTICA, S/N - PÁTIO SERRARIA
                 </div>
@@ -1048,8 +1048,8 @@ function gerarRelatorioHEHtml(f) {
             <!-- Dados da Empresa e Referência -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid black; padding-bottom: 12px; margin-bottom: 15px;">
                 <div>
-                    <h2 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">SERRARIA ORQUESTRACS</h2>
-                    <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">CNPJ: 12.345.678/0001-99</span>
+                    <h2 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">SERRARIA VANMARTE</h2>
+                    <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">CNPJ: 12.345.678/0001-99 | Suporte: Orquestra.cs - sistemas industrial personalizado</span>
                 </div>
                 <div style="text-align: right;">
                     <span style="font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #4b5563;">RELATÓRIO MENSAL DE HORAS EXTRAS</span><br>
