@@ -741,17 +741,17 @@
                         
                         <div class="input-group">
                             <label for="veicModelo">Modelo / Descrição</label>
-                            <input type="text" id="veicModelo" placeholder="Ex: CAMINHÃO VOLVO VM 270" required class="text-uppercase-input">
+                            <input type="text" id="veicModelo" placeholder="Ex: CAMINHÃO VOLVO VM 270" class="text-uppercase-input">
                         </div>
 
                         <div class="input-group">
                             <label for="veicPlaca">Placa / Prefixo</label>
-                            <input type="text" id="veicPlaca" placeholder="Ex: ABC-1234 ou MAQ-02" required class="text-uppercase-input">
+                            <input type="text" id="veicPlaca" placeholder="Ex: ABC-1234 ou MAQ-02" class="text-uppercase-input">
                         </div>
 
                         <div class="input-group">
                             <label for="veicGrupo">Setor / Grupo</label>
-                            <select id="veicGrupo" required>
+                            <select id="veicGrupo">
                                 <option value="SERRARIA">SERRARIA</option>
                                 <option value="FLORESTAL">FLORESTAL</option>
                                 <option value="TERRAPLANAGEM">TERRAPLANAGEM</option>
@@ -760,7 +760,7 @@
 
                         <div class="input-group">
                             <label for="veicAno">Ano de Fabricação</label>
-                            <input type="number" id="veicAno" min="1980" max="2030" placeholder="Ex: 2021" required>
+                            <input type="number" id="veicAno" min="1980" max="2030" placeholder="Ex: 2021">
                         </div>
 
                         <!-- Anexar Documento do Veículo -->
@@ -806,12 +806,12 @@
 
                         <div class="input-group">
                             <label for="abastData">Data do Lançamento</label>
-                            <input type="date" id="abastData" required>
+                            <input type="date" id="abastData">
                         </div>
 
                         <div class="input-group">
                             <label for="abastTipo">Insumo / Combustível</label>
-                            <select id="abastTipo" required onchange="window.atualizarPrecoUnitarioEstoque()">
+                            <select id="abastTipo" onchange="window.atualizarPrecoUnitarioEstoque()">
                                 <option value="DIESEL">DIESEL (Litros)</option>
                                 <option value="LUBRIFICANTE">LUBRIFICANTE (Litros)</option>
                                 <option value="HIDRAULICO">ÓLEO HIDRÁULICO (Litros)</option>
@@ -821,12 +821,12 @@
 
                         <div class="input-group">
                             <label for="abastQtd">Quantidade (L/Kg)</label>
-                            <input type="number" id="abastQtd" step="0.01" placeholder="Ex: 50" required oninput="window.calcularTotalAbastecimento()">
+                            <input type="number" id="abastQtd" step="0.01" placeholder="Ex: 50" oninput="window.calcularTotalAbastecimento()">
                         </div>
 
                         <div class="input-group">
                             <label for="abastPreco">Preço Unitário (R$)</label>
-                            <input type="text" id="abastPreco" placeholder="R$ 0,00" required oninput="window.calcularTotalAbastecimento()">
+                            <input type="text" id="abastPreco" placeholder="R$ 0,00" oninput="window.calcularTotalAbastecimento()">
                         </div>
 
                         <div class="input-group">
@@ -836,7 +836,7 @@
 
                         <div class="input-group">
                             <label for="abastHorimetro">Horímetro / KM Atual</label>
-                            <input type="number" id="abastHorimetro" placeholder="Ex: 154200" required>
+                            <input type="number" id="abastHorimetro" placeholder="Ex: 154200">
                         </div>
 
                         <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
@@ -884,12 +884,12 @@
 
                         <div class="input-group">
                             <label for="manutData">Data da Manutenção</label>
-                            <input type="date" id="manutData" required>
+                            <input type="date" id="manutData">
                         </div>
 
                         <div class="input-group">
                             <label for="manutTipo">Tipo de Serviço</label>
-                            <select id="manutTipo" required>
+                            <select id="manutTipo">
                                 <option value="CORRETIVA">CORRETIVA</option>
                                 <option value="PREVENTIVA">PREVENTIVA / REVISÃO</option>
                                 <option value="CHECKLIST">CHECKLIST PERIÓDICO</option>
@@ -898,7 +898,7 @@
 
                         <div class="input-group">
                             <label for="manutHorimetro">Horímetro / KM Atual</label>
-                            <input type="number" id="manutHorimetro" placeholder="Ex: 154200" required>
+                            <input type="number" id="manutHorimetro" placeholder="Ex: 154200">
                         </div>
 
                         <!-- Itens do Checklist Rápido -->
@@ -934,10 +934,16 @@
                             </h4>
                             <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end;">
                                 <div style="flex: 2;">
-                                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Selecionar Peça / Item do Estoque</label>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <label id="lblManutItemEstoque" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin: 0;">Selecionar Peça / Item do Estoque</label>
+                                        <label style="font-size: 0.72rem; color: var(--accent-color); display: flex; align-items: center; gap: 4px; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="chkPecaManual" onchange="window.togglePecaManual(this.checked)" style="margin: 0;"> Peça Fora de Estoque
+                                        </label>
+                                    </div>
                                     <select id="manutItemEstoque" style="width: 100%; border-radius: 6px; padding: 8px;" onchange="window.atualizarPrecoPecaDinamica()">
                                         <!-- Carregado do Estoque via JS -->
                                     </select>
+                                    <input type="text" id="manutItemManual" class="text-uppercase-input" placeholder="Digite o nome da peça..." style="display: none; width: 100%; border-radius: 6px; padding: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.25); color: white;">
                                 </div>
                                 <div style="flex: 0.8;">
                                     <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Quantidade</label>

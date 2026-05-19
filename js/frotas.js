@@ -148,17 +148,12 @@ window.handleDocumentoUpload = function(event) {
 
 function salvarVeiculo() {
     const id = document.getElementById('veiculoId').value;
-    const modelo = document.getElementById('veicModelo').value.trim().toUpperCase();
-    const placa = document.getElementById('veicPlaca').value.trim().toUpperCase();
-    const grupo = document.getElementById('veicGrupo').value;
+    const modelo = document.getElementById('veicModelo').value.trim().toUpperCase() || 'VEÍCULO S/ MODELO';
+    const placa = document.getElementById('veicPlaca').value.trim().toUpperCase() || 'S/ PLACA';
+    const grupo = document.getElementById('veicGrupo').value || 'SERRARIA';
     const ano = parseInt(document.getElementById('veicAno').value) || new Date().getFullYear();
     const documento = document.getElementById('veicDocumentoBase64').value;
     const documentoNome = document.getElementById('lblDocumentoNome').textContent;
-
-    if (!modelo || !placa) {
-        alert("Preencha todos os campos obrigatórios.");
-        return;
-    }
 
     if (id) {
         // Editar existente
@@ -439,14 +434,14 @@ function obterUltimoHorimetro(veiculoId) {
 
 function salvarAbastecimento() {
     const veiculoId = document.getElementById('abastVeiculoId').value;
-    const data = document.getElementById('abastData').value;
-    const tipo = document.getElementById('abastTipo').value;
+    const data = document.getElementById('abastData').value || new Date().toISOString().split('T')[0];
+    const tipo = document.getElementById('abastTipo').value || 'DIESEL';
     const qtd = parseFloat(document.getElementById('abastQtd').value) || 0;
     const preco = window.parseCurrencyValue(document.getElementById('abastPreco').value) || 0;
     const horimetro = parseInt(document.getElementById('abastHorimetro').value) || 0;
 
-    if (qtd <= 0 || preco <= 0 || horimetro <= 0) {
-        alert("Por favor, preencha a quantidade, preço unitário e horímetro de forma correta.");
+    if (qtd < 0 || preco < 0 || horimetro < 0) {
+        alert("Por favor, insira valores válidos (maiores ou iguais a zero).");
         return;
     }
 
@@ -473,7 +468,7 @@ function salvarAbastecimento() {
     
     if (itemEstoque) {
         if (itemEstoque.quantidade < qtd) {
-            alert(`Atenção: A quantidade lançada (${qtd}) é maior do que o saldo atual em estoque (${itemEstoque.quantidade}). O estoque ficará negativo.`);
+            console.log(`Atenção: A quantidade lançada (${qtd}) é maior do que o saldo atual em estoque (${itemEstoque.quantidade}). O estoque ficará negativo.`);
         }
         itemEstoque.quantidade -= qtd;
         salvarBanco(KEYS.ESTOQUE, estoque);
@@ -566,7 +561,11 @@ window.abrirModalManutencao = function(veiculoId) {
     document.getElementById('chkArrefecimento').checked = false;
     document.getElementById('chkEstrutural').checked = false;
 
-    // Reseta peças temporárias
+    // Reseta peças temporárias e checkbox manual
+    const chkManual = document.getElementById('chkPecaManual');
+    if (chkManual) chkManual.checked = false;
+    if (window.togglePecaManual) window.togglePecaManual(false);
+
     pecasManutencaoTemp = [];
     renderizarPecasManutencaoTemp();
 
@@ -625,38 +624,98 @@ window.atualizarPrecoPecaDinamica = function() {
     }
 };
 
+window.togglePecaManual = function(isManual) {
+    const selectEstoque = document.getElementById('manutItemEstoque');
+    const inputManual = document.getElementById('manutItemManual');
+    const inputPreco = document.getElementById('manutItemPreco');
+    const labelSelect = document.getElementById('lblManutItemEstoque');
+    
+    if (isManual) {
+        if (selectEstoque) selectEstoque.style.display = 'none';
+        if (inputManual) {
+            inputManual.style.display = 'block';
+            inputManual.value = '';
+        }
+        if (labelSelect) labelSelect.textContent = 'Nome da Peça / Insumo';
+        if (inputPreco) {
+            inputPreco.value = '';
+            inputPreco.readOnly = false;
+        }
+    } else {
+        if (selectEstoque) selectEstoque.style.display = 'block';
+        if (inputManual) {
+            inputManual.style.display = 'none';
+            inputManual.value = '';
+        }
+        if (labelSelect) labelSelect.textContent = 'Selecionar Peça / Item do Estoque';
+        if (selectEstoque) selectEstoque.value = '';
+        if (inputPreco) {
+            inputPreco.value = '';
+            inputPreco.readOnly = false;
+        }
+    }
+};
+
 window.adicionarPecaManutencao = function() {
-    const itemId = document.getElementById('manutItemEstoque').value;
+    const chkManual = document.getElementById('chkPecaManual');
+    const isManual = chkManual ? chkManual.checked : false;
+    let itemId = '';
+    let itemNome = '';
+
     const qtd = parseInt(document.getElementById('manutItemQtd').value) || 0;
     const preco = window.parseCurrencyValue(document.getElementById('manutItemPreco').value) || 0;
 
-    if (!itemId || qtd <= 0 || preco <= 0) {
-        alert("Selecione um item válido e preencha a quantidade e o preço unitário.");
+    if (isManual) {
+        const inputManual = document.getElementById('manutItemManual');
+        itemNome = inputManual ? inputManual.value.trim().toUpperCase() : '';
+        itemId = 'manual_' + new Date().getTime();
+        if (!itemNome) {
+            alert("Por favor, digite o nome da peça.");
+            return;
+        }
+    } else {
+        const selectEstoque = document.getElementById('manutItemEstoque');
+        itemId = selectEstoque ? selectEstoque.value : '';
+        if (!itemId) {
+            alert("Por favor, selecione uma peça do estoque ou ative a opção 'Peça Fora de Estoque'.");
+            return;
+        }
+        const item = estoque.find(i => i.id === itemId);
+        if (!item) return;
+        itemNome = item.nome;
+    }
+
+    if (qtd <= 0 || preco <= 0) {
+        alert("Preencha a quantidade e o preço unitário com valores maiores que zero.");
         return;
     }
 
-    const item = estoque.find(i => i.id === itemId);
-    if (!item) return;
-
     // Verificar se já existe na lista temporária
-    const jaExiste = pecasManutencaoTemp.find(p => p.id === itemId);
+    const jaExiste = pecasManutencaoTemp.find(p => p.id === itemId || (isManual && p.nome === itemNome));
     if (jaExiste) {
         jaExiste.qtd += qtd;
         jaExiste.subtotal = jaExiste.qtd * jaExiste.preco;
     } else {
         pecasManutencaoTemp.push({
-            id: item.id,
-            nome: item.nome,
+            id: itemId,
+            nome: itemNome,
             qtd,
             preco,
-            subtotal: qtd * preco
+            subtotal: qtd * preco,
+            isManual: isManual
         });
     }
 
     renderizarPecasManutencaoTemp();
 
     // Resetar inputs de peças
-    document.getElementById('manutItemEstoque').value = '';
+    if (isManual) {
+        const inputManual = document.getElementById('manutItemManual');
+        if (inputManual) inputManual.value = '';
+    } else {
+        const selectEstoque = document.getElementById('manutItemEstoque');
+        if (selectEstoque) selectEstoque.value = '';
+    }
     document.getElementById('manutItemQtd').value = 1;
     document.getElementById('manutItemPreco').value = '';
 };
@@ -690,13 +749,13 @@ window.removerPecaManutencaoTemp = function(id) {
 
 function salvarManutencao() {
     const veiculoId = document.getElementById('manutVeiculoId').value;
-    const data = document.getElementById('manutData').value;
-    const tipo = document.getElementById('manutTipo').value;
+    const data = document.getElementById('manutData').value || new Date().toISOString().split('T')[0];
+    const tipo = document.getElementById('manutTipo').value || 'CORRETIVA';
     const horimetro = parseInt(document.getElementById('manutHorimetro').value) || 0;
     const obs = document.getElementById('manutObs').value.trim().toUpperCase();
 
-    if (horimetro <= 0) {
-        alert("Preencha o horímetro / KM do veículo corretamente.");
+    if (horimetro < 0) {
+        alert("O horímetro / KM do veículo não pode ser negativo.");
         return;
     }
 
