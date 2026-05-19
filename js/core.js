@@ -165,6 +165,20 @@ const App = {
         this.checkAuth();
         this.setupNavigation();
         this.setupSidebarCollapse();
+        this.loadProfilePic();
+    },
+
+    loadProfilePic() {
+        const savedPic = localStorage.getItem('orquestrasis_profile_pic');
+        if (savedPic) {
+            const imgPreview = document.getElementById('imgPerfilPreview');
+            const icon = document.getElementById('imgPerfilIcon');
+            if (imgPreview && icon) {
+                imgPreview.src = savedPic;
+                imgPreview.style.display = 'block';
+                icon.style.display = 'none';
+            }
+        }
     },
 
     setupSidebarCollapse() {
@@ -174,11 +188,9 @@ const App = {
             const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
             if (isCollapsed) {
                 appWrapper.classList.add('sidebar-collapsed');
-                const btnSpan = btnToggleSidebar.querySelector('span');
-                if (btnSpan) btnSpan.textContent = "Expandir";
                 const btnIcon = btnToggleSidebar.querySelector('i');
                 if (btnIcon) {
-                    btnIcon.classList.remove('fa-bars');
+                    btnIcon.classList.remove('fa-chevron-left');
                     btnIcon.classList.add('fa-chevron-right');
                 }
             }
@@ -188,18 +200,14 @@ const App = {
                 const collapsed = appWrapper.classList.contains('sidebar-collapsed');
                 localStorage.setItem('sidebar_collapsed', collapsed);
                 
-                const btnSpan = btnToggleSidebar.querySelector('span');
-                if (btnSpan) {
-                    btnSpan.textContent = collapsed ? "Expandir" : "Recolher Menu";
-                }
                 const btnIcon = btnToggleSidebar.querySelector('i');
                 if (btnIcon) {
                     if (collapsed) {
-                        btnIcon.classList.remove('fa-bars');
+                        btnIcon.classList.remove('fa-chevron-left');
                         btnIcon.classList.add('fa-chevron-right');
                     } else {
                         btnIcon.classList.remove('fa-chevron-right');
-                        btnIcon.classList.add('fa-bars');
+                        btnIcon.classList.add('fa-chevron-left');
                     }
                 }
             });
@@ -311,6 +319,25 @@ window.navegarPara = function(targetId) {
                 document.getElementById('btnToggleSidebar')?.click();
             }
         }
+    }
+};
+
+window.previewFotoPerfil = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imgPreview = document.getElementById('imgPerfilPreview');
+            const icon = document.getElementById('imgPerfilIcon');
+            if (imgPreview && icon) {
+                imgPreview.src = e.target.result;
+                imgPreview.style.display = 'block';
+                icon.style.display = 'none';
+                // Salvar base64 no localStorage ou preparar para Firebase
+                localStorage.setItem('orquestrasis_profile_pic', e.target.result);
+            }
+        };
+        reader.readAsDataURL(file);
     }
 };
 

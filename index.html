@@ -60,8 +60,8 @@
             <!-- Global Header -->
             <div class="global-header hide-on-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
                 <!-- Botão de Recolher Sidebar -->
-                <button type="button" id="btnToggleSidebar" class="btn-action-card" style="padding: 10px 20px;">
-                    <i class="fa-solid fa-bars"></i> <span>Recolher Menu</span>
+                <button type="button" id="btnToggleSidebar" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; margin-left: -15px;" title="Recolher Menu">
+                    <i class="fa-solid fa-chevron-left"></i>
                 </button>
 
                 <div class="header-user-group" style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 12px;" onclick="const d = document.getElementById('profile-dropdown'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
@@ -1140,7 +1140,7 @@
                 </div>
 
                 <!-- CARD DE CADASTRO / EDIÇÃO -->
-                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px; animation: fadeIn 0.4s ease;">
+                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px;">
                     <div class="section-title">
                         <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo Funcionário</h2>
                     </div>
@@ -2167,7 +2167,7 @@
             </section>
 
             <!-- ====== TELA: CONFIGURAÇÕES ====== -->
-            <section id="view-configuracoes" class="view-section" style="display: none; animation: fadeIn 0.5s ease;">
+            <section id="view-configuracoes" class="view-section" style="display: none;">
                 <div class="main-header">
                     <h1><i class="fa-solid fa-gear"></i> Configurações do Sistema</h1>
                     <p>Gerencie seus dados e backups com segurança.</p>
@@ -2185,10 +2185,11 @@
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 24px;">
                             <div style="position: relative;">
                                 <div style="width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--accent-color);">
-                                    <i class="fa-solid fa-user" style="font-size: 40px; color: #888;"></i>
+                                    <img id="imgPerfilPreview" src="" alt="Perfil" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                    <i id="imgPerfilIcon" class="fa-solid fa-user" style="font-size: 40px; color: #888;"></i>
                                 </div>
                                 <label style="position: absolute; bottom: 0; right: 0; background: var(--accent-color); padding: 8px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                                    <input type="file" accept="image/*" style="display: none;">
+                                    <input type="file" id="inputFotoPerfil" accept="image/*" style="display: none;" onchange="window.previewFotoPerfil(event)">
                                     <i class="fa-solid fa-camera" style="color: white; font-size: 14px;"></i>
                                 </label>
                             </div>
