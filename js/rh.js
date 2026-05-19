@@ -1114,7 +1114,7 @@ function gerarRelatorioHEHtml(f) {
                     </div>
                 </div>
             </div>
-        </div>`;
+        </div>
     `;
 }
 
