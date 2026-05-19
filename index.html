@@ -18,11 +18,120 @@
 </head>
 
 <body>
-    <!-- Fallback de Navegação Resiliente e Imediata - Orquestracs Premium -->
+    <!-- Fallback, Diagnósticos e Autocorreção Estrutural - Orquestracs Premium -->
     <script>
         (function() {
+            // 1. CAPTURADOR GLOBAL DE ERROS (Exibe na tela)
+            function exibirErroNaTela(titulo, detalhe) {
+                let banner = document.getElementById('orquestra-error-banner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'orquestra-error-banner';
+                    banner.style.position = 'fixed';
+                    banner.style.bottom = '20px';
+                    banner.style.right = '20px';
+                    banner.style.background = 'rgba(239, 68, 68, 0.95)';
+                    banner.style.color = '#fff';
+                    banner.style.padding = '16px 20px';
+                    banner.style.borderRadius = '8px';
+                    banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+                    banner.style.zIndex = '999999';
+                    banner.style.maxWidth = '380px';
+                    banner.style.fontFamily = 'sans-serif';
+                    banner.style.fontSize = '12px';
+                    banner.style.border = '1px solid rgba(255,255,255,0.2)';
+                    banner.style.backdropFilter = 'blur(8px)';
+                    banner.style.transition = 'all 0.3s ease';
+                    
+                    const header = document.createElement('div');
+                    header.style.display = 'flex';
+                    header.style.justifyContent = 'space-between';
+                    header.style.alignItems = 'center';
+                    header.style.marginBottom = '8px';
+                    
+                    const titleEl = document.createElement('strong');
+                    titleEl.style.color = '#ffe4e6';
+                    titleEl.style.fontSize = '13px';
+                    titleEl.textContent = titulo;
+                    
+                    const closeBtn = document.createElement('button');
+                    closeBtn.innerHTML = '&times;';
+                    closeBtn.style.background = 'none';
+                    closeBtn.style.border = 'none';
+                    closeBtn.style.color = '#fff';
+                    closeBtn.style.fontSize = '18px';
+                    closeBtn.style.cursor = 'pointer';
+                    closeBtn.onclick = () => banner.remove();
+                    
+                    header.appendChild(titleEl);
+                    header.appendChild(closeBtn);
+                    banner.appendChild(header);
+                    
+                    const content = document.createElement('div');
+                    content.id = 'orquestra-error-content';
+                    content.style.lineHeight = '1.4';
+                    content.style.wordBreak = 'break-word';
+                    content.innerHTML = detalhe;
+                    banner.appendChild(content);
+                    
+                    document.body.appendChild(banner);
+                } else {
+                    const content = document.getElementById('orquestra-error-content');
+                    if (content) {
+                        content.innerHTML += '<br><br>' + detalhe;
+                    }
+                }
+            }
+
+            window.addEventListener('error', function(e) {
+                console.error("Erro capturado:", e.message);
+                const file = e.filename ? e.filename.split('/').pop() : 'desconhecido';
+                exibirErroNaTela("Erro de Código Detectado", `${e.message}<br><small style="opacity:0.8;">Arquivo: ${file} (Linha ${e.lineno})</small>`);
+            });
+
+            window.addEventListener('unhandledrejection', function(e) {
+                console.error("Rejeição de promessa:", e.reason);
+                const msg = e.reason ? (e.reason.message || e.reason) : 'Erro desconhecido de rede/Firebase';
+                exibirErroNaTela("Erro no Banco/Rede", msg);
+            });
+
+            // 2. AUTOCORREÇÃO ESTRUTURAL DO DOM (Resolve tags HTML fechadas incorretamente de forma dinâmica)
+            function autocorrigirEstruturaDOM() {
+                console.log("Orquestracs: Iniciando verificação estrutural do DOM...");
+                const mainContent = document.querySelector('.main-content');
+                if (!mainContent) {
+                    console.error("Orquestracs: Container .main-content não encontrado!");
+                    return;
+                }
+
+                const sections = document.querySelectorAll('.view-section');
+                let corrigidos = 0;
+                sections.forEach(s => {
+                    // Se a seção não for filha direta de .main-content, ela foi aninhada incorretamente no HTML
+                    if (s.parentElement !== mainContent) {
+                        console.warn(`Orquestracs: Seção "${s.id}" estava incorretamente aninhada dentro de <${s.parentElement.tagName} id="${s.parentElement.id || ''}" class="${s.parentElement.className || ''}">. Corrigindo...`);
+                        mainContent.appendChild(s);
+                        corrigidos++;
+                    }
+                });
+
+                if (corrigidos > 0) {
+                    console.log(`Orquestracs: ${corrigidos} seções foram corrigidas estruturalmente no DOM em tempo real.`);
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', autocorrigirEstruturaDOM);
+            } else {
+                autocorrigirEstruturaDOM();
+            }
+
+            // 3. FALLBACK DE NAVEGAÇÃO
             window.App = window.App || {
                 showSection: function(id) {
+                    // Força a autocorreção estrutural antes de navegar
+                    autocorrigirEstruturaDOM();
+                    
                     const sections = document.querySelectorAll('.view-section');
                     let found = false;
                     sections.forEach(s => {
@@ -838,8 +947,6 @@
                     </form>
                 </div>
             </div>
-
-                </div>
 
             <!-- ====== TELA: CONTROLE DE FROTAS ====== -->
             <section id="view-frotas" class="view-section" style="display: none;">
