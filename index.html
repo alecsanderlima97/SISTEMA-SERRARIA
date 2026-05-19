@@ -2845,30 +2845,30 @@
 
     <!-- ====== MODAL: MOVIMENTAÇÃO MANUAL DE ESTOQUE ====== -->
     <div id="modalNovaMovimentacao" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
-        <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b; max-height: 92vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 14px; padding: 16px 20px; border: 1px solid var(--panel-border); background: #1e293b;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0; color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
                     <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-color);"></i> Registrar Saída / Entrada de Estoque
                 </h2>
                 <button type="button" class="btn-action-card" onclick="window.fecharModalNovaMovimentacao()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <form id="formNovaMovimentacao" class="grid-form" style="grid-template-columns: 1fr 1fr 1fr;">
+            <form id="formNovaMovimentacao" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px;">
                 <div class="input-group" style="grid-column: span 3;">
                     <label for="movTipo">Tipo de Lançamento</label>
-                    <select id="movTipo" onchange="window.onChangeMovTipo()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
+                    <select id="movTipo" onchange="window.onChangeMovTipo()" style="border-radius: 7px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 7px 10px; font-size: 0.84rem;">
                         <option value="SAÍDA">📉 SAÍDA — Retirada / Consumo / EPI Entregue</option>
                         <option value="ENTRADA">📈 ENTRADA — Compra / Reposição</option>
                     </select>
                 </div>
                 <div class="input-group" style="grid-column: span 3;">
                     <label for="movItemId">Item do Estoque *</label>
-                    <select id="movItemId" onchange="window.onChangeMovItem()" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 10px 14px;">
+                    <select id="movItemId" onchange="window.onChangeMovItem()" required style="border-radius: 7px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 7px 10px; font-size: 0.84rem;">
                         <option value="">-- SELECIONE O ITEM --</option>
                     </select>
                 </div>
                 <div class="input-group" style="grid-column: span 3;">
                     <label for="movRetiradoPor"><i class="fa-solid fa-user"></i> Retirado por / Responsável</label>
-                    <input type="text" id="movRetiradoPor" class="text-uppercase-input" placeholder="Ex: JOÃO DA SILVA" style="border-radius: 8px; border: 1px solid rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: white; padding: 10px 14px;">
+                    <input type="text" id="movRetiradoPor" class="text-uppercase-input" placeholder="Ex: JOÃO DA SILVA" style="border-radius: 7px; border: 1px solid rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div class="input-group" style="grid-column: span 3;">
                     <label for="movDestino"><i class="fa-solid fa-location-dot"></i> Destino / Setor</label>
@@ -2879,19 +2879,19 @@
                         <button type="button" onclick="document.getElementById('movDestino').value='ESCRITÓRIO'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(96,165,250,0.5); background: rgba(96,165,250,0.1); color: #60a5fa; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🏢 ESCRITÓRIO</button>
                         <button type="button" onclick="document.getElementById('movDestino').value='SETOR MECÂNICO'" style="padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(167,139,250,0.5); background: rgba(167,139,250,0.1); color: #a78bfa; font-size: 0.78rem; cursor: pointer; font-family: inherit;">🔧 MECÂNICA</button>
                     </div>
-                    <input type="text" id="movDestino" class="text-uppercase-input" placeholder="Ou digite manualmente..." style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                    <input type="text" id="movDestino" class="text-uppercase-input" placeholder="Ou digite manualmente..." style="border-radius: 7px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div class="input-group">
                     <label for="movData">Data</label>
-                    <input type="date" id="movData" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                    <input type="date" id="movData" style="border-radius: 7px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div class="input-group">
                     <label for="movQtd">Quantidade *</label>
-                    <input type="number" id="movQtd" step="0.01" min="0.01" placeholder="Ex: 1" required style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                    <input type="number" id="movQtd" step="0.01" min="0.01" placeholder="Ex: 1" required style="border-radius: 7px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div class="input-group">
                     <label for="movUnitario">Valor Unit. (R$) *</label>
-                    <input type="text" id="movUnitario" placeholder="R$ 0,00" required oninput="window.formatCurrencyInput(event)" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px;">
+                    <input type="text" id="movUnitario" placeholder="R$ 0,00" required oninput="window.formatCurrencyInput(event)" style="border-radius: 7px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div class="input-group" id="containerMovFrota" style="grid-column: span 3; display: none;">
                     <label for="movFrotaId"><i class="fa-solid fa-truck-pickup"></i> Veículo / Máquina (se consumo de frota)</label>
@@ -2901,7 +2901,7 @@
                 </div>
                 <div class="input-group" style="grid-column: span 3;">
                     <label for="movObs">Observação</label>
-                    <textarea id="movObs" rows="2" class="text-uppercase-input" placeholder="Ex: CORREIA A27 SUBSTITUÍDA NA SERRA PRINCIPAL..." style="width: 100%; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 10px 14px; resize: vertical;"></textarea>
+                    <input type="text" id="movObs" class="text-uppercase-input" placeholder="Ex: CORREIA A27 SUBSTITUÍDA NA SERRA PRINCIPAL..." style="width: 100%; border-radius: 7px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 7px 10px; font-size: 0.84rem;">
                 </div>
                 <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
                     <button type="button" class="btn-secondary" onclick="window.fecharModalNovaMovimentacao()" style="padding: 10px 20px; border-radius: 8px;">Cancelar</button>
