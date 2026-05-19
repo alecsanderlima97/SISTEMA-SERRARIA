@@ -820,6 +820,19 @@ function gerarHoleriteHtml(f) {
     const totalDescontos = vale + descontosAdicionais;
     const valorLiquido = totalVencimentos - totalDescontos;
 
+    const emitente = window.dadosSerrariaEmitente || {
+        nome: "COMERCIO DE MADEIRAS VANMART LTDA",
+        nomeFantasia: "SERRARIA VANMARTE",
+        cnpj: "44.215.194/0001-18",
+        ie: "ISENTO",
+        contato: "15 996297072",
+        email: "escritoriovanmarte@hotmai.com",
+        cep: "18430-000",
+        logradouro: "ESTRADA DO TAQUARI",
+        numero: "267",
+        cidade: "Ribeirão Branco / SP"
+    };
+
     const dataAdmissao = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
     
     // Mes de referencia atual
@@ -831,15 +844,15 @@ function gerarHoleriteHtml(f) {
             <!-- Linha Dupla de Topo -->
             <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
                 <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; letter-spacing: 1px;">EXTRATO E RECIBO DE HORAS EXTRAS / ADICIONAIS</h2>
-                <small>SERRARIA VANMARTE | Suporte: Orquestra.cs - sistemas industrial personalizado</small>
+                <small>${emitente.nomeFantasia.toUpperCase()} | Suporte: Orquestra.cs - sistema industrial personalizado</small>
             </div>
 
             <!-- Dados da Empresa e Período -->
             <div style="display: grid; grid-template-columns: 2fr 1fr; border-bottom: 1px solid black; padding-bottom: 8px; margin-bottom: 8px; gap: 10px;">
                 <div>
-                    <strong>EMPRESA:</strong> VANMARTE SERRARIA INTEGRADA LTDA<br>
-                    <strong>CNPJ:</strong> 12.345.678/0001-99<br>
-                    <strong>ENDEREÇO:</strong> ZONA INDUSTRIAL DE LOGÍSTICA, S/N - PÁTIO SERRARIA
+                    <strong>EMPRESA:</strong> ${emitente.nome.toUpperCase()}<br>
+                    <strong>CNPJ:</strong> ${emitente.cnpj}<br>
+                    <strong>ENDEREÇO:</strong> ${emitente.logradouro.toUpperCase()}, ${emitente.numero} - ${emitente.cidade.toUpperCase()}
                 </div>
                 <div style="text-align: right;">
                     <strong>REFERÊNCIA MÊS:</strong><br>
@@ -1013,6 +1026,19 @@ function gerarRelatorioHEHtml(f) {
     // Cálculo das Horas Extras + Prêmios
     const totalHorasExtras = ganhoHE50 + ganhoHE100 + ganhoAdicionais - descontosAdicionais;
     
+    const emitente = window.dadosSerrariaEmitente || {
+        nome: "COMERCIO DE MADEIRAS VANMART LTDA",
+        nomeFantasia: "SERRARIA VANMARTE",
+        cnpj: "44.215.194/0001-18",
+        ie: "ISENTO",
+        contato: "15 996297072",
+        email: "escritoriovanmarte@hotmai.com",
+        cep: "18430-000",
+        logradouro: "ESTRADA DO TAQUARI",
+        numero: "267",
+        cidade: "Ribeirão Branco / SP"
+    };
+
     // Mes de referencia atual
     const opcoesMes = { month: 'long', year: 'numeric' };
     const mesReferencia = new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
@@ -1048,8 +1074,8 @@ function gerarRelatorioHEHtml(f) {
             <!-- Dados da Empresa e Referência -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid black; padding-bottom: 12px; margin-bottom: 15px;">
                 <div>
-                    <h2 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">SERRARIA VANMARTE</h2>
-                    <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">CNPJ: 12.345.678/0001-99 | Suporte: Orquestra.cs - sistemas industrial personalizado</span>
+                    <h2 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">${emitente.nomeFantasia.toUpperCase()}</h2>
+                    <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">CNPJ: ${emitente.cnpj} | Suporte: Orquestra.cs - sistema industrial personalizado</span>
                 </div>
                 <div style="text-align: right;">
                     <span style="font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #4b5563;">RELATÓRIO MENSAL DE HORAS EXTRAS</span><br>

@@ -8,6 +8,60 @@ window.DB = {
     set: (key, val) => localStorage.setItem(key, JSON.stringify(val))
 };
 
+// Dados Cadastrais Reais da Serraria Emitente (Vanmarte) - Carregamento dinâmico e fallback robusto
+window.dadosSerrariaEmitente = {
+    nome: "COMERCIO DE MADEIRAS VANMART LTDA",
+    nomeFantasia: "SERRARIA VANMARTE",
+    cnpj: "44.215.194/0001-18",
+    ie: "ISENTO",
+    contato: "15 996297072",
+    email: "escritoriovanmarte@hotmai.com",
+    cep: "18430-000",
+    logradouro: "ESTRADA DO TAQUARI",
+    numero: "267",
+    cidade: "Ribeirão Branco / SP"
+};
+
+// Carrega os dados reais do Firestore caso o cadastro do cliente seja alterado
+export async function carregarDadosSerrariaEmitente() {
+    try {
+        console.log("Core: Buscando dados atualizados da emitente (Vanmarte) no Firestore...");
+        const querySnapshot = await getDocs(collection(db, 'clientes'));
+        let encontrado = false;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const nome = (data.nome || "").toUpperCase();
+            const obs = (data.observacao || "").toUpperCase();
+            const email = (data.email || "").toUpperCase();
+            
+            if (nome.includes("VANMART") || obs.includes("VANMART") || email.includes("VANMARTE")) {
+                window.dadosSerrariaEmitente = {
+                    nome: data.nome || "COMERCIO DE MADEIRAS VANMART LTDA",
+                    nomeFantasia: data.observacao || "SERRARIA VANMARTE",
+                    cnpj: data.cnpj || "44.215.194/0001-18",
+                    ie: data.ie || "ISENTO",
+                    contato: data.contato || "15 996297072",
+                    email: data.email || "escritoriovanmarte@hotmai.com",
+                    cep: data.cep || "18430-000",
+                    logradouro: data.logradouro || "ESTRADA DO TAQUARI",
+                    numero: data.numero || "267",
+                    cidade: data.cidade || "Ribeirão Branco / SP"
+                };
+                encontrado = true;
+            }
+        });
+        if (encontrado) {
+            console.log("Core: Dados cadastrais da Vanmarte atualizados com sucesso do Firestore:", window.dadosSerrariaEmitente);
+            document.dispatchEvent(new Event('emitenteUpdated'));
+        }
+    } catch (error) {
+        console.error("Core: Erro ao carregar dados dinâmicos da emitente, utilizando fallback robusto:", error);
+    }
+}
+
+// Ouvir atualizações no cadastro de clientes para manter os dados sincronizados
+document.addEventListener('clientesUpdated', carregarDadosSerrariaEmitente);
+
 window.parseCurrencyValue = function(val) {
     if (val === null || val === undefined || val === '') return 0;
     if (typeof val === 'number') return val;
@@ -227,6 +281,7 @@ const App = {
             this.user = user;
             if (user) {
                 console.log("Core: Autenticado como " + user.email);
+                carregarDadosSerrariaEmitente();
                 if (window.location.pathname.includes('login.html')) {
                     window.location.href = 'index.html';
                 }

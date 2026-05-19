@@ -560,6 +560,10 @@ function imprimirEtiquetasFisicas() {
     let etiquetasHtml = '';
     let serialGlobal = 1;
 
+    const emitente = window.dadosSerrariaEmitente || {
+        nomeFantasia: "VANMARTE"
+    };
+
     // Gerar etiquetas individuais por pacote físico
     itensPatioTemp.forEach(item => {
         for (let p = 1; p <= item.pacotes; p++) {
@@ -578,7 +582,7 @@ function imprimirEtiquetasFisicas() {
             etiquetasHtml += `
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <div class="ticket-brand">VANMARTE</div>
+                        <div class="ticket-brand">${(emitente.nomeFantasia || "VANMARTE").toUpperCase()}</div>
                         <div class="ticket-title">CONTROLE DE PÁTIO</div>
                     </div>
                     

@@ -889,6 +889,19 @@ window.verPreviaRomaneioV2 = () => {
         totalM3Frete += p.m3FreteTotal;
     });
 
+    const emitente = window.dadosSerrariaEmitente || {
+        nome: "COMERCIO DE MADEIRAS VANMART LTDA",
+        nomeFantasia: "SERRARIA VANMARTE",
+        cnpj: "44.215.194/0001-18",
+        ie: "ISENTO",
+        contato: "15 996297072",
+        email: "escritoriovanmarte@hotmai.com",
+        cep: "18430-000",
+        logradouro: "ESTRADA DO TAQUARI",
+        numero: "267",
+        cidade: "Ribeirão Branco / SP"
+    };
+
     const taxa = r.financeiro.taxaNF || 0;
     const imposto = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) * (taxa / 100);
     const subtotalLiquido = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) + imposto;
@@ -899,7 +912,7 @@ window.verPreviaRomaneioV2 = () => {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
             <div>
                 <!-- O usuário enviará a logo, que deve ser salva na raiz como logo.png ou logo.jpg e referenciada aqui -->
-                <img src="logo.png" alt="VANMARTE - Madeiras serradas para embalagens" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
+                <img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()} - Madeiras serradas para embalagens" style="max-height: 80px; max-width: 250px; display: block;" onerror="this.style.display='none'">
             </div>
             <div style="text-align:right; color: black;">
                 <h1 style="margin:0; font-size: 1.5rem; text-transform: uppercase;">ROMANEIO DE CARGA</h1>
@@ -963,7 +976,7 @@ window.verPreviaRomaneioV2 = () => {
             <div style="border-top: 1px solid black; text-align:center; padding-top: 5px; color: black;">Assinatura do Recebedor</div>
         </div>
         <div class="show-on-print" style="text-align: center; margin-top: 40px; font-size: 0.65rem; color: #777;">
-            Desenvolvido por: Orquestra.cs - sistemas industrial personalizado
+            Desenvolvido por: Orquestra.cs - sistema industrial personalizado
         </div>
     `;
 };
