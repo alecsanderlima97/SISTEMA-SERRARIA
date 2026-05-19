@@ -10,8 +10,8 @@
     /* Dourado */
     --bg-color: #0f0a09;
     /* Terroso escuro */
-    --panel-bg: rgba(255, 255, 255, 0.05);
-    --panel-border: rgba(255, 255, 255, 0.1);
+    --panel-bg: rgba(18, 12, 10, 0.88);
+    --panel-border: rgba(255, 255, 255, 0.08);
     --text-color: #ffffff; /* Texto 100% visível e brilhante */
     --text-muted: #cbd5e1; /* Texto secundário com maior contraste */
     --danger-color: #f85149;
@@ -146,8 +146,8 @@ body {
 /* Glass Panels */
 .glass-panel {
     background: var(--panel-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-lg);
     padding: 2rem;
