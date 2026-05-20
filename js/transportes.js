@@ -42,7 +42,7 @@ window.switchTabTransportes = function(tabName, isEditing = false) {
         btnForm.style.color = 'var(--text-muted)';
         btnForm.style.borderBottom = 'none';
     }
-}
+};
 
 // Forçar letras maiúsculas em tempo real nos campos de transportadoras
 ['transNome', 'transMotorista', 'transCaminhao', 'transPlaca'].forEach(id => {

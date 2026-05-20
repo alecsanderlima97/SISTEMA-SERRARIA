@@ -591,51 +591,27 @@ inputsFinanceirosCalc.forEach(id => {
         input.addEventListener('input', window.formatCurrencyInput);
     }
 });
+window.switchTabSubprodutos = function(tabName) {
+    const tabRecibo = document.getElementById('panelEmissaoCavaco');
+    const tabClientes = document.getElementById('panelCadastroClientesSub');
+    const btnRecibo = document.getElementById('btnTabSubRecibo');
+    const btnClientes = document.getElementById('btnTabSubClientes');
 
-// Alternância do painel de gerenciamento de clientes de subprodutos
-function inicializarToggleClientesSub() {
-    const btnToggle = document.getElementById('btnToggleGerenciarClientesSub');
-    const panelCadastro = document.getElementById('panelCadastroClientesSub');
-    const panelEmissao = document.getElementById('panelEmissaoCavaco');
-    const container = document.getElementById('subprodutosContainer');
+    if (!tabRecibo || !tabClientes || !btnRecibo || !btnClientes) return;
 
-    if (btnToggle && panelCadastro && panelEmissao && container) {
-        // Inicialização - Oculto por padrão
-        panelCadastro.style.display = 'none';
-        container.classList.remove('form-table-grid');
-        container.style.maxWidth = '650px';
-        panelEmissao.style.maxWidth = '100%';
-        panelEmissao.style.margin = '0';
-
-        btnToggle.addEventListener('click', function() {
-            const isHidden = panelCadastro.style.display === 'none';
-            if (isHidden) {
-                // Mostrar painel de gerenciamento lateral
-                panelCadastro.style.display = 'block';
-                // Mudar layout do container para grid bilateral de duas colunas
-                container.classList.add('form-table-grid');
-                container.style.maxWidth = '1350px';
-                btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Gerenciador';
-                btnToggle.classList.add('btn-primary');
-                btnToggle.classList.remove('btn-secondary');
-            } else {
-                // Esconder painel de gerenciamento
-                panelCadastro.style.display = 'none';
-                // Remover layout de grid do container
-                container.classList.remove('form-table-grid');
-                // Voltar limites manuais de centralização da calculadora
-                container.style.maxWidth = '650px';
-                btnToggle.innerHTML = '<i class="fa-solid fa-users-gear"></i> Gerenciar Clientes';
-                btnToggle.classList.remove('btn-primary');
-                btnToggle.classList.add('btn-secondary');
-            }
-        });
+    if (tabName === 'recibo') {
+        tabRecibo.style.display = 'block';
+        tabClientes.style.display = 'none';
+        btnRecibo.style.color = 'var(--accent-color)';
+        btnRecibo.style.borderBottom = '3px solid var(--accent-color)';
+        btnClientes.style.color = 'var(--text-muted)';
+        btnClientes.style.borderBottom = 'none';
+    } else {
+        tabRecibo.style.display = 'none';
+        tabClientes.style.display = 'block';
+        btnClientes.style.color = 'var(--accent-color)';
+        btnClientes.style.borderBottom = '3px solid var(--accent-color)';
+        btnRecibo.style.color = 'var(--text-muted)';
+        btnRecibo.style.borderBottom = 'none';
     }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', inicializarToggleClientesSub);
-} else {
-    inicializarToggleClientesSub();
-}
-
+};

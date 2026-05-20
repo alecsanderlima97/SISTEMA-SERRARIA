@@ -1886,7 +1886,17 @@
                     <p>Gerencie clientes e emita recibos automatizados para venda de Cavaco, Pó de Serra e Cascas.</p>
                 </div>
 
-                <div class="subprodutos-container" id="subprodutosContainer" style="max-width: 1200px; margin: 0 auto; position: relative;">
+                <!-- TABS DE SUBPRODUTOS -->
+                <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap; justify-content: flex-start;">
+                    <button type="button" id="btnTabSubRecibo" onclick="window.switchTabSubprodutos('recibo')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo
+                    </button>
+                    <button type="button" id="btnTabSubClientes" onclick="window.switchTabSubprodutos('clientes')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-users-gear"></i> Gerenciar Clientes
+                    </button>
+                </div>
+
+                <div class="subprodutos-container" id="subprodutosContainer" style="max-width: 900px; margin: 0 auto; position: relative;">
                     
                     <!-- COLUNA 1: CADASTRO DE CLIENTES (CAVACO/PÓ) [OCULTO POR PADRÃO] -->
                     <div class="glass-panel" id="panelCadastroClientesSub" style="display: none;">
@@ -1984,12 +1994,9 @@
                     </div>
 
                     <!-- COLUNA 2: EMISSÃO DE RECIBOS [CENTRALIZADA POR PADRÃO] -->
-                    <div class="glass-panel" id="panelEmissaoCavaco" style="max-width: 600px; margin: 0 auto;">
-                        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div class="glass-panel" id="panelEmissaoCavaco" style="max-width: 600px; margin: 0 auto; display: block;">
+                        <div class="section-title">
                             <h2><i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo</h2>
-                            <button type="button" class="btn-action-card" id="btnToggleGerenciarClientesSub" style="padding: 8px 16px; font-size: 0.82rem;">
-                                <i class="fa-solid fa-users-gear"></i> Gerenciar Clientes
-                            </button>
                         </div>
                         <form id="formCavaco" class="grid-form-fixed-2">
                             <div class="input-group col-span-2" style="margin-bottom:10px;">
