@@ -14,7 +14,7 @@ const ADMIN_EMAILS = [
 
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
-        return 'GERENTE';
+        return 'gerente';
     }
     return 'PENDENTE';
 }
@@ -165,13 +165,13 @@ loginForm.addEventListener('submit', async function(e) {
         if (ADMIN_EMAILS.includes(em)) {
             const userRef = doc(db, 'usuarios', user.uid);
             const userSnap = await getDoc(userRef);
-            if (userSnap.exists() && userSnap.data().cargo !== 'GERENTE') {
-                await updateDoc(userRef, { cargo: 'GERENTE' });
+            if (userSnap.exists() && userSnap.data().cargo !== 'gerente') {
+                await updateDoc(userRef, { cargo: 'gerente' });
             } else if (!userSnap.exists()) {
                 await setDoc(userRef, {
                     nome: (user.displayName || em.split('@')[0]).toUpperCase(),
                     email: em,
-                    cargo: 'GERENTE',
+                    cargo: 'gerente',
                     criadoEm: new Date().toISOString()
                 });
             }
@@ -238,7 +238,7 @@ if (registerForm) {
                 criadoEm: new Date().toISOString()
             });
             
-            const msgCadastro = cargoInicial === 'GERENTE'
+            const msgCadastro = cargoInicial === 'gerente'
                 ? "Conta de Gerente criada com sucesso! Você já pode acessar o sistema."
                 : "Cadastro realizado com sucesso! Aguarde a aprovação do Gerente Geral para liberar seu acesso às abas do sistema.";
             alert(msgCadastro);
