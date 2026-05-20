@@ -1,8 +1,23 @@
 import { 
-    auth, db, doc, getDoc, setDoc, getDocs, collection, query, where, deleteDoc,
+    auth, db, doc, getDoc, setDoc, getDocs, collection, query, where, deleteDoc, updateDoc,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     GoogleAuthProvider, signInWithRedirect, getRedirectResult
 } from './firebase-init.js';
+
+// ======================================================
+// LISTA DE E-MAILS COM CARGO GERENTE AUTOMÁTICO
+// Adicione aqui os e-mails que devem ser Gerentes
+// ======================================================
+const ADMIN_EMAILS = [
+    'limaalecsander@gmail.com'
+];
+
+function getCargoInicial(email) {
+    if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
+        return 'GERENTE';
+    }
+    return 'PENDENTE';
+}
 
 // DOM Elements - Formulário de Login
 const loginForm = document.getElementById('loginForm');
@@ -96,13 +111,16 @@ async function checkGoogleRedirectResult() {
                     }
                 } else {
                     // Usuário totalmente novo cadastrando com Google
+                    const cargoGoogle = getCargoInicial(user.email);
                     await setDoc(userRef, {
                         nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
                         email: user.email.toLowerCase(),
-                        cargo: 'PENDENTE',
+                        cargo: cargoGoogle,
                         criadoEm: new Date().toISOString()
                     });
-                    alert("Seu cadastro foi realizado com sucesso! Aguarde a aprovação do Gerente para acessar o sistema.");
+                    if (cargoGoogle === 'PENDENTE') {
+                        alert("Seu cadastro foi realizado com sucesso! Aguarde a aprovação do Gerente para acessar o sistema.");
+                    }
                 }
             }
             window.location.href = 'index.html';
@@ -140,7 +158,25 @@ loginForm.addEventListener('submit', async function(e) {
 
     try {
         // Tenta fazer login no Firebase Auth
-        await signInWithEmailAndPassword(auth, em, pw);
+        const credential = await signInWithEmailAndPassword(auth, em, pw);
+        const user = credential.user;
+
+        // Auto-promover gerentes caso ainda estejam como PENDENTE
+        if (ADMIN_EMAILS.includes(em)) {
+            const userRef = doc(db, 'usuarios', user.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists() && userSnap.data().cargo !== 'GERENTE') {
+                await updateDoc(userRef, { cargo: 'GERENTE' });
+            } else if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    nome: (user.displayName || em.split('@')[0]).toUpperCase(),
+                    email: em,
+                    cargo: 'GERENTE',
+                    criadoEm: new Date().toISOString()
+                });
+            }
+        }
+
         window.location.href = 'index.html';
     } catch (error) {
         console.error("Erro no login:", error.code);
@@ -192,16 +228,20 @@ if (registerForm) {
             const userCredential = await createUserWithEmailAndPassword(auth, email, pw);
             const user = userCredential.user;
             
-            // Grava os dados do usuário no Firestore com cargo 'PENDENTE'
+            // Grava os dados do usuário no Firestore (cargo automático para admins)
             const userRef = doc(db, 'usuarios', user.uid);
+            const cargoInicial = getCargoInicial(email);
             await setDoc(userRef, {
                 nome: nome,
                 email: email,
-                cargo: 'PENDENTE',
+                cargo: cargoInicial,
                 criadoEm: new Date().toISOString()
             });
             
-            alert("Cadastro realizado com sucesso! Aguarde a aprovação do Gerente Geral para liberar seu acesso às abas do sistema.");
+            const msgCadastro = cargoInicial === 'GERENTE'
+                ? "Conta de Gerente criada com sucesso! Você já pode acessar o sistema."
+                : "Cadastro realizado com sucesso! Aguarde a aprovação do Gerente Geral para liberar seu acesso às abas do sistema.";
+            alert(msgCadastro);
             
             // Limpa o formulário de cadastro, preenche o email na tela de login e clica na aba de Entrar
             registerForm.reset();
