@@ -1,6 +1,47 @@
-import { auth, signOut, onAuthStateChanged, db, collection, getDocs } from './firebase-init.js';
+import { 
+    auth, signOut, onAuthStateChanged, db, collection, getDocs,
+    doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot
+} from './firebase-init.js';
+
 
 console.log("Core: Inicializando sistema de segurança e navegação...");
+
+const ROLE_PERMISSIONS = {
+    'gerente': {
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        readOnly: false
+    },
+    'patrao': {
+        allowedSections: ['view-dashboard', 'view-historico', 'view-patio', 'view-configuracoes'],
+        readOnly: true
+    },
+    'mecanico': {
+        allowedSections: ['view-frotas', 'view-configuracoes'],
+        readOnly: false
+    },
+    'muqueiro': {
+        allowedSections: ['view-entrada', 'view-configuracoes'],
+        readOnly: false
+    },
+    'estoquista': {
+        allowedSections: ['view-estoque', 'view-configuracoes'],
+        readOnly: false
+    },
+    'PENDENTE': {
+        allowedSections: ['view-pendente'],
+        readOnly: true
+    }
+};
+
+const ROLE_NAMES = {
+    'gerente': 'Gerente Geral',
+    'patrao': 'Patrão',
+    'mecanico': 'Mecânico',
+    'muqueiro': 'Muqueiro',
+    'estoquista': 'Estoquista',
+    'PENDENTE': 'Acesso Pendente'
+};
+
 
 // Objeto de compatibilidade para evitar que scripts antigos travem o sistema
 window.DB = {
@@ -212,6 +253,8 @@ window.exportarBackup = async function(btnElement) {
 
 const App = {
     user: null,
+    userUnsubscribe: null, // Guarda a função de desinscrição do onSnapshot
+    usuariosUnsubscribe: null, // Guarda a função de desinscrição da lista de usuários
 
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
@@ -220,7 +263,16 @@ const App = {
         this.setupNavigation();
         this.setupSidebarCollapse();
         this.loadProfilePic();
+        
+        const btnSalvar = document.getElementById('btnSalvarUsuario');
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.salvarUsuario();
+            });
+        }
     },
+
 
     loadProfilePic() {
         const savedPic = localStorage.getItem('orquestrasis_profile_pic');
@@ -247,7 +299,10 @@ const App = {
         const btnToggleSidebar = document.getElementById('btnToggleSidebar');
         const appWrapper = document.querySelector('.app-wrapper');
         if (btnToggleSidebar && appWrapper) {
-            const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+            // Se for dispositivo móvel (celular), inicia sempre recolhido para carregamento limpo
+            const isMobile = window.innerWidth <= 768;
+            const isCollapsed = isMobile || localStorage.getItem('sidebar_collapsed') === 'true';
+            
             if (isCollapsed) {
                 appWrapper.classList.add('sidebar-collapsed');
                 const btnIcon = btnToggleSidebar.querySelector('i');
@@ -260,7 +315,9 @@ const App = {
             btnToggleSidebar.addEventListener('click', () => {
                 appWrapper.classList.toggle('sidebar-collapsed');
                 const collapsed = appWrapper.classList.contains('sidebar-collapsed');
-                localStorage.setItem('sidebar_collapsed', collapsed);
+                if (!isMobile) {
+                    localStorage.setItem('sidebar_collapsed', collapsed);
+                }
                 
                 const btnIcon = btnToggleSidebar.querySelector('i');
                 if (btnIcon) {
@@ -277,16 +334,141 @@ const App = {
     },
 
     checkAuth() {
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
+            // Cancelar escuta anterior em tempo real caso o usuário mude ou deslogue
+            if (this.userUnsubscribe) {
+                console.log("Core: Cancelando escuta em tempo real anterior...");
+                this.userUnsubscribe();
+                this.userUnsubscribe = null;
+            }
+            if (this.usuariosUnsubscribe) {
+                console.log("Core: Cancelando escuta de lista de usuários anterior...");
+                this.usuariosUnsubscribe();
+                this.usuariosUnsubscribe = null;
+            }
+
             this.user = user;
             if (user) {
                 console.log("Core: Autenticado como " + user.email);
-                carregarDadosSerrariaEmitente();
-                if (window.location.pathname.includes('login.html')) {
-                    window.location.href = 'index.html';
+                
+                try {
+                    const userRef = doc(db, 'usuarios', user.uid);
+                    let userSnap = await getDoc(userRef);
+                    
+                    if (!userSnap.exists()) {
+                        // Tenta buscar pré-cadastro por email
+                        const usersColl = collection(db, 'usuarios');
+                        const q = query(usersColl, where('email', '==', user.email));
+                        const qSnap = await getDocs(q);
+                        
+                        if (!qSnap.empty) {
+                            const preDoc = qSnap.docs[0];
+                            const preData = preDoc.data();
+                            await setDoc(userRef, {
+                                ...preData,
+                                uid: user.uid,
+                                atualizadoEm: new Date().toISOString()
+                            });
+                            if (preDoc.id !== user.uid) {
+                                await deleteDoc(doc(db, 'usuarios', preDoc.id));
+                            }
+                        } else {
+                            await setDoc(userRef, {
+                                nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
+                                email: user.email,
+                                cargo: 'PENDENTE',
+                                criadoEm: new Date().toISOString()
+                            });
+                        }
+                    }
+                    
+                    // ESCUTA ATUALIZAÇÕES EM TEMPO REAL NO DOCUMENTO DO USUÁRIO LOGADO (Firestore Realtime)
+                    console.log("Core: Iniciando escuta em tempo real para cargo e permissões...");
+                    this.userUnsubscribe = onSnapshot(userRef, (snapshot) => {
+                        if (!snapshot.exists()) {
+                            console.warn("Core: Perfil do usuário não encontrado no Firestore. Forçando logout...");
+                            this.logout();
+                            return;
+                        }
+                        
+                        const userData = snapshot.data();
+                        const novoCargo = userData.cargo || 'PENDENTE';
+                        const novoNome = userData.nome || user.email.split('@')[0].toUpperCase();
+                        
+                        console.log(`Core [Sincronização em Tempo Real]: Nome: ${novoNome} | Cargo: ${novoCargo}`);
+                        
+                        const cargoMudou = this.userRole !== novoCargo;
+                        
+                        // Cancelar escuta da lista de usuários se o cargo do próprio usuário logado deixar de ser gerente
+                        if (novoCargo !== 'gerente' && this.usuariosUnsubscribe) {
+                            console.log("Core: Cancelando escuta de lista de usuários pois cargo mudou...");
+                            this.usuariosUnsubscribe();
+                            this.usuariosUnsubscribe = null;
+                        }
+                        
+                        // Atualiza as variáveis globais da aplicação
+                        this.userRole = novoCargo;
+                        this.userName = novoNome;
+                        
+                        // Aplicar classe de perfil dinamicamente no body para controle CSS
+                        document.body.className = `role-${this.userRole.toLowerCase()}`;
+                        
+                        // Atualizar nome e cargo nos cabeçalhos da página
+                        const nameHeader = document.getElementById('userNameHeader');
+                        const roleHeader = document.querySelector('.header-user-role');
+                        if (nameHeader) nameHeader.textContent = this.userName;
+                        if (roleHeader) roleHeader.textContent = ROLE_NAMES[this.userRole] || this.userRole;
+                        
+                        // Direcionar telas de acordo com a permissão atômica atualizada
+                        if (this.userRole === 'PENDENTE') {
+                            const pendNome = document.getElementById('pendente-user-name');
+                            const pendEmail = document.getElementById('pendente-user-email');
+                            if (pendNome) pendNome.textContent = this.userName;
+                            if (pendEmail) pendEmail.textContent = user.email;
+                            
+                            this.showSection('view-pendente');
+                        } else {
+                            if (window.location.pathname.includes('login.html')) {
+                                window.location.href = 'index.html';
+                            } else {
+                                const currentSection = document.querySelector('.view-section.active-section')?.id || 'view-dashboard';
+                                const perms = ROLE_PERMISSIONS[this.userRole];
+                                
+                                // Se o cargo mudou ou se o usuário estiver em uma tela proibida, redireciona dinamicamente
+                                if (cargoMudou || (perms && !perms.allowedSections.includes(currentSection))) {
+                                    if (perms && perms.allowedSections.length > 0) {
+                                        console.log(`Core: Redirecionando para a seção permitida "${perms.allowedSections[0]}"`);
+                                        this.showSection(perms.allowedSections[0]);
+                                        document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
+                                        const link = document.querySelector(`.sidebar nav ul li a[data-target="${perms.allowedSections[0]}"]`);
+                                        if (link) link.classList.add('active');
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Se for gerente, renderiza e libera o painel de administração de usuários nas configurações
+                        const panel = document.getElementById('panelConfigUsuarios');
+                        if (this.userRole === 'gerente') {
+                            if (panel) {
+                                panel.style.display = 'block';
+                                this.carregarTabelaUsuarios();
+                            }
+                        } else {
+                            if (panel) panel.style.display = 'none';
+                        }
+                    }, (error) => {
+                        console.error("Core [Realtime Error]: Erro na sincronização em tempo real:", error);
+                    });
+                    
+                } catch (err) {
+                    console.error("Core [Auth Exception]: Erro ao carregar perfil do Firestore:", err);
                 }
+                
+                carregarDadosSerrariaEmitente();
+                
             } else {
-                console.warn("Core: Usuário não autenticado.");
+                console.warn("Core: Usuário desautenticado ou desconectado.");
                 if (!window.location.pathname.includes('login.html')) {
                     window.location.href = 'login.html';
                 }
@@ -306,21 +488,37 @@ const App = {
     setupNavigation() {
         console.log("Core: Ativando escuta de navegação...");
         
-        // Escuta de cliques para ações específicas como Logout
         document.addEventListener('click', (e) => {
             const link = e.target.closest('#btnLogout');
-            if (link) {
+            const btnPendenteLogout = e.target.closest('#btnPendenteLogout');
+            if (link || btnPendenteLogout) {
                 e.preventDefault();
                 console.log("Core: Efetuando logout do sistema...");
                 this.logout();
             }
         });
 
-        // Mostrar dashboard por padrão ao carregar
-        this.showSection('view-dashboard');
+        // Mostrar primeira seção permitida por padrão ao carregar
+        const startSection = this.userRole && ROLE_PERMISSIONS[this.userRole] 
+            ? ROLE_PERMISSIONS[this.userRole].allowedSections[0] 
+            : 'view-dashboard';
+            
+        this.showSection(startSection);
     },
 
     showSection(id) {
+        const currentRole = this.userRole || 'PENDENTE';
+        const permissions = ROLE_PERMISSIONS[currentRole];
+        
+        if (permissions && !permissions.allowedSections.includes(id)) {
+            console.warn(`Core: Acesso negado à seção ${id} para o cargo ${currentRole}`);
+            if (permissions.allowedSections.length > 0) {
+                id = permissions.allowedSections[0];
+            } else {
+                id = 'view-pendente';
+            }
+        }
+
         const sections = document.querySelectorAll('.view-section');
         let found = false;
         sections.forEach(s => {
@@ -334,10 +532,72 @@ const App = {
             }
         });
         
-        if (!found && id !== 'view-dashboard') {
+        if (!found && id !== 'view-dashboard' && id !== 'view-pendente') {
             console.error("Core: Seção não encontrada: " + id);
         }
+    },
+
+    carregarTabelaUsuarios() {
+        const tbody = document.getElementById('tbodyConfigUsuarios');
+        if (!tbody) return;
+        
+        // Se já existe um listener ativo para a lista de usuários, não recriamos
+        if (this.usuariosUnsubscribe) {
+            return;
+        }
+        
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando lista...</td></tr>`;
+        
+        try {
+            const usersColl = collection(db, 'usuarios');
+            const q = query(usersColl, orderBy('criadoEm', 'desc'));
+            
+            console.log("Core: Iniciando escuta em tempo real da lista de usuários para painel do Gerente...");
+            this.usuariosUnsubscribe = onSnapshot(q, (qSnap) => {
+                if (qSnap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;">Nenhum usuário cadastrado.</td></tr>`;
+                    return;
+                }
+                
+                let html = '';
+                qSnap.forEach(doc => {
+                    const u = doc.data();
+                    const id = doc.id;
+                    const cargoFormatado = ROLE_NAMES[u.cargo] || u.cargo;
+                    const statusBadge = u.cargo === 'PENDENTE' 
+                        ? `<span style="background: rgba(230,126,34,0.15); color: #e67e22; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(230,126,34,0.3);">Pendente</span>`
+                        : `<span style="background: rgba(46,204,113,0.15); color: #2ecc71; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(46,204,113,0.3);">Ativo</span>`;
+                    
+                    html += `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
+                            <td><strong style="color: white;">${u.nome}</strong></td>
+                            <td>${u.email}</td>
+                            <td><span style="color: var(--accent-color); font-weight: 500;">${cargoFormatado}</span></td>
+                            <td>${statusBadge}</td>
+                            <td style="text-align: right;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button onclick="window.abrirEditarUsuario('${id}', '${u.nome}', '${u.email}', '${u.cargo}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">
+                                        <i class="fa-solid fa-pen"></i> Alterar
+                                    </button>
+                                    <button onclick="window.excluirUsuario('${id}')" class="btn-danger" style="padding: 6px 10px; font-size: 12px;">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            }, (error) => {
+                console.error("Erro na escuta da lista de usuários em tempo real:", error);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Erro ao carregar usuários.</td></tr>`;
+            });
+        } catch (err) {
+            console.error("Erro ao carregar tabela de usuários:", err);
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Erro ao carregar usuários.</td></tr>`;
+        }
     }
+
 };
 
 // Iniciar quando o DOM estiver pronto
@@ -398,4 +658,109 @@ window.previewFotoPerfil = function(event) {
     }
 };
 
+// Expor funções globais para controle de usuários e permissões
+window.abrirModalNovoUsuario = function() {
+    const modal = document.getElementById('modalUsuario');
+    const title = document.getElementById('modalUsuarioTitle');
+    const form = document.getElementById('formUsuario');
+    
+    if (modal && title && form) {
+        form.reset();
+        document.getElementById('form-user-id').value = '';
+        document.getElementById('form-user-email').disabled = false;
+        title.innerHTML = `<i class="fa-solid fa-user-plus"></i> Pré-Cadastrar Usuário`;
+        modal.style.display = 'flex';
+    }
+};
+
+window.fecharModalUsuario = function() {
+    const modal = document.getElementById('modalUsuario');
+    if (modal) modal.style.display = 'none';
+};
+
+window.abrirEditarUsuario = function(id, nome, email, cargo) {
+    const modal = document.getElementById('modalUsuario');
+    const title = document.getElementById('modalUsuarioTitle');
+    
+    if (modal && title) {
+        document.getElementById('form-user-id').value = id;
+        document.getElementById('form-user-nome').value = nome;
+        document.getElementById('form-user-email').value = email;
+        document.getElementById('form-user-email').disabled = true; // Email não muda
+        document.getElementById('form-user-cargo').value = cargo;
+        
+        title.innerHTML = `<i class="fa-solid fa-user-pen"></i> Alterar Permissões de Usuário`;
+        modal.style.display = 'flex';
+    }
+};
+
+window.salvarUsuario = async function() {
+    const id = document.getElementById('form-user-id').value;
+    const nome = document.getElementById('form-user-nome').value.trim();
+    const email = document.getElementById('form-user-email').value.trim().toLowerCase();
+    const cargo = document.getElementById('form-user-cargo').value;
+    
+    if (!nome || !email) {
+        alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+    
+    const btnSalvar = document.getElementById('btnSalvarUsuario');
+    const origText = btnSalvar ? btnSalvar.innerHTML : 'Salvar';
+    if (btnSalvar) {
+        btnSalvar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+        btnSalvar.disabled = true;
+    }
+    
+    try {
+        if (id) {
+            // Edição
+            const userRef = doc(db, 'usuarios', id);
+            await updateDoc(userRef, {
+                nome: nome,
+                cargo: cargo,
+                atualizadoEm: new Date().toISOString()
+            });
+            alert("Permissões do usuário atualizadas com sucesso!");
+        } else {
+            // Pré-cadastro
+            const userRef = doc(collection(db, 'usuarios'));
+            await setDoc(userRef, {
+                nome: nome,
+                email: email,
+                cargo: cargo,
+                criadoEm: new Date().toISOString()
+            });
+            alert("Pré-cadastro realizado com sucesso! Quando o funcionário acessar com este e-mail, ele já terá o cargo definido.");
+        }
+        window.fecharModalUsuario();
+        if (App && typeof App.carregarTabelaUsuarios === 'function') {
+            App.carregarTabelaUsuarios();
+        }
+    } catch (err) {
+        console.error("Erro ao salvar usuário:", err);
+        alert("Erro ao salvar dados do usuário.");
+    } finally {
+        if (btnSalvar) {
+            btnSalvar.innerHTML = origText;
+            btnSalvar.disabled = false;
+        }
+    }
+};
+
+window.excluirUsuario = async function(id) {
+    if (!confirm("Tem certeza que deseja excluir o cadastro e acesso deste usuário?")) return;
+    try {
+        await deleteDoc(doc(db, 'usuarios', id));
+        alert("Usuário excluído com sucesso!");
+        if (App && typeof App.carregarTabelaUsuarios === 'function') {
+            App.carregarTabelaUsuarios();
+        }
+    } catch (err) {
+        console.error("Erro ao excluir usuário:", err);
+        alert("Erro ao excluir usuário.");
+    }
+};
+
 export { App };
+

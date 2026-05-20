@@ -29,6 +29,17 @@
                 <p>Acesse o Sistema de Gestão</p>
             </div>
 
+            <!-- Abas de Navegação Premium para Login/Cadastro -->
+            <div class="login-tabs" style="display: flex; gap: 5px; margin-bottom: 25px; border-bottom: 1.5px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+                <button type="button" id="tabBtnLogin" class="login-tab active" style="flex: 1; padding: 12px; background: none; border: none; color: var(--accent-color); font-weight: 700; border-bottom: 3px solid var(--accent-color); cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                </button>
+                <button type="button" id="tabBtnRegister" class="login-tab" style="flex: 1; padding: 12px; background: none; border: none; color: var(--text-muted); font-weight: 700; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-user-plus"></i> Cadastrar-se
+                </button>
+            </div>
+
+            <!-- FORMULÁRIO DE LOGIN -->
             <form id="loginForm" class="login-form">
                 <div class="input-group">
                     <label for="email">E-mail de Acesso</label>
@@ -39,7 +50,7 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="password">Senha <span class="badge">(Será salva no 1º acesso)</span></label>
+                    <label for="password">Senha</label>
                     <div class="input-with-icon">
                         <i class="fa-solid fa-lock"></i>
                         <input type="password" id="password" required placeholder="Sua senha segura">
@@ -54,6 +65,61 @@
                     Entrar no Sistema <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </form>
+
+            <!-- FORMULÁRIO DE CADASTRO [NOVO] -->
+            <form id="registerForm" class="login-form" style="display: none;">
+                <div class="input-group">
+                    <label for="regNome">Nome Completo</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="regNome" required placeholder="Ex: JOÃO SILVA" class="text-uppercase-input">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="regEmail">E-mail de Acesso</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" id="regEmail" required placeholder="joao@orquestra.cs">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="regPassword">Senha (min. 6 dígitos)</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="regPassword" required placeholder="Escolha uma senha forte">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="regConfirmPassword">Confirmar Senha</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <input type="password" id="regConfirmPassword" required placeholder="Repita a senha">
+                    </div>
+                </div>
+
+                <div id="registerError" class="error-msg" style="display: none;">
+                    Ocorreu um erro no cadastro.
+                </div>
+
+                <button type="submit" class="btn-primary login-btn" style="background: var(--accent-color); border-color: var(--accent-color);">
+                    Criar Minha Conta <i class="fa-solid fa-user-plus"></i>
+                </button>
+            </form>
+
+            <!-- CONTAINER COMUM GOOGLE -->
+            <div id="googleLoginContainer">
+                <div class="login-divider">
+                    <span>ou acesse com</span>
+                </div>
+
+                <button type="button" id="btnGoogleLogin" class="btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; margin-top: 10px; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px;">
+                    Acessar com o Google
+                </button>
+            </div>
         </div>
     </div>
 

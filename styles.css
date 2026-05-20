@@ -467,6 +467,33 @@ input::placeholder {
     margin-top: 10px;
 }
 
+.login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 15px 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-divider:not(:empty)::before {
+    margin-right: .8em;
+}
+
+.login-divider:not(:empty)::after {
+    margin-left: .8em;
+}
+
+
 /* DASHBOARD INFORMATIVO */
 .dashboard-grid {
     display: grid;
@@ -1579,3 +1606,55 @@ tfoot td {
         color: black !important;
     }
 }
+
+/* =========================================
+   CONTROLE DE ACESSO BASEADO EM FUNÇÃO (RBAC)
+   ========================================= */
+
+/* Perfis no body */
+/* 1. Patrão: Leitura Apenas (Dashboard, Histórico de Cargas, Pátio) */
+body.role-patrao button.btn-primary:not(.allow-read-only),
+body.role-patrao button.btn-danger,
+body.role-patrao .btn-action-card:not(.allow-read-only),
+body.role-patrao button[type="submit"],
+body.role-patrao button[title*="Editar"],
+body.role-patrao button[title*="Excluir"],
+body.role-patrao button[title*="Alterar"],
+body.role-patrao button[title*="Excluir Registro"],
+body.role-patrao button[onclick*="Editar"],
+body.role-patrao button[onclick*="Excluir"],
+body.role-patrao button[onclick*="excluir"],
+body.role-patrao button[onclick*="deletar"],
+body.role-patrao button[onclick*="alterar"],
+body.role-patrao #btnAbrirControleProducao,
+body.role-patrao .form-container,
+body.role-patrao form button {
+    display: none !important;
+}
+
+/* 2. Mecânico: Apenas Frotas e Configurações */
+body.role-mecanico .sidebar nav ul li a:not([data-target="view-frotas"]):not([data-target="view-configuracoes"]) {
+    display: none !important;
+}
+
+/* 3. Muqueiro: Apenas Entrada de Toras e Configurações */
+body.role-muqueiro .sidebar nav ul li a:not([data-target="view-entrada"]):not([data-target="view-configuracoes"]) {
+    display: none !important;
+}
+
+/* 4. Estoquista: Apenas Estoque e Configurações */
+body.role-estoquista .sidebar nav ul li a:not([data-target="view-estoque"]):not([data-target="view-configuracoes"]) {
+    display: none !important;
+}
+
+/* 5. Pendente: Bloquear interface e exibir apenas tela de análise */
+body.role-pendente .sidebar {
+    display: none !important;
+}
+body.role-pendente .app-wrapper {
+    display: block !important;
+}
+body.role-pendente .global-header {
+    display: none !important;
+}
+
