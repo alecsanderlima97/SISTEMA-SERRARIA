@@ -30,16 +30,6 @@ function inicializarModuloRH() {
 
 // Configurar exibição condicional do formulário de cadastro
 function configurarTogglesRH() {
-    if (btnToggleFormRH) {
-        btnToggleFormRH.onclick = () => {
-            if (cardFormRH.style.display === 'none') {
-                abrirFormularioRH(null);
-            } else {
-                fecharFormularioRH();
-            }
-        };
-    }
-
     if (btnCancelarRH) {
         btnCancelarRH.onclick = fecharFormularioRH;
     }
@@ -49,17 +39,55 @@ function configurarTogglesRH() {
     }
 }
 
-function abrirFormularioRH(func = null) {
-    if (!cardFormRH || !panelListaRH) return;
-    
-    cardFormRH.style.display = 'block';
-    
-    // Maximizar espaço ocultando a tabela quando formulário estiver aberto
-    panelListaRH.style.display = 'none';
+window.switchTabRH = function(tabName, isEditing = false) {
+    const tabForm = document.getElementById('cardFormRH');
+    const tabLista = document.getElementById('panelListaRH');
+    const btnForm = document.getElementById('btnTabRHForm');
+    const btnLista = document.getElementById('btnTabRHLista');
 
+    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
+
+    if (tabName === 'form') {
+        tabForm.style.display = 'block';
+        tabLista.style.display = 'none';
+        btnForm.style.color = 'var(--accent-color)';
+        btnForm.style.borderBottom = '3px solid var(--accent-color)';
+        btnLista.style.color = 'var(--text-muted)';
+        btnLista.style.borderBottom = 'none';
+
+        if (!isEditing) {
+            funcionarioEditandoId = null;
+            if (formFuncionario) formFuncionario.reset();
+            const idEl = document.getElementById('rh-id');
+            if (idEl) idEl.value = '';
+            const normalEl = document.getElementById('rh-valor-he-normal');
+            if (normalEl) normalEl.value = '';
+            const espEl = document.getElementById('rh-valor-he-especial');
+            if (espEl) espEl.value = '';
+            const titEl = document.getElementById('tituloFormRH');
+            if (titEl) titEl.innerHTML = `<i class="fa-solid fa-user-plus"></i> Novo Funcionário`;
+            const lblTab = document.getElementById('lblTabRHForm');
+            if (lblTab) lblTab.textContent = 'Cadastrar Funcionário';
+        }
+    } else {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'block';
+        btnLista.style.color = 'var(--accent-color)';
+        btnLista.style.borderBottom = '3px solid var(--accent-color)';
+        btnForm.style.color = 'var(--text-muted)';
+        btnForm.style.borderBottom = 'none';
+    }
+};
+
+function abrirFormularioRH(func = null) {
     if (func) {
+        window.switchTabRH('form', true);
+        
         funcionarioEditandoId = func.id;
         document.getElementById('tituloFormRH').innerHTML = `<i class="fa-solid fa-user-pen"></i> Editar Funcionário: ${func.nome}`;
+        const lblTab = document.getElementById('lblTabRHForm');
+        if (lblTab) lblTab.textContent = 'Editar Funcionário';
+        
         document.getElementById('rh-id').value = func.id;
         document.getElementById('rh-nome').value = func.nome;
         document.getElementById('rh-nascimento').value = func.nascimento || '';
@@ -78,26 +106,13 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
         document.getElementById('rh-ferias-inicio').value = func.feriasInicio || '';
         document.getElementById('rh-ferias-fim').value = func.feriasFim || '';
-        
-        if (txtToggleFormRH) txtToggleFormRH.textContent = "Voltar para Lista";
     } else {
-        funcionarioEditandoId = null;
-        if (formFuncionario) formFuncionario.reset();
-        document.getElementById('rh-id').value = '';
-        document.getElementById('rh-valor-he-normal').value = '';
-        document.getElementById('rh-valor-he-especial').value = '';
-        document.getElementById('tituloFormRH').innerHTML = `<i class="fa-solid fa-user-plus"></i> Novo Funcionário`;
-        if (txtToggleFormRH) txtToggleFormRH.textContent = "Voltar para Lista";
+        window.switchTabRH('form', false);
     }
 }
 
 function fecharFormularioRH() {
-    if (!cardFormRH || !panelListaRH) return;
-    
-    cardFormRH.style.display = 'none';
-    panelListaRH.style.display = 'block';
-    
-    if (txtToggleFormRH) txtToggleFormRH.textContent = "Cadastrar Funcionário";
+    window.switchTabRH('lista');
     if (formFuncionario) formFuncionario.reset();
     funcionarioEditandoId = null;
 }

@@ -9,29 +9,39 @@ const transportesCollection = collection(db, 'transportes');
 let transportesAtuais = [];
 let transporteEditandoId = null;
 
-// Toggles de layout Transportadoras
-const cardFormTransporte = document.getElementById('cardFormTransporte');
-const panelListaTransportes = document.getElementById('panelListaTransportes');
-const btnToggleListaTransportes = document.getElementById('btnToggleListaTransportes');
-const btnToggleFormTransporte = document.getElementById('btnToggleFormTransporte');
+window.switchTabTransportes = function(tabName, isEditing = false) {
+    const tabForm = document.getElementById('tabTranspForm');
+    const tabLista = document.getElementById('tabTranspLista');
+    const btnForm = document.getElementById('btnTabTranspForm');
+    const btnLista = document.getElementById('btnTabTranspLista');
 
-if (btnToggleListaTransportes) {
-    btnToggleListaTransportes.addEventListener('click', () => {
-        cardFormTransporte.style.display = 'none';
-        panelListaTransportes.style.display = 'block';
-    });
-}
+    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
 
-if (btnToggleFormTransporte) {
-    btnToggleFormTransporte.addEventListener('click', () => {
-        panelListaTransportes.style.display = 'none';
-        cardFormTransporte.style.display = 'block';
-        formTransporte.reset();
-        transporteEditandoId = null;
-        const submitBtn = formTransporte.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
-        submitBtn.classList.replace('btn-secondary', 'btn-primary');
-    });
+    if (tabName === 'form') {
+        tabForm.style.display = 'block';
+        tabLista.style.display = 'none';
+        btnForm.style.color = 'var(--accent-color)';
+        btnForm.style.borderBottom = '3px solid var(--accent-color)';
+        btnLista.style.color = 'var(--text-muted)';
+        btnLista.style.borderBottom = 'none';
+
+        if (!isEditing) {
+            formTransporte.reset();
+            transporteEditandoId = null;
+            const submitBtn = formTransporte.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
+                submitBtn.classList.replace('btn-secondary', 'btn-primary');
+            }
+        }
+    } else {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'block';
+        btnLista.style.color = 'var(--accent-color)';
+        btnLista.style.borderBottom = '3px solid var(--accent-color)';
+        btnForm.style.color = 'var(--text-muted)';
+        btnForm.style.borderBottom = 'none';
+    }
 }
 
 // Forçar letras maiúsculas em tempo real nos campos de transportadoras
@@ -80,6 +90,7 @@ formTransporte.addEventListener('submit', async function(e) {
         
         // Disparar evento para o combo do romaneio recarregar
         document.dispatchEvent(new Event('transportesUpdated'));
+        window.switchTabTransportes('lista');
     } catch (error) {
         console.error("Erro ao salvar transportadora: ", error);
         alert('Erro ao salvar. Verifique o console.');
@@ -92,10 +103,6 @@ formTransporte.addEventListener('submit', async function(e) {
 window.editarTransporte = function(id) {
     let t = transportesAtuais.find(x => x.id === id);
     if(t) {
-        // Mudar para o formulário
-        if (panelListaTransportes) panelListaTransportes.style.display = 'none';
-        if (cardFormTransporte) cardFormTransporte.style.display = 'block';
-
         document.getElementById('transNome').value = t.nome || '';
         document.getElementById('transMotorista').value = t.motorista || '';
         document.getElementById('transCaminhao').value = t.caminhao || '';
@@ -106,6 +113,8 @@ window.editarTransporte = function(id) {
         let submitBtn = formTransporte.querySelector('button[type="submit"]');
         submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Transportadora';
         submitBtn.classList.replace('btn-primary', 'btn-secondary');
+        
+        window.switchTabTransportes('form', true);
         window.scrollTo(0, 0);
     }
 }
@@ -140,8 +149,14 @@ function renderTransportes() {
             <td>${t.caminhao || '-'}</td>
             <td>${t.placa || '-'}</td>
             <td>
-                <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="window.editarTransporte('${t.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                <button class="btn-danger" style="padding: 5px;" onclick="window.apagarTransporte('${t.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.editarTransporte('${t.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button onclick="window.apagarTransporte('${t.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1rem; padding: 6px 8px;" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         listaTransportes.appendChild(tr);

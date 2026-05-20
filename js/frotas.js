@@ -66,29 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Registrar eventos
 function inicializarEventosFrotas() {
-    const btnToggle = document.getElementById('btnToggleFormFrota');
-    const cardForm = document.getElementById('cardFormFrota');
     const btnCancelar = document.getElementById('btnCancelarFrota');
     const form = document.getElementById('formFrota');
 
-    if (btnToggle && cardForm) {
-        btnToggle.addEventListener('click', () => {
-            const isHidden = cardForm.style.display === 'none';
-            cardForm.style.display = isHidden ? 'block' : 'none';
-            btnToggle.innerHTML = isHidden 
-                ? '<i class="fa-solid fa-minus"></i> Ocultar Formulário' 
-                : '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
-            limparFormFrota();
-        });
-    }
-
     if (btnCancelar) {
         btnCancelar.addEventListener('click', () => {
-            cardForm.style.display = 'none';
-            if (btnToggle) {
-                btnToggle.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
-            }
-            limparFormFrota();
+            window.switchTabFrotas('lista');
         });
     }
 
@@ -116,6 +99,39 @@ function inicializarEventosFrotas() {
         });
     }
 }
+
+window.switchTabFrotas = function(tabName, isEditing = false) {
+    const tabForm = document.getElementById('cardFormFrota');
+    const tabLista = document.getElementById('panelListaFrotas');
+    const btnForm = document.getElementById('btnTabFrotaForm');
+    const btnLista = document.getElementById('btnTabFrotaLista');
+
+    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
+
+    if (tabName === 'form') {
+        tabForm.style.display = 'block';
+        tabLista.style.display = 'none';
+        btnForm.style.color = 'var(--accent-color)';
+        btnForm.style.borderBottom = '3px solid var(--accent-color)';
+        btnLista.style.color = 'var(--text-muted)';
+        btnLista.style.borderBottom = 'none';
+
+        if (!isEditing) {
+            limparFormFrota();
+            document.getElementById('veiculoId').value = '';
+            document.getElementById('formFrotaTitulo').innerHTML = `<i class="fa-solid fa-truck-pickup"></i> Novo Veículo`;
+            const lblTab = document.getElementById('lblTabFrotaForm');
+            if (lblTab) lblTab.textContent = 'Novo Veículo / Máquina';
+        }
+    } else {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'block';
+        btnLista.style.color = 'var(--accent-color)';
+        btnLista.style.borderBottom = '3px solid var(--accent-color)';
+        btnForm.style.color = 'var(--text-muted)';
+        btnForm.style.borderBottom = 'none';
+    }
+};
 
 // --- CONTROLE DE CADASTRO DE VEÍCULOS ---
 function limparFormFrota() {
@@ -177,15 +193,14 @@ function salvarVeiculo() {
     atualizarKPIsFrota();
 
     // Fechar formulário
-    document.getElementById('cardFormFrota').style.display = 'none';
-    const btnToggle = document.getElementById('btnToggleFormFrota');
-    if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-plus"></i> Novo Veículo / Máquina';
-    limparFormFrota();
+    window.switchTabFrotas('lista');
 }
 
 window.editarVeiculo = function(id) {
     const v = frota.find(item => item.id === id);
     if (!v) return;
+
+    window.switchTabFrotas('form', true);
 
     document.getElementById('veiculoId').value = v.id;
     document.getElementById('veicModelo').value = v.modelo;
@@ -196,11 +211,8 @@ window.editarVeiculo = function(id) {
     document.getElementById('lblDocumentoNome').textContent = v.documentoNome || 'Sem Anexo';
 
     document.getElementById('formFrotaTitulo').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Veículo: ${v.placa}`;
-
-    // Mostrar form
-    document.getElementById('cardFormFrota').style.display = 'block';
-    const btnToggle = document.getElementById('btnToggleFormFrota');
-    if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-minus"></i> Ocultar Formulário';
+    const lblTab = document.getElementById('lblTabFrotaForm');
+    if (lblTab) lblTab.textContent = 'Editar Veículo';
 
     // Rolar até o form
     document.getElementById('cardFormFrota').scrollIntoView({ behavior: 'smooth' });
@@ -292,19 +304,22 @@ function renderizarFrota() {
                 </div>
 
                 <!-- Ações Rápidas de Frota -->
-                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; gap: 8px;">
-                        <button type="button" class="btn-primary" onclick="window.abrirModalAbastecimento('${v.id}')" style="flex: 1; padding: 8px 12px; font-size: 0.78rem; border-radius: 8px; background: #ef4444 !important; border: none; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(239,68,68,0.2);">
-                            <i class="fa-solid fa-gas-pump"></i> ⛽ Abastecer
+                        <button onclick="window.abrirModalAbastecimento('${v.id}')" class="btn-icon" style="color:#ef4444; font-size:1.1rem; padding: 4px;" title="Lançar Abastecimento (Diesel / Lubrificantes)">
+                            <i class="fa-solid fa-gas-pump"></i>
                         </button>
-                        <button type="button" class="btn-primary" onclick="window.abrirModalManutencao('${v.id}')" style="flex: 1; padding: 8px 12px; font-size: 0.78rem; border-radius: 8px; background: #3b82f6 !important; border: none; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.2);">
-                            <i class="fa-solid fa-screwdriver-wrench"></i> 🔧 Manutenção
+                        <button onclick="window.abrirModalManutencao('${v.id}')" class="btn-icon" style="color:#3b82f6; font-size:1.1rem; padding: 4px;" title="Registrar Manutenção Preventiva / Corretiva">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
                         </button>
                     </div>
-                    
-                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px;">
-                        <button class="btn-action-card" onclick="window.editarVeiculo('${v.id}')" title="Editar Veículo" style="padding: 6px 10px;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
-                        <button class="btn-action-card" onclick="window.excluirVeiculo('${v.id}')" title="Excluir Veículo" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.editarVeiculo('${v.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Dados do Veículo">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="window.excluirVeiculo('${v.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.1rem; padding: 4px;" title="Excluir Registro permanentemente">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                 </div>
             </div>

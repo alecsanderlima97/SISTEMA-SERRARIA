@@ -337,13 +337,20 @@
                     <p>Cadastre e gerencie os parceiros</p>
                 </div>
 
-                <div class="form-table-grid" id="gridClientesLayout">
-                    <div class="glass-panel" id="cardFormCliente" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <!-- TABS DE CLIENTES -->
+                <div style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" id="btnTabClienteForm" onclick="window.switchTabClientes('form')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-user-plus"></i> Cadastrar Cliente
+                    </button>
+                    <button type="button" id="btnTabClienteLista" onclick="window.switchTabClientes('lista')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-users"></i> Gerenciar Clientes
+                    </button>
+                </div>
+
+                <!-- TAB: FORMULÁRIO -->
+                <div id="tabClienteForm" class="glass-panel" style="margin-bottom: 0;">
+                    <div class="section-title">
                         <h2><i class="fa-solid fa-user-plus"></i> Novo Cliente</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleListaClientes" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-users"></i> Gerenciar Clientes
-                        </button>
                     </div>
                     <form id="formCliente" class="grid-form">
                         <div class="input-group">
@@ -385,7 +392,6 @@
                         <div style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
                             <h3 style="color:var(--accent-color);"><i class="fa-solid fa-handshake"></i> Informações Comerciais / Preços Acordados</h3>
                         </div>
-
                         <div class="input-group">
                             <label for="cliValorFrete">Valor do Frete (R$)</label>
                             <input type="text" id="cliValorFrete" placeholder="R$ 0,00">
@@ -408,7 +414,6 @@
                             <label for="cliPrazoPagamento">Prazo (Ex: 15 dias)</label>
                             <input type="text" id="cliPrazoPagamento" class="text-uppercase-input" placeholder="Ex: 15 dias">
                         </div>
-
                         <div class="input-group">
                             <label for="cliMadeira1">Madeira de 1ª (R$ / m³)</label>
                             <input type="text" id="cliMadeira1" placeholder="R$ 0,00">
@@ -433,20 +438,18 @@
                             <label for="cliValorMadeiraExtra">Valor Madeira Extra (R$ / m³)</label>
                             <input type="text" id="cliValorMadeiraExtra" placeholder="R$ 0,00">
                         </div>
-
                         <div class="input-group" style="grid-column: 1 / -1;">
                             <label for="cliObservacao">Observações Importantes do Cliente</label>
                             <textarea id="cliObservacao" rows="3" placeholder="Ex: Ligar antes de entregar, horário de recebimento, etc." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;"></textarea>
                         </div>
-
                         <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
-                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
-                                Cliente</button>
+                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Cliente</button>
                         </div>
                     </form>
                 </div>
 
-                <div class="glass-panel" id="panelListaClientes" style="margin-bottom: 0; display: none;">
+                <!-- TAB: LISTA -->
+                <div id="tabClienteLista" class="glass-panel" style="margin-bottom: 0; display: none;">
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2><i class="fa-solid fa-list"></i> Clientes Cadastrados</h2>
                         <div class="input-group" style="margin-bottom: 0; width: 250px;">
@@ -470,8 +473,7 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
             <!-- ====== TELA: HISTÓRICO DE CARGAS ====== -->
             <section id="view-historico" class="view-section" style="display: none;">
@@ -525,13 +527,43 @@
                     <p>Gerencie seus motoristas e caminhões</p>
                 </div>
 
-                <div class="form-table-grid" id="gridTransportesLayout" style="display: block;">
-                    <div class="glass-panel form-panel" id="cardFormTransporte" style="margin-bottom: 20px; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <!-- TABS DE TRANSPORTADORAS -->
+                <div style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" id="btnTabTranspLista" onclick="window.switchTabTransportes('lista')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-list"></i> Transportadoras Cadastradas
+                    </button>
+                    <button type="button" id="btnTabTranspForm" onclick="window.switchTabTransportes('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-truck-ramp-box"></i> Nova Transportadora
+                    </button>
+                </div>
+
+                <!-- TAB: LISTA -->
+                <div id="tabTranspLista" class="glass-panel" style="margin-bottom: 0;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-list"></i> Transportadoras Cadastradas</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Empresa/Contratante</th>
+                                    <th>Motorista</th>
+                                    <th>Modelo</th>
+                                    <th>Placa</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaTransportes">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: FORMULÁRIO -->
+                <div id="tabTranspForm" class="glass-panel" style="margin-bottom: 0; display: none;">
+                    <div class="section-title">
                         <h2><i class="fa-solid fa-truck-ramp-box"></i> Nova Transportadora</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleListaTransportes" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-list"></i> Gerenciar Transportadoras
-                        </button>
                     </div>
                     <form id="formTransporte" class="grid-form">
                         <div class="input-group">
@@ -551,39 +583,11 @@
                             <input type="text" id="transPlaca" class="text-uppercase-input" required placeholder="ABC-1234">
                         </div>
                         <div class="form-actions" style="grid-column: 1 / -1;">
-                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
-                                Transportadora</button>
+                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Transportadora</button>
                         </div>
                     </form>
                 </div>
-
-                <div class="glass-panel list-panel" id="panelListaTransportes" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h2><i class="fa-solid fa-list"></i> Transportadoras Cadastradas</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleFormTransporte" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-plus-circle"></i> Cadastrar Transportadora
-                        </button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Empresa/Contratante</th>
-                                    <th>Motorista</th>
-                                    <th>Modelo</th>
-                                    <th>Placa</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaTransportes">
-                                <!-- Preenchido via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
+            </section>
             <!-- ====== TELA: PRODUTOS / MADEIRAS ====== -->
             <section id="view-produtos" class="view-section" style="display: none;">
                 <div class="main-header">
@@ -591,13 +595,42 @@
                     <p>Cadastre os tipos de madeira e o valor do m³</p>
                 </div>
 
-                <div class="form-table-grid" id="gridProdutosLayout" style="display: block;">
-                    <div class="glass-panel" id="cardFormProduto" style="margin-bottom: 20px; display: none;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                        <h2><i class="fa-solid fa-plus-circle"></i> Novo Tipo Sorteado</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleListaProdutos" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-list"></i> Gerenciar Madeiras
-                        </button>
+                <!-- TABS DE MADEIRAS -->
+                <div style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" id="btnTabProdLista" onclick="window.switchTabProdutos('lista')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-list-check"></i> Madeiras Cadastradas
+                    </button>
+                    <button type="button" id="btnTabProdForm" onclick="window.switchTabProdutos('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-plus-circle"></i> Nova Madeira
+                    </button>
+                </div>
+
+                <!-- TAB: LISTA -->
+                <div id="tabProdLista" class="glass-panel" style="margin-bottom: 0;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-list-check"></i> Madeiras Cadastradas</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Descrição / Tipo</th>
+                                    <th>Natureza / Qualidade</th>
+                                    <th>Preço Base (m³)</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaProdutos">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: FORMULÁRIO -->
+                <div id="tabProdForm" class="glass-panel" style="margin-bottom: 0; display: none;">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-plus-circle"></i> Nova Madeira / Estilo</h2>
                     </div>
                     <form id="formProduto" class="grid-form">
                         <div class="input-group">
@@ -612,7 +645,7 @@
                             <label for="prodQualidade">Qualidade</label>
                             <input type="text" id="prodQualidade" class="text-uppercase-input" placeholder="Ex: 1ª Qualidade, BCA, etc">
                         </div>
-                        <input type="hidden" id="prodClasse" value="Geral"> 
+                        <input type="hidden" id="prodClasse" value="Geral">
                         <div class="input-group">
                             <label for="prodEspessura">Espessura (cm)</label>
                             <input type="number" id="prodEspessura" step="0.1" required placeholder="Ex: 2.5">
@@ -634,38 +667,11 @@
                             <input type="text" id="prodPreco" required placeholder="R$ 0,00">
                         </div>
                         <div class="input-group" style="justify-content: flex-end;">
-                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar
-                                Madeira</button>
+                            <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
                         </div>
                     </form>
                 </div>
-
-                <div class="glass-panel" id="panelListaProdutos" style="margin-bottom: 0;">
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h2><i class="fa-solid fa-list-check"></i> Madeiras Cadastradas</h2>
-                        <button type="button" class="btn-action-card" id="btnToggleFormProduto" style="padding: 8px 16px; font-size: 0.82rem;">
-                            <i class="fa-solid fa-plus-circle"></i> Nova Madeira
-                        </button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Descrição / Tipo</th>
-                                    <th>Natureza / Qualidade</th>
-                                    <th>Preço Base (m³)</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaProdutos">
-                                <!-- Preenchido via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
+            </section>
         <!-- ====== TELA: CONTROLE DE ESTOQUE ====== -->
         <section id="view-estoque" class="view-section" style="display: none;">
             <div class="main-header">
@@ -987,24 +993,31 @@
                     </div>
                 </div>
 
-                <!-- Barra de Ações & Filtros -->
-                <div class="hide-on-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                    <!-- Setor Filtros Tabs -->
-                    <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 10px; border: 1px solid var(--panel-border);">
-                        <button type="button" class="btn-action-card active" onclick="window.filtrarFrota('TODOS')" id="btn-frota-todos" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Todos</button>
-                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('SERRARIA')" id="btn-frota-serraria" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Serraria</button>
-                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('FLORESTAL')" id="btn-frota-florestal" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Florestal</button>
-                        <button type="button" class="btn-action-card" onclick="window.filtrarFrota('TERRAPLANAGEM')" id="btn-frota-terraplanagem" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Terraplanagem</button>
-                    </div>
-
-                    <!-- Novo Veículo Triggers -->
-                    <button type="button" id="btnToggleFormFrota" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-plus"></i> Novo Veículo / Máquina
+                <!-- TABS DE FROTAS -->
+                <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" class="btn-tab-frota active" onclick="window.switchTabFrotas('lista')" id="btnTabFrotaLista" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-truck-moving"></i> Veículos &amp; Máquinas
+                    </button>
+                    <button type="button" class="btn-tab-frota" onclick="window.switchTabFrotas('form')" id="btnTabFrotaForm" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-plus-circle"></i> <span id="lblTabFrotaForm">Novo Veículo / Máquina</span>
                     </button>
                 </div>
 
-                <!-- Formulário Cadastro de Veículo (Expansível) -->
-                <div class="glass-panel hide-on-print" id="cardFormFrota" style="display: none; margin-bottom: 20px; padding: 20px;">
+                <!-- TAB: LISTA (Setor Filtros + Grid) -->
+                <div id="panelListaFrotas" style="width: 100%;">
+                    <!-- Barra de Filtros -->
+                    <div class="hide-on-print" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <!-- Setor Filtros Tabs -->
+                        <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 10px; border: 1px solid var(--panel-border);">
+                            <button type="button" class="btn-action-card active" onclick="window.filtrarFrota('TODOS')" id="btn-frota-todos" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Todos</button>
+                            <button type="button" class="btn-action-card" onclick="window.filtrarFrota('SERRARIA')" id="btn-frota-serraria" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Serraria</button>
+                            <button type="button" class="btn-action-card" onclick="window.filtrarFrota('FLORESTAL')" id="btn-frota-florestal" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Florestal</button>
+                            <button type="button" class="btn-action-card" onclick="window.filtrarFrota('TERRAPLANAGEM')" id="btn-frota-terraplanagem" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Terraplanagem</button>
+                        </div>
+                    </div>
+
+                <!-- TAB: FORMULÁRIO -->
+                <div class="glass-panel hide-on-print" id="cardFormFrota" style="display: none; margin-bottom: 20px; padding: 20px; max-width: 800px; margin: 0 auto 20px auto;">
                     <h3 style="margin: 0 0 15px 0;" id="formFrotaTitulo"><i class="fa-solid fa-truck-pickup"></i> Novo Veículo</h3>
                     <form id="formFrota" class="grid-form">
                         <input type="hidden" id="veiculoId">
@@ -1053,10 +1066,11 @@
                     </form>
                 </div>
 
-                <!-- Grid de Veículos / Máquinas Cadastradas -->
-                <div class="grid-form" id="gridVeiculosFrota" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; display: grid;">
-                    <!-- Preenchido dinamicamente via JS -->
-                </div>
+                    <!-- Grid de Veículos / Máquinas Cadastradas -->
+                    <div class="grid-form" id="gridVeiculosFrota" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; display: grid;">
+                        <!-- Preenchido dinamicamente via JS -->
+                    </div>
+                </div> <!-- Fim de panelListaFrotas -->
             </section>
 
             <!-- ====== MODAL: LANÇAMENTO DE ABASTECIMENTO (DIESEL / LUBRIFICANTES) ====== -->
@@ -1287,18 +1301,18 @@
                     <p>Controle de funcionários, salários, férias, vales e horas extras.</p>
                 </div>
 
-                <!-- Botão de controle de visibilidade (Limpo e profissional) -->
-                <div class="hide-on-print" style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <button type="button" id="btnToggleFormRH" class="btn-primary" style="padding: 10px 20px; border-radius: 8px;">
-                        <i class="fa-solid fa-user-plus"></i> <span id="txtToggleFormRH">Cadastrar Funcionário</span>
+                <!-- TABS DE RH -->
+                <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" id="btnTabRHLista" onclick="window.switchTabRH('lista')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários
                     </button>
-                    <button type="button" id="btnLimparBuscaRH" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; display: none;">
-                        <i class="fa-solid fa-list"></i> Ver Todos
+                    <button type="button" id="btnTabRHForm" onclick="window.switchTabRH('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-user-plus"></i> <span id="lblTabRHForm">Cadastrar Funcionário</span>
                     </button>
                 </div>
 
                 <!-- CARD DE CADASTRO / EDIÇÃO -->
-                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px;">
+                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px; max-width: 900px; margin: 0 auto 20px auto;">
                     <div class="section-title">
                         <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo Funcionário</h2>
                     </div>
@@ -1617,11 +1631,17 @@
                     <p>Cadastro de empreiteiros, controle de cubagem de cargas e financeiro de extração.</p>
                 </div>
 
-                <!-- BARRA DE TOGGLES LADO A LADO NO TOPO -->
-                <div class="actions-header-row hide-on-print" style="display: flex; gap: 16px; margin: 15px auto 30px auto; justify-content: center; flex-wrap: wrap; max-width: 950px;">
-                    <button type="button" class="btn-action-card" id="btnToggleCadastroEmpreiteiro" style="min-width: 230px;"><i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro</button>
-                    <button type="button" class="btn-action-card" id="btnToggleListaEmpreiteiros" style="min-width: 230px;"><i class="fa-solid fa-users"></i> Gerenciar Empreiteiros</button>
-                    <button type="button" class="btn-action-card" id="btnToggleUltimasEntradas" style="min-width: 230px;"><i class="fa-solid fa-list"></i> Ver Últimas Entradas</button>
+                <!-- TABS DE ENTRADA -->
+                <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap; justify-content: flex-start;">
+                    <button type="button" id="btnTabEntradaRegistro" onclick="window.switchTabEntrada('registro')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-calculator"></i> Registrar M³
+                    </button>
+                    <button type="button" id="btnTabEntradaLista" onclick="window.switchTabEntrada('lista')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-list"></i> Últimas Entradas
+                    </button>
+                    <button type="button" id="btnTabEntradaEmpreiteiros" onclick="window.switchTabEntrada('empreiteiros')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-users-gear"></i> Empreiteiros
+                    </button>
                 </div>
 
                 <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->

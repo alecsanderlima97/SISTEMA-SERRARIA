@@ -78,6 +78,7 @@ if (formCliente) {
             
             // Dispara evento para o combo do romaneio se recarregar
             document.dispatchEvent(new Event('clientesUpdated'));
+            window.switchTabClientes('lista');
         } catch (error) {
             console.error("Erro ao salvar cliente: ", error);
             alert('Erro ao salvar o cliente. Verifique o console.');
@@ -132,21 +133,7 @@ window.editarCliente = function(id) {
         submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Ficha';
         submitBtn.classList.replace('btn-primary', 'btn-secondary');
         
-        // Garante que a lista de clientes esteja aberta ao editar
-        const panelLista = document.getElementById('panelListaClientes');
-        const gridLayout = document.getElementById('gridClientesLayout');
-        const cardForm = document.getElementById('cardFormCliente');
-        const btnToggle = document.getElementById('btnToggleListaClientes');
-        if (panelLista && panelLista.style.display === 'none') {
-            panelLista.style.display = 'block';
-            if (gridLayout) gridLayout.classList.add('form-table-grid');
-            if (cardForm) {
-                cardForm.style.maxWidth = 'none';
-                cardForm.style.margin = '0';
-            }
-            if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Clientes';
-        }
-        
+        window.switchTabClientes('form', true);
         window.scrollTo(0, 0); // Sobe a tela
     }
 }
@@ -193,10 +180,16 @@ function renderClientes() {
             <td>${c.cidade || '-'}</td>
             <td>${c.contato || '-'}</td>
             <td>
-                <div style="display: flex; gap: 6px; justify-content: center; align-items: center; white-space: nowrap;">
-                    <button class="btn-secondary" style="padding: 5px 8px; border-color:#fff; font-size: 0.9rem;" onclick="window.verCliente('${c.id}')" title="Ficha Completa"><i class="fa-solid fa-eye"></i></button>
-                    <button class="btn-secondary" style="padding: 5px 8px; border-color:var(--accent-color); color:var(--accent-color); font-size: 0.9rem;" onclick="window.editarCliente('${c.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                    <button class="btn-danger" style="padding: 5px 8px; font-size: 0.9rem;" onclick="window.apagarCliente('${c.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.verCliente('${c.id}')" class="btn-icon" style="color:var(--accent-color); font-size:1rem; padding: 6px 8px;" title="Ver Ficha">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    <button onclick="window.editarCliente('${c.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button onclick="window.apagarCliente('${c.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1rem; padding: 6px 8px;" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 </div>
             </td>
         `;
@@ -307,9 +300,6 @@ function inicializarModuloClientes() {
         });
     }
 
-    // Inicializar Toggles
-    inicializarToggleClientes();
-
     // Listener de pesquisa
     const filtroClientesBusca = document.getElementById('filtroClientesBusca');
     if (filtroClientesBusca) {
@@ -330,35 +320,39 @@ function inicializarModuloClientes() {
     carregarClientes();
 }
 
-function inicializarToggleClientes() {
-    const btn = document.getElementById('btnToggleListaClientes');
-    const panelLista = document.getElementById('panelListaClientes');
-    const gridLayout = document.getElementById('gridClientesLayout');
-    const cardForm = document.getElementById('cardFormCliente');
+window.switchTabClientes = function(tabName, isEditing = false) {
+    const tabForm = document.getElementById('tabClienteForm');
+    const tabLista = document.getElementById('tabClienteLista');
+    const btnForm = document.getElementById('btnTabClienteForm');
+    const btnLista = document.getElementById('btnTabClienteLista');
 
-    if (!btn || !panelLista || !gridLayout || !cardForm) return;
+    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
 
-    // Inicia oculto por padrão
-    panelLista.style.display = 'none';
-    gridLayout.classList.remove('form-table-grid');
-    cardForm.style.maxWidth = '650px';
-    cardForm.style.margin = '0 auto';
+    if (tabName === 'form') {
+        tabForm.style.display = 'block';
+        tabLista.style.display = 'none';
+        btnForm.style.color = 'var(--accent-color)';
+        btnForm.style.borderBottom = '3px solid var(--accent-color)';
+        btnLista.style.color = 'var(--text-muted)';
+        btnLista.style.borderBottom = 'none';
 
-    btn.addEventListener('click', () => {
-        if (panelLista.style.display === 'none') {
-            panelLista.style.display = 'block';
-            gridLayout.classList.add('form-table-grid');
-            cardForm.style.maxWidth = 'none';
-            cardForm.style.margin = '0';
-            btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Clientes';
-        } else {
-            panelLista.style.display = 'none';
-            gridLayout.classList.remove('form-table-grid');
-            cardForm.style.maxWidth = '650px';
-            cardForm.style.margin = '0 auto';
-            btn.innerHTML = '<i class="fa-solid fa-users"></i> Gerenciar Clientes';
+        if (!isEditing) {
+            formCliente.reset();
+            clienteEditandoId = null;
+            const submitBtn = formCliente.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
+                submitBtn.classList.replace('btn-secondary', 'btn-primary');
+            }
         }
-    });
+    } else {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'block';
+        btnLista.style.color = 'var(--accent-color)';
+        btnLista.style.borderBottom = '3px solid var(--accent-color)';
+        btnForm.style.color = 'var(--text-muted)';
+        btnForm.style.borderBottom = 'none';
+    }
 }
 
 // Executar de forma segura

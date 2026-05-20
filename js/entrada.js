@@ -52,11 +52,11 @@ function renderizarEmpreiteiros() {
             <td style="color:var(--accent-color); font-weight:bold;">${valorFormatado}</td>
             <td>${emp.pix || '-'}</td>
             <td>
-                <div style="display: flex; gap: 6px; align-items: center; white-space: nowrap;">
-                    <button class="btn-primary" style="background:#f1c40f; color:#000; padding: 5px 8px; font-size: 0.9rem;" onclick="editarEmpreiteiro('${emp.id}')" title="Alterar">
-                        <i class="fa-solid fa-pencil"></i>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.editarEmpreiteiro('${emp.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1.1rem; padding: 4px;" title="Editar Empreiteiro">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button class="btn-primary" style="background:var(--danger-color); padding: 5px 8px; font-size: 0.9rem;" onclick="deletarEmpreiteiro('${emp.id}')" title="Excluir">
+                    <button onclick="window.deletarEmpreiteiro('${emp.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.1rem; padding: 4px;" title="Excluir Empreiteiro">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -302,17 +302,17 @@ function renderizarEntradas() {
                 <div style="color:#3498db; font-size:0.9rem;">${valorTotal}</div>
             </td>
             <td>
-                <div style="display: flex; gap: 6px; justify-content: center; align-items: center; white-space: nowrap;">
-                    <button class="btn-primary" style="padding: 5px 8px; font-size: 0.9rem; background:var(--primary-color);" onclick="visualizarEntrada('${en.id}')" title="Visualizar">
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.visualizarEntrada('${en.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Visualizar Entrada">
                         <i class="fa-solid fa-eye"></i>
                     </button>
-                    <button class="btn-primary" style="padding: 5px 8px; font-size: 0.9rem; background:#f1c40f; color:#000;" onclick="alterarEntrada('${en.id}')" title="Alterar">
-                        <i class="fa-solid fa-pencil"></i>
+                    <button onclick="window.alterarEntrada('${en.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1.1rem; padding: 4px;" title="Alterar Entrada">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button class="btn-primary" style="padding: 5px 8px; font-size: 0.9rem; background:#3498db;" onclick="imprimirEntrada('${en.id}')" title="Imprimir">
+                    <button onclick="window.imprimirEntrada('${en.id}')" class="btn-icon" style="color:#3498db; font-size:1.1rem; padding: 4px;" title="Imprimir Comprovante">
                         <i class="fa-solid fa-print"></i>
                     </button>
-                    <button class="btn-primary" style="padding: 5px 8px; font-size: 0.9rem; background:var(--danger-color);" onclick="deletarEntrada('${en.id}')" title="Excluir">
+                    <button onclick="window.deletarEntrada('${en.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.1rem; padding: 4px;" title="Excluir Registro">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -697,89 +697,75 @@ window.imprimirEntrada = function(id) {
     win.print();
 };
 
-function inicializarTogglesEntrada() {
-    const btnToggleCad = document.getElementById('btnToggleCadastroEmpreiteiro');
-    const btnToggleEmp = document.getElementById('btnToggleListaEmpreiteiros');
-    const btnToggleEnt = document.getElementById('btnToggleUltimasEntradas');
-    
-    const cardCad = document.getElementById('cardFormEmpreiteiro');
-    const panelListaEmp = document.getElementById('panelListaEmpreiteiros');
-    const panelListaEnt = document.getElementById('panelListaEntradas');
+window.switchTabEntrada = function(tabName) {
+    const tabRegistro = document.getElementById('btnTabEntradaRegistro');
+    const tabLista = document.getElementById('btnTabEntradaLista');
+    const tabEmpreiteiros = document.getElementById('btnTabEntradaEmpreiteiros');
+
+    const cardEntrada = document.getElementById('cardFormEntrada');
+    const panelEntradas = document.getElementById('panelListaEntradas');
+    const cardEmp = document.getElementById('cardFormEmpreiteiro');
+    const panelEmp = document.getElementById('panelListaEmpreiteiros');
     
     const gridLayout = document.getElementById('gridEntradasGeralLayout');
     const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
     const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
 
-    if (!btnToggleCad || !btnToggleEmp || !btnToggleEnt || !cardCad || !panelListaEmp || !panelListaEnt || !gridLayout || !colEsquerda || !colDireita) return;
+    if (!tabRegistro || !tabLista || !tabEmpreiteiros || !cardEntrada || !panelEntradas || !cardEmp || !panelEmp || !gridLayout || !colEsquerda || !colDireita) return;
 
-    // Função interna para atualizar o estado visual do grid
-    function atualizarGridGeral() {
-        const empVisivel = panelListaEmp.style.display !== 'none';
-        const entVisivel = panelListaEnt.style.display !== 'none';
+    // Reset styles
+    tabRegistro.style.color = 'var(--text-muted)';
+    tabRegistro.style.borderBottom = 'none';
+    tabLista.style.color = 'var(--text-muted)';
+    tabLista.style.borderBottom = 'none';
+    tabEmpreiteiros.style.color = 'var(--text-muted)';
+    tabEmpreiteiros.style.borderBottom = 'none';
 
-        if (empVisivel || entVisivel) {
-            // Se pelo menos uma tabela da direita estiver aberta, ativa o grid de 2 colunas
-            gridLayout.classList.add('form-table-grid');
-            colDireita.style.display = 'flex';
-            colEsquerda.style.maxWidth = 'none';
-            colEsquerda.style.margin = '0';
-        } else {
-            // Se ambas tabelas estiverem fechadas, centraliza o formulário principal na esquerda
-            gridLayout.classList.remove('form-table-grid');
-            colDireita.style.display = 'none';
-            colEsquerda.style.maxWidth = '650px';
-            colEsquerda.style.margin = '0 auto';
-        }
+    // Hide all
+    cardEntrada.style.display = 'none';
+    panelEntradas.style.display = 'none';
+    cardEmp.style.display = 'none';
+    panelEmp.style.display = 'none';
+
+    if (tabName === 'registro') {
+        tabRegistro.style.color = 'var(--accent-color)';
+        tabRegistro.style.borderBottom = '3px solid var(--accent-color)';
+        
+        colEsquerda.style.display = 'block';
+        colEsquerda.style.maxWidth = '800px';
+        colEsquerda.style.margin = '0 auto';
+        
+        colDireita.style.display = 'none';
+        cardEntrada.style.display = 'block';
+        
+        gridLayout.classList.remove('form-table-grid');
+    } else if (tabName === 'lista') {
+        tabLista.style.color = 'var(--accent-color)';
+        tabLista.style.borderBottom = '3px solid var(--accent-color)';
+        
+        colEsquerda.style.display = 'none';
+        
+        colDireita.style.display = 'block';
+        colDireita.style.width = '100%';
+        panelEntradas.style.display = 'block';
+        
+        gridLayout.classList.remove('form-table-grid');
+    } else if (tabName === 'empreiteiros') {
+        tabEmpreiteiros.style.color = 'var(--accent-color)';
+        tabEmpreiteiros.style.borderBottom = '3px solid var(--accent-color)';
+        
+        colEsquerda.style.display = 'block';
+        colEsquerda.style.maxWidth = 'none';
+        colEsquerda.style.margin = '0';
+        cardEmp.style.display = 'block';
+        
+        colDireita.style.display = 'flex';
+        colDireita.style.width = '100%';
+        panelEmp.style.display = 'block';
+        
+        gridLayout.classList.add('form-table-grid');
     }
-
-    // Inicialização - O cadastro de empreiteiro e as tabelas iniciam ocultos por padrão
-    cardCad.style.display = 'none';
-    panelListaEmp.style.display = 'none';
-    panelListaEnt.style.display = 'none';
-    atualizarGridGeral();
-
-    // Evento para toggle do cadastro de empreiteiro
-    btnToggleCad.addEventListener('click', () => {
-        if (cardCad.style.display === 'none') {
-            cardCad.style.display = 'block';
-            btnToggleCad.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Cadastro';
-        } else {
-            cardCad.style.display = 'none';
-            btnToggleCad.innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar Empreiteiro';
-            if (empreiteiroEditandoId) {
-                empreiteiroEditandoId = null;
-                const btn = formEmpreiteiro.querySelector('button[type="submit"]');
-                if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Empreiteiro';
-                formEmpreiteiro.reset();
-            }
-        }
-        atualizarGridGeral();
-    });
-
-    // Evento de clique para o toggle de empreiteiros
-    btnToggleEmp.addEventListener('click', () => {
-        if (panelListaEmp.style.display === 'none') {
-            panelListaEmp.style.display = 'block';
-            btnToggleEmp.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Empreiteiros';
-        } else {
-            panelListaEmp.style.display = 'none';
-            btnToggleEmp.innerHTML = '<i class="fa-solid fa-users"></i> Gerenciar Empreiteiros';
-        }
-        atualizarGridGeral();
-    });
-
-    // Evento de clique para o toggle de últimas entradas
-    btnToggleEnt.addEventListener('click', () => {
-        if (panelListaEnt.style.display === 'none') {
-            panelListaEnt.style.display = 'block';
-            btnToggleEnt.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Entradas';
-        } else {
-            panelListaEnt.style.display = 'none';
-            btnToggleEnt.innerHTML = '<i class="fa-solid fa-list"></i> Ver Últimas Entradas';
-        }
-        atualizarGridGeral();
-    });
-}
+};
 
 // Inicialização segura
 function inicializarModuloEntrada() {
@@ -892,7 +878,7 @@ function inicializarModuloEntrada() {
         entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
 
-    inicializarTogglesEntrada();
+    window.switchTabEntrada('registro');
 
     carregarEmpreiteiros();
     carregarEntradas();

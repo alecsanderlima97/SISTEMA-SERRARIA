@@ -9,29 +9,39 @@ const produtosCollection = collection(db, 'produtos');
 let produtosAtuais = [];
 let produtoEditandoId = null;
 
-// Toggles de layout Produtos / Madeiras
-const cardFormProduto = document.getElementById('cardFormProduto');
-const panelListaProdutos = document.getElementById('panelListaProdutos');
-const btnToggleListaProdutos = document.getElementById('btnToggleListaProdutos');
-const btnToggleFormProduto = document.getElementById('btnToggleFormProduto');
+window.switchTabProdutos = function(tabName, isEditing = false) {
+    const tabForm = document.getElementById('tabProdForm');
+    const tabLista = document.getElementById('tabProdLista');
+    const btnForm = document.getElementById('btnTabProdForm');
+    const btnLista = document.getElementById('btnTabProdLista');
 
-if (btnToggleListaProdutos) {
-    btnToggleListaProdutos.addEventListener('click', () => {
-        cardFormProduto.style.display = 'none';
-        panelListaProdutos.style.display = 'block';
-    });
-}
+    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
 
-if (btnToggleFormProduto) {
-    btnToggleFormProduto.addEventListener('click', () => {
-        panelListaProdutos.style.display = 'none';
-        cardFormProduto.style.display = 'block';
-        formProduto.reset();
-        produtoEditandoId = null;
-        const submitBtn = formProduto.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
-        submitBtn.classList.replace('btn-secondary', 'btn-primary');
-    });
+    if (tabName === 'form') {
+        tabForm.style.display = 'block';
+        tabLista.style.display = 'none';
+        btnForm.style.color = 'var(--accent-color)';
+        btnForm.style.borderBottom = '3px solid var(--accent-color)';
+        btnLista.style.color = 'var(--text-muted)';
+        btnLista.style.borderBottom = 'none';
+
+        if (!isEditing) {
+            formProduto.reset();
+            produtoEditandoId = null;
+            const submitBtn = formProduto.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
+                submitBtn.classList.replace('btn-secondary', 'btn-primary');
+            }
+        }
+    } else {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'block';
+        btnLista.style.color = 'var(--accent-color)';
+        btnLista.style.borderBottom = '3px solid var(--accent-color)';
+        btnForm.style.color = 'var(--text-muted)';
+        btnForm.style.borderBottom = 'none';
+    }
 }
 
 // Forçar letras maiúsculas em tempo real nos campos de madeiras
@@ -85,6 +95,7 @@ formProduto.addEventListener('submit', async function(e) {
         
         // Disparar evento para o combo do romaneio recarregar
         document.dispatchEvent(new Event('produtosUpdated'));
+        window.switchTabProdutos('lista');
     } catch (error) {
         console.error("Erro ao salvar produto/madeira: ", error);
         alert('Erro ao salvar. Verifique o console.');
@@ -97,10 +108,6 @@ formProduto.addEventListener('submit', async function(e) {
 window.editarProduto = function(id) {
     let p = produtosAtuais.find(x => x.id === id);
     if(p) {
-        // Mudar para o formulário
-        if (panelListaProdutos) panelListaProdutos.style.display = 'none';
-        if (cardFormProduto) cardFormProduto.style.display = 'block';
-
         document.getElementById('prodTipo').value = p.tipo || '';
         document.getElementById('prodNatureza').value = p.natureza || '';
         document.getElementById('prodQualidade').value = p.qualidade || '';
@@ -116,6 +123,8 @@ window.editarProduto = function(id) {
         let submitBtn = formProduto.querySelector('button[type="submit"]');
         submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Madeira';
         submitBtn.classList.replace('btn-primary', 'btn-secondary');
+        
+        window.switchTabProdutos('form', true);
         window.scrollTo(0, 0);
     }
 }
@@ -159,8 +168,14 @@ function renderProdutos() {
             </td>
             <td style="color:var(--accent-color); font-weight:bold;">${precoFormatado}</td>
             <td>
-                <button class="btn-secondary" style="padding: 5px; margin-right:5px; border-color:var(--accent-color); color:var(--accent-color);" onclick="window.editarProduto('${p.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                <button class="btn-danger" style="padding: 5px;" onclick="window.apagarProduto('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.editarProduto('${p.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button onclick="window.apagarProduto('${p.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1rem; padding: 6px 8px;" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         listaProdutos.appendChild(tr);
