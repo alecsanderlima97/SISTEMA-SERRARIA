@@ -65,6 +65,7 @@ const SUBSECTION_PERMISSIONS = {
         items: [
             { id: 'registro', label: 'Registrar tora' },
             { id: 'lista', label: 'Ultimas entradas / historico' },
+            { id: 'descarregamento', label: 'Descarregamento' },
             { id: 'empreiteiros', label: 'Empreiteiros' }
         ]
     }

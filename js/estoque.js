@@ -50,7 +50,27 @@ let filtroBuscaEstoque = '';
 let categoriaAtiva = 'TODAS';
 
 function obterEstoque() {
-    return itensEstoque || [];
+    if (itensEstoque && itensEstoque.length > 0) return itensEstoque;
+
+    const local = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+    if (local.length > 0) {
+        itensEstoque = local;
+        return itensEstoque;
+    }
+
+    itensEstoque = PADROES_ESTOQUE;
+    localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
+    return itensEstoque;
+}
+
+function salvarEstoque(dados) {
+    itensEstoque = dados || [];
+    localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
+    if (window.FS) {
+        itensEstoque.forEach(item => window.FS.setDoc('estoque', item.id, item).catch(err => {
+            console.error('Erro ao sincronizar item de estoque:', err);
+        }));
+    }
 }
 
 async function carregarDadosDoFirestore() {
@@ -66,10 +86,12 @@ async function carregarDadosDoFirestore() {
             estoqueDados = await window.FS.getCollection('estoque');
         }
         itensEstoque = estoqueDados;
+        localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
 
         let movsDados = await window.FS.getCollection('estoque_movimentacoes');
         movsDados.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
         movimentacoesEstoque = movsDados;
+        localStorage.setItem(MOV_KEY, JSON.stringify(movimentacoesEstoque));
 
         renderizarEstoque();
         window.renderSimuladores();
@@ -258,7 +280,7 @@ function renderizarEstoque() {
                 <td style="padding: 12px 8px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center;">
                     <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
-                        <button type="button" class="btn-action-card" onclick="window.abrirSaidaRapida('${item.id}')" title="Registrar Saída" style="padding: 5px 9px; color: #f59e0b; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); font-size: 0.78rem;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Saída</button>
+                        <button type="button" class="btn-action-card" onclick="window.abrirSaidaRapida('${item.id}')" title="Registrar Entrada/Saída" style="padding: 5px 9px; color: #f59e0b; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); font-size: 0.78rem;"><i class="fa-solid fa-right-left"></i> Entrada/Saída</button>
                         <button type="button" class="btn-action-card" onclick="window.editarItemEstoque('${item.id}')" title="Editar item" style="padding: 5px 9px;"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button type="button" class="btn-action-card" onclick="window.excluirItemEstoque('${item.id}')" title="Remover item" style="padding: 5px 9px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -377,12 +399,36 @@ window.excluirItemEstoque = async function(id) {
 
 
 // --- SIMULADORES DE TANQUES & CONVERSÃO EM BALDES DE 20L ---
+function obterMovimentacoesEstoque() {
+    const locais = JSON.parse(localStorage.getItem(MOV_KEY) || '[]');
+    return locais.length > 0 ? locais : (movimentacoesEstoque || []);
+}
+
+function normalizarTipoMovimento(tipo) {
+    return (tipo || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+}
+
+function calcularSaldoPorMovimentacoes(item) {
+    const movs = obterMovimentacoesEstoque().filter(m => {
+        const mesmoId = item.id && m.itemId === item.id;
+        const mesmoNome = (m.itemNome || '').toUpperCase() === (item.nome || '').toUpperCase();
+        return mesmoId || mesmoNome;
+    });
+
+    if (movs.length === 0) return Number(item.quantidade) || 0;
+
+    return movs.reduce((saldo, mov) => {
+        const qtd = Number(mov.quantidade) || 0;
+        return normalizarTipoMovimento(mov.tipo) === 'ENTRADA' ? saldo + qtd : saldo - qtd;
+    }, 0);
+}
+
 window.renderSimuladores = function() {
     itensEstoque = obterEstoque();
     
     // 1. Diesel Simulator (Capacidade máxima de 5000 Litros)
     const diesel = itensEstoque.find(i => i.categoria === 'DIESEL' || i.nome.toUpperCase().includes('DIESEL'));
-    const dieselQtd = diesel ? diesel.quantidade : 0;
+    const dieselQtd = diesel ? calcularSaldoPorMovimentacoes(diesel) : 0;
     const dieselCapacity = 5000;
     const dieselPercent = Math.min((dieselQtd / dieselCapacity) * 100, 100);
     const dieselSpaceLeft = Math.max(dieselCapacity - dieselQtd, 0);
@@ -429,7 +475,7 @@ window.renderSimuladores = function() {
         }
 
         container.innerHTML = lubs.map(lub => {
-            const totalLitros = lub.quantidade;
+            const totalLitros = calcularSaldoPorMovimentacoes(lub);
             const baldes = Math.floor(totalLitros / 20);
             const litrosResto = (totalLitros % 20).toFixed(1);
             
@@ -497,17 +543,75 @@ window.registrarMovimentacaoEstoque = async function({
         observacao,
         criadoEm: new Date().toISOString()
     };
+    const movsLocal = JSON.parse(localStorage.getItem(MOV_KEY)) || [];
+    movsLocal.unshift(nova);
+    localStorage.setItem(MOV_KEY, JSON.stringify(movsLocal));
+    movimentacoesEstoque = [nova, ...movimentacoesEstoque.filter(m => m.id !== nova.id)];
     // Persist to Firestore
     try {
-        await window.FS.setDoc('estoque_movimentacoes', nova.id, nova);
+        if (window.FS) await window.FS.setDoc('estoque_movimentacoes', nova.id, nova);
         // Update local cache
-        movimentacoesEstoque.unshift(nova);
-        renderizarMovimentacoesEstoque();
+        window.renderizarMovimentacoesEstoque();
         console.log(`[Almoxarifado] Movimento gravado no Firestore: ${nova.id}`);
     } catch (err) {
         console.error('Erro ao gravar movimento no Firestore', err);
         alert('Não foi possível registrar a movimentação. Veja o console para detalhes.');
     }
+};
+
+window.registrarSaidaEstoqueFrota = async function({
+    itemNome,
+    tipoInsumo,
+    quantidade,
+    unitario,
+    frotaId = '',
+    frotaPlaca = '',
+    destino = '',
+    observacao = ''
+}) {
+    const qtd = parseFloat(quantidade) || 0;
+    const preco = parseFloat(unitario) || 0;
+
+    if (qtd <= 0 || preco < 0) {
+        throw new Error('Quantidade ou valor unitario invalido para saida de estoque.');
+    }
+
+    itensEstoque = obterEstoque();
+    const nomeBusca = (itemNome || '').toUpperCase();
+    const item = itensEstoque.find(i => (i.nome || '').toUpperCase() === nomeBusca)
+        || itensEstoque.find(i => (i.categoria || '').toUpperCase() === (tipoInsumo || '').toUpperCase());
+
+    if (!item) {
+        throw new Error(`Item de estoque nao encontrado: ${itemNome}`);
+    }
+
+    if (item.quantidade < qtd && !confirm(`Atenção: a saída de ${qtd} é maior que o saldo atual (${item.quantidade}). Deseja continuar e deixar o estoque negativo?`)) {
+        return null;
+    }
+
+    item.quantidade -= qtd;
+    item.atualizadoEm = new Date().toISOString();
+    salvarEstoque(itensEstoque);
+    if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+
+    await window.registrarMovimentacaoEstoque({
+        tipo: 'SAÍDA',
+        itemId: item.id,
+        itemNome: item.nome,
+        categoria: item.categoria,
+        quantidade: qtd,
+        unitario: preco,
+        frotaId,
+        frotaPlaca,
+        destino,
+        observacao
+    });
+
+    renderizarEstoque();
+    window.renderSimuladores();
+    window.renderizarMovimentacoesEstoque();
+
+    return item;
 };
 
 // Excluir movimentação de estoque tanto localmente quanto no Firestore
@@ -580,14 +684,14 @@ window.fecharModalNovaMovimentacao = function() {
     document.getElementById('modalNovaMovimentacao').style.display = 'none';
 };
 
-// Atalho: abre o modal já configurado para SAÍDA com o item pré-selecionado
+// Atalho: abre o modal configurado para movimentar o item selecionado.
 window.abrirSaidaRapida = function(itemId) {
     window.abrirModalNovaMovimentacao();
     const st = document.getElementById('movTipo');
     if (st) { st.value = 'SAÍDA'; window.onChangeMovTipo(); }
     const si = document.getElementById('movItemId');
     if (si && itemId) { si.value = itemId; window.onChangeMovItem(); }
-    setTimeout(() => document.getElementById('movRetiradoPor')?.focus(), 150);
+    setTimeout(() => document.getElementById('movQtd')?.focus(), 150);
 };
 
 window.onChangeMovTipo = function() {
@@ -675,6 +779,9 @@ function salvarNovaMovimentacaoManual(e) {
 
     // Save stock changes
     salvarEstoque(itensEstoque);
+    if (window.FS) window.FS.setDoc('estoque', item.id, item).catch(err => {
+        console.error('Erro ao sincronizar item de estoque:', err);
+    });
 
     // Save transaction entry
     window.registrarMovimentacaoEstoque({
@@ -688,7 +795,7 @@ function salvarNovaMovimentacaoManual(e) {
         frotaPlaca,
         destino,
         retiradoPor,
-        observacao: (retiradoPor ? `Retirado por: ${retiradoPor}. ` : '') + observacao + ' (Manual)'
+        observacao: (retiradoPor ? `Responsável: ${retiradoPor}. ` : '') + observacao + ' (Manual)'
     });
 
     // Close and refresh

@@ -703,11 +703,11 @@
                     <button type="button" class="btn-tab-estoque active" onclick="window.switchTabEstoque('inventario')" id="btnTabEstoqueInventario" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                         <i class="fa-solid fa-cubes"></i> Inventário Físico
                     </button>
-                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('tanques')" id="btnTabEstoqueTanques" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-gas-pump"></i> Simulador de Tanques & Níveis
-                    </button>
                     <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('movimentacoes')" id="btnTabEstoqueMovimentacoes" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                         <i class="fa-solid fa-right-left"></i> Histórico de Movimentações (E/S)
+                    </button>
+                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('tanques')" id="btnTabEstoqueTanques" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fa-solid fa-gas-pump"></i> Simulador de Tanques & Níveis
                     </button>
                 </div>
 
@@ -883,12 +883,15 @@
                                 <i class="fa-solid fa-right-left" style="color: var(--accent-color);"></i> Log de Entradas & Saídas
                             </h3>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <input type="text" id="buscaMovimentacao" placeholder="🔍 Filtrar item ou frota..." oninput="window.renderizarMovimentacoesEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 180px;">
-                                <select id="filtroMovTipo" onchange="window.renderizarMovimentacoesEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 8px 12px; font-size: 0.85rem;">
+                                <input type="text" id="buscaMovimentacao" placeholder="🔍 Filtrar item ou frota..." style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 180px;">
+                                <select id="filtroMovTipo" style="border-radius: 8px; border: 1px solid var(--panel-border); background: #1e293b; color: white; padding: 8px 12px; font-size: 0.85rem;">
                                     <option value="TODOS">TODOS LANÇAMENTOS</option>
                                     <option value="ENTRADA">📈 ENTRADAS</option>
                                     <option value="SAÍDA">📉 SAÍDAS</option>
                                 </select>
+                                <button type="button" class="btn-primary" onclick="window.renderizarMovimentacoesEstoque()" style="padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-filter"></i> Filtrar
+                                </button>
                                 <button type="button" class="btn-primary" onclick="window.abrirModalNovaMovimentacao()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; background: var(--primary-color);">
                                     <i class="fa-solid fa-plus-minus"></i> Novo Lançamento (Manual)
                                 </button>
@@ -1658,6 +1661,9 @@
                     <button type="button" id="btnTabEntradaLista" onclick="window.switchTabEntrada('lista')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-list"></i> Últimas Entradas
                     </button>
+                    <button type="button" id="btnTabEntradaDescarregamento" onclick="window.switchTabEntrada('descarregamento')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-truck-ramp-box"></i> Descarregamento
+                    </button>
                     <button type="button" id="btnTabEntradaEmpreiteiros" onclick="window.switchTabEntrada('empreiteiros')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-users-gear"></i> Empreiteiros
                     </button>
@@ -1899,6 +1905,67 @@
                                 </div>
                                 <button type="button" id="btnGerarRelatorioConsolidado" class="btn-primary" style="width: 100%; margin-top: 15px; background: var(--accent-color); color: #000; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                     <i class="fa-solid fa-file-lines"></i> Gerar Relatório de Fechamento
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Descarregamentos -->
+                        <div class="glass-panel" id="panelDescarregamentos" style="margin-bottom: 0; display: none; width: 100%;">
+                            <div class="section-title" style="display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 15px;">
+                                <h2 style="margin: 0;"><i class="fa-solid fa-truck-ramp-box"></i> Descarregamento</h2>
+                                <div class="filters-row" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; width: 100%;">
+                                    <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Buscar por FuncionÃ¡rio / Motorista</label>
+                                        <input type="text" id="filtroDescargaNome" placeholder="Buscar..." style="padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
+                                    </div>
+                                    <div class="input-group" style="margin-bottom: 0; width: 140px;">
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data InÃ­cio</label>
+                                        <input type="date" id="filtroDescargaDataInicio" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
+                                    </div>
+                                    <div class="input-group" style="margin-bottom: 0; width: 140px;">
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data Fim</label>
+                                        <input type="date" id="filtroDescargaDataFim" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
+                                    </div>
+                                    <button type="button" id="btnFiltrarDescargas" class="btn-primary" style="padding: 8px 15px; font-size: 0.85rem; height: 38px; border-radius: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Data/Hora</th>
+                                            <th>FuncionÃ¡rio</th>
+                                            <th>Romaneio / Motorista</th>
+                                            <th>Placa</th>
+                                            <th>Volume</th>
+                                            <th>Valor/mÂ³</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listaDescarregamentos">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="margin-top: 20px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--panel-border); border-radius: 8px; padding: 15px;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
+                                    <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+                                        <div style="font-size: 0.8rem; color: #ccc;">Registros</div>
+                                        <div id="descargaQtdTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+                                        <div style="font-size: 0.8rem; color: #ccc;">Volume Total</div>
+                                        <div id="descargaVolumeTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0,00 mÂ³</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+                                        <div style="font-size: 0.8rem; color: #ccc;">Total Descarga</div>
+                                        <div id="descargaValorTotal" style="font-size: 1.4rem; font-weight: bold; color: #f59e0b; margin-top: 5px;">R$ 0,00</div>
+                                    </div>
+                                </div>
+                                <button type="button" id="btnGerarRelatorioDescarga" class="btn-primary" style="width: 100%; margin-top: 15px; background: #f59e0b; color: #111827; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fa-solid fa-print"></i> Imprimir RelatÃ³rio de Descarregamento
                                 </button>
                             </div>
                         </div>
@@ -3025,7 +3092,7 @@
         <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 14px; padding: 16px 20px; border: 1px solid var(--panel-border); background: #1e293b;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0; color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
-                    <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--accent-color);"></i> Registrar Saída / Entrada de Estoque
+                    <i class="fa-solid fa-right-left" style="color: var(--accent-color);"></i> Registrar Entrada / Saída de Estoque
                 </h2>
                 <button type="button" class="btn-action-card" onclick="window.fecharModalNovaMovimentacao()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
             </div>

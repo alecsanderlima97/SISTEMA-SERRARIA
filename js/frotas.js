@@ -110,7 +110,7 @@ window.switchTabFrotas = function(tabName, isEditing = false) {
 
     if (tabName === 'form') {
         tabForm.style.display = 'block';
-        tabLista.style.display = 'none';
+        tabLista.style.display = 'block';
         btnForm.style.color = 'var(--accent-color)';
         btnForm.style.borderBottom = '3px solid var(--accent-color)';
         btnLista.style.color = 'var(--text-muted)';
@@ -306,8 +306,11 @@ function renderizarFrota() {
                 <!-- Ações Rápidas de Frota -->
                 <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="window.abrirModalAbastecimento('${v.id}')" class="btn-icon" style="color:#ef4444; font-size:1.1rem; padding: 4px;" title="Lançar Abastecimento (Diesel / Lubrificantes)">
+                        <button onclick="window.abrirModalAbastecimento('${v.id}', 'DIESEL')" class="btn-icon" style="color:#ef4444; font-size:1.1rem; padding: 4px;" title="Lançar Diesel">
                             <i class="fa-solid fa-gas-pump"></i>
+                        </button>
+                        <button onclick="window.abrirModalAbastecimento('${v.id}', 'LUBRIFICANTE')" class="btn-icon" style="color:#60a5fa; font-size:1.1rem; padding: 4px;" title="Lançar Lubrificante">
+                            <i class="fa-solid fa-oil-can"></i>
                         </button>
                         <button onclick="window.abrirModalManutencao('${v.id}')" class="btn-icon" style="color:#3b82f6; font-size:1.1rem; padding: 4px;" title="Registrar Manutenção Preventiva / Corretiva">
                             <i class="fa-solid fa-screwdriver-wrench"></i>
@@ -367,7 +370,7 @@ function atualizarKPIsFrota() {
 // MÓDULO ABASTECIMENTO (DIESEL / LUBRIFICANTES LINKED COM ESTOQUE)
 // =========================================================================
 
-window.abrirModalAbastecimento = function(veiculoId) {
+window.abrirModalAbastecimento = function(veiculoId, tipoPadrao = 'DIESEL') {
     const v = frota.find(item => item.id === veiculoId);
     if (!v) return;
 
@@ -377,7 +380,7 @@ window.abrirModalAbastecimento = function(veiculoId) {
     document.getElementById('abastPreco').value = '';
     document.getElementById('abastTotal').value = '';
     document.getElementById('abastHorimetro').value = obterUltimoHorimetro(v.id);
-    document.getElementById('abastTipo').value = 'DIESEL';
+    document.getElementById('abastTipo').value = tipoPadrao;
 
     // Informações no Header do modal
     document.getElementById('abastVeiculoCard').innerHTML = `
@@ -447,7 +450,7 @@ function obterUltimoHorimetro(veiculoId) {
     return max > 0 ? max : '';
 }
 
-function salvarAbastecimento() {
+async function salvarAbastecimento() {
     const veiculoId = document.getElementById('abastVeiculoId').value;
     const data = document.getElementById('abastData').value || new Date().toISOString().split('T')[0];
     const tipo = document.getElementById('abastTipo').value || 'DIESEL';
@@ -478,6 +481,22 @@ function salvarAbastecimento() {
     else if (tipo === 'HIDRAULICO') estoqueNome = 'ÓLEO HIDRÁULICO ISO 68';
     else if (tipo === 'GRAXA') estoqueNome = 'GRAXA DE CHASSI MP2';
 
+    const v = frota.find(item => item.id === veiculoId);
+
+    if (window.registrarSaidaEstoqueFrota) {
+        const itemAtualizado = await window.registrarSaidaEstoqueFrota({
+            itemNome: estoqueNome,
+            tipoInsumo: tipo,
+            quantidade: qtd,
+            unitario: preco,
+            frotaId: veiculoId,
+            frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
+            destino: `Consumo Frota: ${v ? v.modelo : 'VeÃ­culo'}`,
+            observacao: `Abastecimento registrado em frotas. HorÃ­metro/KM: ${horimetro}`
+        });
+
+        if (!itemAtualizado) return;
+    } else {
     estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
     let itemEstoque = estoque.find(i => i.nome === estoqueNome);
     
@@ -505,6 +524,7 @@ function salvarAbastecimento() {
                 observacao: `Abastecimento de veículo. Horímetro/KM: ${horimetro}`
             });
         }
+    }
     }
 
     abastecimentos.push(novo);

@@ -155,7 +155,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, filtroEntradasNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
+let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -187,9 +187,14 @@ function aplicarVisibilidadeFinanceiraEntrada() {
     if (cardEmpreiteiro) cardEmpreiteiro.style.display = podeVerEmpreiteiro ? 'block' : 'none';
 }
 
+function temDescarga(en) {
+    return (en.totalDescarga || 0) > 0 && (en.valorDescargaM3 || 0) > 0;
+}
+
 window.atualizarPermissoesEntrada = function() {
     aplicarVisibilidadeFinanceiraEntrada();
     renderizarEntradas();
+    renderizarDescarregamentos();
 };
 
 // --- Funções de Máscara Decimal e Conversão ---
@@ -287,6 +292,7 @@ async function carregarEntradas() {
             const checkAll = document.getElementById('checkAllEntradas');
             if (checkAll) checkAll.checked = false;
             renderizarEntradas();
+            renderizarDescarregamentos();
         }, (error) => {
             console.error(error);
             listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
@@ -338,8 +344,8 @@ function renderizarEntradas() {
         const valorTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
         const valorDescarga = en.totalDescarga ? en.totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
         const financeiroHtml = usuarioPodeVerFinanceiroEmpreiteiro()
-            ? `<div style="color:#3498db; font-size:0.9rem;">Emp.: ${valorTotal}</div>${en.totalDescarga ? `<div style="color:#f59e0b; font-size:0.85rem;">Desc.: ${valorDescarga}</div>` : ''}`
-            : `<div style="color:#f59e0b; font-size:0.9rem;">Desc.: ${valorDescarga}</div>`;
+            ? `<div style="color:#3498db; font-size:0.9rem;">Emp.: ${valorTotal}</div>${temDescarga(en) ? `<div style="color:#f59e0b; font-size:0.85rem;">Desc.: ${valorDescarga}</div>` : ''}`
+            : (temDescarga(en) ? `<div style="color:#f59e0b; font-size:0.9rem;">Desc.: ${valorDescarga}</div>` : '');
         const isChecked = entradasSelecionadas.has(en.id) ? 'checked' : '';
         const autorCriacao = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '';
         const autorAlteracao = en.atualizadoPor?.nome || '';
@@ -389,6 +395,147 @@ function renderizarEntradas() {
 
     atualizarPainelFechamento();
 }
+
+function getDescargasFiltradas() {
+    const filtroNome = filtroDescargaNome ? filtroDescargaNome.value.toLowerCase().trim() : '';
+    const dataInicio = document.getElementById('filtroDescargaDataInicio')?.value || '';
+    const dataFim = document.getElementById('filtroDescargaDataFim')?.value || '';
+
+    return window.entradasAtuaisLista.filter(en => {
+        if (!temDescarga(en)) return false;
+        const funcionario = (en.criadoPor?.nome || en.usuarioNome || en.autorNome || '').toLowerCase();
+        const motorista = (en.motorista || '').toLowerCase();
+        const romaneio = (en.romaneioNum || '').toLowerCase();
+        const bateNome = !filtroNome || funcionario.includes(filtroNome) || motorista.includes(filtroNome) || romaneio.includes(filtroNome);
+        let bateData = true;
+        if (dataInicio) bateData = bateData && (en.data >= dataInicio);
+        if (dataFim) bateData = bateData && (en.data <= dataFim);
+        return bateNome && bateData;
+    }).sort((a,b) => new Date(b.data + 'T' + (b.horario || '00:00')) - new Date(a.data + 'T' + (a.horario || '00:00')));
+}
+
+function renderizarDescarregamentos() {
+    if (!listaDescarregamentos) return;
+    const filtradas = getDescargasFiltradas();
+
+    if (filtradas.length === 0) {
+        listaDescarregamentos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
+        atualizarResumoDescarregamento(filtradas);
+        return;
+    }
+
+    listaDescarregamentos.innerHTML = '';
+    filtradas.forEach(en => {
+        const tr = document.createElement('tr');
+        const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
+        const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
+        tr.innerHTML = `
+            <td>${dtStr}<br><small style="color:#aaa;">${en.horario || '-'}</small></td>
+            <td><strong>${funcionario}</strong></td>
+            <td><strong>${en.romaneioNum || '-'}</strong><br><small style="color:#aaa;">Mot: ${en.motorista || '-'}</small></td>
+            <td><span class="badge" style="background:#555;">${en.placa || '-'}</span></td>
+            <td style="font-weight:bold; color:var(--accent-color);">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
+            <td>${(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+            <td style="font-weight:bold; color:#f59e0b;">${(en.totalDescarga || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+        `;
+        listaDescarregamentos.appendChild(tr);
+    });
+
+    atualizarResumoDescarregamento(filtradas);
+}
+
+function atualizarResumoDescarregamento(lista) {
+    const totalVolume = lista.reduce((sum, en) => sum + (en.volume || 0), 0);
+    const totalValor = lista.reduce((sum, en) => sum + (en.totalDescarga || 0), 0);
+    const qtd = document.getElementById('descargaQtdTotal');
+    const volume = document.getElementById('descargaVolumeTotal');
+    const valor = document.getElementById('descargaValorTotal');
+    if (qtd) qtd.textContent = String(lista.length);
+    if (volume) volume.textContent = totalVolume.toFixed(2).replace('.', ',') + ' m³';
+    if (valor) valor.textContent = totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
+
+window.gerarRelatorioDescarregamento = function() {
+    const lista = getDescargasFiltradas().sort((a,b) => new Date(a.data + 'T' + (a.horario || '00:00')) - new Date(b.data + 'T' + (b.horario || '00:00')));
+    if (lista.length === 0) {
+        alert("Nenhum descarregamento com valor encontrado para imprimir.");
+        return;
+    }
+
+    const totalVolume = lista.reduce((sum, en) => sum + (en.volume || 0), 0);
+    const totalValor = lista.reduce((sum, en) => sum + (en.totalDescarga || 0), 0);
+    const dataInicio = document.getElementById('filtroDescargaDataInicio')?.value;
+    const dataFim = document.getElementById('filtroDescargaDataFim')?.value;
+    const periodo = dataInicio || dataFim
+        ? `${dataInicio ? new Date(dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${dataFim ? new Date(dataFim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`
+        : 'Periodo geral';
+
+    const rows = lista.map((en, index) => {
+        const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
+        const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
+        return `
+            <tr>
+                <td style="text-align:center;">${index + 1}</td>
+                <td>${dtStr} ${en.horario || ''}</td>
+                <td>${funcionario}</td>
+                <td>${en.romaneioNum || '-'}</td>
+                <td>${en.motorista || '-'}</td>
+                <td>${en.placa || '-'}</td>
+                <td style="text-align:right;">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
+                <td style="text-align:right;">${(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+                <td style="text-align:right; font-weight:bold;">${(en.totalDescarga || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+<html>
+<head>
+    <title>Relatorio de Descarregamento</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 28px; color: #222; font-size: 12px; }
+        h1 { margin: 0; font-size: 18px; text-transform: uppercase; }
+        .muted { color: #666; margin-top: 4px; }
+        .summary { display: flex; gap: 12px; margin: 18px 0; }
+        .box { flex: 1; border: 1px solid #ccc; padding: 12px; text-align: center; }
+        .box strong { display:block; margin-top: 5px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 7px; }
+        th { background: #eee; text-align: left; }
+        .total td { font-weight: bold; background: #f3f4f6; }
+        .signatures { margin-top: 60px; display: flex; justify-content: space-around; }
+        .signature { width: 260px; border-top: 1px solid #000; padding-top: 6px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Relatorio de Descarregamento</h1>
+    <div class="muted">Periodo: <strong>${periodo}</strong> | Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    <div class="summary">
+        <div class="box">Registros<strong>${lista.length}</strong></div>
+        <div class="box">Volume Total<strong>${totalVolume.toFixed(2).replace('.', ',')} m³</strong></div>
+        <div class="box">Total a Pagar<strong>${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong></div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Nº</th><th>Data/Hora</th><th>Funcionario</th><th>Romaneio</th><th>Motorista</th><th>Placa</th><th>Volume</th><th>Valor/m³</th><th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rows}
+            <tr class="total"><td colspan="6" style="text-align:right;">Total</td><td style="text-align:right;">${totalVolume.toFixed(2).replace('.', ',')} m³</td><td></td><td style="text-align:right;">${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td></tr>
+        </tbody>
+    </table>
+    <div class="signatures">
+        <div class="signature">Responsavel</div>
+        <div class="signature">Funcionario</div>
+    </div>
+    <script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`);
+    win.document.close();
+};
 
 function atualizarPainelFechamento() {
     const selected = window.entradasAtuaisLista.filter(en => entradasSelecionadas.has(en.id));
@@ -790,7 +937,7 @@ ${reciboFinanceiro}
 };
 
 window.switchTabEntrada = function(tabName) {
-    const subTabs = ['registro', 'lista', 'empreiteiros'];
+    const subTabs = ['registro', 'lista', 'descarregamento', 'empreiteiros'];
     const canAccess = (name) => !window.hasSubsectionPermission || window.hasSubsectionPermission('view-entrada', name);
     if (!canAccess(tabName)) {
         const fallback = subTabs.find(canAccess);
@@ -803,10 +950,12 @@ window.switchTabEntrada = function(tabName) {
 
     const tabRegistro = document.getElementById('btnTabEntradaRegistro');
     const tabLista = document.getElementById('btnTabEntradaLista');
+    const tabDescarregamento = document.getElementById('btnTabEntradaDescarregamento');
     const tabEmpreiteiros = document.getElementById('btnTabEntradaEmpreiteiros');
 
     const cardEntrada = document.getElementById('cardFormEntrada');
     const panelEntradas = document.getElementById('panelListaEntradas');
+    const panelDescargas = document.getElementById('panelDescarregamentos');
     const cardEmp = document.getElementById('cardFormEmpreiteiro');
     const panelEmp = document.getElementById('panelListaEmpreiteiros');
     
@@ -814,10 +963,11 @@ window.switchTabEntrada = function(tabName) {
     const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
     const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
 
-    if (!tabRegistro || !tabLista || !tabEmpreiteiros || !cardEntrada || !panelEntradas || !cardEmp || !panelEmp || !gridLayout || !colEsquerda || !colDireita) return;
+    if (!tabRegistro || !tabLista || !tabDescarregamento || !tabEmpreiteiros || !cardEntrada || !panelEntradas || !panelDescargas || !cardEmp || !panelEmp || !gridLayout || !colEsquerda || !colDireita) return;
 
     tabRegistro.style.display = canAccess('registro') ? 'flex' : 'none';
     tabLista.style.display = canAccess('lista') ? 'flex' : 'none';
+    tabDescarregamento.style.display = canAccess('descarregamento') ? 'flex' : 'none';
     tabEmpreiteiros.style.display = canAccess('empreiteiros') ? 'flex' : 'none';
 
     // Reset styles
@@ -825,12 +975,15 @@ window.switchTabEntrada = function(tabName) {
     tabRegistro.style.borderBottom = 'none';
     tabLista.style.color = 'var(--text-muted)';
     tabLista.style.borderBottom = 'none';
+    tabDescarregamento.style.color = 'var(--text-muted)';
+    tabDescarregamento.style.borderBottom = 'none';
     tabEmpreiteiros.style.color = 'var(--text-muted)';
     tabEmpreiteiros.style.borderBottom = 'none';
 
     // Hide all
     cardEntrada.style.display = 'none';
     panelEntradas.style.display = 'none';
+    panelDescargas.style.display = 'none';
     cardEmp.style.display = 'none';
     panelEmp.style.display = 'none';
 
@@ -857,6 +1010,17 @@ window.switchTabEntrada = function(tabName) {
         panelEntradas.style.display = 'block';
         
         gridLayout.classList.remove('form-table-grid');
+    } else if (tabName === 'descarregamento') {
+        tabDescarregamento.style.color = 'var(--accent-color)';
+        tabDescarregamento.style.borderBottom = '3px solid var(--accent-color)';
+        
+        colEsquerda.style.display = 'none';
+        colDireita.style.display = 'block';
+        colDireita.style.width = '100%';
+        panelDescargas.style.display = 'block';
+        renderizarDescarregamentos();
+        
+        gridLayout.classList.remove('form-table-grid');
     } else if (tabName === 'empreiteiros') {
         tabEmpreiteiros.style.color = 'var(--accent-color)';
         tabEmpreiteiros.style.borderBottom = '3px solid var(--accent-color)';
@@ -879,7 +1043,9 @@ function inicializarModuloEntrada() {
     // Resolver referências dos elementos dinamicamente para garantir que não fiquem nulos
     formEntrada = document.getElementById('formEntrada');
     listaEntradas = document.getElementById('listaEntradas');
+    listaDescarregamentos = document.getElementById('listaDescarregamentos');
     filtroEntradasNome = document.getElementById('filtroEntradasNome');
+    filtroDescargaNome = document.getElementById('filtroDescargaNome');
     entRomaneio = document.getElementById('entRomaneio');
     entComp = document.getElementById('entComp');
     entLarg = document.getElementById('entLarg');
@@ -937,6 +1103,16 @@ function inicializarModuloEntrada() {
     const filtroEntradasDataFim = document.getElementById('filtroEntradasDataFim');
     if(filtroEntradasDataInicio) filtroEntradasDataInicio.addEventListener('change', renderizarEntradas);
     if(filtroEntradasDataFim) filtroEntradasDataFim.addEventListener('change', renderizarEntradas);
+
+    if(filtroDescargaNome) filtroDescargaNome.addEventListener('input', renderizarDescarregamentos);
+    const btnFiltrarDescargas = document.getElementById('btnFiltrarDescargas');
+    if(btnFiltrarDescargas) btnFiltrarDescargas.addEventListener('click', renderizarDescarregamentos);
+    const filtroDescargaDataInicio = document.getElementById('filtroDescargaDataInicio');
+    const filtroDescargaDataFim = document.getElementById('filtroDescargaDataFim');
+    if(filtroDescargaDataInicio) filtroDescargaDataInicio.addEventListener('change', renderizarDescarregamentos);
+    if(filtroDescargaDataFim) filtroDescargaDataFim.addEventListener('change', renderizarDescarregamentos);
+    const btnGerarRelatorioDescarga = document.getElementById('btnGerarRelatorioDescarga');
+    if(btnGerarRelatorioDescarga) btnGerarRelatorioDescarga.addEventListener('click', window.gerarRelatorioDescarregamento);
 
     // Selecionar tudo
     const checkAll = document.getElementById('checkAllEntradas');
