@@ -155,7 +155,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, filtroEntradasNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario;
+let formEntrada, listaEntradas, filtroEntradasNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -172,6 +172,25 @@ function getUsuarioAtualAuditoria() {
         email: user.email || null
     };
 }
+
+function normalizeText(value) {
+    return (value || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function usuarioPodeVerFinanceiroEmpreiteiro() {
+    return normalizeText(window.App?.userRole) === 'gerente';
+}
+
+function aplicarVisibilidadeFinanceiraEntrada() {
+    const podeVerEmpreiteiro = usuarioPodeVerFinanceiroEmpreiteiro();
+    const cardEmpreiteiro = document.getElementById('entCardFinanceiroEmpreiteiro');
+    if (cardEmpreiteiro) cardEmpreiteiro.style.display = podeVerEmpreiteiro ? 'block' : 'none';
+}
+
+window.atualizarPermissoesEntrada = function() {
+    aplicarVisibilidadeFinanceiraEntrada();
+    renderizarEntradas();
+};
 
 // --- Funções de Máscara Decimal e Conversão ---
 function formatDecimalValue(val) {
@@ -234,7 +253,13 @@ function calcularVolumeAtual() {
     if (resFinanceiro) resFinanceiro.textContent = totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoFinanceira) infoFinanceira.textContent = `Baseado em ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m³`;
 
-    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro };
+    const valorDescargaM3 = window.parseCurrencyValue ? window.parseCurrencyValue(entValorDescarga?.value || '0') : 0;
+    const totalDescarga = volume * valorDescargaM3;
+    if (resDescarga) resDescarga.textContent = totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    if (infoDescarga) infoDescarga.textContent = `Baseado em ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m³`;
+
+    aplicarVisibilidadeFinanceiraEntrada();
+    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
 }
 
 async function carregarEntradas() {
@@ -311,6 +336,10 @@ function renderizarEntradas() {
         const dtObj = new Date(en.data + 'T12:00:00'); // hack para timezone
         const dtStr = dtObj.toLocaleDateString('pt-BR');
         const valorTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        const valorDescarga = en.totalDescarga ? en.totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        const financeiroHtml = usuarioPodeVerFinanceiroEmpreiteiro()
+            ? `<div style="color:#3498db; font-size:0.9rem;">Emp.: ${valorTotal}</div>${en.totalDescarga ? `<div style="color:#f59e0b; font-size:0.85rem;">Desc.: ${valorDescarga}</div>` : ''}`
+            : `<div style="color:#f59e0b; font-size:0.9rem;">Desc.: ${valorDescarga}</div>`;
         const isChecked = entradasSelecionadas.has(en.id) ? 'checked' : '';
         const autorCriacao = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '';
         const autorAlteracao = en.atualizadoPor?.nome || '';
@@ -336,7 +365,7 @@ function renderizarEntradas() {
             </td>
             <td>
                 <div style="font-size:1.1rem; color:var(--accent-color); font-weight:bold;">${en.volume.toFixed(2).replace('.', ',')} m³</div>
-                <div style="color:#3498db; font-size:0.9rem;">${valorTotal}</div>
+                ${financeiroHtml}
             </td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
@@ -365,7 +394,7 @@ function atualizarPainelFechamento() {
     const selected = window.entradasAtuaisLista.filter(en => entradasSelecionadas.has(en.id));
     const count = selected.length;
     const totalVolume = selected.reduce((sum, en) => sum + (en.volume || 0), 0);
-    const totalPay = selected.reduce((sum, en) => sum + (en.totalEmpreiteiro || 0), 0);
+    const totalPay = selected.reduce((sum, en) => sum + (usuarioPodeVerFinanceiroEmpreiteiro() ? (en.totalEmpreiteiro || 0) : (en.totalDescarga || 0)), 0);
     
     const countBadge = document.getElementById('fechamentoQtdCargas');
     const volText = document.getElementById('fechamentoVolumeTotal');
@@ -533,7 +562,9 @@ window.gerarRelatorioConsolidado = function() {
     win.document.close();
 };
 
-if (formEntrada) {
+function configurarSubmitEntrada() {
+    if (!formEntrada || formEntrada.dataset.submitEntradaBound === '1') return;
+    formEntrada.dataset.submitEntradaBound = '1';
     formEntrada.addEventListener('submit', async (e) => {
         e.preventDefault();
         const calcData = calcularVolumeAtual();
@@ -564,6 +595,8 @@ if (formEntrada) {
             alturas: inputsAlt.map(i => parseDecimalValue(i?.value) || 0), // Salvar alturas individuais
             valorMetroEmpreiteiro: calcData.valorMetro,
             totalEmpreiteiro: calcData.totalFinanceiro,
+            valorDescargaM3: calcData.valorDescargaM3,
+            totalDescarga: calcData.totalDescarga,
             atualizadoEm: new Date().toISOString()
         };
         
@@ -585,10 +618,15 @@ if (formEntrada) {
                 novaEntrada.criadoPor = usuarioAuditoria;
                 novaEntrada.atualizadoPor = usuarioAuditoria;
                 await addDoc(collection(db, 'entradas'), novaEntrada);
-                alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
+                const valorMensagem = usuarioPodeVerFinanceiroEmpreiteiro()
+                    ? calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})
+                    : calcData.totalDescarga.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+                const labelMensagem = usuarioPodeVerFinanceiroEmpreiteiro() ? 'Valor empreiteiro' : 'Valor da descarga';
+                alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) registrada com sucesso!\n${labelMensagem}: ${valorMensagem}`);
             }
             
             formEntrada.reset();
+            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(1.05) : 'R$ 1,05';
             if(entData) entData.valueAsDate = new Date();
             if(entHorario) {
                 const now = new Date();
@@ -628,6 +666,13 @@ window.visualizarEntrada = function(id) {
         alturasStr = `Esq: [${formatDecimalValue(en.alturas[0])}m, ${formatDecimalValue(en.alturas[1])}m, ${formatDecimalValue(en.alturas[2])}m]
 Dir: [${formatDecimalValue(en.alturas[3])}m, ${formatDecimalValue(en.alturas[4])}m, ${formatDecimalValue(en.alturas[5])}m]`;
     }
+    const financeiroDetalhe = usuarioPodeVerFinanceiroEmpreiteiro()
+        ? `Valor/Metro Empreiteiro: R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}
+Total Empreiteiro: R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}
+Valor Descarga/m³: R$ ${(en.valorDescargaM3 || 0).toFixed(2)}
+Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`
+        : `Valor Descarga/m³: R$ ${(en.valorDescargaM3 || 0).toFixed(2)}
+Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`;
     
     alert(`Detalhes da Entrada:
 Romaneio: ${en.romaneioNum || 'N/A'}
@@ -645,8 +690,7 @@ Altura Média: ${formatDecimalValue(en.mediaAltura)}m
 Volume Total: ${en.volume.toFixed(2).replace('.', ',')}m³
 
 --- FINANCEIRO ---
-Valor/Metro: R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}
-Total a Pagar: R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}
+${financeiroDetalhe}
 `);
 };
 
@@ -663,6 +707,7 @@ window.alterarEntrada = function(id) {
     document.getElementById('entPlaca').value = en.placa || '';
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(en.valorDescargaM3 || 1.05) : formatDecimalValue(en.valorDescargaM3 || 1.05);
     
     // Carregar alturas individuais se existirem
     if (en.alturas && Array.isArray(en.alturas)) {
@@ -715,6 +760,13 @@ window.imprimirEntrada = function(id) {
     if(!en) return;
     const dtObj = new Date(en.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
+    const reciboFinanceiro = usuarioPodeVerFinanceiroEmpreiteiro()
+        ? `<br><p><strong>Valor Empreiteiro por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
+<p><strong>Total Empreiteiro:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</p>
+<p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`
+        : `<br><p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`;
     let win = window.open('', '_blank');
     win.document.write(`
 <html><head><title>Imprimir Recibo de Entrada</title>
@@ -728,8 +780,7 @@ window.imprimirEntrada = function(id) {
 <p><strong>Veículo:</strong> ${en.caminhao || 'N/A'} - Placa: ${en.placa}</p>
 <table><tr><th>Comprimento</th><th>Largura</th><th>Altura Média</th><th>Volume (m³)</th></tr>
 <tr><td>${formatDecimalValue(en.comp)}m</td><td>${formatDecimalValue(en.larg)}m</td><td>${formatDecimalValue(en.mediaAltura)}m</td><td><strong>${en.volume.toFixed(2).replace('.', ',')}</strong></td></tr></table>
-<br><p><strong>Valor por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
-<h3><strong>TOTAL A PAGAR:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</h3>
+${reciboFinanceiro}
 <br><br><br>
 <div style="text-align:center; width: 300px; border-top: 1px solid #000; margin: 0 auto;">Assinatura</div>
 </body></html>
@@ -840,8 +891,12 @@ function inicializarModuloEntrada() {
     resInfo = document.getElementById('entInfoMedia');
     resFinanceiro = document.getElementById('entResultadoFinanceiro');
     infoFinanceira = document.getElementById('entInfoFinanceira');
+    entValorDescarga = document.getElementById('entValorDescarga');
+    resDescarga = document.getElementById('entResultadoDescarga');
+    infoDescarga = document.getElementById('entInfoDescarga');
     entData = document.getElementById('entData');
     entHorario = document.getElementById('entHorario');
+    configurarSubmitEntrada();
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
     ['empNome', 'entRomaneio', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
@@ -867,6 +922,10 @@ function inicializarModuloEntrada() {
     });
 
     if(selectEmpreiteiro) selectEmpreiteiro.addEventListener('change', calcularVolumeAtual);
+    if(entValorDescarga) {
+        entValorDescarga.addEventListener('input', window.formatCurrencyInput);
+        entValorDescarga.addEventListener('input', calcularVolumeAtual);
+    }
 
     // Eventos de Busca e Filtro de Entradas
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);

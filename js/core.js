@@ -385,6 +385,9 @@ const App = {
                 }
             });
         });
+        if (typeof window.atualizarPermissoesEntrada === 'function') {
+            window.atualizarPermissoesEntrada();
+        }
     },
 
     renderPermissionEditor(selected = {}) {
@@ -607,9 +610,13 @@ const App = {
                                 if (cargoMudou || (perms && !perms.allowedSections.includes(currentSection))) {
                                     if (perms && perms.allowedSections.length > 0) {
                                         console.log(`Core: Redirecionando para a seção permitida "${perms.allowedSections[0]}"`);
-                                        this.showSection(perms.allowedSections[0]);
+                                        const savedSection = localStorage.getItem('appActiveSection');
+                                        const nextSection = savedSection && perms.allowedSections.includes(savedSection)
+                                            ? savedSection
+                                            : perms.allowedSections[0];
+                                        this.showSection(nextSection);
                                         document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
-                                        const link = document.querySelector(`.sidebar nav ul li a[data-target="${perms.allowedSections[0]}"]`);
+                                        const link = document.querySelector(`.sidebar nav ul li a[data-target="${nextSection}"]`);
                                         if (link) link.classList.add('active');
                                     }
                                 }
@@ -668,7 +675,11 @@ const App = {
         });
 
         // Mostrar primeira seção permitida por padrão ao carregar
-        const startSection = this.getCurrentPermissions().allowedSections[0] || 'view-dashboard';
+        const permissions = this.getCurrentPermissions();
+        const savedSection = localStorage.getItem('appActiveSection');
+        const startSection = savedSection && (permissions.allowedSections || []).includes(savedSection)
+            ? savedSection
+            : (permissions.allowedSections[0] || 'view-dashboard');
             
         this.showSection(startSection);
     },
@@ -701,6 +712,9 @@ const App = {
         
         if (!found && id !== 'view-dashboard' && id !== 'view-pendente') {
             console.error("Core: Seção não encontrada: " + id);
+        }
+        if (found && id !== 'view-pendente') {
+            localStorage.setItem('appActiveSection', id);
         }
         this.applyPermissionVisibility();
         return id;

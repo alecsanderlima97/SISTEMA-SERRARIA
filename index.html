@@ -1747,7 +1747,10 @@
                                     <label>Largura Média (m) *</label>
                                     <input type="text" id="entLarg" inputmode="decimal" required placeholder="Ex: 2,40">
                                 </div>
-                                <div class="input-group" style="grid-column: span 2;"></div>
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label for="entValorDescarga">Valor descarregamento (R$ / m³)</label>
+                                    <input type="text" id="entValorDescarga" placeholder="R$ 1,05" value="R$ 1,05">
+                                </div>
 
                                 <!-- Alturas -->
                                 <div style="grid-column: 1 / -1; margin-top: 10px;">
@@ -1781,16 +1784,21 @@
                                 </div>
 
                                 <!-- Resultado Real-Time -->
-                                <div style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;">
                                     <div style="text-align: center; padding: 15px; background: rgba(44, 201, 144, 0.1); border: 1px dashed var(--accent-color); border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Volume M³</h4>
                                         <div id="entResultadoVolume" style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">0.000 m³</div>
                                         <small id="entInfoMedia" style="color:#aaa; font-size: 0.75rem;">Média: 0.00m</small>
                                     </div>
-                                    <div style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
-                                        <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto</h4>
+                                    <div id="entCardFinanceiroEmpreiteiro" style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
+                                        <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto Empreiteiro</h4>
                                         <div id="entResultadoFinanceiro" style="font-size: 1.8rem; font-weight: bold; color:#3498db; margin-top: 5px;">R$ 0,00</div>
                                         <small id="entInfoFinanceira" style="color:#aaa; font-size: 0.75rem;">Base: R$ 0,00/m³</small>
+                                    </div>
+                                    <div id="entCardFinanceiroDescarga" style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; border-radius: 8px;">
+                                        <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Total Descarga</h4>
+                                        <div id="entResultadoDescarga" style="font-size: 1.8rem; font-weight: bold; color:#f59e0b; margin-top: 5px;">R$ 0,00</div>
+                                        <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Base: R$ 1,05/m³</small>
                                     </div>
                                 </div>
 
