@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, onSnapshot } from './firebase-init.js';
 
 // ---- MÓDULO: ENTRADA DE MADEIRA E EMPREITEIROS ----
 
@@ -160,6 +160,18 @@ let formEntrada, listaEntradas, filtroEntradasNome, entRomaneio, entComp, entLar
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
 let entradasSelecionadas = new Set();
+let entradasUnsubscribe = null;
+
+function getUsuarioAtualAuditoria() {
+    const user = auth.currentUser || {};
+    const nomeHeader = document.getElementById('userNameHeader')?.textContent?.trim();
+    const nome = window.App?.userName || nomeHeader || user.displayName || user.email || 'Usuario nao identificado';
+    return {
+        uid: user.uid || null,
+        nome: nome,
+        email: user.email || null
+    };
+}
 
 // --- Funções de Máscara Decimal e Conversão ---
 function formatDecimalValue(val) {
@@ -228,16 +240,32 @@ function calcularVolumeAtual() {
 async function carregarEntradas() {
     if(!listaEntradas) return;
     listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
-    
-    try {
-        const querySnapshot = await getDocs(collection(db, 'entradas'));
-        window.entradasAtuaisLista = [];
-        entradasSelecionadas.clear(); // Reset selection on reload
-        const checkAll = document.getElementById('checkAllEntradas');
-        if (checkAll) checkAll.checked = false;
-        
-        querySnapshot.forEach(doc => window.entradasAtuaisLista.push({ id: doc.id, ...doc.data() }));
+
+    if (entradasUnsubscribe) {
         renderizarEntradas();
+        return;
+    }
+
+    try {
+        entradasUnsubscribe = onSnapshot(collection(db, 'entradas'), (querySnapshot) => {
+            window.entradasAtuaisLista = [];
+            const idsAtuais = new Set();
+            querySnapshot.forEach(docSnap => {
+                idsAtuais.add(docSnap.id);
+                window.entradasAtuaisLista.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            entradasSelecionadas.forEach(id => {
+                if (!idsAtuais.has(id)) entradasSelecionadas.delete(id);
+            });
+
+            const checkAll = document.getElementById('checkAllEntradas');
+            if (checkAll) checkAll.checked = false;
+            renderizarEntradas();
+        }, (error) => {
+            console.error(error);
+            listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
+        });
     } catch (error) {
         console.error(error);
         listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
@@ -284,6 +312,14 @@ function renderizarEntradas() {
         const dtStr = dtObj.toLocaleDateString('pt-BR');
         const valorTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
         const isChecked = entradasSelecionadas.has(en.id) ? 'checked' : '';
+        const autorCriacao = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '';
+        const autorAlteracao = en.atualizadoPor?.nome || '';
+        const infoAutor = autorAlteracao
+            ? `Alterado por ${autorAlteracao}`
+            : (autorCriacao ? `Lancado por ${autorCriacao}` : '');
+        const infoAutorHtml = infoAutor
+            ? `<br><small style="color:#f59e0b; font-size:0.68rem; font-weight:600; letter-spacing:0.2px;"><i class="fa-solid fa-user-pen"></i> ${infoAutor}</small>`
+            : '';
         
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="check-entrada" data-id="${en.id}" ${isChecked} style="transform: scale(1.25); cursor: pointer;"></td>
@@ -291,6 +327,7 @@ function renderizarEntradas() {
             <td>
                 <strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br>
                 <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'} | Mot: ${en.motorista || '-'}</small>
+                ${infoAutorHtml}
             </td>
             <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:#aaa;">${en.caminhao || '-'}</small></td>
             <td style="font-size: 0.9em;">
@@ -508,6 +545,7 @@ if (formEntrada) {
         
         const empreiteiroId = selectEmpreiteiro.value;
         const empreiteiroNome = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
+        const usuarioAuditoria = getUsuarioAtualAuditoria();
         
         const novaEntrada = {
             data: document.getElementById('entData').value,
@@ -536,6 +574,7 @@ if (formEntrada) {
 
         try {
             if (entradaEditandoId) {
+                novaEntrada.atualizadoPor = usuarioAuditoria;
                 await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) atualizada com sucesso!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
@@ -543,6 +582,8 @@ if (formEntrada) {
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
             } else {
                 novaEntrada.criadoEm = new Date().toISOString();
+                novaEntrada.criadoPor = usuarioAuditoria;
+                novaEntrada.atualizadoPor = usuarioAuditoria;
                 await addDoc(collection(db, 'entradas'), novaEntrada);
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) registrada com sucesso!\nValor a pagar: ${calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`);
             }
@@ -554,7 +595,7 @@ if (formEntrada) {
                 entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
             }
             calcularVolumeAtual();
-            await carregarEntradas();
+            carregarEntradas();
         } catch (error) {
             console.error(error);
             alert("Erro ao salvar entrada.");
@@ -698,6 +739,17 @@ window.imprimirEntrada = function(id) {
 };
 
 window.switchTabEntrada = function(tabName) {
+    const subTabs = ['registro', 'lista', 'empreiteiros'];
+    const canAccess = (name) => !window.hasSubsectionPermission || window.hasSubsectionPermission('view-entrada', name);
+    if (!canAccess(tabName)) {
+        const fallback = subTabs.find(canAccess);
+        if (!fallback) {
+            alert('Seu usuario nao tem permissao para acessar telas internas de Entrada de Toras.');
+            return;
+        }
+        tabName = fallback;
+    }
+
     const tabRegistro = document.getElementById('btnTabEntradaRegistro');
     const tabLista = document.getElementById('btnTabEntradaLista');
     const tabEmpreiteiros = document.getElementById('btnTabEntradaEmpreiteiros');
@@ -712,6 +764,10 @@ window.switchTabEntrada = function(tabName) {
     const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
 
     if (!tabRegistro || !tabLista || !tabEmpreiteiros || !cardEntrada || !panelEntradas || !cardEmp || !panelEmp || !gridLayout || !colEsquerda || !colDireita) return;
+
+    tabRegistro.style.display = canAccess('registro') ? 'flex' : 'none';
+    tabLista.style.display = canAccess('lista') ? 'flex' : 'none';
+    tabEmpreiteiros.style.display = canAccess('empreiteiros') ? 'flex' : 'none';
 
     // Reset styles
     tabRegistro.style.color = 'var(--text-muted)';

@@ -12,7 +12,7 @@ const ROLE_PERMISSIONS = {
         readOnly: false
     },
     'patrao': {
-        allowedSections: ['view-dashboard', 'view-historico', 'view-patio', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-historico', 'view-configuracoes'],
         readOnly: true
     },
     'mecanico': {
@@ -41,6 +41,78 @@ const ROLE_NAMES = {
     'estoquista': 'Estoquista',
     'PENDENTE': 'Acesso Pendente'
 };
+
+const SECTION_PERMISSIONS = [
+    { id: 'view-dashboard', label: 'Inicio' },
+    { id: 'view-romaneio-v2', label: 'Gerar Romaneio' },
+    { id: 'view-historico', label: 'Historico de Cargas' },
+    { id: 'view-clientes', label: 'Clientes' },
+    { id: 'view-transportes', label: 'Transportadoras' },
+    { id: 'view-entrada', label: 'Entrada de Toras' },
+    { id: 'view-cavaco', label: 'Venda Cavaco/Po' },
+    { id: 'view-produtos', label: 'Madeiras / Estilos' },
+    { id: 'view-estoque', label: 'Controle de Estoque' },
+    { id: 'view-frotas', label: 'Controle de Frota' },
+    { id: 'view-rh', label: 'RH Funcionarios' },
+    { id: 'view-calculadoras', label: 'Calculadoras' },
+    { id: 'view-agenda', label: 'Agenda / Calendario' },
+    { id: 'view-configuracoes', label: 'Configuracoes' }
+];
+
+const SUBSECTION_PERMISSIONS = {
+    'view-entrada': {
+        label: 'Entrada de Toras',
+        items: [
+            { id: 'registro', label: 'Registrar tora' },
+            { id: 'lista', label: 'Ultimas entradas / historico' },
+            { id: 'empreiteiros', label: 'Empreiteiros' }
+        ]
+    }
+};
+
+function normalizeRole(role) {
+    const value = (role || '').toString().trim();
+    if (!value) return 'PENDENTE';
+    const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (normalized === 'pendente') return 'PENDENTE';
+    return normalized;
+}
+
+function getDefaultRolePermissions(role) {
+    const key = normalizeRole(role);
+    return ROLE_PERMISSIONS[key] || ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.PENDENTE;
+}
+
+function getEffectivePermissions(userData = {}) {
+    const custom = userData.permissoes || userData.permissions;
+    if (custom && Array.isArray(custom.allowedSections)) {
+        return {
+            allowedSections: custom.allowedSections,
+            allowedSubsections: custom.allowedSubsections || {},
+            readOnly: !!custom.readOnly
+        };
+    }
+    const defaults = getDefaultRolePermissions(userData.cargo);
+    return {
+        allowedSections: defaults.allowedSections || [],
+        allowedSubsections: {},
+        readOnly: !!defaults.readOnly
+    };
+}
+
+function getRoleDisplayName(role) {
+    const key = normalizeRole(role);
+    return ROLE_NAMES[key] || ROLE_NAMES[role] || role || 'Acesso Pendente';
+}
+
+function permissionOptionHtml(item, checked = false) {
+    return `
+        <label style="display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.025); cursor:pointer;">
+            <input type="checkbox" value="${item.id}" ${checked ? 'checked' : ''} style="width:16px; height:16px;">
+            <span style="font-size: 0.9rem; color: #f8fafc;">${item.label}</span>
+        </label>
+    `;
+}
 
 
 // Objeto de compatibilidade para evitar que scripts antigos travem o sistema
@@ -253,6 +325,9 @@ window.exportarBackup = async function(btnElement) {
 
 const App = {
     user: null,
+    userRole: 'PENDENTE',
+    userPermissions: { allowedSections: ['view-pendente'], allowedSubsections: {}, readOnly: true },
+    usuariosConfigById: {},
     userUnsubscribe: null, // Guarda a função de desinscrição do onSnapshot
     usuariosUnsubscribe: null, // Guarda a função de desinscrição da lista de usuários
 
@@ -271,6 +346,97 @@ const App = {
                 window.salvarUsuario();
             });
         }
+        this.renderPermissionEditor();
+    },
+
+    getCurrentPermissions() {
+        return this.userPermissions || getEffectivePermissions({ cargo: this.userRole });
+    },
+
+    canAccessSection(sectionId) {
+        const permissions = this.getCurrentPermissions();
+        return (permissions.allowedSections || []).includes(sectionId);
+    },
+
+    canAccessSubsection(sectionId, subId) {
+        const permissions = this.getCurrentPermissions();
+        const allowed = permissions.allowedSubsections || {};
+        if (!SUBSECTION_PERMISSIONS[sectionId]) return true;
+        if (!Object.prototype.hasOwnProperty.call(allowed, sectionId)) return true;
+        const list = allowed[sectionId];
+        return Array.isArray(list) && list.includes(subId);
+    },
+
+    applyPermissionVisibility() {
+        const permissions = this.getCurrentPermissions();
+        const allowedSections = permissions.allowedSections || [];
+        document.querySelectorAll('.sidebar nav ul li a[data-target]').forEach(link => {
+            const target = link.getAttribute('data-target');
+            const li = link.closest('li');
+            if (li) li.style.display = allowedSections.includes(target) ? '' : 'none';
+        });
+
+        Object.entries(SUBSECTION_PERMISSIONS).forEach(([sectionId, group]) => {
+            group.items.forEach(item => {
+                const suffix = item.id.charAt(0).toUpperCase() + item.id.slice(1);
+                const el = document.getElementById(`btnTabEntrada${suffix}`);
+                if (el && sectionId === 'view-entrada') {
+                    el.style.display = this.canAccessSubsection(sectionId, item.id) ? 'flex' : 'none';
+                }
+            });
+        });
+    },
+
+    renderPermissionEditor(selected = {}) {
+        const container = document.getElementById('form-user-permissoes');
+        if (!container) return;
+        const allowedSections = selected.allowedSections || [];
+        container.innerHTML = SECTION_PERMISSIONS.map(item => permissionOptionHtml(item, allowedSections.includes(item.id))).join('');
+        container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', () => this.renderSubPermissionEditor(this.getPermissionsFromForm()));
+        });
+        this.renderSubPermissionEditor(selected);
+    },
+
+    renderSubPermissionEditor(selected = {}) {
+        const wrap = document.getElementById('form-user-subpermissoes-wrap');
+        const container = document.getElementById('form-user-subpermissoes');
+        if (!wrap || !container) return;
+
+        const allowedSections = selected.allowedSections || [];
+        const allowedSubsections = selected.allowedSubsections || {};
+        const groups = Object.entries(SUBSECTION_PERMISSIONS).filter(([sectionId]) => allowedSections.includes(sectionId));
+
+        if (groups.length === 0) {
+            wrap.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        wrap.style.display = 'block';
+        container.innerHTML = groups.map(([sectionId, group]) => {
+            const selectedItems = allowedSubsections[sectionId] || group.items.map(item => item.id);
+            const options = group.items.map(item => permissionOptionHtml(item, selectedItems.includes(item.id))).join('');
+            return `
+                <div data-subsection-group="${sectionId}">
+                    <div style="font-size:0.85rem; color:var(--accent-color); font-weight:700; margin-bottom:8px;">${group.label}</div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:8px;">${options}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    getPermissionsFromForm() {
+        const sectionInputs = Array.from(document.querySelectorAll('#form-user-permissoes input[type="checkbox"]:checked'));
+        const allowedSections = sectionInputs.map(input => input.value);
+        const allowedSubsections = {};
+
+        document.querySelectorAll('#form-user-subpermissoes [data-subsection-group]').forEach(group => {
+            const sectionId = group.getAttribute('data-subsection-group');
+            allowedSubsections[sectionId] = Array.from(group.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);
+        });
+
+        return { allowedSections, allowedSubsections, readOnly: false };
     },
 
 
@@ -394,13 +560,14 @@ const App = {
                         const userData = snapshot.data();
                         const novoCargo = userData.cargo || 'PENDENTE';
                         const novoNome = userData.nome || user.email.split('@')[0].toUpperCase();
+                        const novasPermissoes = getEffectivePermissions(userData);
                         
                         console.log(`Core [Sincronização em Tempo Real]: Nome: ${novoNome} | Cargo: ${novoCargo}`);
                         
                         const cargoMudou = this.userRole !== novoCargo;
                         
                         // Cancelar escuta da lista de usuários se o cargo do próprio usuário logado deixar de ser gerente
-                        if (novoCargo !== 'gerente' && this.usuariosUnsubscribe) {
+                        if (normalizeRole(novoCargo) !== 'gerente' && this.usuariosUnsubscribe) {
                             console.log("Core: Cancelando escuta de lista de usuários pois cargo mudou...");
                             this.usuariosUnsubscribe();
                             this.usuariosUnsubscribe = null;
@@ -408,6 +575,7 @@ const App = {
                         
                         // Atualiza as variáveis globais da aplicação
                         this.userRole = novoCargo;
+                        this.userPermissions = novasPermissoes;
                         this.userName = novoNome;
                         
                         // Aplicar classe de perfil dinamicamente no body para controle CSS
@@ -417,10 +585,11 @@ const App = {
                         const nameHeader = document.getElementById('userNameHeader');
                         const roleHeader = document.querySelector('.header-user-role');
                         if (nameHeader) nameHeader.textContent = this.userName;
-                        if (roleHeader) roleHeader.textContent = ROLE_NAMES[this.userRole] || this.userRole;
+                        if (roleHeader) roleHeader.textContent = getRoleDisplayName(this.userRole);
+                        this.applyPermissionVisibility();
                         
                         // Direcionar telas de acordo com a permissão atômica atualizada
-                        if (this.userRole === 'PENDENTE') {
+                        if (normalizeRole(this.userRole) === 'PENDENTE') {
                             const pendNome = document.getElementById('pendente-user-name');
                             const pendEmail = document.getElementById('pendente-user-email');
                             if (pendNome) pendNome.textContent = this.userName;
@@ -432,7 +601,7 @@ const App = {
                                 window.location.href = 'index.html';
                             } else {
                                 const currentSection = document.querySelector('.view-section.active-section')?.id || 'view-dashboard';
-                                const perms = ROLE_PERMISSIONS[this.userRole];
+                                const perms = this.getCurrentPermissions();
                                 
                                 // Se o cargo mudou ou se o usuário estiver em uma tela proibida, redireciona dinamicamente
                                 if (cargoMudou || (perms && !perms.allowedSections.includes(currentSection))) {
@@ -449,7 +618,7 @@ const App = {
                         
                         // Se for gerente, renderiza e libera o painel de administração de usuários nas configurações
                         const panel = document.getElementById('panelConfigUsuarios');
-                        if (this.userRole === 'gerente') {
+                        if (normalizeRole(this.userRole) === 'gerente') {
                             if (panel) {
                                 panel.style.display = 'block';
                                 this.carregarTabelaUsuarios();
@@ -499,16 +668,14 @@ const App = {
         });
 
         // Mostrar primeira seção permitida por padrão ao carregar
-        const startSection = this.userRole && ROLE_PERMISSIONS[this.userRole] 
-            ? ROLE_PERMISSIONS[this.userRole].allowedSections[0] 
-            : 'view-dashboard';
+        const startSection = this.getCurrentPermissions().allowedSections[0] || 'view-dashboard';
             
         this.showSection(startSection);
     },
 
     showSection(id) {
         const currentRole = this.userRole || 'PENDENTE';
-        const permissions = ROLE_PERMISSIONS[currentRole];
+        const permissions = this.getCurrentPermissions();
         
         if (permissions && !permissions.allowedSections.includes(id)) {
             console.warn(`Core: Acesso negado à seção ${id} para o cargo ${currentRole}`);
@@ -535,6 +702,8 @@ const App = {
         if (!found && id !== 'view-dashboard' && id !== 'view-pendente') {
             console.error("Core: Seção não encontrada: " + id);
         }
+        this.applyPermissionVisibility();
+        return id;
     },
 
     carregarTabelaUsuarios() {
@@ -560,11 +729,15 @@ const App = {
                 }
                 
                 let html = '';
+                this.usuariosConfigById = {};
                 qSnap.forEach(doc => {
                     const u = doc.data();
                     const id = doc.id;
-                    const cargoFormatado = ROLE_NAMES[u.cargo] || u.cargo;
-                    const statusBadge = u.cargo === 'PENDENTE' 
+                    this.usuariosConfigById[id] = { id, ...u };
+                    const permissions = getEffectivePermissions(u);
+                    const cargoFormatado = getRoleDisplayName(u.cargo);
+                    const isPending = normalizeRole(u.cargo) === 'PENDENTE' || (permissions.allowedSections || []).length === 0;
+                    const statusBadge = isPending 
                         ? `<span style="background: rgba(230,126,34,0.15); color: #e67e22; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(230,126,34,0.3);">Pendente</span>`
                         : `<span style="background: rgba(46,204,113,0.15); color: #2ecc71; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(46,204,113,0.3);">Ativo</span>`;
                     
@@ -576,7 +749,7 @@ const App = {
                             <td>${statusBadge}</td>
                             <td style="text-align: right;">
                                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                    <button onclick="window.abrirEditarUsuario('${id}', '${u.nome}', '${u.email}', '${u.cargo}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">
+                                    <button onclick="window.abrirEditarUsuario('${id}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">
                                         <i class="fa-solid fa-pen"></i> Alterar
                                     </button>
                                     <button onclick="window.excluirUsuario('${id}')" class="btn-danger" style="padding: 6px 10px; font-size: 12px;">
@@ -608,9 +781,11 @@ if (document.readyState === 'loading') {
 }
 
 window.App = App;
+window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
+window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
 window.navegarPara = function(targetId) {
     if (App && typeof App.showSection === 'function') {
-        App.showSection(targetId);
+        targetId = App.showSection(targetId);
         
         // Atualizar classe ativa na sidebar
         document.querySelectorAll('.sidebar nav ul li a').forEach(l => l.classList.remove('active'));
@@ -668,6 +843,8 @@ window.abrirModalNovoUsuario = function() {
         form.reset();
         document.getElementById('form-user-id').value = '';
         document.getElementById('form-user-email').disabled = false;
+        document.getElementById('form-user-cargo').value = '';
+        App.renderPermissionEditor({ allowedSections: [], allowedSubsections: {}, readOnly: false });
         title.innerHTML = `<i class="fa-solid fa-user-plus"></i> Pré-Cadastrar Usuário`;
         modal.style.display = 'flex';
     }
@@ -681,13 +858,15 @@ window.fecharModalUsuario = function() {
 window.abrirEditarUsuario = function(id, nome, email, cargo) {
     const modal = document.getElementById('modalUsuario');
     const title = document.getElementById('modalUsuarioTitle');
+    const usuario = App.usuariosConfigById[id] || { id, nome, email, cargo };
     
     if (modal && title) {
         document.getElementById('form-user-id').value = id;
-        document.getElementById('form-user-nome').value = nome;
-        document.getElementById('form-user-email').value = email;
+        document.getElementById('form-user-nome').value = usuario.nome || '';
+        document.getElementById('form-user-email').value = usuario.email || '';
         document.getElementById('form-user-email').disabled = true; // Email não muda
-        document.getElementById('form-user-cargo').value = cargo;
+        document.getElementById('form-user-cargo').value = usuario.cargo || '';
+        App.renderPermissionEditor(getEffectivePermissions(usuario));
         
         title.innerHTML = `<i class="fa-solid fa-user-pen"></i> Alterar Permissões de Usuário`;
         modal.style.display = 'flex';
@@ -698,11 +877,24 @@ window.salvarUsuario = async function() {
     const id = document.getElementById('form-user-id').value;
     const nome = document.getElementById('form-user-nome').value.trim();
     const email = document.getElementById('form-user-email').value.trim().toLowerCase();
-    const cargo = document.getElementById('form-user-cargo').value;
+    const cargo = document.getElementById('form-user-cargo').value.trim();
+    const permissoes = App.getPermissionsFromForm();
     
-    if (!nome || !email) {
+    if (!nome || !email || !cargo) {
         alert("Preencha todos os campos obrigatórios.");
         return;
+    }
+
+    if (normalizeRole(cargo) !== 'PENDENTE' && permissoes.allowedSections.length === 0) {
+        alert("Selecione ao menos uma aba para liberar o acesso deste usuário.");
+        return;
+    }
+
+    for (const sectionId of permissoes.allowedSections) {
+        if (SUBSECTION_PERMISSIONS[sectionId] && (permissoes.allowedSubsections[sectionId] || []).length === 0) {
+            alert("Selecione ao menos uma tela interna para cada aba liberada.");
+            return;
+        }
     }
     
     const btnSalvar = document.getElementById('btnSalvarUsuario');
@@ -719,6 +911,8 @@ window.salvarUsuario = async function() {
             await updateDoc(userRef, {
                 nome: nome,
                 cargo: cargo,
+                cargoNormalizado: normalizeRole(cargo),
+                permissoes: permissoes,
                 atualizadoEm: new Date().toISOString()
             });
             alert("Permissões do usuário atualizadas com sucesso!");
@@ -729,6 +923,8 @@ window.salvarUsuario = async function() {
                 nome: nome,
                 email: email,
                 cargo: cargo,
+                cargoNormalizado: normalizeRole(cargo),
+                permissoes: permissoes,
                 criadoEm: new Date().toISOString()
             });
             alert("Pré-cadastro realizado com sucesso! Quando o funcionário acessar com este e-mail, ele já terá o cargo definido.");
