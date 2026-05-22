@@ -136,6 +136,103 @@ window.fecharModalPatio = function() {
     }
 };
 
+window.abrirFluxoPatio = async function() {
+    const panel = document.getElementById('panelFluxoPatio');
+    if (!panel) return;
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    await renderizarFluxoPatio();
+};
+
+window.fecharFluxoPatio = function() {
+    const panel = document.getElementById('panelFluxoPatio');
+    if (panel) panel.style.display = 'none';
+};
+
+async function renderizarFluxoPatio() {
+    const tbody = document.getElementById('fluxoPatioLista');
+    const resumo = document.getElementById('fluxoPatioResumo');
+    const classes = document.getElementById('fluxoPatioClasses');
+    const info = document.getElementById('fluxoPatioInfo');
+    if (!tbody || !resumo || !classes) return;
+
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando fluxo do patio...</td></tr>';
+    resumo.innerHTML = '';
+    classes.innerHTML = '';
+
+    try {
+        const querySnapshot = await getDocs(collection(db, 'patio_relatorios'));
+        const relatorios = [];
+        querySnapshot.forEach(docSnap => relatorios.push({ id: docSnap.id, ...docSnap.data() }));
+        relatorios.sort((a, b) => new Date(b.criadoEm || `${b.data}T${b.horario || '00:00'}`) - new Date(a.criadoEm || `${a.data}T${a.horario || '00:00'}`));
+
+        const atual = relatorios[0];
+        if (!atual) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
+            if (info) info.textContent = 'Nenhum controle de producao salvo ainda.';
+            return;
+        }
+
+        const itens = Array.isArray(atual.itens) ? atual.itens : [];
+        const totais = calcularTotaisFluxoPatio(itens);
+        const dataFmt = atual.data ? new Date(`${atual.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
+        if (info) info.textContent = `Ultima atualizacao: ${dataFmt} ${atual.horario || ''} | Periodo: ${atual.periodo || '-'}`;
+
+        resumo.innerHTML = `
+            ${cardFluxoPatio('Madeira serrando', atual.serrando || '-')}
+            ${cardFluxoPatio('Pacotes no patio', totais.pacotes)}
+            ${cardFluxoPatio('Pecas no patio', totais.pecas)}
+            ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} m³`)}
+        `;
+
+        tbody.innerHTML = itens.length ? itens.map(item => `
+            <tr>
+                <td><strong>${atual.serrando || '-'}</strong><br><small style="color: var(--text-muted);">${item.tipo || '-'}</small></td>
+                <td>${formatarClasseFluxo(item.classe)}</td>
+                <td>${formatDecimalMockup(item.espessura)} x ${formatDecimalMockup(item.largura)} x ${formatDecimalMockup(item.comprimento)}</td>
+                <td>${item.totalPecas || item.pecas || 0}</td>
+                <td>${item.pacotes || 0}</td>
+                <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
+
+        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`)).join('');
+    } catch (error) {
+        console.error('Erro ao carregar fluxo do patio:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
+    }
+}
+
+function calcularTotaisFluxoPatio(itens) {
+    return itens.reduce((acc, item) => {
+        const classe = formatarClasseFluxo(item.classe);
+        if (!acc.porClasse[classe]) acc.porClasse[classe] = { volume: 0, pacotes: 0 };
+        acc.pacotes += Number(item.pacotes) || 0;
+        acc.pecas += Number(item.totalPecas) || Number(item.pecas) || 0;
+        acc.volume += Number(item.volume) || 0;
+        acc.porClasse[classe].volume += Number(item.volume) || 0;
+        acc.porClasse[classe].pacotes += Number(item.pacotes) || 0;
+        return acc;
+    }, { pacotes: 0, pecas: 0, volume: 0, porClasse: {} });
+}
+
+function cardFluxoPatio(label, value) {
+    return `
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 14px;">
+            <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${label}</div>
+            <div style="font-size: 1.25rem; color: white; font-weight: 800; margin-top: 6px;">${value}</div>
+        </div>
+    `;
+}
+
+function formatarClasseFluxo(classe) {
+    const value = (classe || '').toString().toUpperCase();
+    if (value.includes('1')) return '1ª';
+    if (value.includes('2')) return '2ª';
+    if (value.includes('3')) return '3ª';
+    return value || '-';
+}
+
 // Adicionar Item via Formulário
 function adicionarItemAoPatio() {
     const tipo = document.getElementById('patioItemTipo').value;
