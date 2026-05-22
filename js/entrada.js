@@ -155,7 +155,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
+let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entMato, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -313,10 +313,11 @@ function renderizarEntradas() {
     const dataFim = document.getElementById('filtroEntradasDataFim')?.value || '';
     
     const filtradas = window.entradasAtuaisLista.filter(en => {
-        // Filtro por Nome (Empreiteiro ou Motorista)
+        // Filtro por fornecedor, mato ou romaneio
         const emp = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
-        const mot = (en.motorista || '').toLowerCase();
-        const bateNome = !filtroNome || emp.includes(filtroNome) || mot.includes(filtroNome);
+        const mato = (en.mato || '').toLowerCase();
+        const romaneio = (en.romaneioNum || '').toLowerCase();
+        const bateNome = !filtroNome || emp.includes(filtroNome) || mato.includes(filtroNome) || romaneio.includes(filtroNome);
         
         // Filtro por Período de Data
         let bateData = true;
@@ -362,7 +363,8 @@ function renderizarEntradas() {
             <td>${dtStr} <br><small style="color:#aaa;">${en.horario || '-'}</small></td>
             <td>
                 <strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br>
-                <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'} | Mot: ${en.motorista || '-'}</small>
+                <small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br>
+                <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small>
                 ${infoAutorHtml}
             </td>
             <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:#aaa;">${en.caminhao || '-'}</small></td>
@@ -405,9 +407,10 @@ function getDescargasFiltradas() {
     return window.entradasAtuaisLista.filter(en => {
         if (!temDescarga(en)) return false;
         const funcionario = (en.criadoPor?.nome || en.usuarioNome || en.autorNome || '').toLowerCase();
-        const motorista = (en.motorista || '').toLowerCase();
+        const fornecedor = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
+        const mato = (en.mato || '').toLowerCase();
         const romaneio = (en.romaneioNum || '').toLowerCase();
-        const bateNome = !filtroNome || funcionario.includes(filtroNome) || motorista.includes(filtroNome) || romaneio.includes(filtroNome);
+        const bateNome = !filtroNome || funcionario.includes(filtroNome) || fornecedor.includes(filtroNome) || mato.includes(filtroNome) || romaneio.includes(filtroNome);
         let bateData = true;
         if (dataInicio) bateData = bateData && (en.data >= dataInicio);
         if (dataFim) bateData = bateData && (en.data <= dataFim);
@@ -420,7 +423,7 @@ function renderizarDescarregamentos() {
     const filtradas = getDescargasFiltradas();
 
     if (filtradas.length === 0) {
-        listaDescarregamentos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
+        listaDescarregamentos.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
         atualizarResumoDescarregamento(filtradas);
         return;
     }
@@ -432,12 +435,25 @@ function renderizarDescarregamentos() {
         const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
         tr.innerHTML = `
             <td>${dtStr}<br><small style="color:#aaa;">${en.horario || '-'}</small></td>
-            <td><strong>${funcionario}</strong></td>
-            <td><strong>${en.romaneioNum || '-'}</strong><br><small style="color:#aaa;">Mot: ${en.motorista || '-'}</small></td>
+            <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br><small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small></td>
+            <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. MÃ©dia: ${formatDecimalValue(en.mediaAltura)}m</td>
             <td><span class="badge" style="background:#555;">${en.placa || '-'}</span></td>
             <td style="font-weight:bold; color:var(--accent-color);">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
             <td>${(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
             <td style="font-weight:bold; color:#f59e0b;">${(en.totalDescarga || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+            <td>
+                <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.visualizarEntrada('${en.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Visualizar Descarregamento">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    <button onclick="window.alterarEntrada('${en.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1.1rem; padding: 4px;" title="Alterar Descarregamento">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button onclick="window.deletarEntrada('${en.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.1rem; padding: 4px;" title="Excluir Descarregamento">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </td>
         `;
         listaDescarregamentos.appendChild(tr);
     });
@@ -545,10 +561,12 @@ function atualizarPainelFechamento() {
     const totalPay = selected.reduce((sum, en) => sum + (usuarioPodeVerFinanceiroEmpreiteiro() ? (en.totalEmpreiteiro || 0) : (en.totalDescarga || 0)), 0);
     
     const countBadge = document.getElementById('fechamentoQtdCargas');
+    const countText = document.getElementById('fechamentoRegistrosTotal');
     const volText = document.getElementById('fechamentoVolumeTotal');
     const payText = document.getElementById('fechamentoValorTotal');
     
     if (countBadge) countBadge.textContent = `${count} Carga(s) Selecionada(s)`;
+    if (countText) countText.textContent = String(count);
     if (volText) volText.textContent = totalVolume.toFixed(2).replace('.', ',') + ' m³';
     if (payText) payText.textContent = totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 }
@@ -644,6 +662,7 @@ window.gerarRelatorioConsolidado = function() {
             <td style="text-align: right;">
                 <h1>Relatório de Fechamento de Extração</h1>
                 <h2>Período das Cargas: <strong>${periodoStr}</strong></h2>
+                <h2>Total de entradas neste relatório: <strong>${count}</strong></h2>
                 <h2 style="font-size: 11px; color: #888;">Gerado em: ${new Date().toLocaleString('pt-BR')}</h2>
             </td>
         </tr>
@@ -731,6 +750,7 @@ function configurarSubmitEntrada() {
             horario: document.getElementById('entHorario').value,
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
+            mato: (entMato?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
@@ -825,6 +845,7 @@ Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`;
     alert(`Detalhes da Entrada:
 Romaneio: ${en.romaneioNum || 'N/A'}
 Empreiteiro: ${en.empreiteiroNome || en.fornecedor || 'N/A'}
+Mato: ${en.mato || 'N/A'}
 Motorista: ${en.motorista || 'N/A'}
 Data: ${en.data} ${en.horario || ''}
 Caminhão/Placa: ${en.caminhao || 'N/A'} / ${en.placa}
@@ -845,10 +866,12 @@ ${financeiroDetalhe}
 window.alterarEntrada = function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
+    alert('VocÃª serÃ¡ direcionado para a tela de Registro / Calculadora MÂ³ para alterar esta entrada.');
     entradaEditandoId = id;
     document.getElementById('entData').value = en.data || '';
     document.getElementById('entHorario').value = en.horario || '';
     if(selectEmpreiteiro) selectEmpreiteiro.value = en.empreiteiroId || '';
+    if(entMato) entMato.value = en.mato || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
@@ -877,26 +900,8 @@ window.alterarEntrada = function(id) {
     const btn = formEntrada.querySelector('button[type="submit"]');
     if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
     
-    // Garante que a lista de entradas esteja aberta ao editar
-    const panelLista = document.getElementById('panelListaEntradas');
-    const gridLayout = document.getElementById('gridEntradasGeralLayout');
-    const btnToggle = document.getElementById('btnToggleUltimasEntradas');
-    if (panelLista && panelLista.style.display === 'none') {
-        panelLista.style.display = 'block';
-        if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Entradas';
-    }
-
-    // E atualiza a visibilidade do grid geral
-    const panelListaEmp = document.getElementById('panelListaEmpreiteiros');
-    const cardCad = document.getElementById('cardFormEmpreiteiro');
-    const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
-    const colDireita = gridLayout ? gridLayout.querySelector('.table-column-right') : null;
-    
-    if (gridLayout && colEsquerda && colDireita && panelListaEmp && panelLista) {
-        gridLayout.classList.add('form-table-grid');
-        colDireita.style.display = 'flex';
-        colEsquerda.style.maxWidth = 'none';
-        colEsquerda.style.margin = '0';
+    if (typeof window.switchTabEntrada === 'function') {
+        window.switchTabEntrada('registro');
     }
 
     window.scrollTo({top: formEntrada.offsetTop - 100, behavior: 'smooth'});
@@ -1048,6 +1053,7 @@ function inicializarModuloEntrada() {
     filtroEntradasNome = document.getElementById('filtroEntradasNome');
     filtroDescargaNome = document.getElementById('filtroDescargaNome');
     entRomaneio = document.getElementById('entRomaneio');
+    entMato = document.getElementById('entMato');
     entComp = document.getElementById('entComp');
     entLarg = document.getElementById('entLarg');
     inputsAlt = [
@@ -1066,7 +1072,7 @@ function inicializarModuloEntrada() {
     configurarSubmitEntrada();
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'entRomaneio', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+    ['empNome', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);

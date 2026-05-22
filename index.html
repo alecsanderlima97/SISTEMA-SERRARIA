@@ -1708,12 +1708,16 @@
                                 <h2><i class="fa-solid fa-calculator"></i> Calculadora de M³</h2>
                             </div>
                             <form id="formEntrada" class="grid-form">
-                                <div class="input-group" style="grid-column: span 2;">
-                                    <label for="entEmpreiteiro">Empreiteiro / Fornecedor *</label>
+                                <div class="input-group">
+                                    <label for="entEmpreiteiro">Empreiteiro *</label>
                                     <select id="entEmpreiteiro" required>
                                         <option value="">Selecione o Empreiteiro...</option>
                                         <!-- Preenchido via JS -->
                                     </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="entMato">Mato</label>
+                                    <input type="text" id="entMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                 </div>
                                 <div class="input-group">
                                     <label for="entRomaneio">Nº Romaneio *</label>
@@ -1853,7 +1857,7 @@
                                 <!-- Filtros Avançados por Nome e Período -->
                                 <div class="filters-row" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; width: 100%;">
                                     <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
-                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Buscar por Nome / Motorista</label>
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Buscar por Fornecedor / Mato / Romaneio</label>
                                         <input type="text" id="filtroEntradasNome" placeholder="Buscar..." style="padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
                                     <div class="input-group" style="margin-bottom: 0; width: 140px;">
@@ -1893,7 +1897,11 @@
                                     <h3 style="margin: 0; color: var(--accent-color); font-size: 1rem;"><i class="fa-solid fa-file-invoice-dollar"></i> Fechamento Financeiro de Extração</h3>
                                     <span class="badge" style="background: var(--primary-color);" id="fechamentoQtdCargas">0 Cargas Selecionadas</span>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
+                                    <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+                                        <div style="font-size: 0.8rem; color: #ccc;">Registros Selecionados</div>
+                                        <div id="fechamentoRegistrosTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0</div>
+                                    </div>
                                     <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
                                         <div style="font-size: 0.8rem; color: #ccc;">Volume Consolidado</div>
                                         <div id="fechamentoVolumeTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0,000 m³</div>
@@ -1915,7 +1923,7 @@
                                 <h2 style="margin: 0;"><i class="fa-solid fa-truck-ramp-box"></i> Descarregamento</h2>
                                 <div class="filters-row" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; width: 100%;">
                                     <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
-                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Buscar por FuncionÃ¡rio / Motorista</label>
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Buscar por Fornecedor / Mato / Romaneio</label>
                                         <input type="text" id="filtroDescargaNome" placeholder="Buscar..." style="padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
                                     <div class="input-group" style="margin-bottom: 0; width: 140px;">
@@ -1935,12 +1943,13 @@
                                     <thead>
                                         <tr>
                                             <th>Data/Hora</th>
-                                            <th>FuncionÃ¡rio</th>
-                                            <th>Romaneio / Motorista</th>
+                                            <th>Fornecedor</th>
+                                            <th>DimensÃµes</th>
                                             <th>Placa</th>
                                             <th>Volume</th>
                                             <th>Valor/mÂ³</th>
                                             <th>Total</th>
+                                            <th>AÃ§Ãµes</th>
                                         </tr>
                                     </thead>
                                     <tbody id="listaDescarregamentos">
@@ -3204,7 +3213,7 @@
     <script type="module" src="js/produtos.js"></script>
     <script type="module" src="js/calculadoras.js"></script>
     <script type="module" src="js/transportes.js"></script>
-    <script type="module" src="js/entrada.js?v=permissoes-usuario"></script>
+    <script type="module" src="js/entrada.js?v=entrada-mato-descarga"></script>
     <script type="module" src="js/estoque.js"></script>
     <script type="module" src="js/romaneio_v2.js"></script>
     <script type="module" src="js/historico.js"></script>
