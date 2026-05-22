@@ -8,7 +8,7 @@ console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const ROLE_PERMISSIONS = {
     'gerente': {
-        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
         readOnly: false
     },
     'patrao': {
@@ -53,6 +53,7 @@ const SECTION_PERMISSIONS = [
     { id: 'view-produtos', label: 'Madeiras / Estilos' },
     { id: 'view-estoque', label: 'Controle de Estoque' },
     { id: 'view-frotas', label: 'Controle de Frota' },
+    { id: 'view-financeiro', label: 'Financeiro' },
     { id: 'view-rh', label: 'RH Funcionarios' },
     { id: 'view-calculadoras', label: 'Calculadoras' },
     { id: 'view-agenda', label: 'Agenda / Calendario' },
@@ -87,8 +88,13 @@ function getDefaultRolePermissions(role) {
 function getEffectivePermissions(userData = {}) {
     const custom = userData.permissoes || userData.permissions;
     if (custom && Array.isArray(custom.allowedSections)) {
+        const role = normalizeRole(userData.cargo);
+        const defaultSections = getDefaultRolePermissions(role).allowedSections || [];
+        const allowedSections = role === 'gerente'
+            ? [...new Set([...custom.allowedSections, ...defaultSections])]
+            : custom.allowedSections;
         return {
-            allowedSections: custom.allowedSections,
+            allowedSections,
             allowedSubsections: custom.allowedSubsections || {},
             readOnly: !!custom.readOnly
         };

@@ -2,7 +2,7 @@ import { db, getDocs, collection } from './js/firebase-init.js';
 
 let chartVendasInstance = null;
 let chartVolumeInstance = null;
-let dashboardData = { romaneios: [], entradas: [], subprodutos: [] };
+let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [] };
 
 const formatBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatM3 = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} m³`;
@@ -17,18 +17,20 @@ document.addEventListener('historicoUpdated', initDashboard);
 
 async function initDashboard() {
     try {
-        const [snapRomaneios, snapClientes, snapProdutos, snapEntradas, snapSubprodutos] = await Promise.all([
+        const [snapRomaneios, snapClientes, snapProdutos, snapEntradas, snapSubprodutos, snapFuncionarios] = await Promise.all([
             getDocs(collection(db, 'romaneios')),
             getDocs(collection(db, 'clientes')),
             getDocs(collection(db, 'produtos')),
             getDocs(collection(db, 'entradas')),
-            getDocs(collection(db, 'vendas_subprodutos'))
+            getDocs(collection(db, 'vendas_subprodutos')),
+            getDocs(collection(db, 'funcionarios'))
         ]);
 
         dashboardData = {
             romaneios: docsToArray(snapRomaneios),
             entradas: docsToArray(snapEntradas),
-            subprodutos: docsToArray(snapSubprodutos)
+            subprodutos: docsToArray(snapSubprodutos),
+            funcionarios: docsToArray(snapFuncionarios)
         };
 
         const totalCargas = dashboardData.romaneios.length;
@@ -37,6 +39,10 @@ async function initDashboard() {
         const volumeToras = dashboardData.entradas.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
         const volumeSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
         const faturamentoSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+        const faturamentoTotal = faturamentoMadeira + faturamentoSub;
+        const resumoFinanceiro = getResumoFinanceiroLocal();
+        const comparativoFinanceiro = faturamentoTotal - resumoFinanceiro.despesas;
+        window.dashboardFinanceiroResumo = { faturamentoTotal, faturamentoMadeira, faturamentoSub, despesasMes: resumoFinanceiro.despesas, comparativoFinanceiro };
         const saldoSubEstimado = Math.max(volumeToras - volumeMadeira - volumeSub, 0);
         const aproveitamentoTotal = volumeToras > 0 ? ((volumeMadeira + volumeSub + saldoSubEstimado) / volumeToras) * 100 : 0;
         const itensAcabando = getItensAlmoxarifadoAcabando();
@@ -46,6 +52,8 @@ async function initDashboard() {
         setText('dash-entrada-toras', formatM3(volumeToras));
         setText('dash-faturamento-madeira', formatBRL(faturamentoMadeira));
         setText('dash-faturamento-sub', formatBRL(faturamentoSub));
+        setText('dash-despesas-mes', formatBRL(resumoFinanceiro.despesas));
+        setText('dash-comparativo-financeiro', formatBRL(comparativoFinanceiro));
         setText('dash-volume-sub', formatM3(volumeSub));
         setText('dash-rendimento-serraria', `${aproveitamentoTotal.toFixed(1).replace('.', ',')}%`);
         setText('dash-total-clientes', snapClientes.size);
@@ -53,10 +61,20 @@ async function initDashboard() {
 
         bindKpiClicks();
         renderDashboardView('madeira');
+        renderRelatorioMensalDashboard();
     } catch (err) {
         console.error('Erro ao carregar dados do dashboard:', err);
     }
 }
+
+document.addEventListener('financeiroUpdated', () => {
+    const resumo = getResumoFinanceiroLocal();
+    const faturamentoTotal = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
+        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    setText('dash-despesas-mes', formatBRL(resumo.despesas));
+    setText('dash-comparativo-financeiro', formatBRL(faturamentoTotal - resumo.despesas));
+    renderRelatorioMensalDashboard();
+});
 
 function docsToArray(snapshot) {
     const list = [];
@@ -97,6 +115,21 @@ function renderDashboardView(view) {
         renderLineChart('Comparativo mensal da serraria', agruparRendimentoPorMes());
         renderBarChart('Rendimento da serraria em m³', calcularRendimentoSerraria());
         renderResumoRendimento();
+        return;
+    }
+
+    if (view === 'financeiro') {
+        renderLineChart('Comparativo financeiro mensal', agruparFaturamentoRealPorMes());
+        renderBarChart('Despesas mensais', agruparDespesasPorMes());
+        renderResumoFinanceiroDashboard();
+        return;
+    }
+
+    if (view === 'despesas') {
+        const detalhes = calcularDespesasDetalhadas();
+        renderBarChart('Relatório de despesas por origem', detalhes.porOrigem);
+        renderLineChart('Despesas mensais consolidadas', agruparDespesasPorMes());
+        renderResumoDespesasDashboard(detalhes);
         return;
     }
 
@@ -271,6 +304,108 @@ function agruparRendimentoPorMes() {
     return grupos;
 }
 
+function obterLancamentosFinanceirosLocal() {
+    try {
+        return JSON.parse(localStorage.getItem('orquestra_financeiro_lancamentos') || '[]');
+    } catch (error) {
+        return [];
+    }
+}
+
+function getResumoFinanceiroLocal() {
+    const hoje = new Date();
+    const inicio = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
+    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const detalhes = calcularDespesasDetalhadas(inicio, fim);
+    return { despesas: detalhes.total, quantidade: detalhes.quantidade, detalhes };
+}
+
+function agruparDespesasPorMes() {
+    const grupos = {};
+    obterLancamentosFinanceirosLocal().forEach(item => addGroup(grupos, getMesKey({ data: item.vencimento }), item.valor || 0));
+    dashboardData.entradas.forEach(item => {
+        addGroup(grupos, getMesKey({ data: item.data }), Number(item.totalEmpreiteiro || 0) + Number(item.totalDescarga || 0));
+    });
+    dashboardData.funcionarios.forEach(func => {
+        const mes = getMesKey({ data: func.admissao || new Date().toISOString() });
+        addGroup(grupos, mes, Number(func.salario || 0) + Number(func.vale || 0));
+        (func.horasExtras || []).forEach(he => addGroup(grupos, getMesKey({ data: he.data }), calcularValorHoraExtra(func, he)));
+    });
+    return grupos;
+}
+
+function calcularDespesasDetalhadas(inicio = getInicioMesAtual(), fim = getFimMesAtual()) {
+    const dentroPeriodo = data => (!inicio || data >= inicio) && (!fim || data <= fim);
+    const manual = obterLancamentosFinanceirosLocal().filter(item => dentroPeriodo(item.vencimento || ''));
+    const porOrigem = {
+        'Pagamento funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + Number(f.salario || 0), 0),
+        'Vale funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + Number(f.vale || 0), 0),
+        'Hora extra funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + (f.horasExtras || []).filter(he => dentroPeriodo(he.data || '')).reduce((sum, he) => sum + calcularValorHoraExtra(f, he), 0), 0),
+        'Valor a pagar empreiteiro': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalEmpreiteiro || 0), 0),
+        'Valor a pagar descarregamento': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalDescarga || 0), 0),
+        'Despesas gerais': manual.filter(item => item.aba === 'despesas-gerais').reduce((acc, item) => acc + Number(item.valor || 0), 0),
+        'Boletos aleatorios': manual.filter(item => item.aba === 'boletos').reduce((acc, item) => acc + Number(item.valor || 0), 0),
+        'Impostos': manual.filter(item => item.aba === 'impostos').reduce((acc, item) => acc + Number(item.valor || 0), 0),
+        'Despesas fixas': manual.filter(item => item.aba === 'despesas-fixas').reduce((acc, item) => acc + Number(item.valor || 0), 0)
+    };
+    return {
+        porOrigem,
+        total: Object.values(porOrigem).reduce((acc, valor) => acc + Number(valor || 0), 0),
+        quantidade: manual.length + dashboardData.funcionarios.length + dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).length
+    };
+}
+
+function calcularValorHoraExtra(func, he) {
+    const salario = Number(func.salario || 0);
+    const valorNormal = func.valorHeNormal !== undefined ? Number(func.valorHeNormal || 0) : (salario / 220) * 1.5;
+    const valorEspecial = func.valorHeEspecial !== undefined ? Number(func.valorHeEspecial || 0) : (salario / 220) * 2;
+    const valorHora = he.tipo === 'ESPECIAL' ? valorEspecial : valorNormal;
+    return (Number(he.horas || 0) * valorHora) + Number(he.adicional || 0);
+}
+
+function getInicioMesAtual() {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function getFimMesAtual() {
+    const hoje = new Date();
+    return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+}
+
+function agruparFaturamentoRealPorMes() {
+    const grupos = {};
+    dashboardData.romaneios.forEach(r => addGroup(grupos, getMesKey(r), r.financeiro?.totalGeral || 0));
+    dashboardData.subprodutos.forEach(s => addGroup(grupos, getMesKey(s), s.total || 0));
+    const despesas = agruparDespesasPorMes();
+    Object.keys(despesas).forEach(mes => {
+        grupos[mes] = (grupos[mes] || 0) - despesas[mes];
+    });
+    return grupos;
+}
+
+function renderResumoFinanceiroDashboard() {
+    const resumo = getResumoFinanceiroLocal();
+    const faturamento = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
+        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    setResumo(
+        `Lucro geral: ${formatBRL(faturamento)}`,
+        `Despesas gerais: ${formatBRL(resumo.despesas)}`,
+        `Comparativo: ${formatBRL(faturamento - resumo.despesas)}`
+    );
+}
+
+function renderResumoDespesasDashboard(detalhes) {
+    const itens = Object.entries(detalhes.porOrigem)
+        .sort((a, b) => b[1] - a[1])
+        .map(([nome, valor]) => `${nome}: ${formatBRL(valor)}`);
+    setResumo(
+        `Total despesas: ${formatBRL(detalhes.total)}`,
+        itens.slice(0, 3).join(' | ') || '-',
+        itens.slice(3).join(' | ') || '-'
+    );
+}
+
 function getMesKey(item) {
     const raw = item.data || item.dataCriacao || item.criadoEm || item.dataEmissao || '';
     const date = raw ? new Date(raw) : null;
@@ -329,3 +464,38 @@ function setResumo(maiorCarga, melhorDia, madeiras) {
     setText('dash-resumo-melhor-dia', melhorDia);
     setText('dash-resumo-madeiras', madeiras);
 }
+
+function renderRelatorioMensalDashboard() {
+    const info = document.getElementById('dash-relatorio-mensal-info');
+    if (!info) return;
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const relatorios = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
+    const salvo = relatorios[mesAtual];
+    if (salvo) {
+        info.textContent = `${mesAtual}: despesas ${formatBRL(salvo.despesas)} | comparativo ${formatBRL(salvo.comparativoFinanceiro || salvo.faturamentoReal || 0)}`;
+        return;
+    }
+    info.textContent = hoje.getDate() === 1
+        ? 'Hoje é dia de fechar e salvar o relatório mensal.'
+        : 'Fechamento mensal ainda não salvo.';
+}
+
+window.salvarRelatorioMensalDashboard = function() {
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const resumo = getResumoFinanceiroLocal();
+    const faturamento = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
+        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    const relatorios = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
+    relatorios[mesAtual] = {
+        mes: mesAtual,
+        despesas: resumo.despesas,
+        faturamento,
+        comparativoFinanceiro: faturamento - resumo.despesas,
+        salvoEm: new Date().toISOString()
+    };
+    localStorage.setItem('orquestra_financeiro_relatorios_mensais', JSON.stringify(relatorios));
+    renderRelatorioMensalDashboard();
+    alert('Relatório mensal salvo no painel de controle.');
+};

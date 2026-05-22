@@ -373,6 +373,42 @@ window.removerLinhaPatio = function(id) {
     }
 };
 
+window.editarItemPatio = function(id) {
+    const item = itensPatioTemp.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('patioItemTipo').value = item.tipo || 'TÁBUA';
+    document.getElementById('patioItemClasse').value = item.classe || '1ª CLASSE';
+    const especieInput = document.querySelector(`input[name="patioItemEspecie"][value="${item.especie || 'EUCALIPTO'}"]`);
+    if (especieInput) especieInput.checked = true;
+
+    document.getElementById('patioItemEsp').value = formatDecimal(item.espessura, 1);
+    document.getElementById('patioItemLarg').value = formatDecimal(item.largura, 1);
+    document.getElementById('patioItemComp').value = formatDecimal(item.comprimento, 2);
+    document.getElementById('patioItemPacotes').value = item.pacotes || '';
+    document.getElementById('patioItemPecas').value = item.pecas || '';
+
+    const configPacote = parseConfigPacote(item.pecasRaw);
+    document.getElementById('patioItemAltura').value = configPacote.alt || '';
+    document.getElementById('patioItemCamada').value = configPacote.cam || '';
+    document.getElementById('patioItemAmarras').value = configPacote.am || '';
+
+    itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
+    renderizarItensPatioTemp();
+    document.getElementById('patioItemPacotes').focus();
+};
+
+window.imprimirEtiquetaItemPatio = function(id) {
+    const item = itensPatioTemp.find(i => i.id === id);
+    if (!item) return;
+    imprimirEtiquetasFisicas([item]);
+};
+
+function parseConfigPacote(raw) {
+    const match = (raw || '').toString().match(/^(\d+)x(\d+)(?:\+(\d+))?$/);
+    return match ? { alt: match[1], cam: match[2], am: match[3] || '' } : {};
+}
+
 // Renderizar lista do pátio exatamente igual ao mockup
 function renderizarItensPatioTemp() {
     const tbody = document.getElementById('listaItensPatioTemp');
@@ -448,6 +484,12 @@ function renderizarItensPatioTemp() {
                         </button>
                         <button type="button" class="btn-patio-action-plus" onclick="alterarPacotesPatio('${item.id}', 1)" title="Aumentar Pacote">
                             +1
+                        </button>
+                        <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar Lote">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button type="button" onclick="imprimirEtiquetaItemPatio('${item.id}')" style="background:none; border:none; color: #16a34a; cursor:pointer; font-size: 1rem; transition: color 0.15s;" title="Imprimir Etiqueta">
+                            <i class="fa-solid fa-print"></i>
                         </button>
                         <button type="button" onclick="removerLinhaPatio('${item.id}')" style="background:none; border:none; color: #94a3b8; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="Excluir Lote">
                             <i class="fa-solid fa-trash-can"></i>
@@ -698,13 +740,21 @@ window.editarHistoricoPatio = function(id) {
 };
 
 // Imprimir etiquetas físicas (Mockup Circle Blue Action)
-function imprimirEtiquetasFisicas() {
-    if (itensPatioTemp.length === 0) {
+function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
+    if (!Array.isArray(lista)) {
+        lista = itensPatioTemp;
+    }
+
+    if (lista.length === 0) {
         alert("⚠️ Não há pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
         return;
     }
 
     const win = window.open('', '_blank');
+    if (!win) {
+        alert("Nao foi possivel abrir a etiqueta. Libere pop-ups para este site e tente novamente.");
+        return;
+    }
     let etiquetasHtml = '';
     let serialGlobal = 1;
 
@@ -713,7 +763,7 @@ function imprimirEtiquetasFisicas() {
     };
 
     // Gerar etiquetas individuais por pacote físico
-    itensPatioTemp.forEach(item => {
+    lista.forEach(item => {
         for (let p = 1; p <= item.pacotes; p++) {
             const zeroPaddedSerial = String(serialGlobal).padStart(3, '0');
             const uniqueId = `PCT-${item.dataRaw.replace(/-/g, '')}-${zeroPaddedSerial}`;
@@ -747,10 +797,14 @@ function imprimirEtiquetasFisicas() {
                         ${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 8px 0; margin: 10px 0;">
+                    <div style="display: grid; grid-template-columns: 1.1fr 0.9fr 1fr; gap: 8px; border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 8px 0; margin: 10px 0;">
                         <div class="ticket-meta">
                             <span>FORMAÇÃO</span>
                             <strong>${configPacote}</strong>
+                        </div>
+                        <div class="ticket-meta" style="text-align: center;">
+                            <span>PEÇAS/PCT</span>
+                            <strong style="color:#0f172a;">${item.pecas}</strong>
                         </div>
                         <div class="ticket-meta" style="text-align: right;">
                             <span>VOLUME</span>
@@ -759,7 +813,7 @@ function imprimirEtiquetasFisicas() {
                     </div>
 
                     <div style="font-size: 10px; color: #64748b; text-align: center; margin-bottom: 6px;">
-                        PeÃ§as/Pct: <strong style="color:#0f172a;">${item.pecas}</strong> | Data: ${item.dataFormatted}
+                        Data: ${item.dataFormatted}
                     </div>
 
                     <div class="ticket-barcode">
@@ -772,6 +826,7 @@ function imprimirEtiquetasFisicas() {
         }
     });
 
+    win.document.open();
     win.document.write(`
 <html>
 <head>
@@ -888,14 +943,18 @@ function imprimirEtiquetasFisicas() {
 <body>
     ${etiquetasHtml}
     <script>
-        window.onload = function() {
-            window.print();
-        }
+        window.addEventListener('load', function() {
+            window.focus();
+            setTimeout(function() {
+                window.print();
+            }, 350);
+        });
     </script>
 </body>
 </html>
     `);
     win.document.close();
+    win.focus();
 }
 
 // Gerar layout de fechamento do pátio para impressão agrupado
