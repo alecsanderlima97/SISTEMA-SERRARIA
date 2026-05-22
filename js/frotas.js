@@ -491,8 +491,8 @@ async function salvarAbastecimento() {
             unitario: preco,
             frotaId: veiculoId,
             frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
-            destino: `Consumo Frota: ${v ? v.modelo : 'VeÃ­culo'}`,
-            observacao: `Abastecimento registrado em frotas. HorÃ­metro/KM: ${horimetro}`
+            destino: `Consumo Frota: ${v ? v.modelo : 'Veículo'}`,
+            observacao: `Abastecimento registrado em frotas. Horímetro/KM: ${horimetro}`
         });
 
         if (!itemAtualizado) return;

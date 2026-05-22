@@ -8,9 +8,69 @@ const selectEmpreiteiro = document.getElementById('entEmpreiteiro');
 
 let empreiteirosAtuais = [];
 let empreiteiroEditandoId = null;
+let matosEmpreiteiroEditando = [];
+let ordenarEmpreiteirosAZ = false;
+
+function normalizarNomeMato(nome) {
+    return (nome || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+function obterMatosEmpreiteiro(emp) {
+    const matos = Array.isArray(emp?.matos) ? emp.matos : [];
+    const normalizados = matos.map(mato => {
+        if (typeof mato === 'string') {
+            return { nome: mato.toUpperCase().trim(), valorMetro: Number(emp?.valorMetro) || 0 };
+        }
+        return {
+            nome: (mato?.nome || '').toString().toUpperCase().trim(),
+            valorMetro: Number(mato?.valorMetro ?? emp?.valorMetro) || 0
+        };
+    });
+
+    if (normalizados.length === 0 && emp?.mato) {
+        normalizados.push({ nome: emp.mato.toString().toUpperCase().trim(), valorMetro: Number(emp?.valorMetro) || 0 });
+    }
+
+    const unicos = new Map();
+    normalizados.filter(mato => mato.nome).forEach(mato => unicos.set(mato.nome, mato));
+    return [...unicos.values()];
+}
+
+function renderizarMatosEmpreiteiro() {
+    const lista = document.getElementById('empMatosLista');
+    if (!lista) return;
+    lista.innerHTML = '';
+
+    matosEmpreiteiroEditando.forEach((mato, index) => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:14px; background:rgba(44,201,144,0.12); border:1px solid rgba(44,201,144,0.35); color:#d1fae5; font-size:0.78rem;';
+        const valor = Number(mato.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        chip.innerHTML = `${mato.nome} - ${valor}/m³ <button type="button" data-action="edit" data-index="${index}" style="border:none; background:transparent; color:#93c5fd; cursor:pointer; font-weight:bold;" title="Editar mato"><i class="fa-solid fa-pen"></i></button><button type="button" data-action="remove" data-index="${index}" style="border:none; background:transparent; color:#fca5a5; cursor:pointer; font-weight:bold;" title="Remover mato">×</button>`;
+        lista.appendChild(chip);
+    });
+}
+
+function adicionarMatoEmpreiteiro() {
+    const input = document.getElementById('empMato');
+    const inputValor = document.getElementById('empMatoValor');
+    const mato = (input?.value || '').toUpperCase().trim();
+    const valorMetro = window.parseCurrencyValue(inputValor?.value || '') || 0;
+    if (!mato) return;
+    const existente = matosEmpreiteiroEditando.find(item => normalizarNomeMato(item.nome) === normalizarNomeMato(mato));
+    if (existente) {
+        existente.nome = mato;
+        existente.valorMetro = valorMetro;
+    } else {
+        matosEmpreiteiroEditando.push({ nome: mato, valorMetro });
+        matosEmpreiteiroEditando.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    }
+    if (input) input.value = '';
+    if (inputValor) inputValor.value = '';
+    renderizarMatosEmpreiteiro();
+}
 
 async function carregarEmpreiteiros() {
-    if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
     
     try {
         const querySnapshot = await getDocs(collection(db, 'empreiteiros'));
@@ -23,7 +83,7 @@ async function carregarEmpreiteiros() {
         atualizarSelectEmpreiteiros();
     } catch (error) {
         console.error("Erro ao buscar empreiteiros: ", error);
-        if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="5" style="text-align:center; color: red;">Erro ao carregar empreiteiros.</td></tr>';
+        if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Erro ao carregar empreiteiros.</td></tr>';
     }
 }
 
@@ -35,11 +95,17 @@ function renderizarEmpreiteiros() {
     const filtro = filtroInput ? filtroInput.value.toLowerCase().trim() : '';
     
     const filtrados = empreiteirosAtuais.filter(emp => {
-        return (emp.nome || '').toLowerCase().includes(filtro);
+        const nome = (emp.nome || '').toLowerCase();
+        const mato = obterMatosEmpreiteiro(emp).map(item => item.nome).join(' ').toLowerCase();
+        return nome.includes(filtro) || mato.includes(filtro);
     });
 
+    if (ordenarEmpreiteirosAZ) {
+        filtrados.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+    }
+
     if(filtrados.length === 0) {
-        listaEmpreiteiros.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum empreiteiro encontrado.</td></tr>';
+        listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum empreiteiro encontrado.</td></tr>';
         return;
     }
 
@@ -49,6 +115,7 @@ function renderizarEmpreiteiros() {
         tr.innerHTML = `
             <td><strong>${emp.nome}</strong></td>
             <td>${emp.contato || '-'}</td>
+            <td>${obterMatosEmpreiteiro(emp).map(item => `${item.nome} (${Number(item.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³)`).join(', ') || '-'}</td>
             <td style="color:var(--accent-color); font-weight:bold;">${valorFormatado}</td>
             <td>${emp.pix || '-'}</td>
             <td>
@@ -74,8 +141,45 @@ function atualizarSelectEmpreiteiros() {
         opt.value = emp.id;
         opt.textContent = emp.nome;
         opt.dataset.valor = emp.valorMetro;
+        opt.dataset.matos = JSON.stringify(obterMatosEmpreiteiro(emp));
         selectEmpreiteiro.appendChild(opt);
     });
+}
+
+function preencherDadosEmpreiteiroSelecionado() {
+    if (!selectEmpreiteiro) return;
+    const opt = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
+    const entMatoSelect = document.getElementById('entMatoSelect');
+    let matos = [];
+    try {
+        matos = JSON.parse(opt?.dataset?.matos || '[]');
+    } catch {
+        matos = [];
+    }
+
+    if (!entMato || !entMatoSelect) return;
+    entMatoSelect.innerHTML = '<option value="">Selecione o Mato...</option>';
+
+    if (matos.length > 1) {
+        matos.forEach(mato => {
+            const option = document.createElement('option');
+            option.value = mato.nome;
+            option.textContent = `${mato.nome} - ${Number(mato.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³`;
+            option.dataset.valor = mato.valorMetro || 0;
+            entMatoSelect.appendChild(option);
+        });
+        entMato.value = '';
+        entMato.style.display = 'none';
+        entMatoSelect.style.display = 'block';
+        return;
+    }
+
+    entMatoSelect.style.display = 'none';
+    entMato.style.display = 'block';
+    entMato.value = (matos[0]?.nome || '').toUpperCase();
+    if (selectEmpreiteiro && matos[0]) {
+        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valor = matos[0].valorMetro || 0;
+    }
 }
 
 window.editarEmpreiteiro = function(id) {
@@ -85,7 +189,9 @@ window.editarEmpreiteiro = function(id) {
     
     document.getElementById('empNome').value = emp.nome || '';
     document.getElementById('empContato').value = emp.contato || '';
-    document.getElementById('empValorMetro').value = window.formatCurrencyValue(emp.valorMetro || 0);
+    document.getElementById('empMato').value = '';
+    matosEmpreiteiroEditando = obterMatosEmpreiteiro(emp);
+    renderizarMatosEmpreiteiro();
     document.getElementById('empPix').value = emp.pix || '';
     
     const btn = formEmpreiteiro.querySelector('button[type="submit"]');
@@ -113,7 +219,8 @@ if(formEmpreiteiro) {
         const dados = {
             nome: document.getElementById('empNome').value.toUpperCase().trim(),
             contato: document.getElementById('empContato').value.trim(),
-            valorMetro: window.parseCurrencyValue(document.getElementById('empValorMetro').value),
+            matos: [...matosEmpreiteiroEditando],
+            mato: '',
             pix: document.getElementById('empPix').value.trim(),
             atualizadoEm: new Date().toISOString()
         };
@@ -130,6 +237,8 @@ if(formEmpreiteiro) {
                 alert('Empreiteiro cadastrado com sucesso!');
             }
             formEmpreiteiro.reset();
+            matosEmpreiteiroEditando = [];
+            renderizarMatosEmpreiteiro();
             await carregarEmpreiteiros();
         } catch (error) {
             console.error("Erro ao salvar empreiteiro:", error);
@@ -252,7 +361,9 @@ function calcularVolumeAtual() {
     // Calculo Financeiro
     let valorMetro = 0;
     if(selectEmpreiteiro && selectEmpreiteiro.selectedIndex > 0) {
-        valorMetro = parseFloat(selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valor) || 0;
+        const optEmpreiteiro = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
+        const selectMato = document.getElementById('entMatoSelect');
+        valorMetro = parseFloat(selectMato?.selectedOptions?.[0]?.dataset?.valor || optEmpreiteiro.dataset.valor) || 0;
     }
     
     const totalFinanceiro = volume * valorMetro;
@@ -436,7 +547,7 @@ function renderizarDescarregamentos() {
         tr.innerHTML = `
             <td>${dtStr}<br><small style="color:#aaa;">${en.horario || '-'}</small></td>
             <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br><small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small></td>
-            <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. MÃ©dia: ${formatDecimalValue(en.mediaAltura)}m</td>
+            <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. Média: ${formatDecimalValue(en.mediaAltura)}m</td>
             <td><span class="badge" style="background:#555;">${en.placa || '-'}</span></td>
             <td style="font-weight:bold; color:var(--accent-color);">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
             <td>${(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
@@ -750,7 +861,7 @@ function configurarSubmitEntrada() {
             horario: document.getElementById('entHorario').value,
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
-            mato: (entMato?.value || '').toUpperCase().trim(),
+            mato: ((document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
@@ -866,11 +977,18 @@ ${financeiroDetalhe}
 window.alterarEntrada = function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
-    alert('VocÃª serÃ¡ direcionado para a tela de Registro / Calculadora MÂ³ para alterar esta entrada.');
+    alert('Você será direcionado para a tela de Registro / Calculadora M³ para alterar esta entrada.');
     entradaEditandoId = id;
     document.getElementById('entData').value = en.data || '';
     document.getElementById('entHorario').value = en.horario || '';
-    if(selectEmpreiteiro) selectEmpreiteiro.value = en.empreiteiroId || '';
+    if(selectEmpreiteiro) {
+        selectEmpreiteiro.value = en.empreiteiroId || '';
+        preencherDadosEmpreiteiroSelecionado();
+    }
+    const entMatoSelect = document.getElementById('entMatoSelect');
+    if (entMatoSelect && entMatoSelect.style.display !== 'none') {
+        entMatoSelect.value = en.mato || '';
+    }
     if(entMato) entMato.value = en.mato || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
     document.getElementById('entMotorista').value = en.motorista || '';
@@ -1072,19 +1190,13 @@ function inicializarModuloEntrada() {
     configurarSubmitEntrada();
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);
         }
     });
     
-    // Máscara monetária de Empreiteiro
-    const empValorMetroInput = document.getElementById('empValorMetro');
-    if (empValorMetroInput) {
-        empValorMetroInput.addEventListener('input', window.formatCurrencyInput);
-    }
-
     // Aplicar máscara decimal com 2 casas e escuta de cálculo em tempo real nas medidas
     const decimalInputs = [entComp, entLarg, ...inputsAlt];
     decimalInputs.forEach(input => {
@@ -1094,7 +1206,19 @@ function inicializarModuloEntrada() {
         }
     });
 
-    if(selectEmpreiteiro) selectEmpreiteiro.addEventListener('change', calcularVolumeAtual);
+    if(selectEmpreiteiro) {
+        selectEmpreiteiro.addEventListener('change', () => {
+            preencherDadosEmpreiteiroSelecionado();
+            calcularVolumeAtual();
+        });
+    }
+    const entMatoSelect = document.getElementById('entMatoSelect');
+    if (entMatoSelect) {
+        entMatoSelect.addEventListener('change', () => {
+            if (entMato) entMato.value = entMatoSelect.value;
+            calcularVolumeAtual();
+        });
+    }
     if(entValorDescarga) {
         entValorDescarga.addEventListener('input', window.formatCurrencyInput);
         entValorDescarga.addEventListener('input', calcularVolumeAtual);
@@ -1168,6 +1292,54 @@ function inicializarModuloEntrada() {
     }
     const btnFiltrarEmpreiteiros = document.getElementById('btnFiltrarEmpreiteiros');
     if(btnFiltrarEmpreiteiros) btnFiltrarEmpreiteiros.addEventListener('click', renderizarEmpreiteiros);
+    const btnOrdenarEmpreiteiros = document.getElementById('btnOrdenarEmpreiteiros');
+    if (btnOrdenarEmpreiteiros) {
+        btnOrdenarEmpreiteiros.addEventListener('click', () => {
+            ordenarEmpreiteirosAZ = !ordenarEmpreiteirosAZ;
+            btnOrdenarEmpreiteiros.style.background = ordenarEmpreiteirosAZ ? 'var(--accent-color)' : '';
+            renderizarEmpreiteiros();
+        });
+    }
+    const btnAdicionarMatoEmpreiteiro = document.getElementById('btnAdicionarMatoEmpreiteiro');
+    if (btnAdicionarMatoEmpreiteiro) btnAdicionarMatoEmpreiteiro.addEventListener('click', adicionarMatoEmpreiteiro);
+    const empMatoInput = document.getElementById('empMato');
+    if (empMatoInput) {
+        empMatoInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                adicionarMatoEmpreiteiro();
+            }
+        });
+    }
+    const empMatoValorInput = document.getElementById('empMatoValor');
+    if (empMatoValorInput) {
+        empMatoValorInput.addEventListener('input', window.formatCurrencyInput);
+        empMatoValorInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                adicionarMatoEmpreiteiro();
+            }
+        });
+    }
+    const empMatosLista = document.getElementById('empMatosLista');
+    if (empMatosLista) {
+        empMatosLista.addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-index]');
+            if (!button) return;
+            const index = Number(button.dataset.index);
+            if (button.dataset.action === 'edit') {
+                const mato = matosEmpreiteiroEditando[index];
+                const input = document.getElementById('empMato');
+                const inputValor = document.getElementById('empMatoValor');
+                if (input) input.value = mato.nome || '';
+                if (inputValor) inputValor.value = window.formatCurrencyValue(mato.valorMetro || 0);
+                input?.focus();
+                return;
+            }
+            matosEmpreiteiroEditando.splice(index, 1);
+            renderizarMatosEmpreiteiro();
+        });
+    }
 
     // Inicializar data/horário atual padrão no formulário
     if(entData) entData.valueAsDate = new Date();

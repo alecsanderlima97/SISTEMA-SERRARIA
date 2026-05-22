@@ -49,23 +49,23 @@ function atualizarCabecalhoHistorico(tipoAtivo) {
     if (!header) return;
     if (tipoAtivo === 'subprodutos') {
         header.innerHTML = `
-            <th>Romaneio NÂº</th>
+            <th>Romaneio Nº</th>
             <th>Data</th>
             <th>Cliente</th>
-            <th>CaminhÃ£o / Motorista</th>
+            <th>Caminhão / Motorista</th>
             <th>Volume Total</th>
             <th>Valor Total</th>
-            <th>AÃ§Ãµes</th>
+            <th>Ações</th>
         `;
         return;
     }
     header.innerHTML = `
-        <th>Romaneio NÂº</th>
+        <th>Romaneio Nº</th>
         <th>Data</th>
         <th>Cliente</th>
         <th>Volume Total</th>
         <th>Valor Total</th>
-        <th>AÃ§Ãµes</th>
+        <th>Ações</th>
     `;
 }
 
@@ -151,9 +151,9 @@ function aplicarFiltro() {
             const transporteHtml = `
                 <strong>${r.caminhao || '-'}</strong><br>
                 <small style="color:#aaa;">Motorista: ${r.motorista || '-'}</small><br>
-                <small style="color:#aaa;">Placa caminhÃ£o: ${r.placaCaminhao || '-'}</small><br>
+                <small style="color:#aaa;">Placa caminhão: ${r.placaCaminhao || '-'}</small><br>
                 <small style="color:#aaa;">Placa carreta: ${r.placaCarreta || '-'}</small>
-                ${r.dimensoesCaminhao ? `<br><small style="color:#aaa;">DimensÃµes: ${r.dimensoesCaminhao}</small>` : ''}
+                ${r.dimensoesCaminhao ? `<br><small style="color:#aaa;">Dimensões: ${r.dimensoesCaminhao}</small>` : ''}
             `;
 
             tr.innerHTML = `

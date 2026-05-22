@@ -1829,9 +1829,14 @@
                                     <label for="empContato">Contato (Telefone/WhatsApp)</label>
                                     <input type="text" id="empContato" placeholder="(00) 00000-0000">
                                 </div>
-                                <div class="input-group">
-                                    <label for="empValorMetro">Valor Pago por Metro (R$ / m³) *</label>
-                                    <input type="text" id="empValorMetro" required placeholder="R$ 0,00">
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label for="empMato">Matos</label>
+                                    <div style="display: grid; grid-template-columns: minmax(160px, 1fr) 130px auto; gap: 8px;">
+                                        <input type="text" id="empMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita" style="margin-bottom: 0;">
+                                        <input type="text" id="empMatoValor" placeholder="R$ / m³" style="margin-bottom: 0;">
+                                        <button type="button" id="btnAdicionarMatoEmpreiteiro" class="btn-primary" style="width: auto; padding: 0 14px; white-space: nowrap;"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                                    </div>
+                                    <div id="empMatosLista" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;"></div>
                                 </div>
                                 <div class="input-group">
                                     <label for="empPix">Chave PIX para Pagamento</label>
@@ -1858,6 +1863,7 @@
                                 </div>
                                 <div class="input-group">
                                     <label for="entMato">Mato</label>
+                                    <select id="entMatoSelect" style="display: none;"></select>
                                     <input type="text" id="entMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                 </div>
                                 <div class="input-group">
@@ -1968,8 +1974,9 @@
                             <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                 <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros</h2>
                                 <div style="display: flex; gap: 8px; align-items: center;">
-                                    <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome..." style="padding: 8px 12px; font-size: 0.85rem; width: 160px; margin-bottom: 0;">
+                                    <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome ou Mato..." style="padding: 8px 12px; font-size: 0.85rem; width: 190px; margin-bottom: 0;">
                                     <button type="button" id="btnFiltrarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                                    <button type="button" id="btnOrdenarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-arrow-down-a-z"></i> A-Z</button>
                                 </div>
                             </div>
                             <div class="table-container">
@@ -1978,6 +1985,7 @@
                                         <tr>
                                             <th>Nome</th>
                                             <th>Contato</th>
+                                            <th>Mato</th>
                                             <th>Valor (R$/m³)</th>
                                             <th>PIX</th>
                                             <th>Ações</th>
@@ -2068,7 +2076,7 @@
                                         <input type="text" id="filtroDescargaNome" placeholder="Buscar..." style="padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
                                     <div class="input-group" style="margin-bottom: 0; width: 140px;">
-                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data InÃ­cio</label>
+                                        <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data Início</label>
                                         <input type="date" id="filtroDescargaDataInicio" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
                                     <div class="input-group" style="margin-bottom: 0; width: 140px;">
@@ -2085,12 +2093,12 @@
                                         <tr>
                                             <th>Data/Hora</th>
                                             <th>Fornecedor</th>
-                                            <th>DimensÃµes</th>
+                                            <th>Dimensões</th>
                                             <th>Placa</th>
                                             <th>Volume</th>
-                                            <th>Valor/mÂ³</th>
+                                            <th>Valor/m³</th>
                                             <th>Total</th>
-                                            <th>AÃ§Ãµes</th>
+                                            <th>Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="listaDescarregamentos">
@@ -2107,7 +2115,7 @@
                                     </div>
                                     <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
                                         <div style="font-size: 0.8rem; color: #ccc;">Volume Total</div>
-                                        <div id="descargaVolumeTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0,00 mÂ³</div>
+                                        <div id="descargaVolumeTotal" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-color); margin-top: 5px;">0,00 m³</div>
                                     </div>
                                     <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
                                         <div style="font-size: 0.8rem; color: #ccc;">Total Descarga</div>
@@ -2115,7 +2123,7 @@
                                     </div>
                                 </div>
                                 <button type="button" id="btnGerarRelatorioDescarga" class="btn-primary" style="width: 100%; margin-top: 15px; background: #f59e0b; color: #111827; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                    <i class="fa-solid fa-print"></i> Imprimir RelatÃ³rio de Descarregamento
+                                    <i class="fa-solid fa-print"></i> Imprimir Relatório de Descarregamento
                                 </button>
                             </div>
                         </div>
@@ -3129,7 +3137,7 @@
                             </select>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
-                            <label><i class="fa-solid fa-seedling"></i> EspÃ©cie</label>
+                            <label><i class="fa-solid fa-seedling"></i> Espécie</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 42px;">
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="EUCALIPTO" checked> Eucalipto</label>
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="PINOS"> Pinos</label>
