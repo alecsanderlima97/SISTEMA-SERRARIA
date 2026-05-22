@@ -238,7 +238,8 @@ function calcularVolumeAtual() {
     let volume = 0;
     
     if (valoresAltura.length > 0) {
-        mediaAltura = valoresAltura.reduce((a, b) => a + b, 0) / valoresAltura.length;
+        const mediaCalculada = valoresAltura.reduce((a, b) => a + b, 0) / valoresAltura.length;
+        mediaAltura = Math.trunc(mediaCalculada * 100) / 100;
     }
     
     if (c > 0 && l > 0 && mediaAltura > 0) {
