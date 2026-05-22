@@ -12,9 +12,9 @@ let tipoPendente = 'madeira'; // 'madeira' ou 'subprodutos'
 
 async function renderizarHistorico() {
     if(!listaHistorico) return;
-    listaHistorico.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
-    
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
+    atualizarCabecalhoHistorico(tipoAtivo);
+    listaHistorico.innerHTML = `<tr><td colspan="${tipoAtivo === 'subprodutos' ? 7 : 6}" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
     
     try {
         if (tipoAtivo === 'madeira') {
@@ -42,6 +42,31 @@ async function renderizarHistorico() {
         console.error("Erro histórico:", error);
         listaHistorico.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--danger-color);">Erro ao carregar dados.</td></tr>';
     }
+}
+
+function atualizarCabecalhoHistorico(tipoAtivo) {
+    const header = listaHistorico?.closest('table')?.querySelector('thead tr');
+    if (!header) return;
+    if (tipoAtivo === 'subprodutos') {
+        header.innerHTML = `
+            <th>Romaneio NÂº</th>
+            <th>Data</th>
+            <th>Cliente</th>
+            <th>CaminhÃ£o / Motorista</th>
+            <th>Volume Total</th>
+            <th>Valor Total</th>
+            <th>AÃ§Ãµes</th>
+        `;
+        return;
+    }
+    header.innerHTML = `
+        <th>Romaneio NÂº</th>
+        <th>Data</th>
+        <th>Cliente</th>
+        <th>Volume Total</th>
+        <th>Valor Total</th>
+        <th>AÃ§Ãµes</th>
+    `;
 }
 
 function aplicarFiltro() {
@@ -110,7 +135,7 @@ function aplicarFiltro() {
         );
 
         if(filtrados.length === 0) {
-            listaHistorico.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhuma venda de subproduto encontrada.</td></tr>`;
+            listaHistorico.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma venda de subproduto encontrada.</td></tr>`;
             return;
         }
 
@@ -123,11 +148,19 @@ function aplicarFiltro() {
             const tipoSub = r.tipo || '-';
             const volumeStr = `${parseFloat(r.quantidade || 0).toFixed(2)} ${r.unidade || 'm³'}`;
             const valorTotal = r.total || 0;
+            const transporteHtml = `
+                <strong>${r.caminhao || '-'}</strong><br>
+                <small style="color:#aaa;">Motorista: ${r.motorista || '-'}</small><br>
+                <small style="color:#aaa;">Placa caminhÃ£o: ${r.placaCaminhao || '-'}</small><br>
+                <small style="color:#aaa;">Placa carreta: ${r.placaCarreta || '-'}</small>
+                ${r.dimensoesCaminhao ? `<br><small style="color:#aaa;">DimensÃµes: ${r.dimensoesCaminhao}</small>` : ''}
+            `;
 
             tr.innerHTML = `
                 <td><strong>${numero}</strong></td>
                 <td>${dataStr}</td>
                 <td>${cliente} <br><small style="color:#aaa;">(${tipoSub})</small></td>
+                <td>${transporteHtml}</td>
                 <td>${volumeStr}</td>
                 <td style="color:#00ff88; font-weight:bold;">R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td>
