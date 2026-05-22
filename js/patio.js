@@ -156,7 +156,7 @@ async function renderizarFluxoPatio() {
     const info = document.getElementById('fluxoPatioInfo');
     if (!tbody || !resumo || !classes) return;
 
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando fluxo do patio...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando fluxo do patio...</td></tr>';
     resumo.innerHTML = '';
     classes.innerHTML = '';
 
@@ -168,7 +168,7 @@ async function renderizarFluxoPatio() {
 
         const atual = relatorios[0];
         if (!atual) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
             if (info) info.textContent = 'Nenhum controle de producao salvo ainda.';
             return;
         }
@@ -181,25 +181,22 @@ async function renderizarFluxoPatio() {
         resumo.innerHTML = `
             ${cardFluxoPatio('Madeira serrando', atual.serrando || '-')}
             ${cardFluxoPatio('Pacotes no patio', totais.pacotes)}
-            ${cardFluxoPatio('Pecas no patio', totais.pecas)}
             ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} m³`)}
         `;
 
         tbody.innerHTML = itens.length ? itens.map(item => `
             <tr>
-                <td><strong>${atual.serrando || '-'}</strong><br><small style="color: var(--text-muted);">${item.tipo || '-'}</small></td>
-                <td>${formatarClasseFluxo(item.classe)}</td>
-                <td>${formatDecimalMockup(item.espessura)} x ${formatDecimalMockup(item.largura)} x ${formatDecimalMockup(item.comprimento)}</td>
-                <td>${item.totalPecas || item.pecas || 0}</td>
-                <td>${item.pacotes || 0}</td>
+                <td>${badgeClasseFluxo(item.classe)}</td>
+                <td style="font-weight:700; color:white;">${formatCubagemFluxo(item)}</td>
+                <td style="font-weight:800;">${item.pacotes || 0}</td>
                 <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
             </tr>
-        `).join('') : '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
+        `).join('') : '<tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
 
         classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`)).join('');
     } catch (error) {
         console.error('Erro ao carregar fluxo do patio:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
     }
 }
 
@@ -218,9 +215,9 @@ function calcularTotaisFluxoPatio(itens) {
 
 function cardFluxoPatio(label, value) {
     return `
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 14px;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; min-height: 82px;">
             <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${label}</div>
-            <div style="font-size: 1.25rem; color: white; font-weight: 800; margin-top: 6px;">${value}</div>
+            <div style="font-size: 1.35rem; color: white; font-weight: 900; margin-top: 8px; line-height: 1.2;">${value}</div>
         </div>
     `;
 }
@@ -233,10 +230,34 @@ function formatarClasseFluxo(classe) {
     return value || '-';
 }
 
+function badgeClasseFluxo(classe) {
+    const label = formatarClasseFluxo(classe);
+    let colors = { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
+    if (label === '1ª') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
+    if (label === '2ª') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (label === '3ª') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    return `<span style="display:inline-flex; min-width:42px; justify-content:center; padding:5px 10px; border-radius:999px; font-weight:800; background:${colors.bg}; border:1px solid ${colors.border}; color:${colors.color};">${label}</span>`;
+}
+
+function formatCubagemFluxo(item) {
+    return `${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m`;
+}
+
+function formatarConfiguracaoPacote(item) {
+    const raw = (item.pecasRaw || '').toString().trim();
+    if (raw.includes('x')) {
+        const [base, amarras] = raw.split('+');
+        const textoBase = base.replace('x', ' x ');
+        return amarras ? `${textoBase} + ${amarras} amarras` : textoBase;
+    }
+    return `${item.pecas || 0} peças`;
+}
+
 // Adicionar Item via Formulário
 function adicionarItemAoPatio() {
     const tipo = document.getElementById('patioItemTipo').value;
     const classe = document.getElementById('patioItemClasse').value;
+    const especie = document.querySelector('input[name="patioItemEspecie"]:checked')?.value || 'EUCALIPTO';
     const espRaw = document.getElementById('patioItemEsp').value;
     const largRaw = document.getElementById('patioItemLarg').value;
     const compRaw = document.getElementById('patioItemComp').value;
@@ -279,6 +300,7 @@ function adicionarItemAoPatio() {
         dataFormatted: dataFormatada,
         tipo: tipo.toUpperCase(),
         classe: classe,
+        especie: especie,
         espessura: esp,
         largura: larg,
         comprimento: comp,
@@ -290,16 +312,11 @@ function adicionarItemAoPatio() {
         volume: volumeLinha
     });
 
-    // Limpar campos de medidas
-    document.getElementById('patioItemEsp').value = '';
-    document.getElementById('patioItemLarg').value = '';
-    document.getElementById('patioItemComp').value = '';
+    // Mantem medidas/tipo/classe/especie para agilizar lancamentos repetidos.
     document.getElementById('patioItemPacotes').value = '';
     document.getElementById('patioItemPecas').value = '';
-    document.getElementById('patioItemAltura').value = '';
-    document.getElementById('patioItemCamada').value = '';
     document.getElementById('patioItemAmarras').value = '';
-    document.getElementById('patioItemEsp').focus();
+    document.getElementById('patioItemPacotes').focus();
 
     renderizarItensPatioTemp();
 }
@@ -603,13 +620,21 @@ async function carregarHistoricoPatio() {
                     <td style="text-align:center; padding: 10px 8px; font-weight: bold;">${rel.totais?.totalPacotes || 0}</td>
                     <td style="text-align:center; padding: 10px 8px; color: #64748b;">${rel.totais?.totalPecas || 0}</td>
                     <td style="text-align:right; padding: 10px 8px; font-weight: 800; color: #16a34a;">${volStr} m³</td>
-                    <td style="text-align:center; padding: 10px 8px; display: flex; gap: 8px; justify-content: center;">
+                    <td style="text-align:center; padding: 10px 8px;">
+                        <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                        <button type="button" onclick="visualizarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important;" title="Visualizar">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button type="button" onclick="editarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important; background:#fff7ed !important; border:1px solid #fed7aa !important; color:#c2410c !important;" title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
                         <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir Relatório">
-                            <i class="fa-solid fa-print"></i> Ver/Imprimir
+                            <i class="fa-solid fa-print"></i>
                         </button>
                         <button type="button" onclick="deletarHistoricoPatio('${rel.id}')" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1rem; transition: color 0.1s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'" title="Apagar Registro">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -646,6 +671,32 @@ window.imprimirHistoricoPatio = function(id) {
     gerarLayoutImpressaoPatio(rel);
 };
 
+window.visualizarHistoricoPatio = function(id) {
+    const rel = historicoPatioAtuais.find(r => r.id === id);
+    if (!rel) return;
+    gerarLayoutImpressaoPatio(rel);
+};
+
+window.editarHistoricoPatio = function(id) {
+    const rel = historicoPatioAtuais.find(r => r.id === id);
+    if (!rel) return;
+    if (!confirm("Deseja carregar este lancamento salvo para edicao no Controle de Producao?")) return;
+
+    const inputData = document.getElementById('patioData');
+    const selectPeriodo = document.getElementById('patioPeriodo');
+    const inputHorario = document.getElementById('patioHorario');
+    const inputSerrando = document.getElementById('patioSerrando');
+
+    if (inputData) inputData.value = rel.data || '';
+    if (selectPeriodo) selectPeriodo.value = rel.periodo || '';
+    if (inputHorario) inputHorario.value = rel.horario || '';
+    if (inputSerrando) inputSerrando.value = rel.serrando || '';
+
+    itensPatioTemp = Array.isArray(rel.itens) ? rel.itens.map(item => ({ ...item })) : [];
+    renderizarItensPatioTemp();
+    alert("Lancamento carregado para edicao. Ajuste os itens e salve novamente quando finalizar.");
+};
+
 // Imprimir etiquetas físicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas() {
     if (itensPatioTemp.length === 0) {
@@ -666,6 +717,7 @@ function imprimirEtiquetasFisicas() {
         for (let p = 1; p <= item.pacotes; p++) {
             const zeroPaddedSerial = String(serialGlobal).padStart(3, '0');
             const uniqueId = `PCT-${item.dataRaw.replace(/-/g, '')}-${zeroPaddedSerial}`;
+            const configPacote = formatarConfiguracaoPacote(item);
             
             let badgeStyle = '';
             if (item.classe === '1ª CLASSE') {
@@ -687,6 +739,10 @@ function imprimirEtiquetasFisicas() {
                         <span class="ticket-badge" style="${badgeStyle}">${item.classe}</span>
                     </div>
 
+                    <div style="text-align:center; font-size: 12px; font-weight: 900; color:#0f172a; text-transform: uppercase; margin-top: -4px;">
+                        ${item.especie || 'EUCALIPTO'}
+                    </div>
+
                     <div class="ticket-measure">
                         ${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m
                     </div>
@@ -694,7 +750,7 @@ function imprimirEtiquetasFisicas() {
                     <div style="display: flex; justify-content: space-between; border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 8px 0; margin: 10px 0;">
                         <div class="ticket-meta">
                             <span>FORMAÇÃO</span>
-                            <strong>${item.pecas} PEÇAS</strong>
+                            <strong>${configPacote}</strong>
                         </div>
                         <div class="ticket-meta" style="text-align: right;">
                             <span>VOLUME</span>
@@ -702,8 +758,8 @@ function imprimirEtiquetasFisicas() {
                         </div>
                     </div>
 
-                    <div style="font-size: 11px; color: #64748b; text-align: center; margin-bottom: 8px;">
-                        Data: ${item.dataFormatted}
+                    <div style="font-size: 10px; color: #64748b; text-align: center; margin-bottom: 6px;">
+                        PeÃ§as/Pct: <strong style="color:#0f172a;">${item.pecas}</strong> | Data: ${item.dataFormatted}
                     </div>
 
                     <div class="ticket-barcode">
@@ -724,19 +780,21 @@ function imprimirEtiquetasFisicas() {
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background: #f1f5f9;
-            padding: 20px;
+            padding: 0.4cm;
             margin: 0;
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
+            gap: 0.25cm;
+            align-items: flex-start;
         }
         .ticket-card {
-            width: 280px;
+            width: 7.5cm;
+            height: 7.5cm;
+            box-sizing: border-box;
             background: #ffffff;
             border: 2px solid #0f172a;
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 8px;
+            padding: 0.32cm;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             page-break-inside: avoid;
             display: flex;
@@ -753,24 +811,24 @@ function imprimirEtiquetasFisicas() {
         .ticket-brand {
             font-weight: 900;
             color: #e67e22;
-            font-size: 12px;
+            font-size: 10px;
             letter-spacing: 0.5px;
         }
         .ticket-title {
             font-weight: 700;
             color: #64748b;
-            font-size: 10px;
+            font-size: 8px;
         }
         .ticket-badge {
             display: inline-block;
             padding: 4px 14px;
             border-radius: 20px;
             font-weight: 900;
-            font-size: 12px;
+            font-size: 10px;
             text-transform: uppercase;
         }
         .ticket-measure {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 800;
             color: #0f172a;
             text-align: center;
@@ -798,7 +856,7 @@ function imprimirEtiquetasFisicas() {
         }
         .barcode-lines {
             width: 100%;
-            height: 38px;
+            height: 24px;
             background: repeating-linear-gradient(
                 90deg,
                 #0f172a,
@@ -820,8 +878,9 @@ function imprimirEtiquetasFisicas() {
             letter-spacing: 1px;
         }
         @media print {
-            body { background: transparent; padding: 0; }
-            .ticket-card { border: 2px solid #000; box-shadow: none; margin: 10px; }
+            @page { margin: 0.5cm; }
+            body { background: transparent; padding: 0; gap: 0.2cm; }
+            .ticket-card { border: 2px solid #000; box-shadow: none; margin: 0; }
             .barcode-lines { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
@@ -885,19 +944,11 @@ function gerarLayoutImpressaoPatio(rel) {
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
-        .header-logo {
-            font-family: sans-serif;
-            letter-spacing: -0.5px;
-        }
-        .header-logo-main {
-            color: #e67e22;
-            font-weight: 900;
-            font-size: 28px;
-        }
-        .header-logo-sub {
-            color: #475569;
-            font-weight: bold;
-            font-size: 16px;
+        .header-logo-img {
+            max-height: 72px;
+            max-width: 260px;
+            display: block;
+            object-fit: contain;
         }
         .meta-container {
             display: grid;
@@ -1020,9 +1071,8 @@ function gerarLayoutImpressaoPatio(rel) {
 </head>
 <body>
     <div class="header">
-        <div class="header-logo">
-            <span class="header-logo-main">O</span><span class="header-logo-sub">rquestra.cs</span>
-            <div style="font-size: 9px; color: #475569; font-weight: bold; letter-spacing: 0.5px; margin-top: -2px;">SISTEMAS PERSONALIZADOS</div>
+        <div>
+            <img src="logo.png" alt="Serraria Vanmarte" class="header-logo-img" onerror="this.style.display='none'">
         </div>
         <div style="text-align: right;">
             <h2 style="margin: 0; color: #0f172a; font-size: 20px;">Relação de Pátio Diário</h2>
@@ -1114,7 +1164,7 @@ function gerarLayoutImpressaoPatio(rel) {
     </div>
 
     <div class="print-footer">
-        <p>Relação emitida automaticamente pelo Sistema Orquestra.cs - Desenvolvimento personalizado de SaaS.</p>
+        <p>Relação emitida automaticamente pelo sistema da Serraria Vanmarte.</p>
         <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
     </div>
 </body>

@@ -1162,7 +1162,7 @@ tfoot td {
 /* Grade do formulário de lançamento - compacta */
 .patio-form-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 1.4fr 0.9fr 48px;
+    grid-template-columns: minmax(110px, 1fr) minmax(125px, 1fr) minmax(150px, 1fr) repeat(3, minmax(80px, 0.7fr)) minmax(68px, 0.5fr) minmax(190px, 1.25fr) minmax(70px, 0.55fr) 48px;
     gap: 8px;
     align-items: flex-end;
 }
