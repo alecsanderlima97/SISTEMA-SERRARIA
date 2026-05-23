@@ -164,7 +164,8 @@ function preencherDadosEmpreiteiroSelecionado() {
         matos.forEach(mato => {
             const option = document.createElement('option');
             option.value = mato.nome;
-            option.textContent = `${mato.nome} - ${Number(mato.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³`;
+            const valorTexto = Number(mato.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+            option.textContent = usuarioPodeVerFinanceiroEmpreiteiro() ? `${mato.nome} - ${valorTexto}/m³` : mato.nome;
             option.dataset.valor = mato.valorMetro || 0;
             entMatoSelect.appendChild(option);
         });
