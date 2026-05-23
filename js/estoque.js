@@ -238,6 +238,13 @@ function renderizarEstoque() {
         filtrados = filtrados.filter(item => item.quantidade <= (item.limite_alerta || 3));
     }
 
+    const ordem = document.getElementById('ordenarEstoque')?.value || 'nome';
+    filtrados.sort((a, b) => {
+        if (ordem === 'data-desc') return new Date(b.criadoEm || b.atualizadoEm || 0) - new Date(a.criadoEm || a.atualizadoEm || 0);
+        if (ordem === 'data-asc') return new Date(a.criadoEm || a.atualizadoEm || 0) - new Date(b.criadoEm || b.atualizadoEm || 0);
+        return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    });
+
     if (filtrados.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -359,6 +366,7 @@ async function salvarItemEstoque() {
             quantidade,
             unitario,
             limite_alerta,
+            criadoEm: id ? (itensEstoque.find(i => i.id === id)?.criadoEm || new Date().toISOString()) : new Date().toISOString(),
             atualizadoEm: new Date().toISOString()
         };
 

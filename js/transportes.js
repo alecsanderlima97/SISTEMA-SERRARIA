@@ -136,12 +136,22 @@ window.apagarTransporte = async function(id) {
 function renderTransportes() {
     listaTransportes.innerHTML = '';
 
-    if (transportesAtuais.length === 0) {
+    const filtro = (document.getElementById('filtroTransportesBusca')?.value || '').toLowerCase().trim();
+    const ordem = document.getElementById('ordenarTransportes')?.value || 'nome';
+    const filtrados = transportesAtuais.filter(t => {
+        return [t.nome, t.motorista, t.caminhao, t.placa].some(valor => (valor || '').toLowerCase().includes(filtro));
+    }).sort((a, b) => {
+        if (ordem === 'data-desc') return new Date(b.criadoEm || b.atualizadoEm || 0) - new Date(a.criadoEm || a.atualizadoEm || 0);
+        if (ordem === 'data-asc') return new Date(a.criadoEm || a.atualizadoEm || 0) - new Date(b.criadoEm || b.atualizadoEm || 0);
+        return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    });
+
+    if (filtrados.length === 0) {
         listaTransportes.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhuma transportadora cadastrada no momento.</td></tr>`;
         return;
     }
 
-    transportesAtuais.forEach(t => {
+    filtrados.forEach(t => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${t.nome || '-'}</strong></td>
@@ -181,4 +191,6 @@ async function carregarTransportes() {
 }
 
 // Inicializar
+document.getElementById('filtroTransportesBusca')?.addEventListener('input', renderTransportes);
+document.getElementById('ordenarTransportes')?.addEventListener('change', renderTransportes);
 carregarTransportes();

@@ -365,7 +365,7 @@
                             <p>Clientes Ativos</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel">
+                    <div class="kpi-card glass-panel" data-dashboard-view="estoque">
                         <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-estoque">0</h3>
@@ -535,8 +535,15 @@
                 <div id="tabClienteLista" class="glass-panel" style="margin-bottom: 0; display: none;">
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2><i class="fa-solid fa-list"></i> Clientes Cadastrados</h2>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                         <div class="input-group" style="margin-bottom: 0; width: 250px;">
                             <input type="text" id="filtroClientesBusca" placeholder="Buscar por Nome, CPF/CNPJ..." style="padding: 8px 12px; font-size: 0.9rem;">
+                        </div>
+                        <select id="ordenarClientes" style="height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
+                            <option value="nome">Nome A-Z</option>
+                            <option value="data-desc">Mais novo</option>
+                            <option value="data-asc">Mais velho</option>
+                        </select>
                         </div>
                     </div>
                     <div class="table-container">
@@ -622,8 +629,16 @@
 
                 <!-- TAB: LISTA -->
                 <div id="tabTranspLista" class="glass-panel" style="margin-bottom: 0;">
-                    <div class="section-title">
+                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2><i class="fa-solid fa-list"></i> Transportadoras Cadastradas</h2>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <input type="text" id="filtroTransportesBusca" placeholder="Buscar por nome, motorista, placa..." style="padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border);">
+                            <select id="ordenarTransportes" style="height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
+                                <option value="nome">Nome A-Z</option>
+                                <option value="data-desc">Mais novo</option>
+                                <option value="data-asc">Mais velho</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
@@ -827,6 +842,11 @@
                             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                 <!-- Busca -->
                                 <input type="text" id="buscaEstoque" placeholder="🔍 Buscar item..." oninput="window.filtrarEstoque()" style="border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 12px; font-size: 0.85rem; width: 180px;">
+                                <select id="ordenarEstoque" onchange="window.filtrarEstoque()" style="height: 36px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
+                                    <option value="nome">Nome A-Z</option>
+                                    <option value="data-desc">Mais novo</option>
+                                    <option value="data-asc">Mais velho</option>
+                                </select>
                                 
                                 <!-- Toggle de Acabando -->
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; color: #f87171;">
@@ -1100,6 +1120,12 @@
                             <button type="button" class="btn-action-card" onclick="window.filtrarFrota('FLORESTAL')" id="btn-frota-florestal" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Florestal</button>
                             <button type="button" class="btn-action-card" onclick="window.filtrarFrota('TERRAPLANAGEM')" id="btn-frota-terraplanagem" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px;">Terraplanagem</button>
                         </div>
+                        <input type="text" id="buscaFrota" placeholder="Buscar veículo, máquina ou placa..." style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); min-width: 230px;">
+                        <select id="ordenarFrota" style="height: 36px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
+                            <option value="nome">Nome A-Z</option>
+                            <option value="data-desc">Mais novo</option>
+                            <option value="data-asc">Mais velho</option>
+                        </select>
                     </div>
 
                 <!-- TAB: FORMULÁRIO -->
@@ -1586,9 +1612,14 @@
                 <div id="panelListaRH" class="glass-panel hide-on-print">
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                         <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários</h2>
-                        <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 400px;">
+                        <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; flex-wrap: wrap;">
                             <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-color);"></i>
-                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou função..." style="width: 100%; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou função..." style="flex: 1; min-width: 220px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+                            <select id="ordenarFuncionarios" style="height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
+                                <option value="nome">Nome A-Z</option>
+                                <option value="data-desc">Mais novo</option>
+                                <option value="data-asc">Mais velho</option>
+                            </select>
                         </div>
                     </div>
 

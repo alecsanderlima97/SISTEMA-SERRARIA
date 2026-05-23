@@ -37,6 +37,8 @@ function configurarTogglesRH() {
     if (buscaFuncionario) {
         buscaFuncionario.addEventListener('input', filtrarFuncionarios);
     }
+    const ordenarFuncionarios = document.getElementById('ordenarFuncionarios');
+    if (ordenarFuncionarios) ordenarFuncionarios.addEventListener('change', filtrarFuncionarios);
 }
 
 window.switchTabRH = function(tabName, isEditing = false) {
@@ -226,9 +228,7 @@ async function carregarFuncionarios() {
             funcionariosAtuais.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // Ordenar por nome
-        funcionariosAtuais.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        renderizarFuncionarios(funcionariosAtuais);
+        filtrarFuncionarios();
     } catch (e) {
         console.error("Erro ao carregar funcionários:", e);
         listaRH.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger-color);"><i class="fa-solid fa-circle-exclamation"></i> Falha ao comunicar com Firebase.</td></tr>';
@@ -313,15 +313,16 @@ function renderizarFuncionarios(lista) {
 
 // Filtrar funcionários em tempo real
 function filtrarFuncionarios() {
-    const queryStr = buscaFuncionario.value.toLowerCase().trim();
-    if (!queryStr) {
-        renderizarFuncionarios(funcionariosAtuais);
-        return;
-    }
+    const queryStr = (buscaFuncionario?.value || '').toLowerCase().trim();
+    const ordem = document.getElementById('ordenarFuncionarios')?.value || 'nome';
     const filtrados = funcionariosAtuais.filter(f => 
         (f.nome || '').toLowerCase().includes(queryStr) || 
         (f.funcao || '').toLowerCase().includes(queryStr)
-    );
+    ).sort((a, b) => {
+        if (ordem === 'data-desc') return new Date(b.criadoEm || b.admissao || 0) - new Date(a.criadoEm || a.admissao || 0);
+        if (ordem === 'data-asc') return new Date(a.criadoEm || a.admissao || 0) - new Date(b.criadoEm || b.admissao || 0);
+        return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    });
     renderizarFuncionarios(filtrados);
 }
 

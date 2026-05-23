@@ -167,6 +167,13 @@ function renderClientes() {
         return nome.includes(filtro) || cnpj.includes(filtro) || contato.includes(filtro);
     });
 
+    const ordem = document.getElementById('ordenarClientes')?.value || 'nome';
+    filtrados.sort((a, b) => {
+        if (ordem === 'data-desc') return new Date(b.criadoEm || b.atualizadoEm || 0) - new Date(a.criadoEm || a.atualizadoEm || 0);
+        if (ordem === 'data-asc') return new Date(a.criadoEm || a.atualizadoEm || 0) - new Date(b.criadoEm || b.atualizadoEm || 0);
+        return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+    });
+
     if(filtrados.length === 0) {
         listaClientes.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum cliente encontrado no momento.</td></tr>`;
         return;
@@ -305,6 +312,8 @@ function inicializarModuloClientes() {
     if (filtroClientesBusca) {
         filtroClientesBusca.addEventListener('input', renderClientes);
     }
+    const ordenarClientes = document.getElementById('ordenarClientes');
+    if (ordenarClientes) ordenarClientes.addEventListener('change', renderClientes);
 
     // Inicializar listeners financeiros
     const inputsFinanceirosCliente = [

@@ -82,6 +82,9 @@ function inicializarEventosFrotas() {
         });
     }
 
+    document.getElementById('buscaFrota')?.addEventListener('input', renderizarFrota);
+    document.getElementById('ordenarFrota')?.addEventListener('change', renderizarFrota);
+
     // Registrar submits de modals
     const formAbast = document.getElementById('formAbastecimento');
     if (formAbast) {
@@ -173,7 +176,7 @@ function salvarVeiculo() {
 
     if (id) {
         // Editar existente
-        frota = frota.map(v => v.id === id ? { ...v, modelo, placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome } : v);
+        frota = frota.map(v => v.id === id ? { ...v, modelo, placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() } : v);
     } else {
         // Novo veículo
         const novo = {
@@ -183,7 +186,9 @@ function salvarVeiculo() {
             grupo,
             ano,
             documento,
-            documentoNome: documento ? documentoNome : 'Sem Anexo'
+            documentoNome: documento ? documentoNome : 'Sem Anexo',
+            criadoEm: new Date().toISOString(),
+            atualizadoEm: new Date().toISOString()
         };
         frota.push(novo);
     }
@@ -249,7 +254,16 @@ function renderizarFrota() {
     const grid = document.getElementById('gridVeiculosFrota');
     if (!grid) return;
 
-    const filtrados = frota.filter(v => setorFiltroAtual === 'TODOS' || v.grupo === setorFiltroAtual);
+    const busca = (document.getElementById('buscaFrota')?.value || '').toLowerCase().trim();
+    const ordem = document.getElementById('ordenarFrota')?.value || 'nome';
+    const filtrados = frota
+        .filter(v => setorFiltroAtual === 'TODOS' || v.grupo === setorFiltroAtual)
+        .filter(v => [v.modelo, v.placa, v.grupo].some(valor => (valor || '').toLowerCase().includes(busca)))
+        .sort((a, b) => {
+            if (ordem === 'data-desc') return new Date(b.criadoEm || b.atualizadoEm || 0) - new Date(a.criadoEm || a.atualizadoEm || 0);
+            if (ordem === 'data-asc') return new Date(a.criadoEm || a.atualizadoEm || 0) - new Date(b.criadoEm || b.atualizadoEm || 0);
+            return (a.modelo || '').localeCompare(b.modelo || '', 'pt-BR');
+        });
 
     if (filtrados.length === 0) {
         grid.innerHTML = `

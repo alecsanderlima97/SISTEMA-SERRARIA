@@ -38,6 +38,9 @@ async function initDashboard() {
         const faturamentoMadeira = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0);
         const volumeToras = dashboardData.entradas.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
         const volumeSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
+        const volumeSubMes = dashboardData.subprodutos
+            .filter(s => getMesKey(s) === getMesKey({ data: new Date().toISOString() }))
+            .reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
         const faturamentoSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
         const faturamentoTotal = faturamentoMadeira + faturamentoSub;
         const resumoFinanceiro = getResumoFinanceiroLocal();
@@ -54,7 +57,7 @@ async function initDashboard() {
         setText('dash-faturamento-sub', formatBRL(faturamentoSub));
         setText('dash-despesas-mes', formatBRL(resumoFinanceiro.despesas));
         setText('dash-comparativo-financeiro', formatBRL(comparativoFinanceiro));
-        setText('dash-volume-sub', formatM3(volumeSub));
+        setText('dash-volume-sub', formatM3(volumeSubMes));
         setText('dash-rendimento-serraria', `${aproveitamentoTotal.toFixed(1).replace('.', ',')}%`);
         setText('dash-total-clientes', snapClientes.size);
         setText('dash-total-estoque', itensAcabando.length);
@@ -130,6 +133,14 @@ function renderDashboardView(view) {
         renderBarChart('Relatório de despesas por origem', detalhes.porOrigem);
         renderLineChart('Despesas mensais consolidadas', agruparDespesasPorMes());
         renderResumoDespesasDashboard(detalhes);
+        return;
+    }
+
+    if (view === 'estoque') {
+        const itens = getItensAlmoxarifadoAcabando();
+        renderBarChart('Itens acabando no estoque', agruparItensAcabando(itens));
+        renderLineChart('Itens abaixo do mínimo', agruparItensAcabando(itens));
+        renderResumoEstoqueAcabando(itens);
         return;
     }
 
@@ -328,7 +339,7 @@ function agruparDespesasPorMes() {
     });
     dashboardData.funcionarios.forEach(func => {
         const mes = getMesKey({ data: func.admissao || new Date().toISOString() });
-        addGroup(grupos, mes, Number(func.salario || 0) + Number(func.vale || 0));
+        addGroup(grupos, mes, Number(func.salario || 0));
         (func.horasExtras || []).forEach(he => addGroup(grupos, getMesKey({ data: he.data }), calcularValorHoraExtra(func, he)));
     });
     return grupos;
@@ -339,7 +350,6 @@ function calcularDespesasDetalhadas(inicio = getInicioMesAtual(), fim = getFimMe
     const manual = obterLancamentosFinanceirosLocal().filter(item => dentroPeriodo(item.vencimento || ''));
     const porOrigem = {
         'Pagamento funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + Number(f.salario || 0), 0),
-        'Vale funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + Number(f.vale || 0), 0),
         'Hora extra funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + (f.horasExtras || []).filter(he => dentroPeriodo(he.data || '')).reduce((sum, he) => sum + calcularValorHoraExtra(f, he), 0), 0),
         'Valor a pagar empreiteiro': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalEmpreiteiro || 0), 0),
         'Valor a pagar descarregamento': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalDescarga || 0), 0),
@@ -431,7 +441,29 @@ function renderResumoSubprodutos() {
     const maior = dashboardData.subprodutos.reduce((best, s) => (Number(s.quantidade) || 0) > best.volume ? { volume: Number(s.quantidade) || 0, label: s.romaneio || s.romaneioCliente || '-' } : best, { volume: 0, label: '-' });
     const melhorDia = topEntry(agruparSubprodutosPorDia(), formatM3);
     const tipos = topList(agruparSubprodutosPorTipo(), formatM3);
-    setResumo(`${maior.label} - ${formatM3(maior.volume)}`, melhorDia, tipos);
+    const mensal = topList(agruparSubprodutosPorMes(), formatM3);
+    setResumo(`${maior.label} - ${formatM3(maior.volume)}`, `Mensal: ${mensal}`, tipos);
+}
+
+function agruparSubprodutosPorMes() {
+    return dashboardData.subprodutos.reduce((acc, s) => addGroup(acc, getMesKey(s), s.quantidade || 0), {});
+}
+
+function agruparItensAcabando(itens) {
+    return itens.reduce((acc, item) => addGroup(acc, item.nome || item.descricao || 'Item', item.quantidade || 0), {});
+}
+
+function renderResumoEstoqueAcabando(itens) {
+    const lista = itens
+        .sort((a, b) => (Number(a.quantidade) || 0) - (Number(b.quantidade) || 0))
+        .slice(0, 8)
+        .map(item => `${item.nome || item.descricao || 'Item'}: ${Number(item.quantidade) || 0}`)
+        .join(' | ');
+    setResumo(
+        `${itens.length} item(ns) acabando`,
+        lista || 'Nenhum item abaixo do mínimo',
+        'Revise o almoxarifado'
+    );
 }
 
 function renderResumoRendimento() {
