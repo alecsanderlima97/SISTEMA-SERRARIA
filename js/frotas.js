@@ -12,6 +12,12 @@ const KEYS = {
     ESTOQUE: 'orquestra_estoque' // Chave unificada para simular o almoxarifado
 };
 
+const FROTA_COLLECTIONS = {
+    FROTA: 'frotas',
+    ABASTECIMENTOS: 'frota_abastecimentos',
+    MANUTENCOES: 'frota_manutencoes'
+};
+
 // Inicialização de dados default no Estoque para demonstrar a vinculação
 const DEFAULT_ESTOQUE = [
     { id: 'est_01', nome: 'FILTRO DE AR DE MOTOR', categoria: 'FILTROS', quantidade: 15, unitario: 180.00 },
@@ -43,6 +49,45 @@ function obterBanco(key, defaults = []) {
 
 function salvarBanco(key, dados) {
     localStorage.setItem(key, JSON.stringify(dados));
+}
+
+async function carregarColecaoFrota(collName, key, defaults = []) {
+    const cacheLocal = obterBanco(key, defaults);
+    if (!window.FS) return cacheLocal;
+    try {
+        const nuvem = await window.FS.getCollection(collName);
+        if (nuvem.length > 0) {
+            salvarBanco(key, nuvem);
+            return nuvem;
+        }
+        const base = cacheLocal.length > 0 ? cacheLocal : defaults;
+        await Promise.all(base.map(item => window.FS.setDoc(collName, item.id, item)));
+        salvarBanco(key, base);
+        return base;
+    } catch (error) {
+        console.error(`Falha ao carregar ${collName} no Firestore. Usando cache local.`, error);
+        return cacheLocal;
+    }
+}
+
+async function salvarDocFrota(collName, item) {
+    if (!window.FS || !item?.id) return;
+    try {
+        await window.FS.setDoc(collName, item.id, item);
+    } catch (error) {
+        console.error(`Falha ao salvar ${collName}/${item.id} no Firestore.`, error);
+        alert('Registro salvo localmente, mas nao foi possivel sincronizar com a nuvem agora.');
+    }
+}
+
+async function excluirDocFrota(collName, id) {
+    if (!window.FS || !id) return;
+    try {
+        await window.FS.deleteDoc(collName, id);
+    } catch (error) {
+        console.error(`Falha ao excluir ${collName}/${id} no Firestore.`, error);
+        alert('Registro removido localmente, mas nao foi possivel sincronizar a exclusao na nuvem agora.');
+    }
 }
 
 // Estados Locais
@@ -86,7 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarEventosFrotas();
     renderizarFrota();
     atualizarKPIsFrota();
+    carregarDadosFrotaNuvem();
 });
+
+async function carregarDadosFrotaNuvem() {
+    frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, DEFAULT_FROTA);
+    abastecimentos = await carregarColecaoFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, KEYS.ABASTECIMENTOS, []);
+    manutencoes = await carregarColecaoFrota(FROTA_COLLECTIONS.MANUTENCOES, KEYS.MANUTENCOES, []);
+    renderizarFrota();
+    atualizarKPIsFrota();
+}
 
 // Registrar eventos
 function inicializarEventosFrotas() {
@@ -191,7 +245,7 @@ window.handleDocumentoUpload = function(event) {
     reader.readAsDataURL(file);
 };
 
-function salvarVeiculo() {
+async function salvarVeiculo() {
     const id = document.getElementById('veiculoId').value;
     const modelo = document.getElementById('veicModelo').value.trim().toUpperCase() || 'VEÍCULO S/ MODELO';
     const codigoInput = document.getElementById('veicCodigo').value.trim().toUpperCase();
@@ -201,9 +255,14 @@ function salvarVeiculo() {
     const documento = document.getElementById('veicDocumentoBase64').value;
     const documentoNome = document.getElementById('lblDocumentoNome').textContent;
 
+    let registroSalvo = null;
     if (id) {
         // Editar existente
-        frota = frota.map(v => v.id === id ? { ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() } : v);
+        frota = frota.map(v => {
+            if (v.id !== id) return v;
+            registroSalvo = { ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() };
+            return registroSalvo;
+        });
     } else {
         // Novo veículo
         const novo = {
@@ -219,9 +278,11 @@ function salvarVeiculo() {
             atualizadoEm: new Date().toISOString()
         };
         frota.push(novo);
+        registroSalvo = novo;
     }
 
     salvarBanco(KEYS.FROTA, frota);
+    await salvarDocFrota(FROTA_COLLECTIONS.FROTA, registroSalvo);
     renderizarFrota();
     atualizarKPIsFrota();
 
@@ -252,11 +313,12 @@ window.editarVeiculo = function(id) {
     document.getElementById('cardFormFrota').scrollIntoView({ behavior: 'smooth' });
 };
 
-window.excluirVeiculo = function(id) {
+window.excluirVeiculo = async function(id) {
     if (!confirm("Tem certeza que deseja excluir este veículo? Isso não apagará o histórico de abastecimentos e manutenções dele, mas ele não constará na listagem principal.")) return;
 
     frota = frota.filter(v => v.id !== id);
     salvarBanco(KEYS.FROTA, frota);
+    await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
     renderizarFrota();
     atualizarKPIsFrota();
 };
@@ -358,7 +420,10 @@ function renderizarFrota() {
             atualizouCodigos = true;
         }
     });
-    if (atualizouCodigos) salvarBanco(KEYS.FROTA, frota);
+    if (atualizouCodigos) {
+        salvarBanco(KEYS.FROTA, frota);
+        frota.forEach(v => salvarDocFrota(FROTA_COLLECTIONS.FROTA, v));
+    }
 
     const busca = (document.getElementById('buscaFrota')?.value || '').toLowerCase().trim();
     const ordem = document.getElementById('ordenarFrota')?.value || 'nome';
@@ -454,6 +519,7 @@ function renderizarFrota() {
         `;
     }).join('');
 }
+window.renderizarFrota = renderizarFrota;
 
 // Download/Visualização do documento anexo em base64
 window.visualizarDocumento = function(id) {
@@ -662,6 +728,7 @@ async function salvarAbastecimento() {
 
     abastecimentos.push(novo);
     salvarBanco(KEYS.ABASTECIMENTOS, abastecimentos);
+    await salvarDocFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, novo);
     
     // Atualizar tabela e limpar form do modal
     renderizarAbastecimentosVeiculo(veiculoId);
@@ -702,7 +769,7 @@ function renderizarAbastecimentosVeiculo(veiculoId) {
     `).join('');
 }
 
-window.excluirAbastecimento = function(id, veiculoId) {
+window.excluirAbastecimento = async function(id, veiculoId) {
     if (!confirm("Tem certeza que deseja estornar este abastecimento? Isso reverterá a quantidade correspondente de volta ao estoque.")) return;
 
     const ab = abastecimentos.find(a => a.id === id);
@@ -741,6 +808,7 @@ window.excluirAbastecimento = function(id, veiculoId) {
 
     abastecimentos = abastecimentos.filter(a => a.id !== id);
     salvarBanco(KEYS.ABASTECIMENTOS, abastecimentos);
+    await excluirDocFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, id);
     renderizarAbastecimentosVeiculo(veiculoId);
 };
 
@@ -952,7 +1020,7 @@ window.removerPecaManutencaoTemp = function(id) {
     renderizarPecasManutencaoTemp();
 };
 
-function salvarManutencao() {
+async function salvarManutencao() {
     const veiculoId = document.getElementById('manutVeiculoId').value;
     const data = document.getElementById('manutData').value || new Date().toISOString().split('T')[0];
     const tipo = document.getElementById('manutTipo').value || 'CORRETIVA';
@@ -1019,6 +1087,7 @@ function salvarManutencao() {
     salvarBanco(KEYS.ESTOQUE, estoque);
     manutencoes.push(nova);
     salvarBanco(KEYS.MANUTENCOES, manutencoes);
+    await salvarDocFrota(FROTA_COLLECTIONS.MANUTENCOES, nova);
 
     // Resetar campos e atualizar históricos
     pecasManutencaoTemp = [];
@@ -1063,7 +1132,7 @@ function renderizarManutencoesVeiculo(veiculoId) {
     }).join('');
 }
 
-window.excluirManutencao = function(id, veiculoId) {
+window.excluirManutencao = async function(id, veiculoId) {
     if (!confirm("Tem certeza que deseja excluir esta manutenção? Isso devolverá todas as peças utilizadas de volta ao estoque.")) return;
 
     const m = manutencoes.find(item => item.id === id);
@@ -1098,6 +1167,7 @@ window.excluirManutencao = function(id, veiculoId) {
 
     manutencoes = manutencoes.filter(item => item.id !== id);
     salvarBanco(KEYS.MANUTENCOES, manutencoes);
+    await excluirDocFrota(FROTA_COLLECTIONS.MANUTENCOES, id);
     
     // Recarregar saldo de peças e histórico
     carregarPecasEstoqueSelect();

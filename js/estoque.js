@@ -96,6 +96,7 @@ async function carregarDadosDoFirestore() {
         renderizarEstoque();
         window.renderSimuladores();
         window.renderizarMovimentacoesEstoque();
+        renderResumoEstoque();
     } catch (err) {
         console.error("Erro na sincronização do estoque:", err);
     }
@@ -105,6 +106,7 @@ async function carregarDadosDoFirestore() {
 document.addEventListener('DOMContentLoaded', () => {
     carregarDadosDoFirestore();
     inicializarEventosEstoque();
+    window.switchTabEstoque('resumo');
 });
 
 // Registrar eventos
@@ -124,6 +126,11 @@ function inicializarEventosEstoque() {
             salvarNovaMovimentacaoManual(e);
         });
     }
+
+    const buscaMovimentacao = document.getElementById('buscaMovimentacao');
+    if (buscaMovimentacao) buscaMovimentacao.addEventListener('input', window.renderizarMovimentacoesEstoque);
+    const filtroMovTipo = document.getElementById('filtroMovTipo');
+    if (filtroMovTipo) filtroMovTipo.addEventListener('change', window.renderizarMovimentacoesEstoque);
 }
 
 
@@ -145,9 +152,11 @@ window.switchTabEstoque = function(tabName) {
 
     // Add active state to selected tab button
     let btnId = '';
-    if (tabName === 'inventario') btnId = 'btnTabEstoqueInventario';
+    if (tabName === 'resumo') btnId = 'btnTabEstoqueResumo';
+    else if (tabName === 'inventario') btnId = 'btnTabEstoqueInventario';
     else if (tabName === 'tanques') btnId = 'btnTabEstoqueTanques';
     else if (tabName === 'movimentacoes') btnId = 'btnTabEstoqueMovimentacoes';
+    else if (tabName === 'lancar') btnId = 'btnTabEstoqueLancar';
 
     const activeBtn = document.getElementById(btnId);
     if (activeBtn) {
@@ -157,7 +166,9 @@ window.switchTabEstoque = function(tabName) {
     }
 
     // Refresh display
-    if (tabName === 'tanques') {
+    if (tabName === 'resumo') {
+        renderResumoEstoque();
+    } else if (tabName === 'tanques') {
         window.renderSimuladores();
     } else if (tabName === 'movimentacoes') {
         window.renderizarMovimentacoesEstoque();
@@ -632,6 +643,46 @@ window.registrarSaidaEstoqueFrota = async function({
     return item;
 };
 
+function getLimiteEstoque(item) {
+    return item.limite_alerta !== undefined && item.limite_alerta !== null
+        ? Number(item.limite_alerta)
+        : (item.categoria === 'DIESEL' ? 1000 : item.categoria === 'LUBRIFICANTES' ? 40 : 3);
+}
+
+function renderResumoEstoque() {
+    const itens = obterEstoque();
+    const diesel = itens.find(i => i.categoria === 'DIESEL' || (i.nome || '').toUpperCase().includes('DIESEL'));
+    const dieselQtd = diesel ? calcularSaldoPorMovimentacoes(diesel) : 0;
+    const itensBaixos = itens.filter(item => (Number(item.quantidade) || 0) <= getLimiteEstoque(item));
+    const valorTotal = itens.reduce((acc, item) => acc + ((Number(item.quantidade) || 0) * (Number(item.unitario) || 0)), 0);
+
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    set('estoqueResumoDiesel', `${Math.round(dieselQtd).toLocaleString('pt-BR')} L`);
+    set('estoqueResumoItens', itens.length);
+    set('estoqueResumoAcabando', itensBaixos.length);
+    set('estoqueResumoValor', valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+
+    const lista = document.getElementById('estoqueResumoListaBaixa');
+    if (!lista) return;
+    if (itensBaixos.length === 0) {
+        lista.innerHTML = '<div style="color: var(--text-muted);">Nenhum item abaixo do mínimo.</div>';
+        return;
+    }
+    lista.innerHTML = itensBaixos.slice(0, 8).map(item => {
+        const unidade = item.categoria === 'DIESEL' || item.categoria === 'LUBRIFICANTES' ? 'L' : 'Un';
+        return `
+            <div style="border:1px solid rgba(248,113,113,0.28); background:rgba(248,113,113,0.08); border-radius:10px; padding:10px;">
+                <strong style="color:white; display:block;">${item.nome}</strong>
+                <small style="color:#fca5a5;">Saldo: ${Number(item.quantidade || 0).toLocaleString('pt-BR')} ${unidade} | Mínimo: ${getLimiteEstoque(item).toLocaleString('pt-BR')} ${unidade}</small>
+            </div>
+        `;
+    }).join('');
+}
+
 // Excluir movimentação de estoque tanto localmente quanto no Firestore
 window.excluirMovimentacaoEstoque = async function(id) {
     if (!confirm('Deseja realmente ESTORNAR este movimento? Isso reverterá o estoque e removerá o registro.')) return;
@@ -678,13 +729,7 @@ window.abrirModalNovaMovimentacao = function() {
     const retEl = document.getElementById('movRetiradoPor');
     if (retEl) retEl.value = '';
 
-    // Populate dropdown with inventory items
-    const selectItem = document.getElementById('movItemId');
-    if (selectItem) {
-        itensEstoque = obterEstoque();
-        selectItem.innerHTML = '<option value="">-- SELECIONE O ITEM --</option>' + 
-            itensEstoque.map(item => `<option value="${item.id}">${item.nome} (${item.categoria}) [Saldo: ${item.quantidade.toFixed(1)}]</option>`).join('');
-    }
+    popularItensMovimentacaoManual();
 
     // Populate dropdown with vehicles list
     const selectFrota = document.getElementById('movFrotaId');
@@ -697,6 +742,26 @@ window.abrirModalNovaMovimentacao = function() {
     window.onChangeMovTipo(); // setup visibility
     document.getElementById('modalNovaMovimentacao').style.display = 'flex';
 };
+
+function itemControladoPorFrota(item) {
+    const categoria = (item?.categoria || '').toUpperCase();
+    const nome = (item?.nome || '').toUpperCase();
+    const ehGraxa = nome.includes('GRAXA');
+    if (ehGraxa) return false;
+    return categoria === 'DIESEL' || categoria === 'LUBRIFICANTES' || nome.includes('DIESEL') || nome.includes('LUBRIFICANTE') || nome.includes('ÓLEO') || nome.includes('OLEO');
+}
+
+function popularItensMovimentacaoManual() {
+    const selectItem = document.getElementById('movItemId');
+    if (!selectItem) return;
+    const tipo = document.getElementById('movTipo')?.value || 'SAÍDA';
+    itensEstoque = obterEstoque();
+    const itensPermitidos = tipo === 'SAÍDA'
+        ? itensEstoque.filter(item => !itemControladoPorFrota(item))
+        : itensEstoque;
+    selectItem.innerHTML = '<option value="">-- SELECIONE O ITEM --</option>' +
+        itensPermitidos.map(item => `<option value="${item.id}">${item.nome} (${item.categoria}) [Saldo: ${item.quantidade.toFixed(1)}]</option>`).join('');
+}
 
 window.fecharModalNovaMovimentacao = function() {
     document.getElementById('modalNovaMovimentacao').style.display = 'none';
@@ -718,6 +783,7 @@ window.onChangeMovTipo = function() {
     if (containerFrota) {
         containerFrota.style.display = tipo === 'SAÍDA' ? 'block' : 'none';
     }
+    popularItensMovimentacaoManual();
 };
 
 window.onChangeMovItem = function() {
@@ -778,6 +844,10 @@ function salvarNovaMovimentacaoManual(e) {
 
     itensEstoque = obterEstoque();
     const item = itensEstoque.find(i => i.id === itemId);
+    if (tipo === 'SAÍDA' && itemControladoPorFrota(item)) {
+        alert('Saídas de diesel e lubrificantes de máquinas devem ser lançadas pelo Controle de Frota.');
+        return;
+    }
     if (!item) {
         alert("Item de estoque inválido.");
         return;
@@ -842,11 +912,11 @@ window.renderizarMovimentacoesEstoque = function() {
     // Filter by text search
     if (query) {
         movs = movs.filter(m => 
-            m.itemNome.toUpperCase().includes(query) ||
-            m.categoria.toUpperCase().includes(query) ||
-            m.destino.toUpperCase().includes(query) ||
-            m.frotaPlaca.toUpperCase().includes(query) ||
-            m.observacao.toUpperCase().includes(query)
+            (m.itemNome || '').toUpperCase().includes(query) ||
+            (m.categoria || '').toUpperCase().includes(query) ||
+            (m.destino || '').toUpperCase().includes(query) ||
+            (m.frotaPlaca || '').toUpperCase().includes(query) ||
+            (m.observacao || '').toUpperCase().includes(query)
         );
     }
 
@@ -942,6 +1012,7 @@ document.addEventListener('click', (e) => {
         renderizarEstoque();
         window.renderSimuladores();
         window.renderizarMovimentacoesEstoque();
+        renderResumoEstoque();
     }
 });
 
@@ -950,4 +1021,5 @@ document.addEventListener('estoqueUpdated', () => {
     renderizarEstoque();
     window.renderSimuladores();
     window.renderizarMovimentacoesEstoque();
+    renderResumoEstoque();
 });

@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && userDoc().data.cargo == 'ADMIN';
+    }
+
+    match /usuarios/{userId} {
+      allow create: if signedIn() && (userId == request.auth.uid || isAdmin());
+      allow read, update: if signedIn() && (userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /{collection}/{document} {
+      allow read, write: if signedIn()
+        && collection in [
+          'clientes',
+          'clientes_subprodutos',
+          'produtos',
+          'transportes',
+          'empreiteiros',
+          'entradas',
+          'romaneios',
+          'historico',
+          'vendas_subprodutos',
+          'patio_relatorios',
+          'funcionarios',
+          'agenda',
+          'estoque',
+          'estoque_movimentacoes',
+          'frotas',
+          'frota_abastecimentos',
+          'frota_manutencoes',
+          'financeiro_lancamentos',
+          'financeiro_relatorios_mensais'
+        ];
+    }
+  }
+}

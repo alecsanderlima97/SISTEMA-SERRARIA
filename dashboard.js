@@ -2,7 +2,7 @@ import { db, getDocs, collection } from './js/firebase-init.js';
 
 let chartVendasInstance = null;
 let chartVolumeInstance = null;
-let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [] };
+let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [], estoque: [], financeiro: [], relatoriosFinanceiros: [] };
 
 const formatBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatM3 = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} m³`;
@@ -17,20 +17,26 @@ document.addEventListener('historicoUpdated', initDashboard);
 
 async function initDashboard() {
     try {
-        const [snapRomaneios, snapClientes, snapProdutos, snapEntradas, snapSubprodutos, snapFuncionarios] = await Promise.all([
+        const [snapRomaneios, snapClientes, snapProdutos, snapEntradas, snapSubprodutos, snapFuncionarios, snapEstoque, snapFinanceiro, snapRelatoriosFinanceiros] = await Promise.all([
             getDocs(collection(db, 'romaneios')),
             getDocs(collection(db, 'clientes')),
             getDocs(collection(db, 'produtos')),
             getDocs(collection(db, 'entradas')),
             getDocs(collection(db, 'vendas_subprodutos')),
-            getDocs(collection(db, 'funcionarios'))
+            getDocs(collection(db, 'funcionarios')),
+            getDocs(collection(db, 'estoque')),
+            getDocs(collection(db, 'financeiro_lancamentos')),
+            getDocs(collection(db, 'financeiro_relatorios_mensais'))
         ]);
 
         dashboardData = {
             romaneios: docsToArray(snapRomaneios),
             entradas: docsToArray(snapEntradas),
             subprodutos: docsToArray(snapSubprodutos),
-            funcionarios: docsToArray(snapFuncionarios)
+            funcionarios: docsToArray(snapFuncionarios),
+            estoque: docsToArray(snapEstoque),
+            financeiro: docsToArray(snapFinanceiro),
+            relatoriosFinanceiros: docsToArray(snapRelatoriosFinanceiros)
         };
 
         const totalCargas = dashboardData.romaneios.length;
@@ -151,7 +157,9 @@ function renderDashboardView(view) {
 
 function getItensAlmoxarifadoAcabando() {
     try {
-        const itens = JSON.parse(localStorage.getItem('orquestra_estoque') || '[]');
+        const itens = dashboardData.estoque.length
+            ? dashboardData.estoque
+            : JSON.parse(localStorage.getItem('orquestra_estoque') || '[]');
         return itens.filter(item => {
             const limite = item.limite_alerta !== undefined && item.limite_alerta !== null
                 ? Number(item.limite_alerta)
@@ -317,6 +325,7 @@ function agruparRendimentoPorMes() {
 
 function obterLancamentosFinanceirosLocal() {
     try {
+        if (dashboardData.financeiro.length) return dashboardData.financeiro;
         return JSON.parse(localStorage.getItem('orquestra_financeiro_lancamentos') || '[]');
     } catch (error) {
         return [];
@@ -502,8 +511,8 @@ function renderRelatorioMensalDashboard() {
     if (!info) return;
     const hoje = new Date();
     const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-    const relatorios = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
-    const salvo = relatorios[mesAtual];
+    const relatoriosLocais = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
+    const salvo = dashboardData.relatoriosFinanceiros.find(item => item.id === mesAtual || item.mes === mesAtual) || relatoriosLocais[mesAtual];
     if (salvo) {
         info.textContent = `${mesAtual}: despesas ${formatBRL(salvo.despesas)} | comparativo ${formatBRL(salvo.comparativoFinanceiro || salvo.faturamentoReal || 0)}`;
         return;
@@ -513,7 +522,7 @@ function renderRelatorioMensalDashboard() {
         : 'Fechamento mensal ainda não salvo.';
 }
 
-window.salvarRelatorioMensalDashboard = function() {
+window.salvarRelatorioMensalDashboard = async function() {
     const hoje = new Date();
     const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
     const resumo = getResumoFinanceiroLocal();
@@ -528,6 +537,13 @@ window.salvarRelatorioMensalDashboard = function() {
         salvoEm: new Date().toISOString()
     };
     localStorage.setItem('orquestra_financeiro_relatorios_mensais', JSON.stringify(relatorios));
+    if (window.FS) {
+        await window.FS.setDoc('financeiro_relatorios_mensais', mesAtual, relatorios[mesAtual]);
+        dashboardData.relatoriosFinanceiros = [
+            { id: mesAtual, ...relatorios[mesAtual] },
+            ...dashboardData.relatoriosFinanceiros.filter(item => item.id !== mesAtual && item.mes !== mesAtual)
+        ];
+    }
     renderRelatorioMensalDashboard();
     alert('Relatório mensal salvo no painel de controle.');
 };

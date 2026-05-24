@@ -189,6 +189,7 @@ async function carregarTransportes() {
         listaTransportes.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>`;
     }
 }
+window.renderTransportes = renderTransportes;
 
 // Inicializar
 document.getElementById('filtroTransportesBusca')?.addEventListener('input', renderTransportes);

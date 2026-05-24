@@ -773,25 +773,60 @@
         <!-- ====== TELA: CONTROLE DE ESTOQUE ====== -->
         <section id="view-estoque" class="view-section" style="display: none;">
             <div class="main-header">
-                <h1><i class="fa-solid fa-boxes-stacked"></i> Almoxarifado & Controle de Estoque</h1>
-                <p>Gestão unificada de recursos, peças de reposição e simuladores de tanques virtuais</p>
+                <h1><i class="fa-solid fa-boxes-stacked"></i> Estoque</h1>
+                <p>Resumo, itens, movimentações e lançamentos manuais do almoxarifado</p>
             </div>
 
                 <!-- TABS DE ESTOQUE -->
                 <div class="tabs-container" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
+                    <button type="button" class="btn-tab-estoque active" onclick="window.switchTabEstoque('resumo')" id="btnTabEstoqueResumo" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fa-solid fa-chart-simple"></i> Resumo
+                    </button>
                     <button type="button" class="btn-tab-estoque active" onclick="window.switchTabEstoque('inventario')" id="btnTabEstoqueInventario" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-cubes"></i> Inventário Físico
+                        <i class="fa-solid fa-cubes"></i> Itens
                     </button>
                     <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('movimentacoes')" id="btnTabEstoqueMovimentacoes" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-right-left"></i> Histórico de Movimentações (E/S)
+                        <i class="fa-solid fa-right-left"></i> Movimentações
                     </button>
                     <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('tanques')" id="btnTabEstoqueTanques" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <i class="fa-solid fa-gas-pump"></i> Simulador de Tanques & Níveis
+                        <i class="fa-solid fa-gas-pump"></i> Tanques
+                    </button>
+                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('lancar')" id="btnTabEstoqueLancar" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fa-solid fa-plus-minus"></i> Lançar Movimento
                     </button>
                 </div>
 
+                <!-- SUB-VIEW 0: RESUMO OPERACIONAL -->
+                <div id="subview-estoque-resumo" class="subview-estoque-section">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div class="glass-panel" style="padding: 18px; border-radius: 12px;">
+                            <small style="color: var(--text-muted);">Diesel no tanque</small>
+                            <strong id="estoqueResumoDiesel" style="display:block; color:#eab308; font-size:1.4rem; margin-top:6px;">0 L</strong>
+                        </div>
+                        <div class="glass-panel" style="padding: 18px; border-radius: 12px;">
+                            <small style="color: var(--text-muted);">Itens cadastrados</small>
+                            <strong id="estoqueResumoItens" style="display:block; color:var(--accent-color); font-size:1.4rem; margin-top:6px;">0</strong>
+                        </div>
+                        <div class="glass-panel" style="padding: 18px; border-radius: 12px;">
+                            <small style="color: var(--text-muted);">Itens acabando</small>
+                            <strong id="estoqueResumoAcabando" style="display:block; color:#f87171; font-size:1.4rem; margin-top:6px;">0</strong>
+                        </div>
+                        <div class="glass-panel" style="padding: 18px; border-radius: 12px;">
+                            <small style="color: var(--text-muted);">Valor estimado</small>
+                            <strong id="estoqueResumoValor" style="display:block; color:#60a5fa; font-size:1.4rem; margin-top:6px;">R$ 0,00</strong>
+                        </div>
+                    </div>
+                    <div class="glass-panel" style="padding: 20px; border-radius: 16px;">
+                        <div class="section-title" style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                            <h2><i class="fa-solid fa-triangle-exclamation"></i> Itens que precisam de atenção</h2>
+                            <button type="button" class="btn-primary" onclick="window.switchTabEstoque('inventario'); const chk=document.getElementById('chkEstoqueAcabando'); if(chk){chk.checked=true; window.filtrarEstoque();}" style="padding: 8px 14px; border-radius: 8px; font-size: 0.85rem;">Ver itens</button>
+                        </div>
+                        <div id="estoqueResumoListaBaixa" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;"></div>
+                    </div>
+                </div>
+
                 <!-- SUB-VIEW 1: INVENTÁRIO FÍSICO -->
-                <div id="subview-estoque-inventario" class="subview-estoque-section">
+                <div id="subview-estoque-inventario" class="subview-estoque-section" style="display: none;">
                     <!-- Categorias de Atalho Rápido -->
                     <div class="glass-panel" style="margin-bottom: 2rem; padding: 20px;">
                         <div class="section-title" style="margin-bottom: 15px;">
@@ -837,7 +872,7 @@
                     <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
                             <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-cubes" style="color: var(--accent-color);"></i> Inventário Físico & Almoxarifado
+                                <i class="fa-solid fa-cubes" style="color: var(--accent-color);"></i> Itens do Estoque
                             </h3>
                             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                 <!-- Busca -->
@@ -973,12 +1008,6 @@
                                     <option value="ENTRADA">📈 ENTRADAS</option>
                                     <option value="SAÍDA">📉 SAÍDAS</option>
                                 </select>
-                                <button type="button" class="btn-primary" onclick="window.renderizarMovimentacoesEstoque()" style="padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fa-solid fa-filter"></i> Filtrar
-                                </button>
-                                <button type="button" class="btn-primary" onclick="window.abrirModalNovaMovimentacao()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; background: var(--primary-color);">
-                                    <i class="fa-solid fa-plus-minus"></i> Novo Lançamento (Manual)
-                                </button>
                             </div>
                         </div>
 
@@ -1002,6 +1031,19 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- SUB-VIEW 4: LANÇAMENTO MANUAL -->
+                <div id="subview-estoque-lancar" class="subview-estoque-section" style="display: none;">
+                    <div class="glass-panel" style="padding: 24px; border-radius: 16px; max-width: 760px; margin: 0 auto;">
+                        <div class="section-title">
+                            <h2><i class="fa-solid fa-plus-minus"></i> Lançar Movimento Manual</h2>
+                        </div>
+                        <p style="color: var(--text-muted); margin-top: -5px;">Use esta opção para entrada de compra, reposição ou saída manual. Saídas de diesel e lubrificantes de máquinas devem ser lançadas pelo Controle de Frota.</p>
+                        <button type="button" class="btn-primary" onclick="window.abrirModalNovaMovimentacao()" style="padding: 12px 18px; border-radius: 8px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-plus-minus"></i> Abrir Formulário de Movimento
+                        </button>
                     </div>
                 </div>
 
@@ -2011,7 +2053,6 @@
                                 <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros</h2>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome ou Mato..." style="padding: 8px 12px; font-size: 0.85rem; width: 190px; margin-bottom: 0;">
-                                    <button type="button" id="btnFiltrarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
                                     <button type="button" id="btnOrdenarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-arrow-down-a-z"></i> A-Z</button>
                                 </div>
                             </div>
@@ -2053,7 +2094,6 @@
                                         <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data Fim</label>
                                         <input type="date" id="filtroEntradasDataFim" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
-                                    <button type="button" id="btnFiltrarEntradas" class="btn-primary" style="padding: 8px 15px; font-size: 0.85rem; height: 38px; border-radius: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
                                 </div>
                             </div>
                             
@@ -2119,7 +2159,6 @@
                                         <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data Fim</label>
                                         <input type="date" id="filtroDescargaDataFim" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
-                                    <button type="button" id="btnFiltrarDescargas" class="btn-primary" style="padding: 8px 15px; font-size: 0.85rem; height: 38px; border-radius: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
                                 </div>
                             </div>
                             

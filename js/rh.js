@@ -313,7 +313,8 @@ function renderizarFuncionarios(lista) {
 
 // Filtrar funcionários em tempo real
 function filtrarFuncionarios() {
-    const queryStr = (buscaFuncionario?.value || '').toLowerCase().trim();
+    const inputBusca = document.getElementById('buscaFuncionario');
+    const queryStr = (inputBusca?.value || '').toLowerCase().trim();
     const ordem = document.getElementById('ordenarFuncionarios')?.value || 'nome';
     const filtrados = funcionariosAtuais.filter(f => 
         (f.nome || '').toLowerCase().includes(queryStr) || 
@@ -325,6 +326,7 @@ function filtrarFuncionarios() {
     });
     renderizarFuncionarios(filtrados);
 }
+window.filtrarFuncionarios = filtrarFuncionarios;
 
 // CRUD - Salvar ou Atualizar Funcionário
 async function salvarFuncionario() {

@@ -203,6 +203,7 @@ function renderClientes() {
         listaClientes.appendChild(tr);
     });
 }
+window.renderClientes = renderClientes;
 
 // Carregar clientes do Firestore
 async function carregarClientes() {
@@ -314,7 +315,6 @@ function inicializarModuloClientes() {
     }
     const ordenarClientes = document.getElementById('ordenarClientes');
     if (ordenarClientes) ordenarClientes.addEventListener('change', renderClientes);
-
     // Inicializar listeners financeiros
     const inputsFinanceirosCliente = [
         'cliValorFrete', 'cliMadeira1', 'cliMadeira2', 'cliMadeira3', 'cliMadeiraPinus', 'cliValorMadeiraExtra'

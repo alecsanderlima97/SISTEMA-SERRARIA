@@ -145,6 +145,7 @@ function atualizarSelectEmpreiteiros() {
         selectEmpreiteiro.appendChild(opt);
     });
 }
+window.renderizarEmpreiteiros = renderizarEmpreiteiros;
 
 function preencherDadosEmpreiteiroSelecionado() {
     if (!selectEmpreiteiro) return;
@@ -510,6 +511,7 @@ function renderizarEntradas() {
 
     atualizarPainelFechamento();
 }
+window.renderizarEntradas = renderizarEntradas;
 
 function getDescargasFiltradas() {
     const filtroNome = filtroDescargaNome ? filtroDescargaNome.value.toLowerCase().trim() : '';
@@ -572,6 +574,7 @@ function renderizarDescarregamentos() {
 
     atualizarResumoDescarregamento(filtradas);
 }
+window.renderizarDescarregamentos = renderizarDescarregamentos;
 
 function atualizarResumoDescarregamento(lista) {
     const totalVolume = lista.reduce((sum, en) => sum + (en.volume || 0), 0);
@@ -1227,8 +1230,6 @@ function inicializarModuloEntrada() {
 
     // Eventos de Busca e Filtro de Entradas
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
-    const btnFiltrarEntradas = document.getElementById('btnFiltrarEntradas');
-    if(btnFiltrarEntradas) btnFiltrarEntradas.addEventListener('click', renderizarEntradas);
     
     // Eventos de Filtro de Período
     const filtroEntradasDataInicio = document.getElementById('filtroEntradasDataInicio');
@@ -1237,8 +1238,6 @@ function inicializarModuloEntrada() {
     if(filtroEntradasDataFim) filtroEntradasDataFim.addEventListener('change', renderizarEntradas);
 
     if(filtroDescargaNome) filtroDescargaNome.addEventListener('input', renderizarDescarregamentos);
-    const btnFiltrarDescargas = document.getElementById('btnFiltrarDescargas');
-    if(btnFiltrarDescargas) btnFiltrarDescargas.addEventListener('click', renderizarDescarregamentos);
     const filtroDescargaDataInicio = document.getElementById('filtroDescargaDataInicio');
     const filtroDescargaDataFim = document.getElementById('filtroDescargaDataFim');
     if(filtroDescargaDataInicio) filtroDescargaDataInicio.addEventListener('change', renderizarDescarregamentos);
@@ -1291,8 +1290,6 @@ function inicializarModuloEntrada() {
     if(filtroEmpreiteirosBusca) {
         filtroEmpreiteirosBusca.addEventListener('input', renderizarEmpreiteiros);
     }
-    const btnFiltrarEmpreiteiros = document.getElementById('btnFiltrarEmpreiteiros');
-    if(btnFiltrarEmpreiteiros) btnFiltrarEmpreiteiros.addEventListener('click', renderizarEmpreiteiros);
     const btnOrdenarEmpreiteiros = document.getElementById('btnOrdenarEmpreiteiros');
     if (btnOrdenarEmpreiteiros) {
         btnOrdenarEmpreiteiros.addEventListener('click', () => {

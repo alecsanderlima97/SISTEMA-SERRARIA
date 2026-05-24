@@ -2,6 +2,8 @@ console.log("Modulo Financeiro: inicializando...");
 
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
+const FINANCEIRO_COLLECTION = 'financeiro_lancamentos';
+const FINANCEIRO_RELATORIOS_COLLECTION = 'financeiro_relatorios_mensais';
 
 const FINANCEIRO_ABAS = {
     'despesas-gerais': {
@@ -29,6 +31,7 @@ const FINANCEIRO_ABAS = {
 let financeiroAbaAtiva = 'despesas-gerais';
 let financeiroAnexosTemp = { documento: null, comprovante: null };
 let financeiroRelatorioAtual = [];
+let financeiroNuvemCarregada = false;
 
 function normalizarTexto(valor) {
     return (valor || '').toString().trim().toUpperCase();
@@ -40,6 +43,43 @@ function obterLancamentosFinanceiros() {
 
 function salvarLancamentosFinanceiros(lista) {
     localStorage.setItem(FINANCEIRO_KEY, JSON.stringify(lista || []));
+}
+
+async function carregarFinanceiroNuvem() {
+    if (!window.FS) return;
+    try {
+        const locais = obterLancamentosFinanceiros();
+        const nuvem = await window.FS.getCollection(FINANCEIRO_COLLECTION);
+        if (nuvem.length > 0) {
+            salvarLancamentosFinanceiros(nuvem);
+        } else if (locais.length > 0) {
+            await Promise.all(locais.map(item => window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, item)));
+        }
+        financeiroNuvemCarregada = true;
+        renderFinanceiro();
+    } catch (error) {
+        console.error('Falha ao carregar financeiro no Firestore. Usando cache local.', error);
+    }
+}
+
+async function salvarFinanceiroNuvem(item) {
+    if (!window.FS || !item?.id) return;
+    try {
+        await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, item);
+    } catch (error) {
+        console.error(`Falha ao salvar financeiro/${item.id} no Firestore.`, error);
+        alert('Lancamento salvo localmente, mas nao foi possivel sincronizar com a nuvem agora.');
+    }
+}
+
+async function excluirFinanceiroNuvem(id) {
+    if (!window.FS || !id) return;
+    try {
+        await window.FS.deleteDoc(FINANCEIRO_COLLECTION, id);
+    } catch (error) {
+        console.error(`Falha ao excluir financeiro/${id} no Firestore.`, error);
+        alert('Lancamento removido localmente, mas nao foi possivel sincronizar a exclusao na nuvem agora.');
+    }
 }
 
 function formatarMoeda(valor) {
@@ -263,19 +303,22 @@ window.editarFinanceiro = function(id) {
     window.scrollTo({ top: document.getElementById('view-financeiro').offsetTop, behavior: 'smooth' });
 };
 
-window.alternarPagoFinanceiro = function(id) {
+window.alternarPagoFinanceiro = async function(id) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
     if (!item) return;
     item.pago = !item.pago;
     item.pagoEm = item.pago ? new Date().toISOString() : null;
+    item.atualizadoEm = new Date().toISOString();
     salvarLancamentosFinanceiros(lista);
+    await salvarFinanceiroNuvem(item);
     renderFinanceiro();
 };
 
-window.excluirFinanceiro = function(id) {
+window.excluirFinanceiro = async function(id) {
     if (!confirm('Deseja excluir este lançamento financeiro?')) return;
     salvarLancamentosFinanceiros(obterLancamentosFinanceiros().filter(item => item.id !== id));
+    await excluirFinanceiroNuvem(id);
     renderFinanceiro();
 };
 
@@ -396,7 +439,7 @@ window.imprimirRelatorioFinanceiro = function() {
     win.document.close();
 };
 
-function salvarFinanceiroSubmit(event) {
+async function salvarFinanceiroSubmit(event) {
     event.preventDefault();
 
     const tipo = normalizarTexto(document.getElementById('financeiroTipo').value);
@@ -434,6 +477,7 @@ function salvarFinanceiroSubmit(event) {
     else lista.push(registro);
 
     salvarLancamentosFinanceiros(lista);
+    await salvarFinanceiroNuvem(registro);
     window.limparFinanceiroForm();
     renderFinanceiro();
 };
@@ -484,4 +528,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('financeiroComprovante')?.addEventListener('change', event => lerArquivoFinanceiro(event.target.files[0], 'comprovante'));
     window.limparFinanceiroForm();
     renderFinanceiro();
+    carregarFinanceiroNuvem();
 });
