@@ -297,6 +297,8 @@ function renderizarEstoque() {
     }).join('');
 }
 
+window.renderizarEstoque = renderizarEstoque;
+
 // Filtro em tempo real
 window.filtrarEstoque = function() {
     const input = document.getElementById('buscaEstoque');
@@ -560,6 +562,7 @@ window.registrarMovimentacaoEstoque = async function({
         if (window.FS) await window.FS.setDoc('estoque_movimentacoes', nova.id, nova);
         // Update local cache
         window.renderizarMovimentacoesEstoque();
+        document.dispatchEvent(new CustomEvent('estoqueUpdated', { detail: nova }));
         console.log(`[Almoxarifado] Movimento gravado no Firestore: ${nova.id}`);
     } catch (err) {
         console.error('Erro ao gravar movimento no Firestore', err);
@@ -593,7 +596,13 @@ window.registrarSaidaEstoqueFrota = async function({
         throw new Error(`Item de estoque nao encontrado: ${itemNome}`);
     }
 
-    if (item.quantidade < qtd && !confirm(`Atenção: a saída de ${qtd} é maior que o saldo atual (${item.quantidade}). Deseja continuar e deixar o estoque negativo?`)) {
+    if (item.quantidade <= 0) {
+        alert(`Não é possível abastecer. O estoque de ${item.nome} está zerado.`);
+        return null;
+    }
+
+    if (item.quantidade < qtd) {
+        alert(`Não é possível abastecer ${qtd.toLocaleString('pt-BR')} L. Saldo disponível de ${item.nome}: ${Number(item.quantidade || 0).toLocaleString('pt-BR')} L.`);
         return null;
     }
 
@@ -618,6 +627,7 @@ window.registrarSaidaEstoqueFrota = async function({
     renderizarEstoque();
     window.renderSimuladores();
     window.renderizarMovimentacoesEstoque();
+    document.dispatchEvent(new CustomEvent('estoqueUpdated', { detail: { itemId: item.id, itemNome: item.nome } }));
 
     return item;
 };
@@ -933,4 +943,11 @@ document.addEventListener('click', (e) => {
         window.renderSimuladores();
         window.renderizarMovimentacoesEstoque();
     }
+});
+
+document.addEventListener('estoqueUpdated', () => {
+    itensEstoque = obterEstoque();
+    renderizarEstoque();
+    window.renderSimuladores();
+    window.renderizarMovimentacoesEstoque();
 });

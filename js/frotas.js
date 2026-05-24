@@ -57,11 +57,40 @@ let pecasManutencaoTemp = [];
 // --- FILTRO DE GRUPO ---
 let setorFiltroAtual = 'TODOS';
 
+function gerarCodigoFrota(grupo = 'MAQ') {
+    const prefixo = grupo === 'FLORESTAL' ? 'MAQ' : grupo === 'TERRAPLANAGEM' ? 'TER' : 'SER';
+    const usados = new Set(frota.map(v => (v.codigo || '').toUpperCase()).filter(Boolean));
+    let seq = frota.length + 1;
+    let codigo = '';
+    do {
+        codigo = `${prefixo}-${String(seq).padStart(4, '0')}`;
+        seq++;
+    } while (usados.has(codigo));
+    return codigo;
+}
+
+function garantirCodigoFrota(veiculo) {
+    if (veiculo.codigo) return veiculo.codigo.toUpperCase().trim();
+    const codigo = gerarCodigoFrota(veiculo.grupo || 'MAQ');
+    veiculo.codigo = codigo;
+    return codigo;
+}
+
+function getUrlFrotaCodigo(codigo) {
+    const base = 'https://sistema-serraria.vercel.app/';
+    return `${base}?view=frotas&codigo=${encodeURIComponent(codigo)}`;
+}
+
 // --- INICIALIZADOR DO MÓDULO ---
 document.addEventListener('DOMContentLoaded', () => {
     inicializarEventosFrotas();
     renderizarFrota();
     atualizarKPIsFrota();
+    const params = new URLSearchParams(window.location.search);
+    const codigoUrl = params.get('codigo') || params.get('veiculo');
+    if ((params.get('view') || '').toLowerCase() === 'frotas' && codigoUrl) {
+        setTimeout(() => window.abrirFrotaPorCodigo(codigoUrl), 500);
+    }
 });
 
 // Registrar eventos
@@ -84,6 +113,7 @@ function inicializarEventosFrotas() {
 
     document.getElementById('buscaFrota')?.addEventListener('input', renderizarFrota);
     document.getElementById('ordenarFrota')?.addEventListener('change', renderizarFrota);
+    document.getElementById('veicCodigo')?.addEventListener('input', window.forceUppercaseInput);
 
     // Registrar submits de modals
     const formAbast = document.getElementById('formAbastecimento');
@@ -140,6 +170,7 @@ window.switchTabFrotas = function(tabName, isEditing = false) {
 function limparFormFrota() {
     document.getElementById('veiculoId').value = '';
     document.getElementById('veicModelo').value = '';
+    document.getElementById('veicCodigo').value = '';
     document.getElementById('veicPlaca').value = '';
     document.getElementById('veicGrupo').value = 'SERRARIA';
     document.getElementById('veicAno').value = '';
@@ -168,6 +199,7 @@ window.handleDocumentoUpload = function(event) {
 function salvarVeiculo() {
     const id = document.getElementById('veiculoId').value;
     const modelo = document.getElementById('veicModelo').value.trim().toUpperCase() || 'VEÍCULO S/ MODELO';
+    const codigoInput = document.getElementById('veicCodigo').value.trim().toUpperCase();
     const placa = document.getElementById('veicPlaca').value.trim().toUpperCase() || 'S/ PLACA';
     const grupo = document.getElementById('veicGrupo').value || 'SERRARIA';
     const ano = parseInt(document.getElementById('veicAno').value) || new Date().getFullYear();
@@ -176,12 +208,13 @@ function salvarVeiculo() {
 
     if (id) {
         // Editar existente
-        frota = frota.map(v => v.id === id ? { ...v, modelo, placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() } : v);
+        frota = frota.map(v => v.id === id ? { ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() } : v);
     } else {
         // Novo veículo
         const novo = {
             id: 'v_' + new Date().getTime(),
             modelo,
+            codigo: codigoInput || gerarCodigoFrota(grupo),
             placa,
             grupo,
             ano,
@@ -209,6 +242,7 @@ window.editarVeiculo = function(id) {
 
     document.getElementById('veiculoId').value = v.id;
     document.getElementById('veicModelo').value = v.modelo;
+    document.getElementById('veicCodigo').value = garantirCodigoFrota(v);
     document.getElementById('veicPlaca').value = v.placa;
     document.getElementById('veicGrupo').value = v.grupo;
     document.getElementById('veicAno').value = v.ano;
@@ -230,6 +264,74 @@ window.excluirVeiculo = function(id) {
     salvarBanco(KEYS.FROTA, frota);
     renderizarFrota();
     atualizarKPIsFrota();
+};
+
+window.abrirFrotaPorCodigo = function(codigo) {
+    const codigoBusca = (codigo || '').toUpperCase().trim();
+    if (!codigoBusca) return false;
+    const veiculo = frota.find(v => (garantirCodigoFrota(v) || '').toUpperCase() === codigoBusca);
+    if (!veiculo) {
+        alert(`Nenhuma máquina encontrada com o código ${codigoBusca}.`);
+        return false;
+    }
+
+    if (typeof window.navegarPara === 'function') window.navegarPara('view-frotas');
+    window.switchTabFrotas('lista');
+    const busca = document.getElementById('buscaFrota');
+    if (busca) busca.value = codigoBusca;
+    renderizarFrota();
+    setTimeout(() => {
+        const card = document.querySelector(`[data-frota-codigo="${codigoBusca}"]`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.75)';
+            setTimeout(() => card.style.boxShadow = '', 3500);
+        }
+    }, 250);
+    return true;
+};
+
+window.imprimirQrFrota = function(id) {
+    const v = frota.find(item => item.id === id);
+    if (!v) return;
+    const codigo = garantirCodigoFrota(v);
+    salvarBanco(KEYS.FROTA, frota);
+    const url = getUrlFrotaCodigo(codigo);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`;
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Não foi possível abrir a etiqueta. Libere pop-ups para este site e tente novamente.');
+        return;
+    }
+    win.document.write(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <title>QR Code ${codigo}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #111827; }
+                .etiqueta { width: 92mm; min-height: 92mm; border: 2px solid #111827; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+                h1 { font-size: 18px; margin: 0; text-transform: uppercase; }
+                .codigo { font-size: 28px; font-weight: 900; letter-spacing: 1px; }
+                img { width: 62mm; height: 62mm; }
+                .meta { font-size: 12px; line-height: 1.35; }
+                @media print { body { padding: 0; } .etiqueta { page-break-inside: avoid; } }
+            </style>
+        </head>
+        <body>
+            <div class="etiqueta">
+                <h1>Sistema Serraria</h1>
+                <div class="codigo">${codigo}</div>
+                <img src="${qrUrl}" alt="QR Code ${codigo}">
+                <div class="meta"><strong>${v.modelo || '-'}</strong><br>${v.placa || '-'} | ${v.grupo || '-'}</div>
+                <div class="meta">Escaneie para abrir a ficha da máquina.</div>
+            </div>
+            <script>window.onload = () => setTimeout(() => window.print(), 500);<\/script>
+        </body>
+        </html>
+    `);
+    win.document.close();
 };
 
 // --- FILTRAR FROTA ---
@@ -254,11 +356,20 @@ function renderizarFrota() {
     const grid = document.getElementById('gridVeiculosFrota');
     if (!grid) return;
 
+    let atualizouCodigos = false;
+    frota.forEach(v => {
+        if (!v.codigo) {
+            garantirCodigoFrota(v);
+            atualizouCodigos = true;
+        }
+    });
+    if (atualizouCodigos) salvarBanco(KEYS.FROTA, frota);
+
     const busca = (document.getElementById('buscaFrota')?.value || '').toLowerCase().trim();
     const ordem = document.getElementById('ordenarFrota')?.value || 'nome';
     const filtrados = frota
         .filter(v => setorFiltroAtual === 'TODOS' || v.grupo === setorFiltroAtual)
-        .filter(v => [v.modelo, v.placa, v.grupo].some(valor => (valor || '').toLowerCase().includes(busca)))
+        .filter(v => [v.modelo, v.codigo, v.placa, v.grupo].some(valor => (valor || '').toLowerCase().includes(busca)))
         .sort((a, b) => {
             if (ordem === 'data-desc') return new Date(b.criadoEm || b.atualizadoEm || 0) - new Date(a.criadoEm || a.atualizadoEm || 0);
             if (ordem === 'data-asc') return new Date(a.criadoEm || a.atualizadoEm || 0) - new Date(b.criadoEm || b.atualizadoEm || 0);
@@ -276,6 +387,7 @@ function renderizarFrota() {
     }
 
     grid.innerHTML = filtrados.map(v => {
+        const codigo = garantirCodigoFrota(v);
         // Definir cores HSL vibrantes de badges com base no setor
         let badgeColor = '';
         let iconHtml = '<i class="fa-solid fa-truck"></i>';
@@ -296,7 +408,7 @@ function renderizarFrota() {
             : `<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sem Documento</span>`;
 
         return `
-            <div class="glass-panel" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div class="glass-panel" data-frota-codigo="${codigo}" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div>
                     <!-- Header Card -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
@@ -311,6 +423,7 @@ function renderizarFrota() {
                     <!-- Dados Principal -->
                     <h3 style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px; color: white;">${v.modelo}</h3>
                     <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px;">
+                        <span>CÓDIGO: <strong style="color: var(--accent-color);">${codigo}</strong></span><br>
                         <span>PLACA / PREFIXO: <strong style="color: white;">${v.placa}</strong></span><br>
                         <span>ANO FABRICAÇÃO: <strong style="color: white;">${v.ano}</strong></span><br>
                         <span style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">DOCUMENTO: ${docLinkHtml}</span>
@@ -328,6 +441,9 @@ function renderizarFrota() {
                         </button>
                         <button onclick="window.abrirModalManutencao('${v.id}')" class="btn-icon" style="color:#3b82f6; font-size:1.1rem; padding: 4px;" title="Registrar Manutenção Preventiva / Corretiva">
                             <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </button>
+                        <button onclick="window.imprimirQrFrota('${v.id}')" class="btn-icon" style="color:#22c55e; font-size:1.1rem; padding: 4px;" title="Imprimir QR Code">
+                            <i class="fa-solid fa-qrcode"></i>
                         </button>
                     </div>
                     <div style="display: flex; gap: 8px;">
@@ -510,15 +626,22 @@ async function salvarAbastecimento() {
         });
 
         if (!itemAtualizado) return;
+        estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
     } else {
     estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
     let itemEstoque = estoque.find(i => i.nome === estoqueNome);
     
     if (itemEstoque) {
+        if (itemEstoque.quantidade <= 0) {
+            alert(`Não é possível abastecer. O estoque de ${itemEstoque.nome} está zerado.`);
+            return;
+        }
         if (itemEstoque.quantidade < qtd) {
-            console.log(`Atenção: A quantidade lançada (${qtd}) é maior do que o saldo atual em estoque (${itemEstoque.quantidade}). O estoque ficará negativo.`);
+            alert(`Não é possível abastecer ${qtd.toLocaleString('pt-BR')} L. Saldo disponível de ${itemEstoque.nome}: ${Number(itemEstoque.quantidade || 0).toLocaleString('pt-BR')} L.`);
+            return;
         }
         itemEstoque.quantidade -= qtd;
+        itemEstoque.atualizadoEm = new Date().toISOString();
         salvarBanco(KEYS.ESTOQUE, estoque);
         console.log(`Estoque deduzido para ${estoqueNome}: novo saldo ${itemEstoque.quantidade}`);
 
@@ -538,6 +661,7 @@ async function salvarAbastecimento() {
                 observacao: `Abastecimento de veículo. Horímetro/KM: ${horimetro}`
             });
         }
+        document.dispatchEvent(new CustomEvent('estoqueUpdated', { detail: { itemId: itemEstoque.id, itemNome: itemEstoque.nome } }));
     }
     }
 
@@ -546,6 +670,8 @@ async function salvarAbastecimento() {
     
     // Atualizar tabela e limpar form do modal
     renderizarAbastecimentosVeiculo(veiculoId);
+    if (typeof window.renderSimuladores === 'function') window.renderSimuladores();
+    if (typeof window.renderizarEstoque === 'function') window.renderizarEstoque();
     document.getElementById('abastQtd').value = '';
     document.getElementById('abastTotal').value = '';
     document.getElementById('abastHorimetro').value = horimetro; // Manter o último
