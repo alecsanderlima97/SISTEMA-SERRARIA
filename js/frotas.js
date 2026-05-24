@@ -86,11 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarEventosFrotas();
     renderizarFrota();
     atualizarKPIsFrota();
-    const params = new URLSearchParams(window.location.search);
-    const codigoUrl = params.get('codigo') || params.get('veiculo');
-    if ((params.get('view') || '').toLowerCase() === 'frotas' && codigoUrl) {
-        setTimeout(() => window.abrirFrotaPorCodigo(codigoUrl), 500);
-    }
 });
 
 // Registrar eventos

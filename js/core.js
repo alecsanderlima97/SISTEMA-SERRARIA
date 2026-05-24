@@ -337,6 +337,7 @@ const App = {
     usuariosConfigById: {},
     userUnsubscribe: null, // Guarda a função de desinscrição do onSnapshot
     usuariosUnsubscribe: null, // Guarda a função de desinscrição da lista de usuários
+    deepLinkFrotaAplicado: false,
 
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
@@ -640,6 +641,7 @@ const App = {
                         } else {
                             if (panel) panel.style.display = 'none';
                         }
+                        this.processarDeepLinkFrota();
                     }, (error) => {
                         console.error("Core [Realtime Error]: Erro na sincronização em tempo real:", error);
                     });
@@ -657,6 +659,30 @@ const App = {
                 }
             }
         });
+    },
+
+    processarDeepLinkFrota() {
+        if (this.deepLinkFrotaAplicado) return;
+        const params = new URLSearchParams(window.location.search);
+        const view = (params.get('view') || '').toLowerCase();
+        const codigo = params.get('codigo') || params.get('veiculo');
+        if (view !== 'frotas' || !codigo) return;
+
+        this.deepLinkFrotaAplicado = true;
+        const abrir = () => {
+            if (typeof window.abrirFrotaPorCodigo === 'function') {
+                window.abrirFrotaPorCodigo(codigo);
+                return;
+            }
+            this.showSection('view-frotas');
+            const busca = document.getElementById('buscaFrota');
+            if (busca) {
+                busca.value = codigo.toUpperCase();
+                busca.dispatchEvent(new Event('input'));
+            }
+        };
+        setTimeout(abrir, 350);
+        setTimeout(abrir, 1200);
     },
 
     async logout() {
