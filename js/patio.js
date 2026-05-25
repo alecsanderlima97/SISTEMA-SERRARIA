@@ -761,6 +761,8 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     const emitente = window.dadosSerrariaEmitente || {
         nomeFantasia: "VANMARTE"
     };
+    const telefoneSerraria = emitente.telefone || emitente.celular || "(15) 99629-7072";
+    const emailSerraria = emitente.email || "escritoriovanmarte@hotmail.com";
 
     // Gerar etiquetas individuais por pacote físico
     lista.forEach(item => {
@@ -771,25 +773,25 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
             
             let badgeStyle = '';
             if (item.classe === '1ª CLASSE') {
-                badgeStyle = 'border: 2px solid #2563eb; color: #2563eb; background: #eff6ff;';
+                badgeStyle = 'border: 3px solid #15803d; color: #ffffff; background: #16a34a;';
             } else if (item.classe === '2ª CLASSE') {
-                badgeStyle = 'border: 2px solid #d97706; color: #d97706; background: #fffbeb;';
+                badgeStyle = 'border: 3px solid #ca8a04; color: #111827; background: #facc15;';
             } else {
-                badgeStyle = 'border: 2px solid #dc2626; color: #dc2626; background: #fef2f2;';
+                badgeStyle = 'border: 3px solid #b91c1c; color: #ffffff; background: #dc2626;';
             }
 
             etiquetasHtml += `
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <div class="ticket-brand">${(emitente.nomeFantasia || "VANMARTE").toUpperCase()}</div>
-                        <div class="ticket-title">CONTROLE DE PÁTIO</div>
+                        <div class="ticket-brand">${(emitente.nomeFantasia || "SERRARIA VANMARTE").toUpperCase()}</div>
+                        <div class="ticket-contact">${telefoneSerraria} • ${emailSerraria}</div>
                     </div>
                     
-                    <div style="text-align: center; margin: 12px 0;">
+                    <div style="text-align: center; margin: 8px 0;">
                         <span class="ticket-badge" style="${badgeStyle}">${item.classe}</span>
                     </div>
 
-                    <div style="text-align:center; font-size: 12px; font-weight: 900; color:#0f172a; text-transform: uppercase; margin-top: -4px;">
+                    <div style="text-align:center; font-size: 10px; font-weight: 900; color:#0f172a; text-transform: uppercase; margin-top: -4px;">
                         ${item.especie || 'EUCALIPTO'}
                     </div>
 
@@ -797,7 +799,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
                         ${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1.1fr 0.9fr 1fr; gap: 8px; border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 8px 0; margin: 10px 0;">
+                    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr 1fr; gap: 8px; border-top: 2px dashed #cbd5e1; border-bottom: 2px dashed #cbd5e1; padding: 9px 0; margin: 8px 0;">
                         <div class="ticket-meta">
                             <span>FORMAÇÃO</span>
                             <strong>${configPacote}</strong>
@@ -858,49 +860,54 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
         }
         .ticket-header {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
             border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 6px;
+            padding-bottom: 5px;
+            text-align: center;
         }
         .ticket-brand {
             font-weight: 900;
             color: #e67e22;
-            font-size: 10px;
+            font-size: 14px;
             letter-spacing: 0.5px;
         }
-        .ticket-title {
+        .ticket-contact {
             font-weight: 700;
-            color: #64748b;
-            font-size: 8px;
+            color: #0f172a;
+            font-size: 8.5px;
+            margin-top: 2px;
         }
         .ticket-badge {
             display: inline-block;
-            padding: 4px 14px;
-            border-radius: 20px;
+            padding: 6px 18px;
+            border-radius: 8px;
             font-weight: 900;
-            font-size: 10px;
+            font-size: 18px;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .ticket-measure {
-            font-size: 18px;
-            font-weight: 800;
+            font-size: 24px;
+            font-weight: 900;
             color: #0f172a;
             text-align: center;
-            letter-spacing: -0.5px;
-            margin: 5px 0;
+            letter-spacing: 0;
+            margin: 4px 0 7px;
         }
         .ticket-meta {
             display: flex;
             flex-direction: column;
         }
         .ticket-meta span {
-            font-size: 9px;
-            color: #94a3b8;
+            font-size: 10px;
+            color: #475569;
             font-weight: bold;
         }
         .ticket-meta strong {
-            font-size: 14px;
+            font-size: 18px;
+            line-height: 1.1;
             color: #0f172a;
         }
         .ticket-barcode {
