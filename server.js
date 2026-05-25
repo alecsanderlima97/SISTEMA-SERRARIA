@@ -12,6 +12,7 @@ const mime = {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.ico': 'image/x-icon',
+    '.pdf': 'application/pdf',
     '.woff': 'font/woff',
     '.woff2': 'font/woff2'
 };

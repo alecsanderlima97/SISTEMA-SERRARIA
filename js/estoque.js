@@ -209,6 +209,7 @@ window.filtrarPorCategoriaEstoque = function(cat) {
     else if (cat === 'LUBRIFICANTES') activeCardId = 'catCard_LUBRIFICANTES';
     else if (cat === 'DIESEL') activeCardId = 'catCard_DIESEL';
     else if (cat === 'CORREIAS INDUSTRIAIS') activeCardId = 'catCard_CORREIAS';
+    else if (cat === 'SERRAS E FACAS P/ PICADOR') activeCardId = 'catCard_SERRAS_FACAS';
     else if (cat === "EPI'S") activeCardId = 'catCard_EPIS';
     else if (cat === 'ESCRITÓRIO') activeCardId = 'catCard_ESCRITORIO';
 

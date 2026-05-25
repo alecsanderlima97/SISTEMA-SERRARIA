@@ -523,10 +523,19 @@ function renderizarFrota() {
         const docLinkHtml = v.documento 
             ? `<button class="btn-action-card" onclick="window.visualizarDocumento('${v.id}')" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); color: #60a5fa;"><i class="fa-solid fa-file-pdf"></i> Doc Anexo</button>`
             : `<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sem Documento</span>`;
+        const fotoHtml = v.foto
+            ? `<div style="height: 150px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.22); position: relative;">
+                    <img src="${v.foto}" alt="${v.modelo}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    ${v.fotoTipo === 'ilustrativa' ? '<span style="position:absolute; right:8px; bottom:8px; font-size:0.65rem; font-weight:800; color:#fbbf24; background:rgba(0,0,0,0.68); border:1px solid rgba(251,191,36,0.35); border-radius:999px; padding:3px 7px;">ILUSTRATIVA</span>' : ''}
+                </div>`
+            : `<div style="height: 150px; border-radius: 12px; margin-bottom: 14px; border: 1px dashed var(--panel-border); background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 2rem;">
+                    ${iconHtml}
+                </div>`;
 
         return `
             <div class="glass-panel" data-frota-codigo="${codigo}" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div>
+                    ${fotoHtml}
                     <!-- Header Card -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                         <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--accent-color);">
@@ -639,13 +648,18 @@ window.imprimirRelatorioGeralFrota = function(veiculoId) {
     win.document.close();
 };
 
-// Download/Visualização do documento anexo em base64
+// Download/visualizacao do documento anexo. Aceita URL local/publica ou base64 legado.
 window.visualizarDocumento = function(id) {
     const v = frota.find(item => item.id === id);
     if (!v || !v.documento) return;
 
     try {
-        const newTab = window.open();
+        if (!String(v.documento).startsWith('data:')) {
+            window.open(v.documento, '_blank', 'noopener');
+            return;
+        }
+
+        const newTab = window.open('', '_blank');
         if (newTab) {
             newTab.document.write(`<iframe src="${v.documento}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%; position:fixed;" allowfullscreen></iframe>`);
             newTab.document.title = `Documento - ${v.modelo} (${v.placa})`;

@@ -14,6 +14,7 @@ const buscaFuncionario = document.getElementById('buscaFuncionario');
 
 const cardFormRH = document.getElementById('cardFormRH');
 const panelListaRH = document.getElementById('panelListaRH');
+let valoresRHOcultos = localStorage.getItem('orquestra_rh_ocultar_valores') === 'true';
 const btnToggleFormRH = document.getElementById('btnToggleFormRH');
 const txtToggleFormRH = document.getElementById('txtToggleFormRH');
 const btnCancelarRH = document.getElementById('btnCancelarRH');
@@ -228,12 +229,67 @@ async function carregarFuncionarios() {
             funcionariosAtuais.push({ id: docSnap.id, ...docSnap.data() });
         });
         
+        atualizarKPIsRH();
         filtrarFuncionarios();
     } catch (e) {
         console.error("Erro ao carregar funcionários:", e);
         listaRH.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger-color);"><i class="fa-solid fa-circle-exclamation"></i> Falha ao comunicar com Firebase.</td></tr>';
     }
 }
+
+function funcionarioEmFerias(funcionario) {
+    if (!funcionario?.feriasInicio || !funcionario?.feriasFim) return false;
+    const hoje = new Date();
+    const inicio = new Date(`${funcionario.feriasInicio}T00:00:00`);
+    const fim = new Date(`${funcionario.feriasFim}T23:59:59`);
+    return hoje >= inicio && hoje <= fim;
+}
+
+function formatarMoedaRH(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function aplicarVisibilidadeValoresRH() {
+    const icon = document.getElementById('iconValoresRH');
+    const botao = document.getElementById('btnToggleValoresRH');
+    document.querySelectorAll('.rh-kpi-valor').forEach(el => {
+        el.textContent = valoresRHOcultos ? 'R$ ••••••' : (el.dataset.valorReal || 'R$ 0,00');
+    });
+    if (icon) {
+        icon.classList.toggle('fa-eye', !valoresRHOcultos);
+        icon.classList.toggle('fa-eye-slash', valoresRHOcultos);
+    }
+    if (botao) botao.title = valoresRHOcultos ? 'Mostrar valores' : 'Ocultar valores';
+}
+
+function atualizarKPIsRH() {
+    const totalFuncionarios = funcionariosAtuais.length;
+    const totalFerias = funcionariosAtuais.filter(funcionarioEmFerias).length;
+    const totalSalarios = funcionariosAtuais.reduce((acc, f) => acc + Number(f.salario || 0), 0);
+    const totalVales = funcionariosAtuais.reduce((acc, f) => acc + Number(f.vale || 0), 0);
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    const setValor = (id, value) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.dataset.valorReal = formatarMoedaRH(value);
+    };
+
+    setText('rhKpiFuncionarios', totalFuncionarios.toLocaleString('pt-BR'));
+    setText('rhKpiFerias', totalFerias.toLocaleString('pt-BR'));
+    setValor('rhKpiSalarios', totalSalarios);
+    setValor('rhKpiVales', totalVales);
+    aplicarVisibilidadeValoresRH();
+}
+
+window.toggleValoresRH = function() {
+    valoresRHOcultos = !valoresRHOcultos;
+    localStorage.setItem('orquestra_rh_ocultar_valores', String(valoresRHOcultos));
+    aplicarVisibilidadeValoresRH();
+};
 
 // Renderizar Tabela de Funcionários
 function renderizarFuncionarios(lista) {

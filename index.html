@@ -224,6 +224,11 @@
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
 
+                    <div class="assistant-home-search hide-on-print">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <input type="text" id="assistantHomeInput" placeholder="Pergunte ao assistente">
+                        <button type="button" onclick="window.enviarPerguntaAssistenteHome()" title="Perguntar"><i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
                 <div class="header-user-group" style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 12px;" onclick="const d = document.getElementById('profile-dropdown'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
                     <div class="header-user-text" style="text-align: right;">
                         <div class="header-user-name" style="color: var(--text-light); font-weight: bold; font-size: 14px;" id="userNameHeader">Administrador</div>
@@ -435,7 +440,11 @@
                     <div class="section-title">
                         <h2><i class="fa-solid fa-user-plus"></i> Novo Cliente</h2>
                     </div>
-                    <form id="formCliente" class="grid-form">
+                    <form id="formCliente">
+                        <div style="margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.12); padding-bottom: 6px;">
+                            <h3 style="font-size: 0.92rem; color:var(--accent-color); margin:0;"><i class="fa-solid fa-address-card"></i> Dados Cadastrais</h3>
+                        </div>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px;">
                         <div class="input-group">
                             <label for="cliNome">Nome / Razão Social</label>
                             <input type="text" id="cliNome" class="text-uppercase-input" required>
@@ -456,6 +465,11 @@
                             <label for="cliEmail">E-mail</label>
                             <input type="email" id="cliEmail">
                         </div>
+                        </div>
+                        <div style="margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.12); padding-bottom: 6px;">
+                            <h3 style="font-size: 0.92rem; color:var(--accent-color); margin:0;"><i class="fa-solid fa-location-dot"></i> Endereço de Entrega</h3>
+                        </div>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px;">
                         <div class="input-group">
                             <label for="cliCep">CEP <span class="badge" id="cepStatus"></span></label>
                             <input type="text" id="cliCep" required placeholder="00000-000" maxlength="9">
@@ -472,9 +486,11 @@
                             <label for="cliCidade">Cidade / Estado</label>
                             <input type="text" id="cliCidade" required readonly>
                         </div>
-                        <div style="grid-column: 1 / -1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+                        </div>
+                        <div style="margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.12); padding-bottom: 6px;">
                             <h3 style="color:var(--accent-color);"><i class="fa-solid fa-handshake"></i> Informações Comerciais / Preços Acordados</h3>
                         </div>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
                         <div class="input-group">
                             <label for="cliValorFrete">Valor do Frete (R$)</label>
                             <input type="text" id="cliValorFrete" placeholder="R$ 0,00">
@@ -521,11 +537,12 @@
                             <label for="cliValorMadeiraExtra">Valor Madeira Extra (R$ / m³)</label>
                             <input type="text" id="cliValorMadeiraExtra" placeholder="R$ 0,00">
                         </div>
-                        <div class="input-group" style="grid-column: 1 / -1;">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 18px;">
                             <label for="cliObservacao">Observações Importantes do Cliente</label>
                             <textarea id="cliObservacao" rows="3" placeholder="Ex: Ligar antes de entregar, horário de recebimento, etc." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;"></textarea>
                         </div>
-                        <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
+                        <div class="input-group" style="align-items: flex-end; margin-top: 15px;">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Cliente</button>
                         </div>
                     </form>
@@ -849,6 +866,10 @@
                                 <i class="fa-solid fa-gears" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
                                 <span style="font-size: 0.76rem; font-weight: 500; white-space: nowrap;">Correias</span>
                             </div>
+                            <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('SERRAS E FACAS P/ PICADOR')" id="catCard_SERRAS_FACAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
+                                <i class="fa-solid fa-scissors" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
+                                <span style="font-size: 0.72rem; font-weight: 500;">Serras/Facas</span>
+                            </div>
                             <div class="category-card-estoque" onclick="window.filtrarPorCategoriaEstoque('PEÇAS')" id="catCard_PEÇAS" style="cursor: pointer; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); transition: all 0.2s;">
                                 <i class="fa-solid fa-screwdriver-wrench" style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 6px; display: block;"></i>
                                 <span style="font-size: 0.8rem; font-weight: 500;">Peças</span>
@@ -1075,6 +1096,7 @@
                                 <option value="ESCRITÓRIO">ESCRITÓRIO</option>
                                 <option value="EPI'S">EPI'S</option>
                                 <option value="CORREIAS INDUSTRIAIS">CORREIAS INDUSTRIAIS</option>
+                                <option value="SERRAS E FACAS P/ PICADOR">SERRAS E FACAS P/ PICADOR</option>
                                 <option value="PEÇAS">PEÇAS / ACESSÓRIOS</option>
                                 <option value="FILTROS">FILTROS</option>
                                 <option value="LUBRIFICANTES">LUBRIFICANTES</option>
@@ -1673,6 +1695,30 @@
 
                 <!-- PAINEL DA LISTA DE CADASTRADOS -->
                 <div id="panelListaRH" class="glass-panel hide-on-print">
+                    <div class="rh-kpi-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                        <h3 style="margin:0; color:white; font-size:1rem; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-chart-simple" style="color:var(--accent-color);"></i> Indicadores do RH</h3>
+                        <button type="button" id="btnToggleValoresRH" onclick="window.toggleValoresRH()" class="btn-action-card" style="padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-eye" id="iconValoresRH"></i> Valores
+                        </button>
+                    </div>
+                    <div class="rh-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:22px;">
+                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
+                            <small style="color:var(--text-muted); font-weight:700;">FUNCIONÁRIOS</small>
+                            <div id="rhKpiFuncionarios" style="font-size:1.7rem; font-weight:900; color:white; margin-top:6px;">0</div>
+                        </div>
+                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
+                            <small style="color:var(--text-muted); font-weight:700;">EM FÉRIAS</small>
+                            <div id="rhKpiFerias" style="font-size:1.7rem; font-weight:900; color:#fbbf24; margin-top:6px;">0</div>
+                        </div>
+                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
+                            <small style="color:var(--text-muted); font-weight:700;">TOTAL SALÁRIOS</small>
+                            <div id="rhKpiSalarios" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#22c55e; margin-top:8px;">R$ 0,00</div>
+                        </div>
+                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
+                            <small style="color:var(--text-muted); font-weight:700;">TOTAL VALES</small>
+                            <div id="rhKpiVales" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#f87171; margin-top:8px;">R$ 0,00</div>
+                        </div>
+                    </div>
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                         <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários</h2>
                         <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; flex-wrap: wrap;">
@@ -3451,6 +3497,33 @@
         </div>
     </div>
 
+    <button type="button" id="assistantFloatButton" class="assistant-float-button hide-on-print" onclick="window.toggleAssistenteIA()" title="Assistente IA">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </button>
+
+    <aside id="assistantPanel" class="assistant-panel hide-on-print" aria-hidden="true">
+        <div class="assistant-panel-header">
+            <div>
+                <strong>Assistente IA</strong>
+                <small>Analise local do sistema</small>
+            </div>
+            <button type="button" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="assistant-quick-actions">
+            <button type="button" onclick="window.perguntarAssistente('resumo geral')">Resumo geral</button>
+            <button type="button" onclick="window.perguntarAssistente('analisar frotas')">Frotas</button>
+            <button type="button" onclick="window.perguntarAssistente('analisar estoque')">Estoque</button>
+            <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
+        </div>
+        <div id="assistantMessages" class="assistant-messages">
+            <div class="assistant-msg assistant-msg-bot">Olá! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
+        </div>
+        <form id="assistantForm" class="assistant-input-row">
+            <input type="text" id="assistantInput" placeholder="Pergunte ao assistente">
+            <button type="submit" title="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
+        </form>
+    </aside>
+
     <!-- Firebase Initialization -->
 
     <script type="module" src="js/firebase-init.js"></script>
@@ -3461,6 +3534,7 @@
     <script type="module" src="js/produtos.js"></script>
     <script type="module" src="js/calculadoras.js"></script>
     <script type="module" src="js/transportes.js"></script>
+    <script type="module" src="js/assistente.js"></script>
     <script type="module" src="js/entrada.js?v=entrada-mato-descarga"></script>
     <script type="module" src="js/estoque.js"></script>
     <script type="module" src="js/romaneio_v2.js"></script>
