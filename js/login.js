@@ -153,7 +153,7 @@ loginForm.addEventListener('submit', async function(e) {
 
     const submitBtn = loginForm.querySelector('button[type="submit"]');
     const origText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Acessando...';
+    submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Acessando...';
     submitBtn.disabled = true;
 
     try {
@@ -220,7 +220,7 @@ if (registerForm) {
         
         const submitBtn = registerForm.querySelector('button[type="submit"]');
         const origText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cadastrando...';
+        submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Cadastrando...';
         submitBtn.disabled = true;
         
         try {

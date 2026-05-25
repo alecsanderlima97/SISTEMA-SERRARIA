@@ -13,7 +13,7 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn()
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
-        && userDoc().data.cargo == 'ADMIN';
+        && userDoc().data.cargo in ['ADMIN', 'admin', 'gerente', 'GERENTE'];
     }
 
     match /usuarios/{userId} {

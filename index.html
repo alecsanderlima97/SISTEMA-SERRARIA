@@ -929,44 +929,48 @@
                                 </h3>
                             </div>
                             
-                            <div style="display: flex; gap: 20px; align-items: center; margin: 20px 0;">
-                                <!-- Tanque Visual Vertical -->
-                                <div style="width: 80px; height: 180px; border: 3px solid rgba(255,255,255,0.2); border-radius: 40px; position: relative; background: rgba(0,0,0,0.3); overflow: hidden; box-shadow: inset 0 0 15px rgba(0,0,0,0.8);">
-                                    <!-- Medidor de Nível Líquido -->
-                                    <div id="dieselLiquidLevel" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(0deg, #b45309 0%, #eab308 100%); transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px #eab308;">
-                                        <!-- Animação de Onda -->
-                                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: rgba(255,255,255,0.3); animation: waveAnim 2s infinite linear;"></div>
+                            <div style="display: grid; grid-template-columns: minmax(120px, 170px) 1fr; gap: 20px; align-items: end; margin: 20px 0;">
+                                <div style="display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: stretch;">
+                                    <div style="height: 230px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 2px 0;">
+                                        <span>5000</span>
+                                        <span>4000</span>
+                                        <span>3000</span>
+                                        <span>2000</span>
+                                        <span>1000</span>
+                                        <span>0</span>
                                     </div>
-                                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 15px 0; font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: bold; pointer-events: none;">
-                                        <span>5k L</span>
-                                        <span>3.5k L</span>
-                                        <span>2.5k L</span>
-                                        <span>1k L</span>
-                                        <span>0 L</span>
+                                    <div style="height: 230px; border-left: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(to top, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px); position: relative;">
+                                        <div id="dieselLiquidLevel" style="position: absolute; bottom: 0; left: 26%; width: 56%; height: 0%; min-height: 2px; background: repeating-linear-gradient(to top, #f97316 0 2px, #fff7ed 2px 3px, #fb923c 3px 5px); border: 1px solid rgba(249,115,22,0.95); box-shadow: 0 0 16px rgba(249,115,22,0.45); transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden;">
+                                            <div style="position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); animation: waveAnim 2.2s infinite linear;"></div>
+                                        </div>
+                                        <div id="dieselLevelNumber" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0%; color: #16a34a; font-size: 0.78rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.45); transition: bottom 1s cubic-bezier(0.4, 0, 0.2, 1);">0</div>
                                     </div>
                                 </div>
 
-                                <!-- Estatísticas do Diesel -->
-                                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Percentual de Volume:</span>
-                                        <div style="font-size: 1.8rem; font-weight: 800; color: #eab308;" id="dieselPercentText">0%</div>
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div style="border: 1px solid var(--panel-border); background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700;">QUANTIDADE REAL NO TANQUE DE DIESEL</span>
+                                        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+                                            <strong style="font-size: 2.4rem; line-height: 1; color: #ef4444;" id="dieselLitersText">0</strong>
+                                            <span style="color: white; font-style: italic;">LITROS</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Saldo Físico no Tanque:</span>
-                                        <div style="font-size: 1.2rem; font-weight: bold; color: white;" id="dieselLitersText">0 Litros</div>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Capacidade Máxima:</span>
-                                        <div style="font-size: 0.9rem; font-weight: bold; color: white;">5.000 Litros</div>
-                                    </div>
-                                    <div>
-                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Espaço Disponível (Vazio):</span>
-                                        <div style="font-size: 0.9rem; font-weight: bold; color: #60a5fa;" id="dieselSpaceLeftText">0 Litros</div>
+                                    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+                                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px;">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted);">Volume</span>
+                                            <div style="font-size: 1.1rem; font-weight: 800; color: #eab308;" id="dieselPercentText">0%</div>
+                                        </div>
+                                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px;">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted);">Capacidade</span>
+                                            <div style="font-size: 1rem; font-weight: 800; color: white;">5.000 L</div>
+                                        </div>
+                                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px;">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted);">Vazio</span>
+                                            <div style="font-size: 1rem; font-weight: 800; color: #60a5fa;" id="dieselSpaceLeftText">0 L</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
                             <!-- Caixa de Sugestão de Compra -->
                             <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px; font-size: 0.85rem;" id="dieselOrderAdvice">
                                 <span style="font-weight: bold; color: #60a5fa; display: block; margin-bottom: 2px;"><i class="fa-solid fa-circle-info"></i> Sugestão de Compra</span>
@@ -1133,7 +1137,7 @@
                         </div>
                     </div>
                     <div class="kpi-card glass-panel" style="padding: 15px;">
-                        <div class="kpi-icon" style="background: rgba(239,68,68,0.1); color: #ef4444;"><i class="fa-solid fa-trowel-rebuild"></i></div>
+                        <div class="kpi-icon" style="background: rgba(239,68,68,0.1); color: #ef4444;"><i class="fa-solid fa-person-digging"></i></div>
                         <div class="kpi-data">
                             <h3 id="frota-kpi-terraplanagem">0</h3>
                             <p>Terraplanagem</p>
@@ -1197,6 +1201,15 @@
                                 <option value="SERRARIA">SERRARIA</option>
                                 <option value="FLORESTAL">FLORESTAL</option>
                                 <option value="TERRAPLANAGEM">TERRAPLANAGEM</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="veicStatus">Status Operacional</label>
+                            <select id="veicStatus">
+                                <option value="OK">OK</option>
+                                <option value="AGUARDANDO">AGUARDANDO</option>
+                                <option value="MANUTENCAO">EM MANUTENCAO</option>
                             </select>
                         </div>
 
@@ -1313,7 +1326,7 @@
             <div id="modalAbastecimento" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
                 <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lançar Diesel / Lubrificantes</h2>
+                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lancar Abastecimento</h2>
                         <button type="button" class="btn-action-card" onclick="window.fecharModalAbastecimento()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
 
@@ -1332,16 +1345,19 @@
                         <div class="input-group">
                             <label for="abastTipo">Insumo / Combustível</label>
                             <select id="abastTipo" onchange="window.atualizarPrecoUnitarioEstoque()">
-                                <option value="DIESEL">DIESEL (Litros)</option>
-                                <option value="LUBRIFICANTE">LUBRIFICANTE (Litros)</option>
-                                <option value="HIDRAULICO">ÓLEO HIDRÁULICO (Litros)</option>
-                                <option value="GRAXA">GRAXA (Kg)</option>
+                                <option value="DIESEL">DIESEL COMUM - SERRARIA</option>
+                                <option value="DIESEL_POSTO">DIESEL POSTO - CIDADE</option>
                             </select>
                         </div>
 
                         <div class="input-group">
-                            <label for="abastQtd">Quantidade (L/Kg)</label>
+                            <label for="abastQtd">Quantidade (Litros)</label>
                             <input type="number" id="abastQtd" step="0.01" placeholder="Ex: 50" oninput="window.calcularTotalAbastecimento()">
+                        </div>
+
+                        <div class="input-group" id="grupoAbastRequisicao" style="display: none; min-width: 0;">
+                            <label for="abastRequisicao">Numero da Requisicao</label>
+                            <input type="text" id="abastRequisicao" class="text-uppercase-input" placeholder="Ex: REQ-001" style="width: 100%; min-width: 0;">
                         </div>
 
                         <div class="input-group">
@@ -1359,7 +1375,7 @@
                             <input type="number" id="abastHorimetro" placeholder="Ex: 154200">
                         </div>
 
-                        <div style="grid-column: span 3; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                        <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                             <button type="button" class="btn-secondary" onclick="window.fecharModalAbastecimento()" style="padding: 10px 20px;">Fechar</button>
                             <button type="submit" class="btn-primary" style="padding: 10px 25px; background: var(--danger-color) !important; box-shadow: 0 0 10px rgba(239,68,68,0.25);">Registrar Consumo</button>
                         </div>
@@ -1685,7 +1701,7 @@
                             <tbody id="listaRH">
                                 <tr>
                                     <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Carregando funcionários...
+                                        <span class="saw-loader" aria-hidden="true"></span> Carregando funcionários...
                                     </td>
                                 </tr>
                             </tbody>

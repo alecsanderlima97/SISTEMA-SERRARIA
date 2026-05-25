@@ -65,7 +65,7 @@ formTransporte.addEventListener('submit', async function(e) {
 
     const submitBtn = formTransporte.querySelector('button[type="submit"]');
     const textoOriginal = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
     submitBtn.disabled = true;
 
     try {
@@ -174,7 +174,7 @@ function renderTransportes() {
 }
 
 async function carregarTransportes() {
-    listaTransportes.innerHTML = `<tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando do Firebase...</td></tr>`;
+    listaTransportes.innerHTML = `<tr><td colspan="5" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>`;
     try {
         const querySnapshot = await getDocs(transportesCollection);
         transportesAtuais = [];

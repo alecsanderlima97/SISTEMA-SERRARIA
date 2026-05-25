@@ -14,7 +14,7 @@ async function renderizarHistorico() {
     if(!listaHistorico) return;
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
     atualizarCabecalhoHistorico(tipoAtivo);
-    listaHistorico.innerHTML = `<tr><td colspan="${tipoAtivo === 'subprodutos' ? 7 : 6}" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+    listaHistorico.innerHTML = `<tr><td colspan="${tipoAtivo === 'subprodutos' ? 7 : 6}" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>`;
     
     try {
         if (tipoAtivo === 'madeira') {
@@ -449,7 +449,7 @@ function inicializarModuloHistorico() {
 
             btnConfirmarSeguranca.disabled = true;
             const textoOriginal = btnConfirmarSeguranca.innerHTML;
-            btnConfirmarSeguranca.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Validando senha...';
+            btnConfirmarSeguranca.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Validando senha...';
 
             try {
                 // Validar senha fazendo login em background com a mesma conta ativa

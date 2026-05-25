@@ -53,7 +53,7 @@ if (formCliente) {
 
         const submitBtn = formCliente.querySelector('button[type="submit"]');
         const textoOriginal = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         submitBtn.disabled = true;
 
         try {
@@ -208,7 +208,7 @@ window.renderClientes = renderClientes;
 // Carregar clientes do Firestore
 async function carregarClientes() {
     if (!listaClientes) return;
-    listaClientes.innerHTML = `<tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando do Firebase...</td></tr>`;
+    listaClientes.innerHTML = `<tr><td colspan="5" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>`;
     try {
         const querySnapshot = await getDocs(clientesCollection);
         clientesAtuais = [];

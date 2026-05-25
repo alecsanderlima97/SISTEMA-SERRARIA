@@ -434,7 +434,7 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
 
     const btnFinalizar = document.getElementById('btnFinalizar');
     const textoOriginal = btnFinalizar.innerHTML;
-    btnFinalizar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    btnFinalizar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
     btnFinalizar.disabled = true;
 
     try {

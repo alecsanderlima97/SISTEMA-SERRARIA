@@ -1,3 +1,5 @@
+import { auth, signInWithEmailAndPassword } from './firebase-init.js';
+
 // --- CONTROLE DE ESTOQUE SAAS PREMIUM & INTEGRADO ---
 // Sincronizado com os módulos de Frotas (Manutenção de Peças e Insumos)
 // Desenvolvido por: Orquestra.cs - sistemas industrial personalizado
@@ -7,6 +9,7 @@ console.log("Módulo de Estoque Premium: Inicializando almoxarifado unificado...
 const ESTOQUE_KEY = 'orquestra_estoque';
 const MOV_KEY = 'orquestra_estoque_movimentacoes';
 const FROTA_KEY = 'orquestra_frota';
+const ESTOQUE_INICIALIZADO_KEY = 'orquestra_estoque_inicializado';
 
 // Wave and cylinder tank animations for the liquid simulators
 const styleTag = document.createElement('style');
@@ -50,15 +53,15 @@ let filtroBuscaEstoque = '';
 let categoriaAtiva = 'TODAS';
 
 function obterEstoque() {
-    if (itensEstoque && itensEstoque.length > 0) return itensEstoque;
+    if (itensEstoque && itensEstoque.length > 0) return itensEstoque.filter(item => item.ativo !== false);
 
     const local = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
     if (local.length > 0) {
         itensEstoque = local;
-        return itensEstoque;
+        return itensEstoque.filter(item => item.ativo !== false);
     }
 
-    itensEstoque = PADROES_ESTOQUE;
+    itensEstoque = PADROES_ESTOQUE.map(item => ({ ...item }));
     localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
     return itensEstoque;
 }
@@ -78,7 +81,8 @@ async function carregarDadosDoFirestore() {
         console.log("Almoxarifado: Sincronizando dados com o Firestore...");
         
         let estoqueDados = await window.FS.getCollection('estoque');
-        if (estoqueDados.length === 0) {
+        const estoqueJaInicializado = localStorage.getItem(ESTOQUE_INICIALIZADO_KEY) === 'true';
+        if (estoqueDados.length === 0 && !estoqueJaInicializado) {
             console.log("Inicializando estoque default no Firestore...");
             for (let item of PADROES_ESTOQUE) {
                 await window.FS.setDoc('estoque', item.id, item);
@@ -87,6 +91,7 @@ async function carregarDadosDoFirestore() {
         }
         itensEstoque = estoqueDados;
         localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
+        localStorage.setItem(ESTOQUE_INICIALIZADO_KEY, 'true');
 
         let movsDados = await window.FS.getCollection('estoque_movimentacoes');
         movsDados.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
@@ -228,12 +233,12 @@ window.filtrarPorCategoriaEstoque = function(cat) {
 
 // --- RENDERIZAR TABELA DE INVENTÁRIO ---
 function renderizarEstoque() {
-    itensEstoque = obterEstoque();
+    const itensAtivos = obterEstoque();
     const tbody = document.getElementById('corpoTabelaEstoque');
     if (!tbody) return;
 
     // Filter by text search
-    let filtrados = itensEstoque.filter(item => 
+    let filtrados = itensAtivos.filter(item => 
         item.nome.toUpperCase().includes(filtroBuscaEstoque.toUpperCase()) ||
         item.categoria.toUpperCase().includes(filtroBuscaEstoque.toUpperCase())
     );
@@ -368,7 +373,7 @@ async function salvarItemEstoque() {
 
     const btn = document.querySelector('#modalNovoItemEstoque button[type="submit"]');
     const origText = btn ? btn.innerHTML : 'Salvar';
-    if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gravando...'; btn.disabled = true; }
+    if (btn) { btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Gravando...'; btn.disabled = true; }
 
     try {
         const itemId = id || 'est_' + new Date().getTime();
@@ -404,17 +409,30 @@ async function salvarItemEstoque() {
 }
 
 window.excluirItemEstoque = async function(id) {
-    if (!confirm("Deseja realmente remover este item do estoque? Se ele for uma peça ou combustível utilizado em frotas, evite excluí-lo para não quebrar referências históricas.")) return;
+    if (!confirm('Deseja realmente ocultar este item do estoque? O historico sera preservado.')) return;
 
     try {
-        await window.FS.deleteDoc('estoque', id);
-        itensEstoque = itensEstoque.filter(i => i.id !== id);
+        const todos = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+        const itemLocal = todos.find(i => i.id === id) || itensEstoque.find(i => i.id === id) || { id };
+        const itemAtualizado = {
+            ...itemLocal,
+            ativo: false,
+            removidoEm: new Date().toISOString()
+        };
+
+        if (window.FS) await window.FS.setDoc('estoque', id, itemAtualizado);
+        itensEstoque = todos.length
+            ? todos.map(i => i.id === id ? itemAtualizado : i)
+            : itensEstoque.map(i => i.id === id ? itemAtualizado : i);
+        localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
+
         renderizarEstoque();
         window.renderSimuladores();
-        alert("Item removido com sucesso!");
+        renderResumoEstoque();
+        alert('Item ocultado com sucesso!');
     } catch (err) {
-        console.error("Erro ao remover item no Firestore:", err);
-        alert("Erro ao remover item.");
+        console.error('Erro ao ocultar item no Firestore:', err);
+        alert('Erro ao ocultar item.');
     }
 };
 
@@ -430,26 +448,16 @@ function normalizarTipoMovimento(tipo) {
 }
 
 function calcularSaldoPorMovimentacoes(item) {
-    const movs = obterMovimentacoesEstoque().filter(m => {
-        const mesmoId = item.id && m.itemId === item.id;
-        const mesmoNome = (m.itemNome || '').toUpperCase() === (item.nome || '').toUpperCase();
-        return mesmoId || mesmoNome;
-    });
-
-    if (movs.length === 0) return Number(item.quantidade) || 0;
-
-    return movs.reduce((saldo, mov) => {
-        const qtd = Number(mov.quantidade) || 0;
-        return normalizarTipoMovimento(mov.tipo) === 'ENTRADA' ? saldo + qtd : saldo - qtd;
-    }, 0);
+    return Number(item?.quantidade) || 0;
 }
 
 window.renderSimuladores = function() {
     itensEstoque = obterEstoque();
     
-    // 1. Diesel Simulator (Capacidade máxima de 5000 Litros)
-    const diesel = itensEstoque.find(i => i.categoria === 'DIESEL' || i.nome.toUpperCase().includes('DIESEL'));
-    const dieselQtd = diesel ? calcularSaldoPorMovimentacoes(diesel) : 0;
+    // 1. Diesel Simulator (capacidade maxima de 5000 litros)
+    const diesel = itensEstoque.find(i => normalizarTipoMovimento(i.categoria) === 'DIESEL')
+        || itensEstoque.find(i => normalizarTipoMovimento(i.nome).includes('DIESEL'));
+    const dieselQtd = diesel ? Number(diesel.quantidade || 0) : 0;
     const dieselCapacity = 5000;
     const dieselPercent = Math.min((dieselQtd / dieselCapacity) * 100, 100);
     const dieselSpaceLeft = Math.max(dieselCapacity - dieselQtd, 0);
@@ -457,11 +465,17 @@ window.renderSimuladores = function() {
     const liquid = document.getElementById('dieselLiquidLevel');
     if (liquid) liquid.style.height = `${dieselPercent}%`;
 
+    const levelNumber = document.getElementById('dieselLevelNumber');
+    if (levelNumber) {
+        levelNumber.innerText = Math.round(dieselQtd).toLocaleString('pt-BR');
+        levelNumber.style.bottom = `${Math.min(Math.max(dieselPercent, 2), 96)}%`;
+    }
+
     const percentText = document.getElementById('dieselPercentText');
     if (percentText) percentText.innerText = `${dieselPercent.toFixed(1)}%`;
 
     const litersText = document.getElementById('dieselLitersText');
-    if (litersText) litersText.innerText = `${Math.round(dieselQtd).toLocaleString('pt-BR')} L`;
+    if (litersText) litersText.innerText = Math.round(dieselQtd).toLocaleString('pt-BR');
 
     const spaceText = document.getElementById('dieselSpaceLeftText');
     if (spaceText) spaceText.innerText = `${Math.round(dieselSpaceLeft).toLocaleString('pt-BR')} L`;
@@ -683,39 +697,92 @@ function renderResumoEstoque() {
     }).join('');
 }
 
-// Excluir movimentação de estoque tanto localmente quanto no Firestore
-window.excluirMovimentacaoEstoque = async function(id) {
-    if (!confirm('Deseja realmente ESTORNAR este movimento? Isso reverterá o estoque e removerá o registro.')) return;
+async function validarSenhaMovimentacaoEstoque(mensagem = 'Digite sua senha de login para confirmar esta operacao:') {
+    const senha = prompt(mensagem);
+    if (!senha) return false;
+
+    const user = auth.currentUser;
+    if (!user?.email) {
+        alert('Usuario autenticado nao encontrado. Faca login novamente.');
+        return false;
+    }
+
     try {
-        // Busca movimento na cache
-        const mov = movimentacoesEstoque.find(m => m.id === id);
+        await signInWithEmailAndPassword(auth, user.email, senha);
+        return true;
+    } catch (err) {
+        console.error('Senha invalida para operacao de estoque:', err);
+        alert('Senha incorreta. Operacao cancelada.');
+        return false;
+    }
+}
+
+// Estorna a movimentacao e remove o lancamento do historico.
+window.excluirMovimentacaoEstoque = async function(id) {
+    if (!confirm('Deseja realmente ESTORNAR este movimento? Isso revertera o estoque e removera o registro.')) return;
+
+    try {
+        const movs = JSON.parse(localStorage.getItem(MOV_KEY) || '[]');
+        const mov = movimentacoesEstoque.find(m => m.id === id) || movs.find(m => m.id === id);
         if (!mov) {
-            alert('Movimento não encontrado na memória.');
+            alert('Movimento nao encontrado.');
             return;
         }
-        // Reverte estoque
+
         itensEstoque = obterEstoque();
         const item = itensEstoque.find(i => i.id === mov.itemId);
         if (item) {
             if (mov.tipo === 'ENTRADA') {
-                item.quantidade -= mov.quantidade;
-            } else if (mov.tipo === 'SAÍDA') {
-                item.quantidade += mov.quantidade;
+                item.quantidade = Number(item.quantidade || 0) - Number(mov.quantidade || 0);
+            } else if ((mov.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'SAIDA') {
+                item.quantidade = Number(item.quantidade || 0) + Number(mov.quantidade || 0);
             }
-            // Persist stock change
-            await window.FS.setDoc('estoque', item.id, item);
+            item.atualizadoEm = new Date().toISOString();
+            salvarEstoque(itensEstoque);
+            if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+        } else {
+            alert('Aviso: o item original foi excluido. O lancamento sera removido, mas o estoque nao pode ser revertido.');
         }
-        // Remove do Firestore
-        await window.FS.deleteDoc('estoque_movimentacoes', id);
-        // Atualiza caches UI
+
+        if (window.FS) await window.FS.deleteDoc('estoque_movimentacoes', id);
         movimentacoesEstoque = movimentacoesEstoque.filter(m => m.id !== id);
+        localStorage.setItem(MOV_KEY, JSON.stringify(movs.filter(m => m.id !== id)));
+
         renderizarMovimentacoesEstoque();
         renderizarEstoque();
         window.renderSimuladores();
-        alert('Movimento estornado com sucesso.');
+        renderResumoEstoque();
+        alert('Lancamento estornado e estoque restabelecido com sucesso.');
     } catch (err) {
-        console.error('Erro ao excluir movimento', err);
+        console.error('Erro ao estornar movimento de estoque:', err);
         alert('Falha ao estornar movimento. Consulte o console.');
+    }
+};
+
+// Exclui somente o lancamento da movimentacao. Exige senha e nao altera saldo.
+window.apagarMovimentacaoEstoque = async function(id) {
+    const movs = JSON.parse(localStorage.getItem(MOV_KEY) || '[]');
+    const mov = movimentacoesEstoque.find(m => m.id === id) || movs.find(m => m.id === id);
+    if (!mov) {
+        alert('Movimento nao encontrado.');
+        return;
+    }
+
+    if (!confirm(`Deseja EXCLUIR apenas este lancamento de ${mov.tipo}? O saldo do estoque nao sera alterado.`)) return;
+
+    const senhaOk = await validarSenhaMovimentacaoEstoque('Digite sua senha de login para excluir este lancamento:');
+    if (!senhaOk) return;
+
+    try {
+        if (window.FS) await window.FS.deleteDoc('estoque_movimentacoes', id);
+        movimentacoesEstoque = movimentacoesEstoque.filter(m => m.id !== id);
+        localStorage.setItem(MOV_KEY, JSON.stringify(movs.filter(m => m.id !== id)));
+
+        window.renderizarMovimentacoesEstoque();
+        alert('Lancamento excluido com sucesso.');
+    } catch (err) {
+        console.error('Erro ao excluir lancamento de estoque:', err);
+        alert('Falha ao excluir lancamento. Consulte o console.');
     }
 };
 
@@ -959,48 +1026,16 @@ window.renderizarMovimentacoesEstoque = function() {
                 </td>
                 <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${mov.observacao}">${mov.observacao}</td>
                 <td style="padding: 10px 8px; text-align: center;">
-                    <button type="button" class="btn-action-card" onclick="window.excluirMovimentacaoEstoque('${mov.id}')" title="Estornar lançamento" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-rotate-left"></i> Estornar</button>
+                    <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-action-card" onclick="window.excluirMovimentacaoEstoque('${mov.id}')" title="Estornar lancamento" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-rotate-left"></i> Estornar</button>
+                        <button type="button" class="btn-action-card" onclick="window.apagarMovimentacaoEstoque('${mov.id}')" title="Excluir lancamento com senha" style="padding: 6px 10px; color: #fb7185;"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 };
 
-window.excluirMovimentacaoEstoque = function(id) {
-    let movs = JSON.parse(localStorage.getItem(MOV_KEY)) || [];
-    const mov = movs.find(m => m.id === id);
-    if (!mov) return;
-
-    if (!confirm(`Deseja realmente ESTORNAR este movimento de ${mov.tipo}? \nIsso reverterá a quantidade de ${mov.quantidade}x ${mov.itemNome} de volta ao saldo do almoxarifado.`)) {
-        return;
-    }
-
-    itensEstoque = obterEstoque();
-    const item = itensEstoque.find(i => i.id === mov.itemId);
-    
-    if (item) {
-        // Revert inventory quantity
-        if (mov.tipo === 'ENTRADA') {
-            item.quantidade -= mov.quantidade;
-        } else if (mov.tipo === 'SAÍDA') {
-            item.quantidade += mov.quantidade;
-        }
-        salvarEstoque(itensEstoque);
-    } else {
-        alert("Aviso: O item de estoque original desta movimentação foi excluído. O registro do log será removido, mas o estoque não pôde ser revertido.");
-    }
-
-    // Delete transaction from list
-    movs = movs.filter(m => m.id !== id);
-    localStorage.setItem(MOV_KEY, JSON.stringify(movs));
-
-    // Reload all subviews
-    renderizarEstoque();
-    window.renderSimuladores();
-    window.renderizarMovimentacoesEstoque();
-
-    alert("Lançamento estornado e estoque restabelecido com sucesso!");
-};
 
 // Sincronização em tempo real quando o usuário muda para a aba de estoque
 document.addEventListener('click', (e) => {

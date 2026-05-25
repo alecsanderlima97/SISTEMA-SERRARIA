@@ -219,7 +219,7 @@ function configurarFormulariosRH() {
 // CRUD - Carregar Funcionários do Firestore
 async function carregarFuncionarios() {
     if (!listaRH) return;
-    listaRH.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando quadro de funcionários...</td></tr>';
+    listaRH.innerHTML = '<tr><td colspan="6" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Buscando quadro de funcionários...</td></tr>';
     
     try {
         const snap = await getDocs(funcionariosCollection);
@@ -358,7 +358,7 @@ async function salvarFuncionario() {
     const btnSalvar = document.getElementById('btnSalvarRH');
     if (btnSalvar) {
         btnSalvar.disabled = true;
-        btnSalvar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
     }
 
     try {

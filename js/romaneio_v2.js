@@ -773,7 +773,7 @@ window.finalizarRomaneioV2 = async () => {
     
     const btn = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
     if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         btn.disabled = true;
     }
 

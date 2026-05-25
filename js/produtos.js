@@ -70,7 +70,7 @@ formProduto.addEventListener('submit', async function(e) {
 
     const submitBtn = formProduto.querySelector('button[type="submit"]');
     const textoOriginal = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
     submitBtn.disabled = true;
 
     try {
@@ -183,7 +183,7 @@ function renderProdutos() {
 }
 
 async function carregarProdutos() {
-    listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando do Firebase...</td></tr>`;
+    listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>`;
     try {
         const querySnapshot = await getDocs(produtosCollection);
         produtosAtuais = [];

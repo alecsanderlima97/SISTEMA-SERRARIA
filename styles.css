@@ -1658,3 +1658,31 @@ body.role-pendente .global-header {
     display: none !important;
 }
 
+/* Loader industrial: serra circular girando */
+.saw-loader {
+    width: 1.05em;
+    height: 1.05em;
+    display: inline-block;
+    vertical-align: -0.16em;
+    margin-right: 0.45em;
+    border-radius: 50%;
+    background:
+        conic-gradient(from 0deg, #f8fafc 0 10deg, #94a3b8 10deg 20deg, #f8fafc 20deg 30deg, #64748b 30deg 40deg, #f8fafc 40deg 50deg, #94a3b8 50deg 60deg, #f8fafc 60deg 70deg, #64748b 70deg 80deg, #f8fafc 80deg 90deg, #94a3b8 90deg 100deg, #f8fafc 100deg 110deg, #64748b 110deg 120deg, #f8fafc 120deg 130deg, #94a3b8 130deg 140deg, #f8fafc 140deg 150deg, #64748b 150deg 160deg, #f8fafc 160deg 170deg, #94a3b8 170deg 180deg, #f8fafc 180deg 190deg, #64748b 190deg 200deg, #f8fafc 200deg 210deg, #94a3b8 210deg 220deg, #f8fafc 220deg 230deg, #64748b 230deg 240deg, #f8fafc 240deg 250deg, #94a3b8 250deg 260deg, #f8fafc 260deg 270deg, #64748b 270deg 280deg, #f8fafc 280deg 290deg, #94a3b8 290deg 300deg, #f8fafc 300deg 310deg, #64748b 310deg 320deg, #f8fafc 320deg 330deg, #94a3b8 330deg 340deg, #f8fafc 340deg 350deg, #64748b 350deg 360deg);
+    border: 2px solid rgba(255,255,255,0.35);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.12), 0 0 12px rgba(230,126,34,0.28);
+    animation: sawSpin 0.85s linear infinite;
+    position: relative;
+}
+
+.saw-loader::after {
+    content: "";
+    position: absolute;
+    inset: 34%;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+@keyframes sawSpin {
+    to { transform: rotate(360deg); }
+}

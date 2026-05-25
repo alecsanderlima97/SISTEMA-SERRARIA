@@ -274,7 +274,7 @@ window.changeTheme = function(themeName) {
 window.exportarBackup = async function(btnElement) {
     const textoOriginal = btnElement ? btnElement.innerHTML : null;
     if (btnElement) {
-        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando Backup...';
+        btnElement.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Gerando Backup...';
         btnElement.disabled = true;
     }
 
@@ -762,7 +762,7 @@ const App = {
             return;
         }
         
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando lista...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;"><span class="saw-loader" aria-hidden="true"></span> Carregando lista...</td></tr>`;
         
         try {
             const usersColl = collection(db, 'usuarios');
@@ -810,11 +810,14 @@ const App = {
                 tbody.innerHTML = html;
             }, (error) => {
                 console.error("Erro na escuta da lista de usuários em tempo real:", error);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Erro ao carregar usuários.</td></tr>`;
+                const msg = error?.code === 'permission-denied'
+                    ? 'Sem permissao para listar usuarios. Atualize as regras do Firestore.'
+                    : 'Erro ao carregar usuarios.';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">${msg}</td></tr>`;
             });
         } catch (err) {
             console.error("Erro ao carregar tabela de usuários:", err);
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Erro ao carregar usuários.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Erro ao carregar usuarios.</td></tr>`;
         }
     }
 
@@ -947,7 +950,7 @@ window.salvarUsuario = async function() {
     const btnSalvar = document.getElementById('btnSalvarUsuario');
     const origText = btnSalvar ? btnSalvar.innerHTML : 'Salvar';
     if (btnSalvar) {
-        btnSalvar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+        btnSalvar.innerHTML = `<span class="saw-loader" aria-hidden="true"></span> Salvando...`;
         btnSalvar.disabled = true;
     }
     

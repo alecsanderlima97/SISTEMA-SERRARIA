@@ -156,7 +156,7 @@ async function renderizarFluxoPatio() {
     const info = document.getElementById('fluxoPatioInfo');
     if (!tbody || !resumo || !classes) return;
 
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando fluxo do patio...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px;"><span class="saw-loader" aria-hidden="true"></span> Carregando fluxo do patio...</td></tr>';
     resumo.innerHTML = '';
     classes.innerHTML = '';
 
@@ -599,7 +599,7 @@ async function salvarRelatorioPatio() {
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
     const originalText = btnSalvar.innerHTML;
     btnSalvar.disabled = true;
-    btnSalvar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
     try {
         await addDoc(collection(db, 'patio_relatorios'), relatorio);
@@ -627,7 +627,7 @@ async function carregarHistoricoPatio() {
     const tbody = document.getElementById('listaHistoricoPatio');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando contagens...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;"><span class="saw-loader" aria-hidden="true"></span> Carregando contagens...</td></tr>';
 
     try {
         const querySnapshot = await getDocs(collection(db, 'patio_relatorios'));

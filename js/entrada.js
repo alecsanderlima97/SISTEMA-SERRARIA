@@ -70,7 +70,7 @@ function adicionarMatoEmpreiteiro() {
 }
 
 async function carregarEmpreiteiros() {
-    if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>';
     
     try {
         const querySnapshot = await getDocs(collection(db, 'empreiteiros'));
@@ -215,7 +215,7 @@ if(formEmpreiteiro) {
         e.preventDefault();
         const btn = formEmpreiteiro.querySelector('button[type="submit"]');
         const txtOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         btn.disabled = true;
 
         const dados = {
@@ -383,7 +383,7 @@ function calcularVolumeAtual() {
 
 async function carregarEntradas() {
     if(!listaEntradas) return;
-    listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>';
 
     if (entradasUnsubscribe) {
         renderizarEntradas();
@@ -885,7 +885,7 @@ function configurarSubmitEntrada() {
         
         const submitBtn = formEntrada.querySelector('button[type="submit"]');
         const textoOriginal = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         submitBtn.disabled = true;
 
         try {

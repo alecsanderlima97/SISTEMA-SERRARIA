@@ -217,7 +217,7 @@ if (formCliSub) {
         const btnSalvar = document.getElementById('btnSalvarClienteSub');
         const originalHTML = btnSalvar.innerHTML;
         btnSalvar.disabled = true;
-        btnSalvar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         
         try {
             if (clienteSubprodutoEditandoId) {
@@ -442,7 +442,7 @@ if (btnCalcCavaco) {
 
         const btnOriginalHTML = btnCalcCavaco.innerHTML;
         btnCalcCavaco.disabled = true;
-        btnCalcCavaco.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+        btnCalcCavaco.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
         try {
             // Salvar a venda no Firestore
