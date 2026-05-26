@@ -1,0 +1,45 @@
+# Mapa do `index.html`
+
+O `index.html` ainda concentra a casca visual e as principais views do sistema. Este mapa orienta a refatoracao gradual sem alterar comportamento.
+
+## Estrutura principal
+
+- `head`: fontes, FontAwesome, CSS principal, CSS do romaneio e Chart.js.
+- script inicial: diagnostico de erro, autocorrecao estrutural e fallback de navegacao.
+- sidebar: menu lateral e links para `view-*`.
+- header global: busca/assistente, usuario, perfil e configuracoes.
+- `main.main-content`: views principais do sistema.
+- modais globais: RH, historico, patio, estoque, usuarios e movimentacoes.
+- scripts finais: imports dos modulos JS e helpers globais pequenos.
+
+## Extracoes ja realizadas
+
+- `js/bootstrap.js`: diagnostico de erro, autocorrecao estrutural e fallback de navegacao.
+- `js/ui-helpers.js`: helpers globais de patio e rolagem rapida.
+
+## Views principais
+
+- `view-pendente`: usuario aguardando aprovacao.
+- `view-dashboard`: painel gerencial.
+- `view-clientes`: cadastro/listagem de clientes.
+- `view-historico`: historico de cargas.
+- `view-transportes`: fretistas e transportadoras.
+- `view-produtos`: madeiras, medidas e precos.
+- `view-estoque`: resumo, inventario, tanques, movimentacoes e lancamentos.
+- `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios.
+- `view-financeiro`: lancamentos financeiros e relatorios.
+- `view-rh`: funcionarios, horas extras, faltas e holerites.
+- `view-calculadoras`: calculadoras operacionais e subprodutos.
+- `view-agenda`: agenda/calendario.
+- `view-entrada`: entrada de toras e descarregamentos.
+- `view-cavaco`: venda de cavaco/po/subprodutos.
+- `view-romaneio-v2`: geracao de romaneio atual.
+- `view-configuracoes`: empresa, aparencia, dados e usuarios.
+
+## Plano de extracao segura
+
+1. Extrair scripts inline pequenos para `js/`.
+2. Criar componentes HTML parciais somente depois de estabilizar os scripts.
+3. Separar views uma por vez, com teste visual depois de cada extracao.
+4. Manter IDs e handlers globais durante a transicao para evitar quebrar modulos existentes.
+5. Migrar para Next.js apenas quando os modulos estiverem desacoplados o suficiente.
