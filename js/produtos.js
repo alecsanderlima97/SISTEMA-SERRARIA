@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from './firebase-init.js';
+import { db, collection, getDocs, doc, deleteDoc } from './firebase-init.js';
 
 // --- Gestão de Produtos / Madeiras ---
 
@@ -76,8 +76,7 @@ formProduto.addEventListener('submit', async function(e) {
     try {
         if(produtoEditandoId) {
             // Atualizar
-            const docRef = doc(db, 'produtos', produtoEditandoId);
-            await updateDoc(docRef, dadosProd);
+            await window.FS.updateDoc('produtos', produtoEditandoId, dadosProd);
             
             produtoEditandoId = null;
             submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
@@ -86,7 +85,7 @@ formProduto.addEventListener('submit', async function(e) {
         } else {
             // Criar
             dadosProd.criadoEm = new Date().toISOString();
-            await addDoc(produtosCollection, dadosProd);
+            await window.FS.addDoc('produtos', dadosProd);
             alert('Madeira cadastrada!');
         }
 

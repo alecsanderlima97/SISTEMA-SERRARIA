@@ -488,12 +488,7 @@ function inicializarModuloHistorico() {
                                 for (const p of r.pacotes) {
                                     if (p.produtoId) {
                                         const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                                        const prodRef = doc(db, "produtos", p.produtoId);
-                                        const prodSnap = await getDoc(prodRef);
-                                        if (prodSnap.exists()) {
-                                            const estoqueEstornado = (prodSnap.data().quantidade || 0) + totalPecasVendidas;
-                                            await updateDoc(prodRef, { quantidade: estoqueEstornado });
-                                        }
+                                        await window.FS.ajustarQuantidadeProduto(p.produtoId, totalPecasVendidas);
                                     }
                                 }
                             }

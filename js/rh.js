@@ -430,14 +430,13 @@ async function salvarFuncionario() {
 
         if (id) {
             // Edição
-            const docRef = doc(db, 'funcionarios', id);
-            await updateDoc(docRef, dados);
+            await window.FS.updateDoc('funcionarios', id, dados);
             alert("Funcionário atualizado com sucesso!");
         } else {
             // Criação
             dados.criadoEm = new Date().toISOString();
             dados.horasExtras = []; // Array vazio de horas extras
-            await addDoc(funcionariosCollection, dados);
+            await window.FS.addDoc('funcionarios', dados);
             alert("Funcionário cadastrado com sucesso!");
         }
 
@@ -625,8 +624,7 @@ async function adicionarHoraExtra() {
     f.horasExtras.push(novoLote);
 
     try {
-        const docRef = doc(db, 'funcionarios', idFunc);
-        await updateDoc(docRef, { horasExtras: f.horasExtras });
+        await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras });
         
         // Atualizar lista em memória local e UI
         renderizarTabelaHE(f);
@@ -653,8 +651,7 @@ window.removerHoraExtra = async (idHE) => {
     if (confirm("Deseja realmente excluir este lançamento?")) {
         f.horasExtras = f.horasExtras.filter(h => h.id !== idHE);
         try {
-            const docRef = doc(db, 'funcionarios', idFunc);
-            await updateDoc(docRef, { horasExtras: f.horasExtras });
+            await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras });
             renderizarTabelaHE(f);
             
             // Atualizar tabela principal de funcionários
@@ -755,8 +752,7 @@ async function adicionarFalta() {
     f.faltas.push(novaFalta);
 
     try {
-        const docRef = doc(db, 'funcionarios', idFunc);
-        await updateDoc(docRef, { faltas: f.faltas });
+        await window.FS.updateDoc('funcionarios', idFunc, { faltas: f.faltas });
         
         // Atualizar UI
         renderizarTabelaFaltas(f);
@@ -778,8 +774,7 @@ window.removerFalta = async (idFalta) => {
     if (confirm("Deseja realmente excluir esta falta?")) {
         f.faltas = f.faltas.filter(x => x.id !== idFalta);
         try {
-            const docRef = doc(db, 'funcionarios', idFunc);
-            await updateDoc(docRef, { faltas: f.faltas });
+            await window.FS.updateDoc('funcionarios', idFunc, { faltas: f.faltas });
             renderizarTabelaFaltas(f);
             
             // Atualizar tabela principal de funcionários

@@ -229,13 +229,13 @@ if(formEmpreiteiro) {
 
         try {
             if (empreiteiroEditandoId) {
-                await updateDoc(doc(db, 'empreiteiros', empreiteiroEditandoId), dados);
+                await window.FS.updateDoc('empreiteiros', empreiteiroEditandoId, dados);
                 alert('Empreiteiro atualizado com sucesso!');
                 empreiteiroEditandoId = null;
                 btn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Empreiteiro';
             } else {
                 dados.criadoEm = new Date().toISOString();
-                await addDoc(collection(db, 'empreiteiros'), dados);
+                await window.FS.addDoc('empreiteiros', dados);
                 alert('Empreiteiro cadastrado com sucesso!');
             }
             formEmpreiteiro.reset();
@@ -891,7 +891,7 @@ function configurarSubmitEntrada() {
         try {
             if (entradaEditandoId) {
                 novaEntrada.atualizadoPor = usuarioAuditoria;
-                await updateDoc(doc(db, 'entradas', entradaEditandoId), novaEntrada);
+                await window.FS.updateDoc('entradas', entradaEditandoId, novaEntrada);
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) atualizada com sucesso!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
@@ -900,7 +900,7 @@ function configurarSubmitEntrada() {
                 novaEntrada.criadoEm = new Date().toISOString();
                 novaEntrada.criadoPor = usuarioAuditoria;
                 novaEntrada.atualizadoPor = usuarioAuditoria;
-                await addDoc(collection(db, 'entradas'), novaEntrada);
+                await window.FS.addDoc('entradas', novaEntrada);
                 const valorMensagem = usuarioPodeVerFinanceiroEmpreiteiro()
                     ? calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})
                     : calcData.totalDescarga.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});

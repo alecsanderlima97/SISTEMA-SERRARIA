@@ -790,12 +790,7 @@ window.finalizarRomaneioV2 = async () => {
                     for (const p of antigo.pacotes) {
                         if (p.produtoId) {
                             const pecasAntigas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                            const prodRef = doc(db, "produtos", p.produtoId);
-                            const prodSnap = await getDoc(prodRef);
-                            if (prodSnap.exists()) {
-                                const estoqueEstornado = (prodSnap.data().quantidade || 0) + pecasAntigas;
-                                await updateDoc(prodRef, { quantidade: estoqueEstornado });
-                            }
+                            await window.FS.ajustarQuantidadeProduto(p.produtoId, pecasAntigas);
                         }
                     }
                 }
@@ -805,12 +800,7 @@ window.finalizarRomaneioV2 = async () => {
             for (const p of romaneioAtual.pacotes) {
                 if (p.produtoId) {
                     const pecasNovas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                    const prodRef = doc(db, "produtos", p.produtoId);
-                    const prodSnap = await getDoc(prodRef);
-                    if (prodSnap.exists()) {
-                        const estoqueAtualizado = Math.max(0, (prodSnap.data().quantidade || 0) - pecasNovas);
-                        await updateDoc(prodRef, { quantidade: estoqueAtualizado });
-                    }
+                    await window.FS.ajustarQuantidadeProduto(p.produtoId, -pecasNovas);
                 }
             }
             
@@ -818,7 +808,7 @@ window.finalizarRomaneioV2 = async () => {
             const dadosNovos = { ...romaneioAtual };
             delete dadosNovos.idFirebase; // Remover ID local antes de salvar
             
-            await updateDoc(docRef, {
+            await window.FS.updateDoc('romaneios', romaneioAtual.idFirebase, {
                 ...dadosNovos,
                 cliente,
                 dataEdicao: new Date().toISOString(),
@@ -828,7 +818,7 @@ window.finalizarRomaneioV2 = async () => {
             alert(`Carga ${romaneioAtual.numero} atualizada com sucesso no Firebase!`);
         } else {
             // --- Criação de Carga Nova ---
-            await addDoc(collection(db, "romaneios"), {
+            await window.FS.addDoc('romaneios', {
                 ...romaneioAtual,
                 cliente,
                 dataCriacao: new Date().toISOString(),
@@ -838,12 +828,7 @@ window.finalizarRomaneioV2 = async () => {
             for (const p of romaneioAtual.pacotes) {
                 if (p.produtoId) {
                     const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
-                    const docRef = doc(db, "produtos", p.produtoId);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        const novoEstoque = Math.max(0, (docSnap.data().quantidade || 0) - totalPecasVendidas);
-                        await updateDoc(docRef, { quantidade: novoEstoque });
-                    }
+                    await window.FS.ajustarQuantidadeProduto(p.produtoId, -totalPecasVendidas);
                 }
             }
             alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);

@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from './firebase-init.js';
+import { db, collection, getDocs, doc, deleteDoc } from './firebase-init.js';
 
 // --- Cadastro de Transportadoras ---
 
@@ -71,8 +71,7 @@ formTransporte.addEventListener('submit', async function(e) {
     try {
         if(transporteEditandoId) {
             // Atualizar
-            const docRef = doc(db, 'transportes', transporteEditandoId);
-            await updateDoc(docRef, dadosTransp);
+            await window.FS.updateDoc('transportes', transporteEditandoId, dadosTransp);
             
             transporteEditandoId = null;
             submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Transportadora';
@@ -81,7 +80,7 @@ formTransporte.addEventListener('submit', async function(e) {
         } else {
             // Criar
             dadosTransp.criadoEm = new Date().toISOString();
-            await addDoc(transportesCollection, dadosTransp);
+            await window.FS.addDoc('transportes', dadosTransp);
             alert('Transportadora cadastrada com sucesso!');
         }
 

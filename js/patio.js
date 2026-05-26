@@ -602,7 +602,7 @@ async function salvarRelatorioPatio() {
     btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
     try {
-        await addDoc(collection(db, 'patio_relatorios'), relatorio);
+        await window.FS.addDoc('patio_relatorios', relatorio);
         alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         
         // Resetar rascunho

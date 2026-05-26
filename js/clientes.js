@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from './firebase-init.js';
+import { db, collection, getDocs, doc, deleteDoc } from './firebase-init.js';
 
 // --- Cadastro e Gestão de Clientes ---
 
@@ -58,9 +58,8 @@ if (formCliente) {
 
         try {
             if(clienteEditandoId) {
-                // Atualizar no Firestore
-                const clienteRef = doc(db, 'clientes', clienteEditandoId);
-                await updateDoc(clienteRef, dadosCliente);
+                // Atualizar no Firestore com metadados SaaS
+                await window.FS.updateDoc('clientes', clienteEditandoId, dadosCliente);
                 
                 clienteEditandoId = null;
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
@@ -69,7 +68,7 @@ if (formCliente) {
             } else {
                 // Criar no Firestore
                 dadosCliente.criadoEm = new Date().toISOString();
-                await addDoc(clientesCollection, dadosCliente);
+                await window.FS.addDoc('clientes', dadosCliente);
                 alert('Cliente cadastrado com sucesso no Firebase!');
             }
 

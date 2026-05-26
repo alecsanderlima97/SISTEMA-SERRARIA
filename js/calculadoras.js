@@ -221,15 +221,14 @@ if (formCliSub) {
         
         try {
             if (clienteSubprodutoEditandoId) {
-                const docRef = doc(db, 'clientes_subprodutos', clienteSubprodutoEditandoId);
-                await updateDoc(docRef, dadosCli);
+                await window.FS.updateDoc('clientes_subprodutos', clienteSubprodutoEditandoId, dadosCli);
                 alert("Cliente de subproduto atualizado com sucesso!");
                 clienteSubprodutoEditandoId = null;
                 btnSalvar.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
                 btnSalvar.style.background = '';
                 btnSalvar.style.color = '';
             } else {
-                await addDoc(collection(db, 'clientes_subprodutos'), dadosCli);
+                await window.FS.addDoc('clientes_subprodutos', dadosCli);
                 alert("Cliente de subproduto cadastrado com sucesso!");
             }
             
@@ -468,7 +467,7 @@ if (btnCalcCavaco) {
                 criadoEm: new Date().toISOString()
             };
 
-            await addDoc(collection(db, 'vendas_subprodutos'), novaVenda);
+            await window.FS.addDoc('vendas_subprodutos', novaVenda);
             console.log("Calculadoras: Venda de subproduto salva no Firebase");
             document.dispatchEvent(new Event('historicoUpdated'));
 

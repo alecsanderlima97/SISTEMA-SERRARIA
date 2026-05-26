@@ -11,6 +11,7 @@ import {
 const ADMIN_EMAILS = [
     'limaalecsander@gmail.com'
 ];
+const DEFAULT_EMPRESA_ID = 'vanmarte';
 
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
@@ -103,6 +104,7 @@ async function checkGoogleRedirectResult() {
                     await setDoc(userRef, {
                         ...dadosExistentes,
                         uid: user.uid,
+                        empresaId: dadosExistentes.empresaId || DEFAULT_EMPRESA_ID,
                         atualizadoEm: new Date().toISOString()
                     });
                     
@@ -116,6 +118,7 @@ async function checkGoogleRedirectResult() {
                         nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
                         email: user.email.toLowerCase(),
                         cargo: cargoGoogle,
+                        empresaId: DEFAULT_EMPRESA_ID,
                         criadoEm: new Date().toISOString()
                     });
                     if (cargoGoogle === 'PENDENTE') {
@@ -172,6 +175,7 @@ loginForm.addEventListener('submit', async function(e) {
                     nome: (user.displayName || em.split('@')[0]).toUpperCase(),
                     email: em,
                     cargo: 'gerente',
+                    empresaId: DEFAULT_EMPRESA_ID,
                     criadoEm: new Date().toISOString()
                 });
             }
@@ -235,6 +239,7 @@ if (registerForm) {
                 nome: nome,
                 email: email,
                 cargo: cargoInicial,
+                empresaId: DEFAULT_EMPRESA_ID,
                 criadoEm: new Date().toISOString()
             });
             

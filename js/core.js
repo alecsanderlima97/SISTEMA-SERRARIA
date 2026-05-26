@@ -6,6 +6,8 @@ import {
 
 console.log("Core: Inicializando sistema de segurança e navegação...");
 
+const DEFAULT_EMPRESA_ID = 'vanmarte';
+
 const ROLE_PERMISSIONS = {
     'gerente': {
         allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
@@ -544,6 +546,7 @@ const App = {
                             await setDoc(userRef, {
                                 ...preData,
                                 uid: user.uid,
+                                empresaId: preData.empresaId || DEFAULT_EMPRESA_ID,
                                 atualizadoEm: new Date().toISOString()
                             });
                             if (preDoc.id !== user.uid) {
@@ -554,6 +557,7 @@ const App = {
                                 nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
                                 email: user.email,
                                 cargo: 'PENDENTE',
+                                empresaId: DEFAULT_EMPRESA_ID,
                                 criadoEm: new Date().toISOString()
                             });
                         }
@@ -572,6 +576,12 @@ const App = {
                         const novoCargo = userData.cargo || 'PENDENTE';
                         const novoNome = userData.nome || user.email.split('@')[0].toUpperCase();
                         const novasPermissoes = getEffectivePermissions(userData);
+                        window.AppUserContext = {
+                            uid: user.uid,
+                            email: user.email,
+                            empresaId: userData.empresaId || DEFAULT_EMPRESA_ID,
+                            cargo: novoCargo
+                        };
                         
                         console.log(`Core [Sincronização em Tempo Real]: Nome: ${novoNome} | Cargo: ${novoCargo}`);
                         
@@ -963,6 +973,7 @@ window.salvarUsuario = async function() {
                 cargo: cargo,
                 cargoNormalizado: normalizeRole(cargo),
                 permissoes: permissoes,
+                empresaId: window.AppUserContext?.empresaId || DEFAULT_EMPRESA_ID,
                 atualizadoEm: new Date().toISOString()
             });
             alert("Permissões do usuário atualizadas com sucesso!");
@@ -975,6 +986,7 @@ window.salvarUsuario = async function() {
                 cargo: cargo,
                 cargoNormalizado: normalizeRole(cargo),
                 permissoes: permissoes,
+                empresaId: window.AppUserContext?.empresaId || DEFAULT_EMPRESA_ID,
                 criadoEm: new Date().toISOString()
             });
             alert("Pré-cadastro realizado com sucesso! Quando o funcionário acessar com este e-mail, ele já terá o cargo definido.");
@@ -1009,4 +1021,3 @@ window.excluirUsuario = async function(id) {
 };
 
 export { App };
-
