@@ -17,6 +17,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/bootstrap.js`: diagnostico de erro, autocorrecao estrutural e fallback de navegacao.
 - `js/ui-helpers.js`: helpers globais de patio e rolagem rapida.
 - `js/views/calculadoras-view.js`: HTML da tela de calculadoras, injetado antes dos modulos da aplicacao.
+- `js/views/agenda-view.js`: HTML da agenda/calendario, injetado antes dos modulos da aplicacao.
 
 ## Views principais
 
@@ -31,7 +32,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-financeiro`: lancamentos financeiros e relatorios.
 - `view-rh`: funcionarios, horas extras, faltas e holerites.
 - `view-calculadoras`: calculadoras operacionais, extraida para `js/views/calculadoras-view.js`.
-- `view-agenda`: agenda/calendario.
+- `view-agenda`: agenda/calendario, extraida para `js/views/agenda-view.js`.
 - `view-entrada`: entrada de toras e descarregamentos.
 - `view-cavaco`: venda de cavaco/po/subprodutos.
 - `view-romaneio-v2`: geracao de romaneio atual.
