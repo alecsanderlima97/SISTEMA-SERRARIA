@@ -19,6 +19,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/calculadoras-view.js`: HTML da tela de calculadoras, injetado antes dos modulos da aplicacao.
 - `js/views/agenda-view.js`: HTML da agenda/calendario, injetado antes dos modulos da aplicacao.
 - `js/views/entrada-view.js`: HTML da entrada de toras, abas internas e descarregamento.
+- `js/views/cavaco-view.js`: HTML da venda de cavaco/po e cadastro de clientes de subprodutos.
 
 ## Views principais
 
@@ -35,7 +36,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-calculadoras`: calculadoras operacionais, extraida para `js/views/calculadoras-view.js`.
 - `view-agenda`: agenda/calendario, extraida para `js/views/agenda-view.js`.
 - `view-entrada`: entrada de toras e descarregamentos, extraida para `js/views/entrada-view.js`.
-- `view-cavaco`: venda de cavaco/po/subprodutos.
+- `view-cavaco`: venda de cavaco/po/subprodutos, extraida para `js/views/cavaco-view.js`.
 - `view-romaneio-v2`: geracao de romaneio atual.
 - `view-configuracoes`: empresa, aparencia, dados e usuarios.
 
