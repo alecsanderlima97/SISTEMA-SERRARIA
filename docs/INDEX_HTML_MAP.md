@@ -21,6 +21,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/entrada-view.js`: HTML da entrada de toras, abas internas e descarregamento.
 - `js/views/cavaco-view.js`: HTML da venda de cavaco/po e cadastro de clientes de subprodutos.
 - `js/views/romaneio-v2-view.js`: HTML do gerador de romaneio atual.
+- `js/views/configuracoes-view.js`: HTML da tela de configuracoes, perfil, backup, tema e painel de usuarios.
 
 ## Views principais
 
@@ -39,7 +40,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-entrada`: entrada de toras e descarregamentos, extraida para `js/views/entrada-view.js`.
 - `view-cavaco`: venda de cavaco/po/subprodutos, extraida para `js/views/cavaco-view.js`.
 - `view-romaneio-v2`: geracao de romaneio atual, extraida para `js/views/romaneio-v2-view.js`.
-- `view-configuracoes`: empresa, aparencia, dados e usuarios.
+- `view-configuracoes`: empresa, aparencia, dados e usuarios, extraida para `js/views/configuracoes-view.js`.
 
 ## Plano de extracao segura
 
