@@ -31,6 +31,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
 - `js/modals/estoque-modals.js`: modal global de movimentacao manual de estoque.
 - `js/modals/usuario-modals.js`: modal global de cadastro, aprovacao e permissao de usuarios.
+- `js/modals/frotas-modals.js`: modais globais de abastecimento e manutencao da frota.
 
 ## Views principais
 
@@ -41,7 +42,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-transportes`: fretistas e transportadoras, extraida para `js/views/transportes-view.js`.
 - `view-produtos`: madeiras, medidas e precos, extraida para `js/views/produtos-view.js`.
 - `view-estoque`: resumo, inventario, tanques, movimentacoes e lancamentos, extraida para `js/views/estoque-view.js`.
-- `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios, parcialmente extraida para `js/views/frotas-view.js`.
+- `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios, extraida para `js/views/frotas-view.js` e `js/modals/frotas-modals.js`.
 - `view-financeiro`: lancamentos financeiros e relatorios.
 - `view-rh`: funcionarios, horas extras, faltas e holerites.
 - `view-calculadoras`: calculadoras operacionais, extraida para `js/views/calculadoras-view.js`.
