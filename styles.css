@@ -1877,12 +1877,25 @@ body.role-pendente .global-header {
     text-transform: none;
 }
 
-.brand .brand-orquestra-initial,
-.brand .brand-orquestra-name {
+.brand .brand-orquestra-logo .brand-orquestra-initial {
+    color: #3b82f6;
+    font-weight: 900;
+    font-size: 36px;
+    letter-spacing: -1px;
+    line-height: 1;
     text-transform: none;
 }
 
-.brand-orquestra-subtitle {
+.brand .brand-orquestra-logo .brand-orquestra-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: bold;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    text-transform: none;
+}
+
+.brand .brand-orquestra-subtitle {
     font-size: 10px;
     color: #666;
     margin-top: -4px;
