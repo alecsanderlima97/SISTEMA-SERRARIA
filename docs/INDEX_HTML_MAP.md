@@ -26,6 +26,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
 - `js/modals/estoque-modals.js`: modal global de movimentacao manual de estoque.
+- `js/modals/usuario-modals.js`: modal global de cadastro, aprovacao e permissao de usuarios.
 
 ## Views principais
 
