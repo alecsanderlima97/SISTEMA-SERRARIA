@@ -242,18 +242,18 @@ function cardFluxoPatio(label, value) {
 
 function formatarClasseFluxo(classe) {
     const value = (classe || '').toString().toUpperCase();
-    if (value.includes('1')) return '1Âª';
-    if (value.includes('2')) return '2Âª';
-    if (value.includes('3')) return '3Âª';
+    if (value.includes('1')) return '1a';
+    if (value.includes('2')) return '2a';
+    if (value.includes('3')) return '3a';
     return value || '-';
 }
 
 function badgeClasseFluxo(classe) {
     const label = formatarClasseFluxo(classe);
     let colors = { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
-    if (label === '1Âª') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
-    if (label === '2Âª') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
-    if (label === '3Âª') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    if (label === '1a') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
+    if (label === '2a') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (label === '3a') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
     return `<span style="display:inline-flex; min-width:42px; justify-content:center; padding:5px 10px; border-radius:999px; font-weight:800; background:${colors.bg}; border:1px solid ${colors.border}; color:${colors.color};">${label}</span>`;
 }
 
@@ -484,11 +484,11 @@ function renderizarItensPatioTemp() {
         // Tag badge da classe
         let classeBadge = '';
         if (item.classe === '1Âª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1Âª</span>`;
+            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1a</span>`;
         } else if (item.classe === '2Âª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2Âª</span>`;
+            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2a</span>`;
         } else {
-            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3Âª</span>`;
+            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3a</span>`;
         }
 
         html += `
