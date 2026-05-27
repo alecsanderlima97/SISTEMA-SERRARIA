@@ -1,37 +1,37 @@
 ﻿(function() {
-    const html = `            <!-- ====== TELA: RH FUNCIONÃƒÂRIOS ====== -->
+    const html = `            <!-- ====== TELA: RH FUNCIONÁRIOS ====== -->
             <section id="view-rh" class="view-section" style="display: none;">
                 <div class="main-header hide-on-print">
-                    <h1><i class="fa-solid fa-id-card-clip"></i> GestÃƒÂ£o de Pessoas (RH)</h1>
-                    <p>Controle de funcionÃƒÂ¡rios, salÃƒÂ¡rios, fÃƒÂ©rias, vales e horas extras.</p>
+                    <h1><i class="fa-solid fa-id-card-clip"></i> Gestão de Pessoas (RH)</h1>
+                    <p>Controle de funcionários, salários, férias, vales e horas extras.</p>
                 </div>
 
                 <!-- TABS DE RH -->
                 <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
                     <button type="button" id="btnTabRHLista" onclick="window.switchTabRH('lista')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
-                        <i class="fa-solid fa-users-viewfinder"></i> Quadro de FuncionÃƒÂ¡rios
+                        <i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários
                     </button>
                     <button type="button" id="btnTabRHForm" onclick="window.switchTabRH('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
-                        <i class="fa-solid fa-user-plus"></i> <span id="lblTabRHForm">Cadastrar FuncionÃƒÂ¡rio</span>
+                        <i class="fa-solid fa-user-plus"></i> <span id="lblTabRHForm">Cadastrar Funcionário</span>
                     </button>
                 </div>
 
-                <!-- CARD DE CADASTRO / EDIÃƒâ€¡ÃƒÆ’O -->
+                <!-- CARD DE CADASTRO / EDIÇÃO -->
                 <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px; max-width: 900px; margin: 0 auto 20px auto;">
                     <div class="section-title">
-                        <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo FuncionÃƒÂ¡rio</h2>
+                        <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo Funcionário</h2>
                     </div>
                     <form id="formFuncionario" onsubmit="event.preventDefault();">
                         <input type="hidden" id="rh-id">
                         
                         <!-- Dados Pessoais -->
                         <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <i class="fa-solid fa-user"></i> InformaÃƒÂ§ÃƒÂµes Pessoais
+                            <i class="fa-solid fa-user"></i> Informações Pessoais
                         </h3>
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="input-group">
                                 <label>Nome Completo *</label>
-                                <input type="text" id="rh-nome" class="text-uppercase-input" required placeholder="Ex: JOÃƒÆ’O DA SILVA">
+                                <input type="text" id="rh-nome" class="text-uppercase-input" required placeholder="Ex: JOÃO DA SILVA">
                             </div>
                             <div class="input-group">
                                 <label>Data de Nascimento</label>
@@ -46,7 +46,7 @@
                                 <input type="text" id="rh-rg" placeholder="Ex: 12.345.678-9">
                             </div>
                             <div class="input-group">
-                                <label>NÃƒÂºmero para Contato *</label>
+                                <label>Número para Contato *</label>
                                 <input type="text" id="rh-contato" required placeholder="(00) 00000-0000">
                             </div>
                         </div>
@@ -57,15 +57,15 @@
                         </h3>
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="input-group">
-                                <label>FunÃƒÂ§ÃƒÂ£o / Cargo *</label>
+                                <label>Função / Cargo *</label>
                                 <input type="text" id="rh-funcao" class="text-uppercase-input" required placeholder="Ex: SERRADOR / EMPILHADEIRISTA">
                             </div>
                             <div class="input-group">
-                                <label>Data de AdmissÃƒÂ£o *</label>
+                                <label>Data de Admissão *</label>
                                 <input type="date" id="rh-admissao" required>
                             </div>
                             <div class="input-group">
-                                <label>SalÃƒÂ¡rio Base R$ *</label>
+                                <label>Salário Base R$ *</label>
                                 <input type="text" id="rh-salario" required placeholder="R$ 0,00">
                             </div>
                             <div class="input-group">
@@ -76,12 +76,12 @@
                                 <label>Forma de Pagamento *</label>
                                 <select id="rh-forma-pagamento" required>
                                     <option value="PIX">PIX</option>
-                                    <option value="DINHEIRO">DINHEIRO (ESPÃƒâ€°CIE)</option>
-                                    <option value="TRANSFERENCIA">TRANSFERÃƒÅ NCIA BANCÃƒÂRIA</option>
+                                    <option value="DINHEIRO">DINHEIRO (ESPÉCIE)</option>
+                                    <option value="TRANSFERENCIA">TRANSFERÊNCIA BANCÁRIA</option>
                                 </select>
                             </div>
                             <div class="input-group" style="grid-column: span 2;">
-                                <label>Chave PIX ou Dados BancÃƒÂ¡rios para Pagamento</label>
+                                <label>Chave PIX ou Dados Bancários para Pagamento</label>
                                 <input type="text" id="rh-dados-bancarios" placeholder="Ex: Chave PIX (Celular/CPF) ou Banco/Ag/Cc">
                             </div>
                             <div class="input-group">
@@ -89,26 +89,26 @@
                                 <input type="text" id="rh-valor-he-normal" required placeholder="R$ 0,00">
                             </div>
                             <div class="input-group">
-                                <label>Valor H. Extra SÃƒÂ¡b/Dom/Fer R$ *</label>
+                                <label>Valor H. Extra Sáb/Dom/Fer R$ *</label>
                                 <input type="text" id="rh-valor-he-especial" required placeholder="R$ 0,00">
                             </div>
                         </div>
 
-                        <!-- FÃƒÂ©rias -->
+                        <!-- Férias -->
                         <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <i class="fa-solid fa-umbrella-beach"></i> Controle de FÃƒÂ©rias
+                            <i class="fa-solid fa-umbrella-beach"></i> Controle de Férias
                         </h3>
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="input-group">
-                                <label>FÃƒÂ©rias UsufruÃƒÂ­das (Dias)</label>
+                                <label>Férias Usufruídas (Dias)</label>
                                 <input type="number" id="rh-ferias-dias" min="0" max="60" value="0">
                             </div>
                             <div class="input-group">
-                                <label>InÃƒÂ­cio do PerÃƒÂ­odo de FÃƒÂ©rias</label>
+                                <label>Início do Período de Férias</label>
                                 <input type="date" id="rh-ferias-inicio">
                             </div>
                             <div class="input-group">
-                                <label>Fim do PerÃƒÂ­odo de FÃƒÂ©rias</label>
+                                <label>Fim do Período de Férias</label>
                                 <input type="date" id="rh-ferias-fim">
                             </div>
                         </div>
@@ -118,7 +118,7 @@
                                 Cancelar
                             </button>
                             <button type="submit" id="btnSalvarRH" class="btn-primary" style="padding: 12px 30px; border-radius: 8px; font-weight: bold; background: #00ff88; color: black; border-color: #00ff88;">
-                                <i class="fa-solid fa-floppy-disk"></i> SALVAR FUNCIONÃƒÂRIO
+                                <i class="fa-solid fa-floppy-disk"></i> SALVAR FUNCIONÁRIO
                             </button>
                         </div>
                     </form>
@@ -134,15 +134,15 @@
                     </div>
                     <div class="rh-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:22px;">
                         <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">FUNCIONÃƒÂRIOS</small>
+                            <small style="color:var(--text-muted); font-weight:700;">FUNCIONÁRIOS</small>
                             <div id="rhKpiFuncionarios" style="font-size:1.7rem; font-weight:900; color:white; margin-top:6px;">0</div>
                         </div>
                         <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">EM FÃƒâ€°RIAS</small>
+                            <small style="color:var(--text-muted); font-weight:700;">EM FÉRIAS</small>
                             <div id="rhKpiFerias" style="font-size:1.7rem; font-weight:900; color:#fbbf24; margin-top:6px;">0</div>
                         </div>
                         <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">TOTAL SALÃƒÂRIOS</small>
+                            <small style="color:var(--text-muted); font-weight:700;">TOTAL SALÁRIOS</small>
                             <div id="rhKpiSalarios" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#22c55e; margin-top:8px;">R$ 0,00</div>
                         </div>
                         <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
@@ -151,10 +151,10 @@
                         </div>
                     </div>
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                        <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de FuncionÃƒÂ¡rios</h2>
+                        <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários</h2>
                         <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; flex-wrap: wrap;">
                             <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-color);"></i>
-                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou funÃƒÂ§ÃƒÂ£o..." style="flex: 1; min-width: 220px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou função..." style="flex: 1; min-width: 220px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
                             <select id="ordenarFuncionarios" style="height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
                                 <option value="nome">Nome A-Z</option>
                                 <option value="data-desc">Mais novo</option>
@@ -167,18 +167,18 @@
                         <table class="package-table">
                             <thead>
                                 <tr>
-                                    <th>FuncionÃƒÂ¡rio</th>
-                                    <th>FunÃƒÂ§ÃƒÂ£o / AdmissÃƒÂ£o</th>
+                                    <th>Funcionário</th>
+                                    <th>Função / Admissão</th>
                                     <th>Contato / CPF</th>
-                                    <th>SalÃƒÂ¡rio / Vale</th>
-                                    <th>FÃƒÂ©rias</th>
-                                    <th style="text-align: center;">PainÃƒÂ©is e AÃƒÂ§ÃƒÂµes</th>
+                                    <th>Salário / Vale</th>
+                                    <th>Férias</th>
+                                    <th style="text-align: center;">Painéis e Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="listaRH">
                                 <tr>
                                     <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">
-                                        <span class="saw-loader" aria-hidden="true"></span> Carregando funcionÃƒÂ¡rios...
+                                        <span class="saw-loader" aria-hidden="true"></span> Carregando funcionários...
                                     </td>
                                 </tr>
                             </tbody>
@@ -190,4 +190,3 @@
 `;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();
-

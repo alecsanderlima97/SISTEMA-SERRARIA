@@ -7,7 +7,7 @@
         <div class="assistant-panel-header">
             <div>
                 <strong>Assistente IA</strong>
-                <small>Analise local do sistema</small>
+                <small>Análise local do sistema</small>
             </div>
             <button type="button" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -18,7 +18,7 @@
             <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
         </div>
         <div id="assistantMessages" class="assistant-messages">
-            <div class="assistant-msg assistant-msg-bot">OlÃƒÆ’Ã‚Â¡! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
+            <div class="assistant-msg assistant-msg-bot">Olá! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
         </div>
         <form id="assistantForm" class="assistant-input-row">
             <input type="text" id="assistantInput" placeholder="Pergunte ao assistente">
@@ -29,4 +29,3 @@
 `;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();
-
