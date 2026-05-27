@@ -38,6 +38,8 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/modals/estoque-modals.js`: modal global de movimentacao manual de estoque.
 - `js/modals/usuario-modals.js`: modal global de cadastro, aprovacao e permissao de usuarios.
 - `js/modals/frotas-modals.js`: modais globais de abastecimento e manutencao da frota.
+- `js/widgets/assistant-widget.js`: botao flutuante e painel visual do assistente.
+- `js/widgets/scroll-helper-widget.js`: botoes flutuantes de rolagem rapida.
 
 ## Views principais
 

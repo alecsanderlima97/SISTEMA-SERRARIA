@@ -9,7 +9,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap"
         rel="stylesheet">
-    <!-- FontAwesome para ÃƒÂ­cones -->
+    <!-- FontAwesome para ÃƒÆ’Ã‚Â­cones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="romaneio-v2.css">
@@ -41,29 +41,29 @@
             </div>
             <nav>
                 <ul>
-                    <li><a href="#" class="active" data-target="view-dashboard" onclick="window.navegarPara('view-dashboard'); return false;"><i class="fa-solid fa-home"></i> InÃƒÂ­cio</a></li>
+                    <li><a href="#" class="active" data-target="view-dashboard" onclick="window.navegarPara('view-dashboard'); return false;"><i class="fa-solid fa-home"></i> InÃƒÆ’Ã‚Â­cio</a></li>
                     <li><a href="#" data-target="view-romaneio-v2" onclick="window.navegarPara('view-romaneio-v2'); return false;"><i class="fa-solid fa-file-invoice"></i> Gerar Romaneio</a></li>
-                    <li><a href="#" data-target="view-historico" onclick="window.navegarPara('view-historico'); return false;"><i class="fa-solid fa-clock-rotate-left"></i> HistÃƒÂ³rico de Cargas</a></li>
+                    <li><a href="#" data-target="view-historico" onclick="window.navegarPara('view-historico'); return false;"><i class="fa-solid fa-clock-rotate-left"></i> HistÃƒÆ’Ã‚Â³rico de Cargas</a></li>
                     <li><a href="#" data-target="view-clientes" onclick="window.navegarPara('view-clientes'); return false;"><i class="fa-solid fa-users"></i> Clientes</a></li>
                     <li><a href="#" data-target="view-transportes" onclick="window.navegarPara('view-transportes'); return false;"><i class="fa-solid fa-truck"></i> Transportadoras</a></li>
                     <li><a href="#" data-target="view-entrada" onclick="window.navegarPara('view-entrada'); return false;"><i class="fa-solid fa-tree"></i> Entrada de Toras</a></li>
-                    <li><a href="#" data-target="view-cavaco" onclick="window.navegarPara('view-cavaco'); return false;"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/PÃƒÂ³)</a></li>
+                    <li><a href="#" data-target="view-cavaco" onclick="window.navegarPara('view-cavaco'); return false;"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/PÃƒÆ’Ã‚Â³)</a></li>
                     <li><a href="#" data-target="view-produtos" onclick="window.navegarPara('view-produtos'); return false;"><i class="fa-solid fa-box-open"></i> Madeiras / Estilos</a></li>
                     <li><a href="#" data-target="view-estoque" onclick="window.navegarPara('view-estoque'); return false;"><i class="fa-solid fa-boxes-stacked"></i> Controle de Estoque</a></li>
                     <li><a href="#" data-target="view-frotas" onclick="window.navegarPara('view-frotas'); return false;"><i class="fa-solid fa-truck-pickup"></i> Controle de Frota</a></li>
                     <li><a href="#" data-target="view-financeiro" onclick="window.navegarPara('view-financeiro'); return false;"><i class="fa-solid fa-sack-dollar"></i> Financeiro</a></li>
-                    <li><a href="#" data-target="view-rh" onclick="window.navegarPara('view-rh'); return false;"><i class="fa-solid fa-id-card-clip"></i> RH FuncionÃƒÂ¡rios</a></li>
+                    <li><a href="#" data-target="view-rh" onclick="window.navegarPara('view-rh'); return false;"><i class="fa-solid fa-id-card-clip"></i> RH FuncionÃƒÆ’Ã‚Â¡rios</a></li>
                     <li><a href="#" data-target="view-calculadoras" onclick="window.navegarPara('view-calculadoras'); return false;"><i class="fa-solid fa-calculator"></i> Calculadoras</a></li>
-                    <li><a href="#" data-target="view-agenda" onclick="window.navegarPara('view-agenda'); return false;"><i class="fa-solid fa-calendar-days"></i> Agenda / CalendÃƒÂ¡rio</a></li>
+                    <li><a href="#" data-target="view-agenda" onclick="window.navegarPara('view-agenda'); return false;"><i class="fa-solid fa-calendar-days"></i> Agenda / CalendÃƒÆ’Ã‚Â¡rio</a></li>
                 </ul>
             </nav>
         </aside>
 
-        <!-- CONTEÃƒÅ¡DO PRINCIPAL -->
+        <!-- CONTEÃƒÆ’Ã…Â¡DO PRINCIPAL -->
         <main class="main-content">
             <!-- Global Header -->
             <div class="global-header hide-on-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
-                <!-- BotÃƒÂ£o de Recolher Sidebar -->
+                <!-- BotÃƒÆ’Ã‚Â£o de Recolher Sidebar -->
                 <button type="button" id="btnToggleSidebar" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; margin-left: -15px;" title="Recolher Menu">
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
@@ -84,7 +84,7 @@
                     </div>
 
                     <div id="profile-dropdown" class="profile-dropdown" style="display: none; position: absolute; top: 50px; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; width: 200px; padding: 8px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 200;">
-                        <a href="#" class="dropdown-item" data-target="view-configuracoes" onclick="window.navegarPara('view-configuracoes'); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-gear"></i> ConfiguraÃƒÂ§ÃƒÂµes</a>
+                        <a href="#" class="dropdown-item" data-target="view-configuracoes" onclick="window.navegarPara('view-configuracoes'); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-gear"></i> ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes</a>
                         <a href="#" class="dropdown-item" onclick="setTimeout(() => document.getElementById('profile-dropdown').style.display='none', 10); window.exportarBackup(null);" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
                         <a href="#" class="dropdown-item" onclick="window.location.reload();" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-rotate-right"></i> Atualizar Sistema</a>
                         <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;"></div>
@@ -130,38 +130,13 @@
 
     <script src="js/modals/usuario-modals.js"></script>
 
-    <button type="button" id="assistantFloatButton" class="assistant-float-button hide-on-print" onclick="window.toggleAssistenteIA()" title="Assistente IA">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-    </button>
-
-    <aside id="assistantPanel" class="assistant-panel hide-on-print" aria-hidden="true">
-        <div class="assistant-panel-header">
-            <div>
-                <strong>Assistente IA</strong>
-                <small>Analise local do sistema</small>
-            </div>
-            <button type="button" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="assistant-quick-actions">
-            <button type="button" onclick="window.perguntarAssistente('resumo geral')">Resumo geral</button>
-            <button type="button" onclick="window.perguntarAssistente('analisar frotas')">Frotas</button>
-            <button type="button" onclick="window.perguntarAssistente('analisar estoque')">Estoque</button>
-            <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
-        </div>
-        <div id="assistantMessages" class="assistant-messages">
-            <div class="assistant-msg assistant-msg-bot">OlÃƒÂ¡! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
-        </div>
-        <form id="assistantForm" class="assistant-input-row">
-            <input type="text" id="assistantInput" placeholder="Pergunte ao assistente">
-            <button type="submit" title="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
-        </form>
-    </aside>
+    <script src="js/widgets/assistant-widget.js"></script>
 
     <!-- Firebase Initialization -->
 
     <script type="module" src="js/firebase-init.js"></script>
 
-    <!-- Scripts da aplicaÃƒÂ§ÃƒÂ£o -->
+    <!-- Scripts da aplicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o -->
     <script type="module" src="js/core.js?v=financeiro-permissoes-1"></script>
     <script type="module" src="js/clientes.js"></script>
     <script type="module" src="js/produtos.js"></script>
@@ -179,15 +154,7 @@
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js"></script>
     <script type="module" src="dashboard.js?v=despesas-automaticas-1"></script>
-    <!-- BOTÃƒÆ’O FLUTUANTE DE ROLAGEM RÃƒÂPIDA (Subir / Descer) -->
-    <div class="scroll-helper-widget hide-on-print" style="position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 8px; z-index: 9999;">
-        <button onclick="window.scrollToTopHelper()" title="Subir ao Topo" class="btn-scroll-helper" style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(230, 126, 34, 0.3); background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-            <i class="fa-solid fa-chevron-up" style="font-size: 0.95rem;"></i>
-        </button>
-        <button onclick="window.scrollToBottomHelper()" title="Descer Mais" class="btn-scroll-helper" style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(230, 126, 34, 0.3); background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-            <i class="fa-solid fa-chevron-down" style="font-size: 0.95rem;"></i>
-        </button>
-    </div>
+    <script src="js/widgets/scroll-helper-widget.js"></script>
 
     <script src="js/ui-helpers.js"></script>
 </body>
