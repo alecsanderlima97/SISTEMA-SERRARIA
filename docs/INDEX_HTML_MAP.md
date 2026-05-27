@@ -23,6 +23,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/romaneio-v2-view.js`: HTML do gerador de romaneio atual.
 - `js/views/configuracoes-view.js`: HTML da tela de configuracoes, perfil, backup, tema e painel de usuarios.
 - `js/views/transportes-view.js`: HTML de fretistas e transportadoras.
+- `js/views/produtos-view.js`: HTML de madeiras, medidas e precos.
 - `js/modals/rh-modals.js`: modais globais de horas extras, faltas, holerite e relatorio HE.
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
@@ -36,7 +37,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-clientes`: cadastro/listagem de clientes.
 - `view-historico`: historico de cargas.
 - `view-transportes`: fretistas e transportadoras, extraida para `js/views/transportes-view.js`.
-- `view-produtos`: madeiras, medidas e precos.
+- `view-produtos`: madeiras, medidas e precos, extraida para `js/views/produtos-view.js`.
 - `view-estoque`: resumo, inventario, tanques, movimentacoes e lancamentos.
 - `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios.
 - `view-financeiro`: lancamentos financeiros e relatorios.
