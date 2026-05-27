@@ -25,6 +25,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/modals/rh-modals.js`: modais globais de horas extras, faltas, holerite e relatorio HE.
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
+- `js/modals/estoque-modals.js`: modal global de movimentacao manual de estoque.
 
 ## Views principais
 
