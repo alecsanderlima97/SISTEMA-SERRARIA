@@ -25,6 +25,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/transportes-view.js`: HTML de fretistas e transportadoras.
 - `js/views/produtos-view.js`: HTML de madeiras, medidas e precos.
 - `js/views/estoque-view.js`: HTML do controle de estoque, subabas e modal de novo item.
+- `js/views/frotas-view.js`: HTML do controle de frota e formulario de veiculos/maquinas.
 - `js/modals/rh-modals.js`: modais globais de horas extras, faltas, holerite e relatorio HE.
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
@@ -40,7 +41,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-transportes`: fretistas e transportadoras, extraida para `js/views/transportes-view.js`.
 - `view-produtos`: madeiras, medidas e precos, extraida para `js/views/produtos-view.js`.
 - `view-estoque`: resumo, inventario, tanques, movimentacoes e lancamentos, extraida para `js/views/estoque-view.js`.
-- `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios.
+- `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios, parcialmente extraida para `js/views/frotas-view.js`.
 - `view-financeiro`: lancamentos financeiros e relatorios.
 - `view-rh`: funcionarios, horas extras, faltas e holerites.
 - `view-calculadoras`: calculadoras operacionais, extraida para `js/views/calculadoras-view.js`.
