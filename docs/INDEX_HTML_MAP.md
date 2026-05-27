@@ -28,6 +28,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/frotas-view.js`: HTML do controle de frota e formulario de veiculos/maquinas.
 - `js/views/pendente-view.js`: HTML da tela de usuario aguardando aprovacao.
 - `js/views/dashboard-view.js`: HTML do painel inicial, KPIs, fluxo do patio e graficos.
+- `js/views/clientes-view.js`: HTML de cadastro, dados comerciais e listagem de clientes.
 - `js/modals/rh-modals.js`: modais globais de horas extras, faltas, holerite e relatorio HE.
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
@@ -39,7 +40,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 
 - `view-pendente`: usuario aguardando aprovacao, extraida para `js/views/pendente-view.js`.
 - `view-dashboard`: painel gerencial, extraida para `js/views/dashboard-view.js`.
-- `view-clientes`: cadastro/listagem de clientes.
+- `view-clientes`: cadastro/listagem de clientes, extraida para `js/views/clientes-view.js`.
 - `view-historico`: historico de cargas.
 - `view-transportes`: fretistas e transportadoras, extraida para `js/views/transportes-view.js`.
 - `view-produtos`: madeiras, medidas e precos, extraida para `js/views/produtos-view.js`.
