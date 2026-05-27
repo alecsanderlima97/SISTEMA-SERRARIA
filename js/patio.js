@@ -241,19 +241,17 @@ function cardFluxoPatio(label, value) {
 }
 
 function formatarClasseFluxo(classe) {
-    const value = (classe || '').toString().toUpperCase();
-    if (value.includes('1')) return '1a';
-    if (value.includes('2')) return '2a';
-    if (value.includes('3')) return '3a';
-    return value || '-';
+    const numero = obterNumeroClasse(classe);
+    return numero ? `${numero}&ordf;` : '-';
 }
 
 function badgeClasseFluxo(classe) {
     const label = formatarClasseFluxo(classe);
+    const numero = obterNumeroClasse(classe);
     let colors = { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
-    if (label === '1a') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
-    if (label === '2a') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
-    if (label === '3a') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    if (numero === 1) colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
+    if (numero === 2) colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (numero === 3) colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
     return `<span style="display:inline-flex; min-width:42px; justify-content:center; padding:5px 10px; border-radius:999px; font-weight:800; background:${colors.bg}; border:1px solid ${colors.border}; color:${colors.color};">${label}</span>`;
 }
 
@@ -300,11 +298,16 @@ function obterDetalhesPacoteEtiqueta(item) {
 }
 
 function obterClasseEtiqueta(classe) {
+    const numero = obterNumeroClasse(classe);
+    return numero ? `${numero}&ordf;` : '-';
+}
+
+function obterNumeroClasse(classe) {
     const valor = (classe || '').toString().toUpperCase();
-    if (valor.includes('1')) return '1a';
-    if (valor.includes('2')) return '2a';
-    if (valor.includes('3')) return '3a';
-    return '-';
+    if (valor.includes('1')) return 1;
+    if (valor.includes('2')) return 2;
+    if (valor.includes('3')) return 3;
+    return 0;
 }
 
 function adicionarItemAoPatio() {
@@ -483,12 +486,13 @@ function renderizarItensPatioTemp() {
     itensPatioTemp.forEach(item => {
         // Tag badge da classe
         let classeBadge = '';
-        if (item.classe === '1Âª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1a</span>`;
-        } else if (item.classe === '2Âª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2a</span>`;
+        const numeroClasse = obterNumeroClasse(item.classe);
+        if (numeroClasse === 1) {
+            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1&ordf;</span>`;
+        } else if (numeroClasse === 2) {
+            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2&ordf;</span>`;
         } else {
-            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3a</span>`;
+            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3&ordf;</span>`;
         }
 
         html += `
@@ -826,9 +830,10 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
             const classeEtiqueta = obterClasseEtiqueta(item.classe);
             
             let badgeStyle = '';
-            if (item.classe === '1Âª CLASSE') {
+            const numeroClasse = obterNumeroClasse(item.classe);
+            if (numeroClasse === 1) {
                 badgeStyle = 'background:#16a34a; color:#fff;';
-            } else if (item.classe === '2Âª CLASSE') {
+            } else if (numeroClasse === 2) {
                 badgeStyle = 'background:#facc15; color:#111;';
             } else {
                 badgeStyle = 'background:#dc2626; color:#fff;';
