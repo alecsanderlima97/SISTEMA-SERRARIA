@@ -1772,6 +1772,8 @@ body.role-pendente .global-header {
     top: 88px;
     bottom: 22px;
     width: min(390px, calc(100vw - 36px));
+    height: min(680px, calc(100vh - 110px));
+    max-height: calc(100vh - 24px);
     z-index: 9999;
     display: none;
     flex-direction: column;
@@ -1798,6 +1800,7 @@ body.role-pendente .global-header {
     border-bottom: 1px solid var(--panel-border);
     cursor: move;
     touch-action: none;
+    flex: 0 0 auto;
 }
 
 .assistant-panel-header small {
@@ -1813,6 +1816,7 @@ body.role-pendente .global-header {
     padding: 10px 12px;
     border-bottom: 1px solid var(--panel-border);
     background: rgba(255,255,255,0.035);
+    flex: 0 0 auto;
 }
 
 .assistant-usage-card strong {
@@ -1862,6 +1866,7 @@ body.role-pendente .global-header {
     flex-wrap: wrap;
     padding: 12px;
     border-bottom: 1px solid var(--panel-border);
+    flex: 0 0 auto;
 }
 
 .assistant-quick-actions button {
@@ -1875,8 +1880,10 @@ body.role-pendente .global-header {
 }
 
 .assistant-messages {
-    flex: 1;
-    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -1888,6 +1895,8 @@ body.role-pendente .global-header {
     border-radius: 10px;
     line-height: 1.45;
     white-space: pre-line;
+    max-width: 92%;
+    word-break: break-word;
 }
 
 .assistant-msg-user {
@@ -1907,6 +1916,7 @@ body.role-pendente .global-header {
     gap: 8px;
     padding: 12px;
     border-top: 1px solid var(--panel-border);
+    flex: 0 0 auto;
 }
 
 .assistant-input-row input {

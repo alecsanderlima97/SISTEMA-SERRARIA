@@ -307,7 +307,6 @@ function inicializarAssistenteArrastavel() {
         panel.style.left = `${posSalva.left}px`;
         panel.style.top = `${posSalva.top}px`;
         panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
     }
 
     let dragging = false;
@@ -333,7 +332,6 @@ function inicializarAssistenteArrastavel() {
         panel.style.left = `${left}px`;
         panel.style.top = `${top}px`;
         panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
     });
 
     header.addEventListener('pointerup', () => {
