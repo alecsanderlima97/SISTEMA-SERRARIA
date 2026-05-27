@@ -3,6 +3,7 @@
   "public": true,
   "name": "sistema-serraria",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/$1" }
   ],
   "cleanUrls": true
