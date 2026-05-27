@@ -31,6 +31,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/clientes-view.js`: HTML de cadastro, dados comerciais e listagem de clientes.
 - `js/views/historico-view.js`: HTML do historico de cargas e subprodutos.
 - `js/views/financeiro-view.js`: HTML dos lancamentos financeiros, KPIs e relatorios.
+- `js/views/rh-view.js`: HTML do cadastro de funcionarios, indicadores e quadro de RH.
 - `js/modals/rh-modals.js`: modais globais de horas extras, faltas, holerite e relatorio HE.
 - `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 - `js/modals/patio-modals.js`: modal global de controle de patio, etiquetas e historico de contagens.
@@ -49,7 +50,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `view-estoque`: resumo, inventario, tanques, movimentacoes e lancamentos, extraida para `js/views/estoque-view.js`.
 - `view-frotas`: veiculos, abastecimentos, manutencoes e relatorios, extraida para `js/views/frotas-view.js` e `js/modals/frotas-modals.js`.
 - `view-financeiro`: lancamentos financeiros e relatorios, extraida para `js/views/financeiro-view.js`.
-- `view-rh`: funcionarios, horas extras, faltas e holerites.
+- `view-rh`: funcionarios, horas extras, faltas e holerites, extraida para `js/views/rh-view.js`.
 - `view-calculadoras`: calculadoras operacionais, extraida para `js/views/calculadoras-view.js`.
 - `view-agenda`: agenda/calendario, extraida para `js/views/agenda-view.js`.
 - `view-entrada`: entrada de toras e descarregamentos, extraida para `js/views/entrada-view.js`.

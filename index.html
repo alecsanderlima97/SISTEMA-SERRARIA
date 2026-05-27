@@ -9,7 +9,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap"
         rel="stylesheet">
-    <!-- FontAwesome para Ã­cones -->
+    <!-- FontAwesome para ÃƒÂ­cones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="romaneio-v2.css">
@@ -41,29 +41,29 @@
             </div>
             <nav>
                 <ul>
-                    <li><a href="#" class="active" data-target="view-dashboard" onclick="window.navegarPara('view-dashboard'); return false;"><i class="fa-solid fa-home"></i> InÃ­cio</a></li>
+                    <li><a href="#" class="active" data-target="view-dashboard" onclick="window.navegarPara('view-dashboard'); return false;"><i class="fa-solid fa-home"></i> InÃƒÂ­cio</a></li>
                     <li><a href="#" data-target="view-romaneio-v2" onclick="window.navegarPara('view-romaneio-v2'); return false;"><i class="fa-solid fa-file-invoice"></i> Gerar Romaneio</a></li>
-                    <li><a href="#" data-target="view-historico" onclick="window.navegarPara('view-historico'); return false;"><i class="fa-solid fa-clock-rotate-left"></i> HistÃ³rico de Cargas</a></li>
+                    <li><a href="#" data-target="view-historico" onclick="window.navegarPara('view-historico'); return false;"><i class="fa-solid fa-clock-rotate-left"></i> HistÃƒÂ³rico de Cargas</a></li>
                     <li><a href="#" data-target="view-clientes" onclick="window.navegarPara('view-clientes'); return false;"><i class="fa-solid fa-users"></i> Clientes</a></li>
                     <li><a href="#" data-target="view-transportes" onclick="window.navegarPara('view-transportes'); return false;"><i class="fa-solid fa-truck"></i> Transportadoras</a></li>
                     <li><a href="#" data-target="view-entrada" onclick="window.navegarPara('view-entrada'); return false;"><i class="fa-solid fa-tree"></i> Entrada de Toras</a></li>
-                    <li><a href="#" data-target="view-cavaco" onclick="window.navegarPara('view-cavaco'); return false;"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/PÃ³)</a></li>
+                    <li><a href="#" data-target="view-cavaco" onclick="window.navegarPara('view-cavaco'); return false;"><i class="fa-solid fa-leaf"></i> Venda (Cavaco/PÃƒÂ³)</a></li>
                     <li><a href="#" data-target="view-produtos" onclick="window.navegarPara('view-produtos'); return false;"><i class="fa-solid fa-box-open"></i> Madeiras / Estilos</a></li>
                     <li><a href="#" data-target="view-estoque" onclick="window.navegarPara('view-estoque'); return false;"><i class="fa-solid fa-boxes-stacked"></i> Controle de Estoque</a></li>
                     <li><a href="#" data-target="view-frotas" onclick="window.navegarPara('view-frotas'); return false;"><i class="fa-solid fa-truck-pickup"></i> Controle de Frota</a></li>
                     <li><a href="#" data-target="view-financeiro" onclick="window.navegarPara('view-financeiro'); return false;"><i class="fa-solid fa-sack-dollar"></i> Financeiro</a></li>
-                    <li><a href="#" data-target="view-rh" onclick="window.navegarPara('view-rh'); return false;"><i class="fa-solid fa-id-card-clip"></i> RH FuncionÃ¡rios</a></li>
+                    <li><a href="#" data-target="view-rh" onclick="window.navegarPara('view-rh'); return false;"><i class="fa-solid fa-id-card-clip"></i> RH FuncionÃƒÂ¡rios</a></li>
                     <li><a href="#" data-target="view-calculadoras" onclick="window.navegarPara('view-calculadoras'); return false;"><i class="fa-solid fa-calculator"></i> Calculadoras</a></li>
-                    <li><a href="#" data-target="view-agenda" onclick="window.navegarPara('view-agenda'); return false;"><i class="fa-solid fa-calendar-days"></i> Agenda / CalendÃ¡rio</a></li>
+                    <li><a href="#" data-target="view-agenda" onclick="window.navegarPara('view-agenda'); return false;"><i class="fa-solid fa-calendar-days"></i> Agenda / CalendÃƒÂ¡rio</a></li>
                 </ul>
             </nav>
         </aside>
 
-        <!-- CONTEÃšDO PRINCIPAL -->
+        <!-- CONTEÃƒÅ¡DO PRINCIPAL -->
         <main class="main-content">
             <!-- Global Header -->
             <div class="global-header hide-on-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; margin-bottom: 20px; position: relative; z-index: 100;">
-                <!-- BotÃ£o de Recolher Sidebar -->
+                <!-- BotÃƒÂ£o de Recolher Sidebar -->
                 <button type="button" id="btnToggleSidebar" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; margin-left: -15px;" title="Recolher Menu">
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
@@ -84,7 +84,7 @@
                     </div>
 
                     <div id="profile-dropdown" class="profile-dropdown" style="display: none; position: absolute; top: 50px; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; width: 200px; padding: 8px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 200;">
-                        <a href="#" class="dropdown-item" data-target="view-configuracoes" onclick="window.navegarPara('view-configuracoes'); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-gear"></i> ConfiguraÃ§Ãµes</a>
+                        <a href="#" class="dropdown-item" data-target="view-configuracoes" onclick="window.navegarPara('view-configuracoes'); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-gear"></i> ConfiguraÃƒÂ§ÃƒÂµes</a>
                         <a href="#" class="dropdown-item" onclick="setTimeout(() => document.getElementById('profile-dropdown').style.display='none', 10); window.exportarBackup(null);" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
                         <a href="#" class="dropdown-item" onclick="window.location.reload();" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: white; text-decoration: none; font-size: 14px; transition: 0.2s;"><i class="fa-solid fa-rotate-right"></i> Atualizar Sistema</a>
                         <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;"></div>
@@ -103,194 +103,7 @@
             <script src="js/views/frotas-view.js"></script>
             <script src="js/views/financeiro-view.js"></script>
             <script src="js/modals/frotas-modals.js"></script>
-            <!-- ====== TELA: RH FUNCIONÃRIOS ====== -->
-            <section id="view-rh" class="view-section" style="display: none;">
-                <div class="main-header hide-on-print">
-                    <h1><i class="fa-solid fa-id-card-clip"></i> GestÃ£o de Pessoas (RH)</h1>
-                    <p>Controle de funcionÃ¡rios, salÃ¡rios, fÃ©rias, vales e horas extras.</p>
-                </div>
-
-                <!-- TABS DE RH -->
-                <div class="tabs-container hide-on-print" style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1.5px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap;">
-                    <button type="button" id="btnTabRHLista" onclick="window.switchTabRH('lista')" style="background: none; border: none; color: var(--accent-color); border-bottom: 3px solid var(--accent-color); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
-                        <i class="fa-solid fa-users-viewfinder"></i> Quadro de FuncionÃ¡rios
-                    </button>
-                    <button type="button" id="btnTabRHForm" onclick="window.switchTabRH('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
-                        <i class="fa-solid fa-user-plus"></i> <span id="lblTabRHForm">Cadastrar FuncionÃ¡rio</span>
-                    </button>
-                </div>
-
-                <!-- CARD DE CADASTRO / EDIÃ‡ÃƒO -->
-                <div id="cardFormRH" class="glass-panel hide-on-print" style="display: none; margin-bottom: 20px; max-width: 900px; margin: 0 auto 20px auto;">
-                    <div class="section-title">
-                        <h2 id="tituloFormRH"><i class="fa-solid fa-user-plus"></i> Novo FuncionÃ¡rio</h2>
-                    </div>
-                    <form id="formFuncionario" onsubmit="event.preventDefault();">
-                        <input type="hidden" id="rh-id">
-                        
-                        <!-- Dados Pessoais -->
-                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <i class="fa-solid fa-user"></i> InformaÃ§Ãµes Pessoais
-                        </h3>
-                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div class="input-group">
-                                <label>Nome Completo *</label>
-                                <input type="text" id="rh-nome" class="text-uppercase-input" required placeholder="Ex: JOÃƒO DA SILVA">
-                            </div>
-                            <div class="input-group">
-                                <label>Data de Nascimento</label>
-                                <input type="date" id="rh-nascimento">
-                            </div>
-                            <div class="input-group">
-                                <label>CPF *</label>
-                                <input type="text" id="rh-cpf" required placeholder="000.000.000-00">
-                            </div>
-                            <div class="input-group">
-                                <label>RG</label>
-                                <input type="text" id="rh-rg" placeholder="Ex: 12.345.678-9">
-                            </div>
-                            <div class="input-group">
-                                <label>NÃºmero para Contato *</label>
-                                <input type="text" id="rh-contato" required placeholder="(00) 00000-0000">
-                            </div>
-                        </div>
-
-                        <!-- Dados Contratuais e Pagamento -->
-                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <i class="fa-solid fa-briefcase"></i> Contrato & Financeiro
-                        </h3>
-                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div class="input-group">
-                                <label>FunÃ§Ã£o / Cargo *</label>
-                                <input type="text" id="rh-funcao" class="text-uppercase-input" required placeholder="Ex: SERRADOR / EMPILHADEIRISTA">
-                            </div>
-                            <div class="input-group">
-                                <label>Data de AdmissÃ£o *</label>
-                                <input type="date" id="rh-admissao" required>
-                            </div>
-                            <div class="input-group">
-                                <label>SalÃ¡rio Base R$ *</label>
-                                <input type="text" id="rh-salario" required placeholder="R$ 0,00">
-                            </div>
-                            <div class="input-group">
-                                <label>Valor do Vale Mensal R$</label>
-                                <input type="text" id="rh-vale" placeholder="R$ 0,00">
-                            </div>
-                            <div class="input-group">
-                                <label>Forma de Pagamento *</label>
-                                <select id="rh-forma-pagamento" required>
-                                    <option value="PIX">PIX</option>
-                                    <option value="DINHEIRO">DINHEIRO (ESPÃ‰CIE)</option>
-                                    <option value="TRANSFERENCIA">TRANSFERÃŠNCIA BANCÃRIA</option>
-                                </select>
-                            </div>
-                            <div class="input-group" style="grid-column: span 2;">
-                                <label>Chave PIX ou Dados BancÃ¡rios para Pagamento</label>
-                                <input type="text" id="rh-dados-bancarios" placeholder="Ex: Chave PIX (Celular/CPF) ou Banco/Ag/Cc">
-                            </div>
-                            <div class="input-group">
-                                <label>Valor H. Extra Normal R$ *</label>
-                                <input type="text" id="rh-valor-he-normal" required placeholder="R$ 0,00">
-                            </div>
-                            <div class="input-group">
-                                <label>Valor H. Extra SÃ¡b/Dom/Fer R$ *</label>
-                                <input type="text" id="rh-valor-he-especial" required placeholder="R$ 0,00">
-                            </div>
-                        </div>
-
-                        <!-- FÃ©rias -->
-                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                            <i class="fa-solid fa-umbrella-beach"></i> Controle de FÃ©rias
-                        </h3>
-                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div class="input-group">
-                                <label>FÃ©rias UsufruÃ­das (Dias)</label>
-                                <input type="number" id="rh-ferias-dias" min="0" max="60" value="0">
-                            </div>
-                            <div class="input-group">
-                                <label>InÃ­cio do PerÃ­odo de FÃ©rias</label>
-                                <input type="date" id="rh-ferias-inicio">
-                            </div>
-                            <div class="input-group">
-                                <label>Fim do PerÃ­odo de FÃ©rias</label>
-                                <input type="date" id="rh-ferias-fim">
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                            <button type="button" id="btnCancelarRH" class="btn-secondary" style="padding: 12px 24px; border-radius: 8px;">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="btnSalvarRH" class="btn-primary" style="padding: 12px 30px; border-radius: 8px; font-weight: bold; background: #00ff88; color: black; border-color: #00ff88;">
-                                <i class="fa-solid fa-floppy-disk"></i> SALVAR FUNCIONÃRIO
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- PAINEL DA LISTA DE CADASTRADOS -->
-                <div id="panelListaRH" class="glass-panel hide-on-print">
-                    <div class="rh-kpi-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
-                        <h3 style="margin:0; color:white; font-size:1rem; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-chart-simple" style="color:var(--accent-color);"></i> Indicadores do RH</h3>
-                        <button type="button" id="btnToggleValoresRH" onclick="window.toggleValoresRH()" class="btn-action-card" style="padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-eye" id="iconValoresRH"></i> Valores
-                        </button>
-                    </div>
-                    <div class="rh-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:22px;">
-                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">FUNCIONÃRIOS</small>
-                            <div id="rhKpiFuncionarios" style="font-size:1.7rem; font-weight:900; color:white; margin-top:6px;">0</div>
-                        </div>
-                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">EM FÃ‰RIAS</small>
-                            <div id="rhKpiFerias" style="font-size:1.7rem; font-weight:900; color:#fbbf24; margin-top:6px;">0</div>
-                        </div>
-                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">TOTAL SALÃRIOS</small>
-                            <div id="rhKpiSalarios" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#22c55e; margin-top:8px;">R$ 0,00</div>
-                        </div>
-                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
-                            <small style="color:var(--text-muted); font-weight:700;">TOTAL VALES</small>
-                            <div id="rhKpiVales" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#f87171; margin-top:8px;">R$ 0,00</div>
-                        </div>
-                    </div>
-                    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                        <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de FuncionÃ¡rios</h2>
-                        <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; flex-wrap: wrap;">
-                            <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-color);"></i>
-                            <input type="text" id="buscaFuncionario" placeholder="Pesquisar por nome ou funÃ§Ã£o..." style="flex: 1; min-width: 220px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
-                            <select id="ordenarFuncionarios" style="height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--panel-border); padding: 0 10px;">
-                                <option value="nome">Nome A-Z</option>
-                                <option value="data-desc">Mais novo</option>
-                                <option value="data-asc">Mais velho</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="overflow-x: auto;">
-                        <table class="package-table">
-                            <thead>
-                                <tr>
-                                    <th>FuncionÃ¡rio</th>
-                                    <th>FunÃ§Ã£o / AdmissÃ£o</th>
-                                    <th>Contato / CPF</th>
-                                    <th>SalÃ¡rio / Vale</th>
-                                    <th>FÃ©rias</th>
-                                    <th style="text-align: center;">PainÃ©is e AÃ§Ãµes</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaRH">
-                                <tr>
-                                    <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">
-                                        <span class="saw-loader" aria-hidden="true"></span> Carregando funcionÃ¡rios...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
+            <script src="js/views/rh-view.js"></script>
             <script src="js/views/calculadoras-view.js"></script>
 
             <script src="js/views/agenda-view.js"></script>
@@ -336,7 +149,7 @@
             <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
         </div>
         <div id="assistantMessages" class="assistant-messages">
-            <div class="assistant-msg assistant-msg-bot">OlÃ¡! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
+            <div class="assistant-msg assistant-msg-bot">OlÃƒÂ¡! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>
         </div>
         <form id="assistantForm" class="assistant-input-row">
             <input type="text" id="assistantInput" placeholder="Pergunte ao assistente">
@@ -348,7 +161,7 @@
 
     <script type="module" src="js/firebase-init.js"></script>
 
-    <!-- Scripts da aplicaÃ§Ã£o -->
+    <!-- Scripts da aplicaÃƒÂ§ÃƒÂ£o -->
     <script type="module" src="js/core.js?v=financeiro-permissoes-1"></script>
     <script type="module" src="js/clientes.js"></script>
     <script type="module" src="js/produtos.js"></script>
@@ -366,7 +179,7 @@
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js"></script>
     <script type="module" src="dashboard.js?v=despesas-automaticas-1"></script>
-    <!-- BOTÃƒO FLUTUANTE DE ROLAGEM RÃPIDA (Subir / Descer) -->
+    <!-- BOTÃƒÆ’O FLUTUANTE DE ROLAGEM RÃƒÂPIDA (Subir / Descer) -->
     <div class="scroll-helper-widget hide-on-print" style="position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 8px; z-index: 9999;">
         <button onclick="window.scrollToTopHelper()" title="Subir ao Topo" class="btn-scroll-helper" style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(230, 126, 34, 0.3); background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
             <i class="fa-solid fa-chevron-up" style="font-size: 0.95rem;"></i>
