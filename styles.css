@@ -1847,6 +1847,7 @@ body.role-pendente .global-header {
     display: flex;
     flex-direction: column;
     align-items: center;
+    white-space: nowrap;
 }
 
 .brand-orquestra-logo {
@@ -1856,6 +1857,8 @@ body.role-pendente .global-header {
     opacity: 0.8;
     filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.2));
     justify-content: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .brand-orquestra-initial {
@@ -1863,6 +1866,7 @@ body.role-pendente .global-header {
     font-weight: 900;
     font-size: 36px;
     letter-spacing: -1px;
+    text-transform: none;
 }
 
 .brand-orquestra-name {
@@ -1870,6 +1874,12 @@ body.role-pendente .global-header {
     font-weight: bold;
     font-size: 22px;
     letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.brand .brand-orquestra-initial,
+.brand .brand-orquestra-name {
+    text-transform: none;
 }
 
 .brand-orquestra-subtitle {
@@ -1879,6 +1889,9 @@ body.role-pendente .global-header {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .global-header {

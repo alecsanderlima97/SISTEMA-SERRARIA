@@ -10,6 +10,15 @@ let acaoPendente = null; // 'editar' ou 'excluir'
 let cargaPendenteId = null;
 let tipoPendente = 'madeira'; // 'madeira' ou 'subprodutos'
 
+function formatarDataHistorico(valor) {
+    if (!valor) return '-';
+    if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+        return new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR');
+    }
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? '-' : data.toLocaleDateString('pt-BR');
+}
+
 async function renderizarHistorico() {
     if(!listaHistorico) return;
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
@@ -90,7 +99,7 @@ function aplicarFiltro() {
             const tr = document.createElement('tr');
             
             const numero = r.numero || r.numeroCarga || '-';
-            const data = r.logistica?.dataCarregamento || r.data || '-';
+            const data = formatarDataHistorico(r.logistica?.dataCarregamento || r.data || r.dataCriacao || r.criadoEm);
             const cliente = r.cliente || '-';
             
             let volume = 0;

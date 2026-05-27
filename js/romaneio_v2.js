@@ -39,11 +39,19 @@ function prepararInterface() {
     console.log("Romaneio V2: Preparando interface...");
     
     // Data de hoje (Imediato)
-    const hj = new Date().toISOString().split('T')[0];
+    const hoje = new Date();
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+    const hj = hoje.toISOString().split('T')[0];
+    const proxDia = amanha.toISOString().split('T')[0];
     const inputData = document.getElementById('v2-data-carreg');
     if (inputData) {
         inputData.value = hj;
         console.log("Romaneio V2: Data automática definida para " + hj);
+    }
+    const inputDataDescarreg = document.getElementById('v2-data-descarreg');
+    if (inputDataDescarreg && !inputDataDescarreg.value) {
+        inputDataDescarreg.value = proxDia;
     }
 
     romaneioAtual.numero = `ROM-${Date.now().toString().slice(-6)}`;
@@ -764,6 +772,8 @@ window.finalizarRomaneioV2 = async () => {
     if (!cliente || romaneioAtual.pacotes.length === 0) { alert("Dados incompletos."); return; }
     
     // Atualizar dados de logística e observações redundantes em maiúsculo
+    romaneioAtual.logistica.dataCarregamento = document.getElementById('v2-data-carreg')?.value || '';
+    romaneioAtual.logistica.dataDescarregamento = document.getElementById('v2-data-descarreg')?.value || '';
     romaneioAtual.logistica.motorista = (document.getElementById('v2-motorista')?.value || '').toUpperCase().trim();
     romaneioAtual.logistica.caminhao = (document.getElementById('v2-caminhao')?.value || '').toUpperCase().trim();
     romaneioAtual.logistica.placa = (document.getElementById('v2-placa')?.value || '').toUpperCase().trim();
@@ -890,6 +900,7 @@ window.verPreviaRomaneioV2 = () => {
         logistica: {
             ...romaneioAtual.logistica,
             dataCarregamento: document.getElementById('v2-data-carreg').value,
+            dataDescarregamento: document.getElementById('v2-data-descarreg')?.value || '',
             motorista: (document.getElementById('v2-motorista').value || '').toUpperCase().trim(),
             caminhao: (document.getElementById('v2-caminhao').value || '').toUpperCase().trim(),
             placa: (document.getElementById('v2-placa').value || '').toUpperCase().trim(),
