@@ -1,0 +1,45 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="320" height="380" viewBox="0 0 320 380">
+  <rect width="320" height="380" fill="#f6f3ed"/>
+  <rect x="12" y="12" width="296" height="356" rx="8" fill="#fffdf8" stroke="#111" stroke-width="2"/>
+  <rect x="12" y="12" width="296" height="54" rx="8" fill="#111"/>
+  <rect x="12" y="48" width="296" height="18" fill="#111"/>
+
+  <text x="160" y="36" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="800" fill="#fff">VANMARTE</text>
+  <text x="160" y="56" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="700" fill="#f5c542">SERRARIA • RIBEIRAO BRANCO - SP</text>
+
+  <text x="160" y="83" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#222">escritoriovanmarte@hotmail.com • (15) 99629-7072</text>
+
+  <line x1="28" y1="99" x2="292" y2="99" stroke="#ddd5c7" stroke-width="1"/>
+  <text x="28" y="119" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" fill="#555">PRODUTO</text>
+  <text x="83" y="119" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#111">EUCALIPTO</text>
+  <text x="196" y="119" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" fill="#555">CLASSE</text>
+  <rect x="252" y="101" width="34" height="27" rx="5" fill="#21a35b" stroke="#111"/>
+  <text x="269" y="121" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="900" fill="#fff">1ª</text>
+
+  <rect x="28" y="137" width="264" height="46" rx="6" fill="#fff3f0" stroke="#e32317" stroke-width="1.5"/>
+  <text x="44" y="154" font-family="Arial, Helvetica, sans-serif" font-size="9.2" font-weight="800" fill="#b9140c">BITOLAS</text>
+  <text x="160" y="174" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="900" fill="#e32317">17 / 110 / 1,20</text>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="28" y="198" width="264" height="32" rx="5" fill="#fafafa" stroke="#d8d8d8"/>
+    <text x="48" y="220" font-size="19" font-weight="900" fill="#e32317">50</text>
+    <text x="106" y="219" font-size="13.5" font-weight="800" fill="#111">ALTURAS</text>
+    <text x="226" y="219" font-size="10.5" font-weight="700" fill="#555">PEÇAS</text>
+
+    <rect x="28" y="237" width="264" height="32" rx="5" fill="#fafafa" stroke="#d8d8d8"/>
+    <text x="48" y="259" font-size="19" font-weight="900" fill="#e32317">10</text>
+    <text x="106" y="258" font-size="13.5" font-weight="800" fill="#111">LARGURA</text>
+    <text x="226" y="258" font-size="10.5" font-weight="700" fill="#555">PEÇAS</text>
+
+    <rect x="28" y="276" width="264" height="32" rx="5" fill="#fafafa" stroke="#d8d8d8"/>
+    <text x="48" y="298" font-size="19" font-weight="900" fill="#e32317">36</text>
+    <text x="106" y="297" font-size="13.5" font-weight="800" fill="#111">AMARRAS</text>
+
+    <rect x="28" y="318" width="126" height="23" rx="4" fill="#111"/>
+    <text x="91" y="334" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff">536 PEÇAS</text>
+    <rect x="166" y="318" width="126" height="23" rx="4" fill="#e32317"/>
+    <text x="229" y="334" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff">1,202 M³</text>
+  </g>
+
+  <text x="160" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="6.8" font-weight="700" fill="#777">desenvolvido por Orquestra.cs - sistemas industrial personalizado</text>
+</svg>
