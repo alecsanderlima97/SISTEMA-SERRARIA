@@ -1,12 +1,12 @@
-import { db, collection, addDoc, getDocs, doc, deleteDoc } from './firebase-init.js';
+﻿import { db, collection, addDoc, getDocs, doc, deleteDoc } from './firebase-init.js';
 
-// ---- MÓDULO DE CONTROLE DE PÁTIO & ETIQUETAS ----
+// ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
 
 let itensPatioTemp = [];
 let historicoPatioAtuais = [];
 let totaisSalvosHoje = { pacotes: 0, volume: 0 };
 
-// Utilitários de Formatação e Conversão
+// UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
 function parseDecimal(val) {
     if (val === null || val === undefined) return 0;
     let s = val.toString().trim();
@@ -27,7 +27,7 @@ function formatDecimalMockup(num, places = 3) {
 
 
 
-// Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
+// Inicializar Eventos Safely (Independente do momento do carregamento do mÃ³dulo ES)
 function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
     const formAdicionar = document.getElementById('formAdicionarItemPatio');
@@ -63,7 +63,13 @@ function inicializarPatioListeners() {
         btnSalvar.addEventListener('click', salvarRelatorioPatio);
     }
 
-    // Calculadora de Peças do Pátio (Alt x Cam + Am)
+    const selectClasse = document.getElementById('patioItemClasse');
+    if (selectClasse) {
+        atualizarCorSelectClasse(selectClasse);
+        selectClasse.addEventListener('change', () => atualizarCorSelectClasse(selectClasse));
+    }
+
+    // Calculadora de PeÃ§as do PÃ¡tio (Alt x Cam + Am)
     const calcInputs = document.querySelectorAll('.calc-patio');
     calcInputs.forEach(input => {
         input.addEventListener('input', () => {
@@ -77,20 +83,32 @@ function inicializarPatioListeners() {
     });
 }
 
+function atualizarCorSelectClasse(selectClasse) {
+    selectClasse.classList.remove('patio-classe-1', 'patio-classe-2', 'patio-classe-3');
+    const valor = (selectClasse.value || '').toUpperCase();
+    if (valor.includes('1')) {
+        selectClasse.classList.add('patio-classe-1');
+    } else if (valor.includes('2')) {
+        selectClasse.classList.add('patio-classe-2');
+    } else {
+        selectClasse.classList.add('patio-classe-3');
+    }
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarPatioListeners);
 } else {
     inicializarPatioListeners();
 }
 
-// Abrir Modal do Pátio
+// Abrir Modal do PÃ¡tio
 window.abrirModalPatio = async function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (!modalPatio) return;
 
     modalPatio.style.display = 'flex';
 
-    // Preencher Data e Hora Atuais por padrão
+    // Preencher Data e Hora Atuais por padrÃ£o
     const inputData = document.getElementById('patioData');
     const inputHorario = document.getElementById('patioHorario');
     const selectPeriodo = document.getElementById('patioPeriodo');
@@ -112,23 +130,23 @@ window.abrirModalPatio = async function() {
         
         if (selectPeriodo) {
             if (hj.getHours() < 13) {
-                selectPeriodo.value = 'Manhã (Início do Dia)';
+                selectPeriodo.value = 'ManhÃ£ (InÃ­cio do Dia)';
             } else {
-                selectPeriodo.value = 'Tarde (Fechamento do Pátio)';
+                selectPeriodo.value = 'Tarde (Fechamento do PÃ¡tio)';
             }
         }
     }
 
-    // Inicializar itens do pátio
+    // Inicializar itens do pÃ¡tio
     itensPatioTemp = [];
     renderizarItensPatioTemp();
 
-    // Carregar histórico do Firebase e calcular acumulados de hoje
+    // Carregar histÃ³rico do Firebase e calcular acumulados de hoje
     await carregarHistoricoPatio();
     await calcularAcumuladosHoje(dataAtualString);
 };
 
-// Fechar Modal do Pátio
+// Fechar Modal do PÃ¡tio
 window.fecharModalPatio = function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (modalPatio) {
@@ -181,7 +199,7 @@ async function renderizarFluxoPatio() {
         resumo.innerHTML = `
             ${cardFluxoPatio('Madeira serrando', atual.serrando || '-')}
             ${cardFluxoPatio('Pacotes no patio', totais.pacotes)}
-            ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} m³`)}
+            ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} mÂ³`)}
         `;
 
         tbody.innerHTML = itens.length ? itens.map(item => `
@@ -189,11 +207,11 @@ async function renderizarFluxoPatio() {
                 <td>${badgeClasseFluxo(item.classe)}</td>
                 <td style="font-weight:700; color:white;">${formatCubagemFluxo(item)}</td>
                 <td style="font-weight:800;">${item.pacotes || 0}</td>
-                <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
+                <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} mÂ³</td>
             </tr>
         `).join('') : '<tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
 
-        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`)).join('');
+        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} mÂ³ | ${total.pacotes} pacotes`)).join('');
     } catch (error) {
         console.error('Erro ao carregar fluxo do patio:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
@@ -224,18 +242,18 @@ function cardFluxoPatio(label, value) {
 
 function formatarClasseFluxo(classe) {
     const value = (classe || '').toString().toUpperCase();
-    if (value.includes('1')) return '1ª';
-    if (value.includes('2')) return '2ª';
-    if (value.includes('3')) return '3ª';
+    if (value.includes('1')) return '1Âª';
+    if (value.includes('2')) return '2Âª';
+    if (value.includes('3')) return '3Âª';
     return value || '-';
 }
 
 function badgeClasseFluxo(classe) {
     const label = formatarClasseFluxo(classe);
     let colors = { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
-    if (label === '1ª') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
-    if (label === '2ª') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
-    if (label === '3ª') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    if (label === '1Âª') colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
+    if (label === '2Âª') colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (label === '3Âª') colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
     return `<span style="display:inline-flex; min-width:42px; justify-content:center; padding:5px 10px; border-radius:999px; font-weight:800; background:${colors.bg}; border:1px solid ${colors.border}; color:${colors.color};">${label}</span>`;
 }
 
@@ -250,10 +268,45 @@ function formatarConfiguracaoPacote(item) {
         const textoBase = base.replace('x', ' x ');
         return amarras ? `${textoBase} + ${amarras} amarras` : textoBase;
     }
-    return `${item.pecas || 0} peças`;
+    return `${item.pecas || 0} peÃ§as`;
 }
 
-// Adicionar Item via Formulário
+// Adicionar Item via FormulÃ¡rio
+function obterDetalhesPacoteEtiqueta(item) {
+    const raw = (item.pecasRaw || '').toString().trim();
+    const detalhes = {
+        alturas: '',
+        largura: '',
+        amarras: '',
+        totalPecas: Number(item.pecas) || 0
+    };
+
+    if (raw.includes('x')) {
+        const [base, amarras] = raw.split('+');
+        const [alturas, largura] = base.split('x');
+        detalhes.alturas = (alturas || '').trim();
+        detalhes.largura = (largura || '').trim();
+        detalhes.amarras = (amarras || '').trim();
+    }
+
+    if (!detalhes.alturas) detalhes.alturas = String(item.altura || item.alturas || '');
+    if (!detalhes.largura) detalhes.largura = String(item.camada || item.larguraPacote || '');
+    if (!detalhes.amarras) detalhes.amarras = String(item.amarras || '');
+    if (!detalhes.totalPecas && detalhes.alturas && detalhes.largura) {
+        detalhes.totalPecas = (Number(detalhes.alturas) || 0) * (Number(detalhes.largura) || 0) + (Number(detalhes.amarras) || 0);
+    }
+
+    return detalhes;
+}
+
+function obterClasseEtiqueta(classe) {
+    const valor = (classe || '').toString().toUpperCase();
+    if (valor.includes('1')) return '1a';
+    if (valor.includes('2')) return '2a';
+    if (valor.includes('3')) return '3a';
+    return '-';
+}
+
 function adicionarItemAoPatio() {
     const tipo = document.getElementById('patioItemTipo').value;
     const classe = document.getElementById('patioItemClasse').value;
@@ -281,7 +334,7 @@ function adicionarItemAoPatio() {
     const comp = parseDecimal(compRaw);
 
     if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
-        alert("⚠️ Por favor, insira valores válidos e maiores que zero.");
+        alert("âš ï¸ Por favor, insira valores vÃ¡lidos e maiores que zero.");
         return;
     }
 
@@ -337,13 +390,13 @@ function zerarEtiquetasPatio() {
 // Limpar toda a lista atual
 function limparTudoPatio() {
     if (itensPatioTemp.length === 0) return;
-    if (confirm(" deseja limpar completamente a lista de pátio atual?")) {
+    if (confirm(" deseja limpar completamente a lista de pÃ¡tio atual?")) {
         itensPatioTemp = [];
         renderizarItensPatioTemp();
     }
 }
 
-// Ações dinâmicas de incremento/decremento (+1 / -)
+// AÃ§Ãµes dinÃ¢micas de incremento/decremento (+1 / -)
 window.alterarPacotesPatio = function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
@@ -377,8 +430,8 @@ window.editarItemPatio = function(id) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
 
-    document.getElementById('patioItemTipo').value = item.tipo || 'TÁBUA';
-    document.getElementById('patioItemClasse').value = item.classe || '1ª CLASSE';
+    document.getElementById('patioItemTipo').value = item.tipo || 'TÃBUA';
+    document.getElementById('patioItemClasse').value = item.classe || '1Âª CLASSE';
     const especieInput = document.querySelector(`input[name="patioItemEspecie"][value="${item.especie || 'EUCALIPTO'}"]`);
     if (especieInput) especieInput.checked = true;
 
@@ -409,7 +462,7 @@ function parseConfigPacote(raw) {
     return match ? { alt: match[1], cam: match[2], am: match[3] || '' } : {};
 }
 
-// Renderizar lista do pátio exatamente igual ao mockup
+// Renderizar lista do pÃ¡tio exatamente igual ao mockup
 function renderizarItensPatioTemp() {
     const tbody = document.getElementById('listaItensPatioTemp');
     if (!tbody) return;
@@ -418,7 +471,7 @@ function renderizarItensPatioTemp() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
-                    Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.
+                    Nenhum pacote na lista de pÃ¡tio. Adicione ou configure os lotes acima.
                 </td>
             </tr>
         `;
@@ -430,12 +483,12 @@ function renderizarItensPatioTemp() {
     itensPatioTemp.forEach(item => {
         // Tag badge da classe
         let classeBadge = '';
-        if (item.classe === '1ª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1ª</span>`;
-        } else if (item.classe === '2ª CLASSE') {
-            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2ª</span>`;
+        if (item.classe === '1Âª CLASSE') {
+            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1Âª</span>`;
+        } else if (item.classe === '2Âª CLASSE') {
+            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2Âª</span>`;
         } else {
-            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3ª</span>`;
+            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3Âª</span>`;
         }
 
         html += `
@@ -461,12 +514,12 @@ function renderizarItensPatioTemp() {
                 <td style="padding: 14px 10px; color: #0f172a; font-weight: bold; font-size: 0.9rem;">
                     ${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m
                 </td>
-                <!-- FORMAÇÃO (Pieces + unit vol) -->
+                <!-- FORMAÃ‡ÃƒO (Pieces + unit vol) -->
                 <td style="padding: 14px 10px; color: #475569;">
-                    <div style="font-weight: 700; color: #0f172a;">${item.pecas} peças</div>
+                    <div style="font-weight: 700; color: #0f172a;">${item.pecas} peÃ§as</div>
                     <small style="color: #64748b; font-size: 0.75rem;">
-                        ${item.pecasRaw && item.pecasRaw !== item.pecas.toString() ? `Fórm: ${item.pecasRaw}<br>` : ''}
-                        (${formatDecimalMockup(item.volumeUnidade)} m³ / pct)
+                        ${item.pecasRaw && item.pecasRaw !== item.pecas.toString() ? `FÃ³rm: ${item.pecasRaw}<br>` : ''}
+                        (${formatDecimalMockup(item.volumeUnidade)} mÂ³ / pct)
                     </small>
                 </td>
                 <!-- VOLUME TOTAL -->
@@ -476,7 +529,7 @@ function renderizarItensPatioTemp() {
                     </div>
                     <small style="color: #94a3b8; font-size: 0.72rem;">(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
                 </td>
-                <!-- AÇÕES (Mockup buttons) -->
+                <!-- AÃ‡Ã•ES (Mockup buttons) -->
                 <td class="hide-on-print" style="padding: 14px 10px; text-align: center;">
                     <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                         <button type="button" class="btn-patio-action-minus" onclick="alterarPacotesPatio('${item.id}', -1)" title="Diminuir Pacote">
@@ -504,7 +557,7 @@ function renderizarItensPatioTemp() {
     atualizarConsolidatedStats();
 }
 
-// Atualizar estatísticas dos cards em tempo real
+// Atualizar estatÃ­sticas dos cards em tempo real
 function atualizarConsolidatedStats() {
     let totalPacotes = 0;
     let totalVolume = 0;
@@ -557,7 +610,7 @@ async function calcularAcumuladosHoje(hojeStr) {
 // Salvar a Contagem Atual no Firebase
 async function salvarRelatorioPatio() {
     if (itensPatioTemp.length === 0) {
-        alert("⚠️ O pátio está vazio! Insira pelo menos um lote ou pacote para poder salvar.");
+        alert("âš ï¸ O pÃ¡tio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
         return;
     }
 
@@ -567,7 +620,7 @@ async function salvarRelatorioPatio() {
     const serrandoVal = document.getElementById('patioSerrando').value.toUpperCase().trim();
 
     if (!serrandoVal) {
-        alert("⚠️ Por favor, digite qual madeira está sendo serrada no momento.");
+        alert("âš ï¸ Por favor, digite qual madeira estÃ¡ sendo serrada no momento.");
         document.getElementById('patioSerrando').focus();
         return;
     }
@@ -603,26 +656,26 @@ async function salvarRelatorioPatio() {
 
     try {
         await window.FS.addDoc('patio_relatorios', relatorio);
-        alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
+        alert(`âœ… Contagem do PÃ¡tio do perÃ­odo (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} mÂ³.`);
         
         // Resetar rascunho
         document.getElementById('patioSerrando').value = '';
         itensPatioTemp = [];
         renderizarItensPatioTemp();
 
-        // Recarregar histórico e atualizar os acumulados salvos do dia
+        // Recarregar histÃ³rico e atualizar os acumulados salvos do dia
         await carregarHistoricoPatio();
         await calcularAcumuladosHoje(dataVal);
     } catch (error) {
-        console.error("Erro ao salvar contagem do pátio:", error);
-        alert("❌ Ocorreu um erro ao salvar o relatório no Firebase.");
+        console.error("Erro ao salvar contagem do pÃ¡tio:", error);
+        alert("âŒ Ocorreu um erro ao salvar o relatÃ³rio no Firebase.");
     } finally {
         btnSalvar.disabled = false;
         btnSalvar.innerHTML = originalText;
     }
 }
 
-// Carregar Histórico do Firebase
+// Carregar HistÃ³rico do Firebase
 async function carregarHistoricoPatio() {
     const tbody = document.getElementById('listaHistoricoPatio');
     if (!tbody) return;
@@ -644,7 +697,7 @@ async function carregarHistoricoPatio() {
         });
 
         if (historicoPatioAtuais.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diária registrada ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diÃ¡ria registrada ainda.</td></tr>';
             return;
         }
 
@@ -661,7 +714,7 @@ async function carregarHistoricoPatio() {
                     <td style="padding: 10px 8px; color: #e67e22; font-weight: bold;">${rel.serrando || 'N/A'}</td>
                     <td style="text-align:center; padding: 10px 8px; font-weight: bold;">${rel.totais?.totalPacotes || 0}</td>
                     <td style="text-align:center; padding: 10px 8px; color: #64748b;">${rel.totais?.totalPecas || 0}</td>
-                    <td style="text-align:right; padding: 10px 8px; font-weight: 800; color: #16a34a;">${volStr} m³</td>
+                    <td style="text-align:right; padding: 10px 8px; font-weight: 800; color: #16a34a;">${volStr} mÂ³</td>
                     <td style="text-align:center; padding: 10px 8px;">
                         <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                         <button type="button" onclick="visualizarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important;" title="Visualizar">
@@ -670,7 +723,7 @@ async function carregarHistoricoPatio() {
                         <button type="button" onclick="editarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important; background:#fff7ed !important; border:1px solid #fed7aa !important; color:#c2410c !important;" title="Editar">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir Relatório">
+                        <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir RelatÃ³rio">
                             <i class="fa-solid fa-print"></i>
                         </button>
                         <button type="button" onclick="deletarHistoricoPatio('${rel.id}')" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1rem; transition: color 0.1s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'" title="Apagar Registro">
@@ -684,17 +737,17 @@ async function carregarHistoricoPatio() {
 
         tbody.innerHTML = html;
     } catch (error) {
-        console.error("Erro ao carregar histórico do pátio:", error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Erro ao obter dados do pátio.</td></tr>';
+        console.error("Erro ao carregar histÃ³rico do pÃ¡tio:", error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Erro ao obter dados do pÃ¡tio.</td></tr>';
     }
 }
 
-// Excluir registro do histórico
+// Excluir registro do histÃ³rico
 window.deletarHistoricoPatio = async function(id) {
-    if (confirm("⚠️ Tem certeza absoluta que deseja excluir este relatório de contagem do pátio?")) {
+    if (confirm("âš ï¸ Tem certeza absoluta que deseja excluir este relatÃ³rio de contagem do pÃ¡tio?")) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
-            alert("✅ Relatório de pátio excluído com sucesso!");
+            alert("âœ… RelatÃ³rio de pÃ¡tio excluÃ­do com sucesso!");
             await carregarHistoricoPatio();
             
             const dataVal = document.getElementById('patioData').value;
@@ -706,7 +759,7 @@ window.deletarHistoricoPatio = async function(id) {
     }
 };
 
-// Imprimir relatório selecionado do histórico
+// Imprimir relatÃ³rio selecionado do histÃ³rico
 window.imprimirHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
@@ -739,14 +792,14 @@ window.editarHistoricoPatio = function(id) {
     alert("Lancamento carregado para edicao. Ajuste os itens e salve novamente quando finalizar.");
 };
 
-// Imprimir etiquetas físicas (Mockup Circle Blue Action)
+// Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     if (!Array.isArray(lista)) {
         lista = itensPatioTemp;
     }
 
     if (lista.length === 0) {
-        alert("⚠️ Não há pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
+        alert("âš ï¸ NÃ£o hÃ¡ pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
         return;
     }
 
@@ -764,64 +817,56 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     const telefoneSerraria = emitente.telefone || emitente.celular || "(15) 99629-7072";
     const emailSerraria = emitente.email || "escritoriovanmarte@hotmail.com";
 
-    // Gerar etiquetas individuais por pacote físico
+    // Gerar etiquetas individuais por pacote fÃ­sico
     lista.forEach(item => {
         for (let p = 1; p <= item.pacotes; p++) {
             const zeroPaddedSerial = String(serialGlobal).padStart(3, '0');
             const uniqueId = `PCT-${item.dataRaw.replace(/-/g, '')}-${zeroPaddedSerial}`;
-            const configPacote = formatarConfiguracaoPacote(item);
+            const detalhesPacote = obterDetalhesPacoteEtiqueta(item);
+            const classeEtiqueta = obterClasseEtiqueta(item.classe);
             
             let badgeStyle = '';
-            if (item.classe === '1ª CLASSE') {
-                badgeStyle = 'border: 3px solid #15803d; color: #ffffff; background: #16a34a;';
-            } else if (item.classe === '2ª CLASSE') {
-                badgeStyle = 'border: 3px solid #ca8a04; color: #111827; background: #facc15;';
+            if (item.classe === '1Âª CLASSE') {
+                badgeStyle = 'background:#16a34a; color:#fff;';
+            } else if (item.classe === '2Âª CLASSE') {
+                badgeStyle = 'background:#facc15; color:#111;';
             } else {
-                badgeStyle = 'border: 3px solid #b91c1c; color: #ffffff; background: #dc2626;';
+                badgeStyle = 'background:#dc2626; color:#fff;';
             }
 
             etiquetasHtml += `
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <div class="ticket-brand">${(emitente.nomeFantasia || "SERRARIA VANMARTE").toUpperCase()}</div>
-                        <div class="ticket-contact">${telefoneSerraria} • ${emailSerraria}</div>
+                        <div class="ticket-brand">VANMARTE</div>
+                        <div class="ticket-city">SERRARIA - RIBEIRAO BRANCO - SP</div>
                     </div>
-                    
-                    <div style="text-align: center; margin: 8px 0;">
-                        <span class="ticket-badge" style="${badgeStyle}">${item.classe}</span>
-                    </div>
+                    <div class="ticket-contact">${emailSerraria} - ${telefoneSerraria}</div>
 
-                    <div style="text-align:center; font-size: 10px; font-weight: 900; color:#0f172a; text-transform: uppercase; margin-top: -4px;">
-                        ${item.especie || 'EUCALIPTO'}
-                    </div>
-
-                    <div class="ticket-measure">
-                        ${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr 1fr; gap: 8px; border-top: 2px dashed #cbd5e1; border-bottom: 2px dashed #cbd5e1; padding: 9px 0; margin: 8px 0;">
-                        <div class="ticket-meta">
-                            <span>FORMAÇÃO</span>
-                            <strong>${configPacote}</strong>
+                    <div class="ticket-product-row">
+                        <div class="ticket-product">
+                            <span>PRODUTO</span>
+                            <strong>${item.especie || 'EUCALIPTO'}</strong>
                         </div>
-                        <div class="ticket-meta" style="text-align: center;">
-                            <span>PEÇAS/PCT</span>
-                            <strong style="color:#0f172a;">${item.pecas}</strong>
-                        </div>
-                        <div class="ticket-meta" style="text-align: right;">
-                            <span>VOLUME</span>
-                            <strong style="color: #16a34a;">${formatDecimalMockup(item.volumeUnidade)} m³</strong>
+                        <div class="ticket-class">
+                            <span>CLASSE</span>
+                            <strong class="ticket-badge" style="${badgeStyle}">${classeEtiqueta}</strong>
                         </div>
                     </div>
 
-                    <div style="font-size: 10px; color: #64748b; text-align: center; margin-bottom: 6px;">
-                        Data: ${item.dataFormatted}
+                    <div class="ticket-bitolas">
+                        <span>BITOLAS</span>
+                        <strong>${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</strong>
                     </div>
 
-                    <div class="ticket-barcode">
-                        <div class="barcode-lines"></div>
-                        <div class="barcode-text">${uniqueId}</div>
+                    <div class="ticket-info-line"><strong>${detalhesPacote.alturas || '-'}</strong><span>ALTURAS</span><small>PEÇAS</small></div>
+                    <div class="ticket-info-line"><strong>${detalhesPacote.largura || '-'}</strong><span>LARGURA</span><small>PEÇAS</small></div>
+                    <div class="ticket-info-line"><strong>${detalhesPacote.amarras || '-'}</strong><span>AMARRAS</span><small></small></div>
+
+                    <div class="ticket-totals">
+                        <strong>${detalhesPacote.totalPecas || item.pecas || 0} PEÇAS</strong>
+                        <strong>${formatDecimalMockup(item.volumeUnidade)} M³</strong>
                     </div>
+                    <div class="ticket-footer">desenvolvido por Orquestra.cs - sistemas industrial personalizado</div>
                 </div>
             `;
             serialGlobal++;
@@ -832,118 +877,59 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.document.write(`
 <html>
 <head>
-    <title>Imprimir Etiquetas do Pátio</title>
+    <title>Imprimir Etiquetas do PÃ¡tio</title>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f1f5f9;
-            padding: 0.4cm;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f6f3ed;
+            padding: 0.35cm;
             margin: 0;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.25cm;
+            gap: 0.22cm;
             align-items: flex-start;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         .ticket-card {
             width: 7.5cm;
-            height: 7.5cm;
+            height: 8.9cm;
             box-sizing: border-box;
-            background: #ffffff;
-            border: 2px solid #0f172a;
+            background: #fffdf8;
+            border: 2px solid #111;
             border-radius: 8px;
             padding: 0.32cm;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             page-break-inside: avoid;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 0.13cm;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
-        .ticket-header {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 5px;
-            text-align: center;
-        }
-        .ticket-brand {
-            font-weight: 900;
-            color: #e67e22;
-            font-size: 14px;
-            letter-spacing: 0.5px;
-        }
-        .ticket-contact {
-            font-weight: 700;
-            color: #0f172a;
-            font-size: 8.5px;
-            margin-top: 2px;
-        }
-        .ticket-badge {
-            display: inline-block;
-            padding: 6px 18px;
-            border-radius: 8px;
-            font-weight: 900;
-            font-size: 18px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .ticket-measure {
-            font-size: 24px;
-            font-weight: 900;
-            color: #0f172a;
-            text-align: center;
-            letter-spacing: 0;
-            margin: 4px 0 7px;
-        }
-        .ticket-meta {
-            display: flex;
-            flex-direction: column;
-        }
-        .ticket-meta span {
-            font-size: 10px;
-            color: #475569;
-            font-weight: bold;
-        }
-        .ticket-meta strong {
-            font-size: 18px;
-            line-height: 1.1;
-            color: #0f172a;
-        }
-        .ticket-barcode {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-        .barcode-lines {
-            width: 100%;
-            height: 24px;
-            background: repeating-linear-gradient(
-                90deg,
-                #0f172a,
-                #0f172a 2px,
-                #ffffff 2px,
-                #ffffff 6px,
-                #0f172a 6px,
-                #0f172a 8px,
-                #ffffff 8px,
-                #ffffff 10px
-            );
-            border-radius: 3px;
-        }
-        .barcode-text {
-            font-family: monospace;
-            font-size: 10px;
-            font-weight: bold;
-            color: #0f172a;
-            letter-spacing: 1px;
-        }
+        .ticket-header { background: #111; color: #fff; border-radius: 6px; padding: 7px 6px 6px; text-align: center; }
+        .ticket-brand { font-weight: 900; font-size: 20px; line-height: 1; }
+        .ticket-city { color: #f5c542; font-size: 8.6px; font-weight: 800; margin-top: 4px; }
+        .ticket-contact { color: #222; font-size: 8.2px; text-align: center; line-height: 1.12; }
+        .ticket-product-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-top: 1px solid #ddd5c7; padding-top: 7px; }
+        .ticket-product, .ticket-class { display: flex; align-items: center; gap: 7px; }
+        .ticket-product span, .ticket-class span { color: #555; font-size: 9.3px; font-weight: 800; }
+        .ticket-product strong { color: #111; font-size: 12.8px; font-weight: 900; }
+        .ticket-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 31px; min-height: 24px; border: 2px solid #111; border-radius: 5px; font-weight: 900; font-size: 13.5px; }
+        .ticket-bitolas { background: #fff3f0; border: 1.5px solid #e32317; border-radius: 6px; padding: 6px 9px; }
+        .ticket-bitolas span { display: block; color: #b9140c; font-size: 8.4px; font-weight: 900; margin-bottom: 3px; }
+        .ticket-bitolas strong { display: block; color: #e32317; font-size: 16px; font-weight: 900; text-align: center; line-height: 1.05; }
+        .ticket-info-line { min-height: 29px; display: grid; grid-template-columns: 48px 1fr 43px; align-items: center; gap: 7px; background: #fafafa; border: 1px solid #d8d8d8; border-radius: 5px; padding: 0 10px; }
+        .ticket-info-line strong { color: #e32317; font-size: 17px; font-weight: 900; line-height: 1; }
+        .ticket-info-line span { color: #111; font-size: 12px; font-weight: 900; }
+        .ticket-info-line small { color: #555; font-size: 9px; font-weight: 800; text-align: right; }
+        .ticket-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1px; }
+        .ticket-totals strong { min-height: 21px; border-radius: 4px; color: #fff; background: #111; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 900; }
+        .ticket-totals strong:last-child { background: #e32317; }
+        .ticket-footer { margin-top: auto; text-align: center; color: #777; font-size: 6.8px; font-weight: 700; }
         @media print {
             @page { margin: 0.5cm; }
-            body { background: transparent; padding: 0; gap: 0.2cm; }
-            .ticket-card { border: 2px solid #000; box-shadow: none; margin: 0; }
-            .barcode-lines { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { background: #f6f3ed !important; padding: 0 !important; gap: 0.2cm; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .ticket-card, .ticket-header, .ticket-bitolas, .ticket-info-line, .ticket-badge, .ticket-totals strong { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
 </head>
@@ -964,14 +950,14 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.focus();
 }
 
-// Gerar layout de fechamento do pátio para impressão agrupado
+// Gerar layout de fechamento do pÃ¡tio para impressÃ£o agrupado
 function gerarLayoutImpressaoPatio(rel) {
     const dtObj = new Date(rel.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
 
-    const itens1 = rel.itens.filter(i => i.classe === '1ª CLASSE');
-    const itens2 = rel.itens.filter(i => i.classe === '2ª CLASSE');
-    const itens3 = rel.itens.filter(i => i.classe === '3ª CLASSE');
+    const itens1 = rel.itens.filter(i => i.classe === '1Âª CLASSE');
+    const itens2 = rel.itens.filter(i => i.classe === '2Âª CLASSE');
+    const itens3 = rel.itens.filter(i => i.classe === '3Âª CLASSE');
 
     // Calcular subtotais por classe
     const calcularSubtotais = (lista) => {
@@ -993,7 +979,7 @@ function gerarLayoutImpressaoPatio(rel) {
     win.document.write(`
 <html>
 <head>
-    <title>Relação de Pátio - Madeira Serrada</title>
+    <title>RelaÃ§Ã£o de PÃ¡tio - Madeira Serrada</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -1067,9 +1053,9 @@ function gerarLayoutImpressaoPatio(rel) {
             border-collapse: collapse;
         }
         th, td {
-            padding: 10px 12px;
+            padding: 8px 8px;
             text-align: left;
-            font-size: 13px;
+            font-size: 12px;
             border-bottom: 1px solid #edf2f7;
         }
         th {
@@ -1141,15 +1127,15 @@ function gerarLayoutImpressaoPatio(rel) {
             <img src="logo.png" alt="Serraria Vanmarte" class="header-logo-img" onerror="this.style.display='none'">
         </div>
         <div style="text-align: right;">
-            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">Relação de Pátio Diário</h2>
+            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">RelaÃ§Ã£o de PÃ¡tio DiÃ¡rio</h2>
             <small style="color: #64748b;">Controle de Estoque de Madeira Serrada para Clientes</small>
         </div>
     </div>
 
     <div class="meta-container">
         <div class="meta-item"><strong>Data da Contagem:</strong> ${dtStr}</div>
-        <div class="meta-item"><strong>Turno / Período:</strong> ${rel.periodo}</div>
-        <div class="meta-item"><strong>Horário da Contagem:</strong> ${rel.horario || 'N/A'}</div>
+        <div class="meta-item"><strong>Turno / PerÃ­odo:</strong> ${rel.periodo}</div>
+        <div class="meta-item"><strong>HorÃ¡rio da Contagem:</strong> ${rel.horario || 'N/A'}</div>
         <div class="meta-item"><strong>Madeira Serrando no Momento:</strong> <span style="color: #e67e22; font-weight: bold;">${rel.serrando || 'N/A'}</span></div>
     </div>
     `);
@@ -1160,14 +1146,17 @@ function gerarLayoutImpressaoPatio(rel) {
         
         let rowsHtml = '';
         itens.forEach(i => {
+            const detalhes = obterDetalhesPacoteEtiqueta(i);
             rowsHtml += `
                 <tr>
                     <td style="font-weight: bold;">${i.tipo}</td>
-                    <td>${formatDecimal(i.espessura, 1)} x ${formatDecimal(i.largura, 1)} x ${formatDecimal(i.comprimento, 2)}m</td>
+                    <td>${formatDecimal(i.espessura, 1)} / ${formatDecimal(i.largura, 1)} / ${formatDecimal(i.comprimento, 2)}</td>
                     <td class="num-col">${i.pacotes}</td>
-                    <td class="num-col">${i.pecas}</td>
+                    <td class="num-col">${detalhes.alturas || '-'}</td>
+                    <td class="num-col">${detalhes.largura || '-'}</td>
+                    <td class="num-col">${detalhes.amarras || '-'}</td>
                     <td class="num-col" style="font-weight: 500;">${i.totalPecas}</td>
-                    <td class="vol-col">${formatDecimalMockup(i.volume)} m³</td>
+                    <td class="vol-col">${formatDecimalMockup(i.volume)} mÂ³</td>
                 </tr>
             `;
         });
@@ -1176,17 +1165,19 @@ function gerarLayoutImpressaoPatio(rel) {
             <div class="class-section">
                 <div class="class-header ${headerClass}">
                     <span>${classeName}</span>
-                    <span>Subtotal: ${formatDecimalMockup(totalClasse.volume)} m³</span>
+                    <span>Subtotal: ${formatDecimalMockup(totalClasse.volume)} mÂ³</span>
                 </div>
                 <table>
                     <thead>
                         <tr>
                             <th>Produto</th>
-                            <th>Medidas (Esp x Larg x Comp)</th>
+                            <th>Bitolas</th>
                             <th class="num-col">Pacotes</th>
-                            <th class="num-col">Peças/Pacote</th>
-                            <th class="num-col">Total Peças</th>
-                            <th class="vol-col">Volume (m³)</th>
+                            <th class="num-col">Alturas</th>
+                            <th class="num-col">Largura</th>
+                            <th class="num-col">Amarras</th>
+                            <th class="num-col">Total PeÃ§as</th>
+                            <th class="vol-col">Volume (mÂ³)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1195,8 +1186,10 @@ function gerarLayoutImpressaoPatio(rel) {
                             <td colspan="2">TOTAL ${classeName}</td>
                             <td class="num-col">${totalClasse.pacotes}</td>
                             <td class="num-col">-</td>
+                            <td class="num-col">-</td>
+                            <td class="num-col">-</td>
                             <td class="num-col">${totalClasse.pecas}</td>
-                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} m³</td>
+                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} mÂ³</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1204,9 +1197,9 @@ function gerarLayoutImpressaoPatio(rel) {
         `;
     }
 
-    win.document.write(gerarTabelaClasse(itens1, '1ª CLASSE (VERDE)', 'class-header-1', sub1));
-    win.document.write(gerarTabelaClasse(itens2, '2ª CLASSE (AMARELO)', 'class-header-2', sub2));
-    win.document.write(gerarTabelaClasse(itens3, '3ª CLASSE (VERMELHO)', 'class-header-3', sub3));
+    win.document.write(gerarTabelaClasse(itens1, '1Âª CLASSE (VERDE)', 'class-header-1', sub1));
+    win.document.write(gerarTabelaClasse(itens2, '2Âª CLASSE (AMARELO)', 'class-header-2', sub2));
+    win.document.write(gerarTabelaClasse(itens3, '3Âª CLASSE (VERMELHO)', 'class-header-3', sub3));
 
     // Escrever bloco consolidado geral
     win.document.write(`
@@ -1216,21 +1209,21 @@ function gerarLayoutImpressaoPatio(rel) {
             <div class="consolidated-val">${rel.totais.totalPacotes}</div>
         </div>
         <div class="consolidated-box">
-            <div class="consolidated-title">Total de Peças</div>
+            <div class="consolidated-title">Total de PeÃ§as</div>
             <div class="consolidated-val">${rel.totais.totalPecas}</div>
         </div>
         <div class="consolidated-box" style="border-right: none;">
-            <div class="consolidated-title">Volume Geral Pátio</div>
-            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} m³</div>
+            <div class="consolidated-title">Volume Geral PÃ¡tio</div>
+            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} mÂ³</div>
         </div>
         <div class="consolidated-box" style="border-right: none; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 5px;">
-            <div style="font-size: 9px; text-transform: uppercase; color: #94a3b8;">Status do Pátio</div>
+            <div style="font-size: 9px; text-transform: uppercase; color: #94a3b8;">Status do PÃ¡tio</div>
             <div style="font-size: 14px; font-weight: bold; color: #e67e22; text-transform: uppercase;">Pronto p/ Venda</div>
         </div>
     </div>
 
     <div class="print-footer">
-        <p>Relação emitida automaticamente pelo sistema da Serraria Vanmarte.</p>
+        <p>RelaÃ§Ã£o emitida automaticamente pelo sistema da Serraria Vanmarte.</p>
         <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
     </div>
 </body>

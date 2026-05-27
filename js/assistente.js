@@ -6,6 +6,8 @@ const KEYS_ASSISTENTE = {
     relatos: 'orquestra_frota_relatos',
     financeiro: 'orquestra_financeiro_lancamentos'
 };
+const ASSISTANT_USAGE_KEY = 'orquestra_assistente_openai_usage';
+const ASSISTANT_BUDGET_KEY = 'orquestra_assistente_openai_budget';
 
 function lerLista(key) {
     try {
@@ -17,6 +19,45 @@ function lerLista(key) {
 
 function moeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function lerUsoAssistente() {
+    try {
+        return JSON.parse(localStorage.getItem(ASSISTANT_USAGE_KEY) || '{}');
+    } catch {
+        return {};
+    }
+}
+
+function salvarUsoAssistente(usage = {}) {
+    const atual = lerUsoAssistente();
+    const novo = {
+        totalTokens: Number(atual.totalTokens || 0) + Number(usage.totalTokens || 0),
+        inputTokens: Number(atual.inputTokens || 0) + Number(usage.inputTokens || 0),
+        outputTokens: Number(atual.outputTokens || 0) + Number(usage.outputTokens || 0),
+        estimatedCostUsd: Number(atual.estimatedCostUsd || 0) + Number(usage.estimatedCostUsd || 0)
+    };
+    localStorage.setItem(ASSISTANT_USAGE_KEY, JSON.stringify(novo));
+    atualizarPainelUsoAssistente();
+}
+
+function formatUsd(value) {
+    return `US$ ${Number(value || 0).toFixed(4)}`;
+}
+
+function atualizarPainelUsoAssistente() {
+    const uso = lerUsoAssistente();
+    const custoEl = document.getElementById('assistantUsageCost');
+    const tokensEl = document.getElementById('assistantUsageTokens');
+    const budgetEl = document.getElementById('assistantBudgetInput');
+    const barEl = document.getElementById('assistantUsageBar');
+    const budget = Number(localStorage.getItem(ASSISTANT_BUDGET_KEY) || budgetEl?.value || 1);
+    const custo = Number(uso.estimatedCostUsd || 0);
+
+    if (custoEl) custoEl.textContent = formatUsd(custo);
+    if (tokensEl) tokensEl.textContent = Number(uso.totalTokens || 0).toLocaleString('pt-BR');
+    if (budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget.toFixed(2);
+    if (barEl) barEl.style.width = `${Math.min(100, budget > 0 ? (custo / budget) * 100 : 0)}%`;
 }
 
 function normalizarTexto(texto) {
@@ -164,6 +205,23 @@ function responderPergunta(pergunta) {
     return `Resumo geral:\n\n${analisarEstoque(ctx)}\n\n${analisarFrotas(ctx)}\n\n${analisarFinanceiro(ctx)}`;
 }
 
+async function responderPerguntaOpenAI(pergunta) {
+    const response = await fetch('/api/assistente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            pergunta,
+            contexto: coletarContexto()
+        })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'Falha ao consultar o assistente.');
+    }
+    if (data.usage) salvarUsoAssistente(data.usage);
+    return data.resposta || 'Nao consegui gerar uma resposta agora.';
+}
+
 function adicionarMensagem(texto, tipo) {
     const box = document.getElementById('assistantMessages');
     if (!box) return;
@@ -183,11 +241,31 @@ window.toggleAssistenteIA = function(force) {
     if (abrir) setTimeout(() => document.getElementById('assistantInput')?.focus(), 80);
 };
 
-window.perguntarAssistente = function(pergunta) {
+window.perguntarAssistente = async function(pergunta) {
     if (!pergunta) return;
     window.toggleAssistenteIA(true);
     adicionarMensagem(pergunta, 'user');
-    adicionarMensagem(responderPergunta(pergunta), 'bot');
+    adicionarMensagem('Pensando com IA...', 'bot');
+    try {
+        const resposta = await responderPerguntaOpenAI(pergunta);
+        const mensagens = document.querySelectorAll('.assistant-msg-bot');
+        const ultima = mensagens[mensagens.length - 1];
+        if (ultima && ultima.textContent === 'Pensando com IA...') {
+            ultima.textContent = resposta;
+        } else {
+            adicionarMensagem(resposta, 'bot');
+        }
+    } catch (error) {
+        const fallback = responderPergunta(pergunta);
+        const mensagens = document.querySelectorAll('.assistant-msg-bot');
+        const ultima = mensagens[mensagens.length - 1];
+        const texto = `${fallback}\n\nIA OpenAI indisponivel: ${error.message}`;
+        if (ultima && ultima.textContent === 'Pensando com IA...') {
+            ultima.textContent = texto;
+        } else {
+            adicionarMensagem(texto, 'bot');
+        }
+    }
 };
 
 window.enviarPerguntaAssistenteHome = function() {
@@ -199,6 +277,13 @@ window.enviarPerguntaAssistenteHome = function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    inicializarAssistenteArrastavel();
+    atualizarPainelUsoAssistente();
+    document.getElementById('assistantBudgetInput')?.addEventListener('change', (event) => {
+        const valor = Math.max(0, Number(event.target.value || 0));
+        localStorage.setItem(ASSISTANT_BUDGET_KEY, String(valor || 1));
+        atualizarPainelUsoAssistente();
+    });
     document.getElementById('assistantForm')?.addEventListener('submit', (event) => {
         event.preventDefault();
         const input = document.getElementById('assistantInput');
@@ -211,3 +296,54 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter') window.enviarPerguntaAssistenteHome();
     });
 });
+
+function inicializarAssistenteArrastavel() {
+    const panel = document.getElementById('assistantPanel');
+    const header = panel?.querySelector('.assistant-panel-header');
+    if (!panel || !header) return;
+
+    const posSalva = JSON.parse(localStorage.getItem('orquestra_assistente_posicao') || 'null');
+    if (posSalva) {
+        panel.style.left = `${posSalva.left}px`;
+        panel.style.top = `${posSalva.top}px`;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+    }
+
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    header.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        dragging = true;
+        const rect = panel.getBoundingClientRect();
+        offsetX = event.clientX - rect.left;
+        offsetY = event.clientY - rect.top;
+        header.setPointerCapture(event.pointerId);
+        panel.classList.add('dragging');
+    });
+
+    header.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        const maxLeft = window.innerWidth - panel.offsetWidth - 8;
+        const maxTop = window.innerHeight - panel.offsetHeight - 8;
+        const left = Math.max(8, Math.min(maxLeft, event.clientX - offsetX));
+        const top = Math.max(8, Math.min(maxTop, event.clientY - offsetY));
+        panel.style.left = `${left}px`;
+        panel.style.top = `${top}px`;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+    });
+
+    header.addEventListener('pointerup', () => {
+        if (!dragging) return;
+        dragging = false;
+        panel.classList.remove('dragging');
+        const rect = panel.getBoundingClientRect();
+        localStorage.setItem('orquestra_assistente_posicao', JSON.stringify({
+            left: Math.round(rect.left),
+            top: Math.round(rect.top)
+        }));
+    });
+}

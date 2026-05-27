@@ -366,14 +366,14 @@ input::placeholder {
 }
 
 .view-section.active-section {
-    animation: fadeIn 0.4s ease forwards;
+    animation: fadeIn 0.24s ease-out forwards;
 }
 
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(6px);
     }
 
     to {
@@ -1309,11 +1309,36 @@ tfoot td {
 }
 .patio-wood-theme .btn-patio-save:hover { background: #15803d !important; }
 
+/* Select de qualidade do lote */
+.patio-classe-select {
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    border-width: 2px !important;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.patio-classe-select option {
+    background: #111827;
+    color: #ffffff;
+}
+.patio-classe-select.patio-classe-1 {
+    background: #16a34a !important;
+    border-color: #22c55e !important;
+}
+.patio-classe-select.patio-classe-2 {
+    background: #facc15 !important;
+    border-color: #eab308 !important;
+    color: #111827 !important;
+}
+.patio-classe-select.patio-classe-3 {
+    background: #dc2626 !important;
+    border-color: #ef4444 !important;
+}
+
 /* Badges de classe */
 .patio-wood-theme .patio-tag-1a {
-    color: #60a5fa !important;
-    background: rgba(37,99,235,0.15) !important;
-    border: 1px solid rgba(59,130,246,0.3) !important;
+    color: #ffffff !important;
+    background: #16a34a !important;
+    border: 1px solid #22c55e !important;
 }
 .patio-wood-theme .patio-tag-2a {
     color: #fbbf24 !important;
@@ -1474,9 +1499,9 @@ tfoot td {
     text-align: center;
 }
 .patio-tag-1a {
-    color: #2563eb !important;
-    background: #eff6ff !important;
-    border: 1px solid #bfdbfe !important;
+    color: #ffffff !important;
+    background: #16a34a !important;
+    border: 1px solid #22c55e !important;
 }
 .patio-tag-2a {
     color: #b45309 !important;
@@ -1757,6 +1782,10 @@ body.role-pendente .global-header {
     overflow: hidden;
 }
 
+.assistant-panel.dragging {
+    user-select: none;
+}
+
 .assistant-panel.open {
     display: flex;
 }
@@ -1767,12 +1796,64 @@ body.role-pendente .global-header {
     justify-content: space-between;
     padding: 14px;
     border-bottom: 1px solid var(--panel-border);
+    cursor: move;
+    touch-action: none;
 }
 
 .assistant-panel-header small {
     display: block;
     color: var(--text-muted);
     margin-top: 2px;
+}
+
+.assistant-usage-card {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr 0.8fr;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.035);
+}
+
+.assistant-usage-card strong {
+    display: block;
+    color: #ffffff;
+    font-size: 0.82rem;
+}
+
+.assistant-usage-card small,
+.assistant-usage-card label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.assistant-usage-card input {
+    width: 100%;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.16);
+    color: white;
+    padding: 5px 6px;
+    font-size: 0.78rem;
+}
+
+.assistant-usage-bar {
+    grid-column: 1 / -1;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+}
+
+.assistant-usage-bar span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e, #facc15, #ef4444);
+    transition: width 0.2s ease;
 }
 
 .assistant-quick-actions {

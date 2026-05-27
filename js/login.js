@@ -12,12 +12,36 @@ const ADMIN_EMAILS = [
     'limaalecsander@gmail.com'
 ];
 const DEFAULT_EMPRESA_ID = 'vanmarte';
+const LOGIN_SOUND_PATH = 'assets/audio/login_sound.mp3';
+const MIN_LOGIN_SOUND_MS = 3500;
 
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
         return 'gerente';
     }
     return 'PENDENTE';
+}
+
+function playLoginSound() {
+    const audio = new Audio(`${LOGIN_SOUND_PATH}?v=${Date.now()}`);
+    audio.volume = 0.7;
+    return new Promise((resolve, reject) => {
+        audio.addEventListener('ended', resolve, { once: true });
+        audio.addEventListener('error', reject, { once: true });
+        audio.play().catch(reject);
+    });
+}
+
+function goToSystemWithEntranceSound() {
+    const startedAt = Date.now();
+    playLoginSound()
+        .catch((error) => console.warn('Som de entrada bloqueado ou indisponivel:', error))
+        .finally(() => {
+            const remaining = Math.max(250, MIN_LOGIN_SOUND_MS - (Date.now() - startedAt));
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, remaining);
+        });
 }
 
 // DOM Elements - Formulário de Login
@@ -126,7 +150,7 @@ async function checkGoogleRedirectResult() {
                     }
                 }
             }
-            window.location.href = 'index.html';
+            goToSystemWithEntranceSound();
         }
     } catch (error) {
         console.error("Erro no redirecionamento do Google:", error);
@@ -181,7 +205,7 @@ loginForm.addEventListener('submit', async function(e) {
             }
         }
 
-        window.location.href = 'index.html';
+        goToSystemWithEntranceSound();
     } catch (error) {
         console.error("Erro no login:", error.code);
         let msg = "E-mail ou senha incorretos.";

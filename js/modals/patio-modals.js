@@ -111,10 +111,10 @@
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-award"></i> Qualidade / Classe</label>
-                            <select id="patioItemClasse">
-                                <option value="1ª CLASSE">1ª Classe (Verde)</option>
-                                <option value="2ª CLASSE">2ª Classe (Amarelo)</option>
-                                <option value="3ª CLASSE">3ª Classe (Vermelho)</option>
+                            <select id="patioItemClasse" class="patio-classe-select patio-classe-1">
+                                <option value="1ª CLASSE">1ª Classe</option>
+                                <option value="2ª CLASSE">2ª Classe</option>
+                                <option value="3ª CLASSE">3ª Classe</option>
                             </select>
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">

@@ -7,9 +7,24 @@
         <div class="assistant-panel-header">
             <div>
                 <strong>Assistente IA</strong>
-                <small>Análise local do sistema</small>
+                <small>IA OpenAI conectada</small>
             </div>
             <button type="button" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="assistant-usage-card">
+            <div>
+                <strong id="assistantUsageCost">US$ 0.0000</strong>
+                <small>gasto estimado</small>
+            </div>
+            <div>
+                <strong id="assistantUsageTokens">0</strong>
+                <small>tokens</small>
+            </div>
+            <div>
+                <label for="assistantBudgetInput">Cota US$</label>
+                <input id="assistantBudgetInput" type="number" min="0" step="0.01" value="1.00">
+            </div>
+            <div class="assistant-usage-bar"><span id="assistantUsageBar"></span></div>
         </div>
         <div class="assistant-quick-actions">
             <button type="button" onclick="window.perguntarAssistente('resumo geral')">Resumo geral</button>
