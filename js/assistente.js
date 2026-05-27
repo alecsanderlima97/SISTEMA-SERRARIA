@@ -214,9 +214,15 @@ async function responderPerguntaOpenAI(pergunta) {
             contexto: coletarContexto()
         })
     });
-    const data = await response.json().catch(() => ({}));
+    const rawText = await response.text();
+    let data = {};
+    try {
+        data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+        data = {};
+    }
     if (!response.ok) {
-        throw new Error(data.error || 'Falha ao consultar o assistente.');
+        throw new Error(data.error || rawText || `Falha ao consultar o assistente. Status ${response.status}`);
     }
     if (data.usage) salvarUsoAssistente(data.usage);
     return data.resposta || 'Nao consegui gerar uma resposta agora.';

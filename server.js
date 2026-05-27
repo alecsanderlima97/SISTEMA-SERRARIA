@@ -136,10 +136,17 @@ async function responderAssistente(req, res) {
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const rawText = await response.text();
+        let data = {};
+        try {
+            data = rawText ? JSON.parse(rawText) : {};
+        } catch {
+            data = {};
+        }
         if (!response.ok) {
             return sendJson(res, response.status, {
-                error: data.error?.message || 'Falha ao consultar a OpenAI.'
+                error: data.error?.message || rawText || 'Falha ao consultar a OpenAI.',
+                status: response.status
             });
         }
 
