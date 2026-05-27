@@ -16,6 +16,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 
 - `js/bootstrap.js`: diagnostico de erro, autocorrecao estrutural e fallback de navegacao.
 - `js/ui-helpers.js`: helpers globais de patio e rolagem rapida.
+- `js/shell-events.js`: eventos do menu lateral, dropdown de perfil e busca do assistente no header.
 - `js/views/calculadoras-view.js`: HTML da tela de calculadoras, injetado antes dos modulos da aplicacao.
 - `js/views/agenda-view.js`: HTML da agenda/calendario, injetado antes dos modulos da aplicacao.
 - `js/views/entrada-view.js`: HTML da entrada de toras, abas internas e descarregamento.
