@@ -22,6 +22,7 @@ O `index.html` ainda concentra a casca visual e as principais views do sistema. 
 - `js/views/cavaco-view.js`: HTML da venda de cavaco/po e cadastro de clientes de subprodutos.
 - `js/views/romaneio-v2-view.js`: HTML do gerador de romaneio atual.
 - `js/views/configuracoes-view.js`: HTML da tela de configuracoes, perfil, backup, tema e painel de usuarios.
+- `js/modals/romaneio-modals.js`: modais globais de detalhes do romaneio e confirmacao de seguranca.
 
 ## Views principais
 
