@@ -47,12 +47,12 @@ const ROLE_NAMES = {
 const SECTION_PERMISSIONS = [
     { id: 'view-dashboard', label: 'Inicio' },
     { id: 'view-romaneio-v2', label: 'Gerar Romaneio' },
-    { id: 'view-historico', label: 'Historico de Cargas' },
+    { id: 'view-historico', label: 'Historico de Vendas' },
     { id: 'view-clientes', label: 'Clientes' },
     { id: 'view-transportes', label: 'Transportadoras' },
-    { id: 'view-entrada', label: 'Entrada de Toras' },
-    { id: 'view-cavaco', label: 'Venda Cavaco/Po' },
-    { id: 'view-produtos', label: 'Madeiras / Estilos' },
+    { id: 'view-entrada', label: 'Conferencia de Cargas' },
+    { id: 'view-cavaco', label: 'Venda de Subprodutos' },
+    { id: 'view-produtos', label: 'Gestao de Madeira' },
     { id: 'view-estoque', label: 'Controle de Estoque' },
     { id: 'view-frotas', label: 'Controle de Frota' },
     { id: 'view-financeiro', label: 'Financeiro' },
@@ -64,7 +64,7 @@ const SECTION_PERMISSIONS = [
 
 const SUBSECTION_PERMISSIONS = {
     'view-entrada': {
-        label: 'Entrada de Toras',
+        label: 'Conferencia de Cargas',
         items: [
             { id: 'registro', label: 'Registrar tora' },
             { id: 'lista', label: 'Ultimas entradas / historico' },

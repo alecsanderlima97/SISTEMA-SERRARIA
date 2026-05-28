@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: HISTÓRICO DE CARGAS ====== -->
             <section id="view-historico" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Cargas</h1>
+                    <h1><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Vendas</h1>
                     <p>Registro de todos os romaneios finalizados</p>
                 </div>
 

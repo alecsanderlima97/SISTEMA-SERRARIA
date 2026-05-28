@@ -593,24 +593,35 @@ inputsFinanceirosCalc.forEach(id => {
 window.switchTabSubprodutos = function(tabName) {
     const tabRecibo = document.getElementById('panelEmissaoCavaco');
     const tabClientes = document.getElementById('panelCadastroClientesSub');
+    const tabListaClientes = document.getElementById('panelListaClientesSub');
     const btnRecibo = document.getElementById('btnTabSubRecibo');
     const btnClientes = document.getElementById('btnTabSubClientes');
+    const btnListaClientes = document.getElementById('btnTabSubListaClientes');
 
-    if (!tabRecibo || !tabClientes || !btnRecibo || !btnClientes) return;
+    if (!tabRecibo || !tabClientes || !tabListaClientes || !btnRecibo || !btnClientes || !btnListaClientes) return;
+
+    const setInactive = (btn) => {
+        btn.style.color = 'var(--text-muted)';
+        btn.style.borderBottom = 'none';
+    };
+    const setActive = (btn) => {
+        btn.style.color = 'var(--accent-color)';
+        btn.style.borderBottom = '3px solid var(--accent-color)';
+    };
+
+    tabRecibo.style.display = 'none';
+    tabClientes.style.display = 'none';
+    tabListaClientes.style.display = 'none';
+    [btnRecibo, btnClientes, btnListaClientes].forEach(setInactive);
 
     if (tabName === 'recibo') {
         tabRecibo.style.display = 'block';
-        tabClientes.style.display = 'none';
-        btnRecibo.style.color = 'var(--accent-color)';
-        btnRecibo.style.borderBottom = '3px solid var(--accent-color)';
-        btnClientes.style.color = 'var(--text-muted)';
-        btnClientes.style.borderBottom = 'none';
-    } else {
-        tabRecibo.style.display = 'none';
+        setActive(btnRecibo);
+    } else if (tabName === 'clientes') {
         tabClientes.style.display = 'block';
-        btnClientes.style.color = 'var(--accent-color)';
-        btnClientes.style.borderBottom = '3px solid var(--accent-color)';
-        btnRecibo.style.color = 'var(--text-muted)';
-        btnRecibo.style.borderBottom = 'none';
+        setActive(btnClientes);
+    } else {
+        tabListaClientes.style.display = 'block';
+        setActive(btnListaClientes);
     }
 };

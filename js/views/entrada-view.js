@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: ENTRADA DE MADEIRA/TORA ====== -->
             <section id="view-entrada" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-tree"></i> Entrada de Toras (M³)</h1>
+                    <h1><i class="fa-solid fa-clipboard-check"></i> Conferência de Cargas (M³)</h1>
                     <p>Cadastro de empreiteiros, controle de cubagem de cargas e financeiro de extração.</p>
                 </div>
 

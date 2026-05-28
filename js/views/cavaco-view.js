@@ -1,8 +1,8 @@
 (function() {
-    const html = `            <!-- ====== TELA: VENDA DE CAVACO/PÓ ====== -->
+    const html = `            <!-- ====== TELA: VENDA DE SUBPRODUTOS ====== -->
             <section id="view-cavaco" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-leaf"></i> Venda de Subprodutos (Cavaco/Pó)</h1>
+                    <h1><i class="fa-solid fa-recycle"></i> Venda de Subprodutos</h1>
                     <p>Gerencie clientes e emita recibos automatizados para venda de Cavaco, Pó de Serra e Cascas.</p>
                 </div>
 
@@ -12,6 +12,9 @@
                         <i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo
                     </button>
                     <button type="button" id="btnTabSubClientes" onclick="window.switchTabSubprodutos('clientes')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-user-plus"></i> Cadastrar Clientes
+                    </button>
+                    <button type="button" id="btnTabSubListaClientes" onclick="window.switchTabSubprodutos('lista-clientes')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-users-gear"></i> Gerenciar Clientes
                     </button>
                 </div>
@@ -90,26 +93,25 @@
                                 <i class="fa-solid fa-save"></i> Salvar Cliente
                             </button>
                         </form>
+                    </div>
 
-                        <!-- LISTA DE CLIENTES DE SUBPRODUTOS CADASTRADOS -->
-                        <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                            <h3 style="font-size: 0.95rem; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                                <span><i class="fa-solid fa-list"></i> Clientes Cadastrados</span>
-                            </h3>
-                            <div style="max-height: 250px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
-                                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                                    <thead>
-                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; background: rgba(255,255,255,0.02);">
-                                            <th style="padding: 10px 8px;">Nome</th>
-                                            <th style="padding: 10px 8px;">Acordado</th>
-                                            <th style="padding: 10px 8px; text-align: right;">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listaClientesSubprodutos">
-                                        <!-- Preenchido via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="glass-panel" id="panelListaClientesSub" style="display: none;">
+                        <div class="section-title">
+                            <h2><i class="fa-solid fa-users-gear"></i> Gerenciar Clientes</h2>
+                        </div>
+                        <div style="max-height: 430px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="background: rgba(0,0,0,0.2); color: var(--text-muted);">
+                                        <th style="padding: 10px; text-align: left;">Nome</th>
+                                        <th style="padding: 10px; text-align: left;">Acordado</th>
+                                        <th style="padding: 10px; text-align: right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaClientesSubprodutos">
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: PRODUTOS / MADEIRAS ====== -->
             <section id="view-produtos" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-box-open"></i> Gestão de Madeiras e Preços</h1>
+                    <h1><i class="fa-solid fa-tree-city"></i> Gestão de Madeira</h1>
                     <p>Cadastre os tipos de madeira e o valor do m³</p>
                 </div>
 
