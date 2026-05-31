@@ -69,7 +69,7 @@ function inicializarPatioListeners() {
         selectClasse.addEventListener('change', () => atualizarCorSelectClasse(selectClasse));
     }
 
-    // Calculadora de Pe?as do P?tio (Alt x Cam + Am)
+    // Calculadora de Peças do Pátio (Alt x Cam + Am)
     const calcInputs = document.querySelectorAll('.calc-patio');
     calcInputs.forEach(input => {
         input.addEventListener('input', () => {
@@ -101,7 +101,7 @@ if (document.readyState === 'loading') {
     inicializarPatioListeners();
 }
 
-// Abrir Modal do P?tio
+// Abrir Modal do Pátio
 window.abrirModalPatio = async function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (!modalPatio) return;
@@ -132,21 +132,21 @@ window.abrirModalPatio = async function() {
             if (hj.getHours() < 13) {
                 selectPeriodo.value = 'ManhÃ£ (In?cio do Dia)';
             } else {
-                selectPeriodo.value = 'Tarde (Fechamento do P?tio)';
+                selectPeriodo.value = 'Tarde (Fechamento do Pátio)';
             }
         }
     }
 
-    // Inicializar itens do p?tio
+    // Inicializar itens do pátio
     itensPatioTemp = [];
     renderizarItensPatioTemp();
 
-    // Carregar hist?rico do Firebase e calcular acumulados de hoje
+    // Carregar histórico do Firebase e calcular acumulados de hoje
     await carregarHistoricoPatio();
     await calcularAcumuladosHoje(dataAtualString);
 };
 
-// Fechar Modal do P?tio
+// Fechar Modal do Pátio
 window.fecharModalPatio = function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (modalPatio) {
@@ -199,7 +199,7 @@ async function renderizarFluxoPatio() {
         resumo.innerHTML = `
             ${cardFluxoPatio('Madeira serrando', atual.serrando || '-')}
             ${cardFluxoPatio('Pacotes no patio', totais.pacotes)}
-            ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} m?`)}
+            ${cardFluxoPatio('Volume geral', `${formatDecimalMockup(totais.volume)} m³`)}
         `;
 
         tbody.innerHTML = itens.length ? itens.map(item => `
@@ -207,11 +207,11 @@ async function renderizarFluxoPatio() {
                 <td>${badgeClasseFluxo(item.classe)}</td>
                 <td style="font-weight:700; color:white;">${formatCubagemFluxo(item)}</td>
                 <td style="font-weight:800;">${item.pacotes || 0}</td>
-                <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m?</td>
+                <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
             </tr>
         `).join('') : '<tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
 
-        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m? | ${total.pacotes} pacotes`)).join('');
+        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`)).join('');
     } catch (error) {
         console.error('Erro ao carregar fluxo do patio:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
@@ -266,7 +266,7 @@ function formatarConfiguracaoPacote(item) {
         const textoBase = base.replace('x', ' x ');
         return amarras ? `${textoBase} + ${amarras} amarras` : textoBase;
     }
-    return `${item.pecas || 0} pe?as`;
+    return `${item.pecas || 0} peças`;
 }
 
 // Adicionar Item via FormulÃ¡rio
@@ -337,7 +337,7 @@ function adicionarItemAoPatio() {
     const comp = parseDecimal(compRaw);
 
     if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
-        alert("?? Por favor, insira valores vÃ¡lidos e maiores que zero.");
+        alert("⚠️ Por favor, insira valores vÃ¡lidos e maiores que zero.");
         return;
     }
 
@@ -393,13 +393,13 @@ function zerarEtiquetasPatio() {
 // Limpar toda a lista atual
 function limparTudoPatio() {
     if (itensPatioTemp.length === 0) return;
-    if (confirm(" deseja limpar completamente a lista de p?tio atual?")) {
+    if (confirm(" deseja limpar completamente a lista de pátio atual?")) {
         itensPatioTemp = [];
         renderizarItensPatioTemp();
     }
 }
 
-// A??es dinÃ¢micas de incremento/decremento (+1 / -)
+// Ações dinÃ¢micas de incremento/decremento (+1 / -)
 window.alterarPacotesPatio = function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
@@ -465,7 +465,7 @@ function parseConfigPacote(raw) {
     return match ? { alt: match[1], cam: match[2], am: match[3] || '' } : {};
 }
 
-// Renderizar lista do p?tio exatamente igual ao mockup
+// Renderizar lista do pátio exatamente igual ao mockup
 function renderizarItensPatioTemp() {
     const tbody = document.getElementById('listaItensPatioTemp');
     if (!tbody) return;
@@ -474,7 +474,7 @@ function renderizarItensPatioTemp() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
-                    Nenhum pacote na lista de p?tio. Adicione ou configure os lotes acima.
+                    Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.
                 </td>
             </tr>
         `;
@@ -520,10 +520,10 @@ function renderizarItensPatioTemp() {
                 </td>
                 <!-- FORMAÃ‡ÃƒO (Pieces + unit vol) -->
                 <td style="padding: 14px 10px; color: #475569;">
-                    <div style="font-weight: 700; color: #0f172a;">${item.pecas} pe?as</div>
+                    <div style="font-weight: 700; color: #0f172a;">${item.pecas} peças</div>
                     <small style="color: #64748b; font-size: 0.75rem;">
                         ${item.pecasRaw && item.pecasRaw !== item.pecas.toString() ? `FÃ³rm: ${item.pecasRaw}<br>` : ''}
-                        (${formatDecimalMockup(item.volumeUnidade)} m? / pct)
+                        (${formatDecimalMockup(item.volumeUnidade)} m³ / pct)
                     </small>
                 </td>
                 <!-- VOLUME TOTAL -->
@@ -614,7 +614,7 @@ async function calcularAcumuladosHoje(hojeStr) {
 // Salvar a Contagem Atual no Firebase
 async function salvarRelatorioPatio() {
     if (itensPatioTemp.length === 0) {
-        alert("?? O p?tio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
+        alert("⚠️ O pátio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
         return;
     }
 
@@ -624,7 +624,7 @@ async function salvarRelatorioPatio() {
     const serrandoVal = document.getElementById('patioSerrando').value.toUpperCase().trim();
 
     if (!serrandoVal) {
-        alert("?? Por favor, digite qual madeira estÃ¡ sendo serrada no momento.");
+        alert("⚠️ Por favor, digite qual madeira estÃ¡ sendo serrada no momento.");
         document.getElementById('patioSerrando').focus();
         return;
     }
@@ -660,26 +660,26 @@ async function salvarRelatorioPatio() {
 
     try {
         await window.FS.addDoc('patio_relatorios', relatorio);
-        alert(`? Contagem do P?tio do per?odo (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m?.`);
+        alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         
         // Resetar rascunho
         document.getElementById('patioSerrando').value = '';
         itensPatioTemp = [];
         renderizarItensPatioTemp();
 
-        // Recarregar hist?rico e atualizar os acumulados salvos do dia
+        // Recarregar histórico e atualizar os acumulados salvos do dia
         await carregarHistoricoPatio();
         await calcularAcumuladosHoje(dataVal);
     } catch (error) {
-        console.error("Erro ao salvar contagem do p?tio:", error);
-        alert("? Ocorreu um erro ao salvar o relat?rio no Firebase.");
+        console.error("Erro ao salvar contagem do pátio:", error);
+        alert("❌ Ocorreu um erro ao salvar o relatório no Firebase.");
     } finally {
         btnSalvar.disabled = false;
         btnSalvar.innerHTML = originalText;
     }
 }
 
-// Carregar Hist?rico do Firebase
+// Carregar Histórico do Firebase
 async function carregarHistoricoPatio() {
     const tbody = document.getElementById('listaHistoricoPatio');
     if (!tbody) return;
@@ -718,7 +718,7 @@ async function carregarHistoricoPatio() {
                     <td style="padding: 10px 8px; color: #e67e22; font-weight: bold;">${rel.serrando || 'N/A'}</td>
                     <td style="text-align:center; padding: 10px 8px; font-weight: bold;">${rel.totais?.totalPacotes || 0}</td>
                     <td style="text-align:center; padding: 10px 8px; color: #64748b;">${rel.totais?.totalPecas || 0}</td>
-                    <td style="text-align:right; padding: 10px 8px; font-weight: 800; color: #16a34a;">${volStr} m?</td>
+                    <td style="text-align:right; padding: 10px 8px; font-weight: 800; color: #16a34a;">${volStr} m³</td>
                     <td style="text-align:center; padding: 10px 8px;">
                         <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                         <button type="button" onclick="visualizarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important;" title="Visualizar">
@@ -727,7 +727,7 @@ async function carregarHistoricoPatio() {
                         <button type="button" onclick="editarHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 9px !important; font-size: 0.72rem !important; border-radius: 6px !important; background:#fff7ed !important; border:1px solid #fed7aa !important; color:#c2410c !important;" title="Editar">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir Relat?rio">
+                        <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir Relatório">
                             <i class="fa-solid fa-print"></i>
                         </button>
                         <button type="button" onclick="deletarHistoricoPatio('${rel.id}')" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1rem; transition: color 0.1s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'" title="Apagar Registro">
@@ -741,17 +741,17 @@ async function carregarHistoricoPatio() {
 
         tbody.innerHTML = html;
     } catch (error) {
-        console.error("Erro ao carregar hist?rico do p?tio:", error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Erro ao obter dados do p?tio.</td></tr>';
+        console.error("Erro ao carregar histórico do pátio:", error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Erro ao obter dados do pátio.</td></tr>';
     }
 }
 
-// Excluir registro do hist?rico
+// Excluir registro do histórico
 window.deletarHistoricoPatio = async function(id) {
-    if (confirm("?? Tem certeza absoluta que deseja excluir este relat?rio de contagem do p?tio?")) {
+    if (confirm("⚠️ Tem certeza absoluta que deseja excluir este relatório de contagem do pátio?")) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
-            alert("? Relat?rio de p?tio excluÃ­do com sucesso!");
+            alert("✅ Relatório de pátio excluÃ­do com sucesso!");
             await carregarHistoricoPatio();
             
             const dataVal = document.getElementById('patioData').value;
@@ -763,7 +763,7 @@ window.deletarHistoricoPatio = async function(id) {
     }
 };
 
-// Imprimir relat?rio selecionado do hist?rico
+// Imprimir relatório selecionado do histórico
 window.imprimirHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
@@ -803,7 +803,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     }
 
     if (lista.length === 0) {
-        alert("?? N?o hÃ¡ pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
+        alert("⚠️ Não hÃ¡ pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
         return;
     }
 
@@ -882,7 +882,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.document.write(`
 <html>
 <head>
-    <title>Imprimir Etiquetas do P?tio</title>
+    <title>Imprimir Etiquetas do Pátio</title>
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -955,7 +955,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.focus();
 }
 
-// Gerar layout de fechamento do p?tio para impressÃ£o agrupado
+// Gerar layout de fechamento do pátio para impressÃ£o agrupado
 function gerarLayoutImpressaoPatio(rel) {
     const dtObj = new Date(rel.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
@@ -984,7 +984,7 @@ function gerarLayoutImpressaoPatio(rel) {
     win.document.write(`
 <html>
 <head>
-    <title>RelaÃ§Ã£o de P?tio - Madeira Serrada</title>
+    <title>RelaÃ§Ã£o de Pátio - Madeira Serrada</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -1132,14 +1132,14 @@ function gerarLayoutImpressaoPatio(rel) {
             <img src="logo.png" alt="Serraria Vanmarte" class="header-logo-img" onerror="this.style.display='none'">
         </div>
         <div style="text-align: right;">
-            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">RelaÃ§Ã£o de P?tio DiÃ¡rio</h2>
+            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">RelaÃ§Ã£o de Pátio DiÃ¡rio</h2>
             <small style="color: #64748b;">Controle de Estoque de Madeira Serrada para Clientes</small>
         </div>
     </div>
 
     <div class="meta-container">
         <div class="meta-item"><strong>Data da Contagem:</strong> ${dtStr}</div>
-        <div class="meta-item"><strong>Turno / Per?odo:</strong> ${rel.periodo}</div>
+        <div class="meta-item"><strong>Turno / Período:</strong> ${rel.periodo}</div>
         <div class="meta-item"><strong>HorÃ¡rio da Contagem:</strong> ${rel.horario || 'N/A'}</div>
         <div class="meta-item"><strong>Madeira Serrando no Momento:</strong> <span style="color: #e67e22; font-weight: bold;">${rel.serrando || 'N/A'}</span></div>
     </div>
@@ -1161,7 +1161,7 @@ function gerarLayoutImpressaoPatio(rel) {
                     <td class="num-col">${detalhes.largura || '-'}</td>
                     <td class="num-col">${detalhes.amarras || '-'}</td>
                     <td class="num-col" style="font-weight: 500;">${i.totalPecas}</td>
-                    <td class="vol-col">${formatDecimalMockup(i.volume)} m?</td>
+                    <td class="vol-col">${formatDecimalMockup(i.volume)} m³</td>
                 </tr>
             `;
         });
@@ -1170,7 +1170,7 @@ function gerarLayoutImpressaoPatio(rel) {
             <div class="class-section">
                 <div class="class-header ${headerClass}">
                     <span>${classeName}</span>
-                    <span>Subtotal: ${formatDecimalMockup(totalClasse.volume)} m?</span>
+                    <span>Subtotal: ${formatDecimalMockup(totalClasse.volume)} m³</span>
                 </div>
                 <table>
                     <thead>
@@ -1181,8 +1181,8 @@ function gerarLayoutImpressaoPatio(rel) {
                             <th class="num-col">Alturas</th>
                             <th class="num-col">Largura</th>
                             <th class="num-col">Amarras</th>
-                            <th class="num-col">Total Pe?as</th>
-                            <th class="vol-col">Volume (m?)</th>
+                            <th class="num-col">Total Peças</th>
+                            <th class="vol-col">Volume (m³)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1194,7 +1194,7 @@ function gerarLayoutImpressaoPatio(rel) {
                             <td class="num-col">-</td>
                             <td class="num-col">-</td>
                             <td class="num-col">${totalClasse.pecas}</td>
-                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} m?</td>
+                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} m³</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1214,15 +1214,15 @@ function gerarLayoutImpressaoPatio(rel) {
             <div class="consolidated-val">${rel.totais.totalPacotes}</div>
         </div>
         <div class="consolidated-box">
-            <div class="consolidated-title">Total de Pe?as</div>
+            <div class="consolidated-title">Total de Peças</div>
             <div class="consolidated-val">${rel.totais.totalPecas}</div>
         </div>
         <div class="consolidated-box" style="border-right: none;">
-            <div class="consolidated-title">Volume Geral P?tio</div>
-            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} m?</div>
+            <div class="consolidated-title">Volume Geral Pátio</div>
+            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} m³</div>
         </div>
         <div class="consolidated-box" style="border-right: none; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 5px;">
-            <div style="font-size: 9px; text-transform: uppercase; color: #94a3b8;">Status do P?tio</div>
+            <div style="font-size: 9px; text-transform: uppercase; color: #94a3b8;">Status do Pátio</div>
             <div style="font-size: 14px; font-weight: bold; color: #e67e22; text-transform: uppercase;">Pronto p/ Venda</div>
         </div>
     </div>

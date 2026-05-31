@@ -318,7 +318,7 @@ window.alternarPagoFinanceiro = async function(id) {
 };
 
 window.excluirFinanceiro = async function(id) {
-    if (!confirm('Deseja excluir este lan?amento financeiro?')) return;
+    if (!confirm('Deseja excluir este lançamento financeiro?')) return;
     const okNuvem = await excluirFinanceiroNuvem(id);
     if (!okNuvem) return;
     salvarLancamentosFinanceiros(obterLancamentosFinanceiros().filter(item => item.id !== id));

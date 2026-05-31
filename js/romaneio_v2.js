@@ -966,7 +966,7 @@ window.verPreviaRomaneioV2 = () => {
         cnpj: "44.215.194/0001-18",
         ie: "ISENTO",
         contato: "15 996297072",
-        email: "escritoriovanmarte@hotmai.com",
+        email: "escritoriovanmarte@hotmail.com",
         cep: "18430-000",
         logradouro: "ESTRADA DO TAQUARI",
         numero: "267",

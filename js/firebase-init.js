@@ -22,7 +22,8 @@ export async function reautenticarUsuarioAtual(senha) {
     if (!user?.email) {
         throw new Error('Usuário autenticado não encontrado. Faça login novamente.');
     }
-    const credential = EmailAuthProvider.credential(user.email, senha);
+    const senhaLimpa = (senha || '').trim();
+    const credential = EmailAuthProvider.credential(user.email, senhaLimpa);
     await reauthenticateWithCredential(user, credential);
     return true;
 }

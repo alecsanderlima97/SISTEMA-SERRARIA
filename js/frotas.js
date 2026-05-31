@@ -371,7 +371,7 @@ window.editarVeiculo = function(id) {
 };
 
 window.excluirVeiculo = async function(id) {
-    if (!confirm("Tem certeza que deseja excluir este ve?culo? Isso n?o apagar? o hist?rico de abastecimentos e manuten??es dele, mas ele n?o constar? na listagem principal.")) return;
+    if (!confirm("Tem certeza que deseja excluir este veículo? Isso não apagará o histórico de abastecimentos e manutenções dele, mas ele não constará na listagem principal.")) return;
 
     const okNuvem = await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
     if (!okNuvem) return;
