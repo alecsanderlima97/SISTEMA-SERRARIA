@@ -13,7 +13,10 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn()
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
-        && userDoc().data.cargo in ['ADMIN', 'admin', 'gerente', 'GERENTE'];
+        && (
+          userDoc().data.cargo in ['ADMIN', 'admin', 'gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL']
+          || userDoc().data.cargoNormalizado in ['admin', 'gerente', 'gerente geral']
+        );
     }
 
     function isBootstrapAdmin() {
@@ -56,7 +59,7 @@ service cloud.firestore {
       allow create: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserCreate(userId);
       allow read: if signedIn() && (userId == request.auth.uid || isAdmin() || isBootstrapAdmin());
       allow update: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserUpdate(userId);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isBootstrapAdmin();
     }
 
     match /{collection}/{document} {

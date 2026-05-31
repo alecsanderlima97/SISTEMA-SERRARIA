@@ -79,6 +79,7 @@ function normalizeRole(role) {
     if (!value) return 'PENDENTE';
     const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     if (normalized === 'pendente') return 'PENDENTE';
+    if (normalized === 'gerente geral' || normalized === 'admin' || normalized === 'administrador') return 'gerente';
     return normalized;
 }
 
