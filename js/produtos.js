@@ -129,7 +129,7 @@ window.editarProduto = function(id) {
 }
 
 window.apagarProduto = async function(id) {
-    if(confirm('Apagar permanentemente configuração desta madeira?')) {
+    if(await window.confirmarExclusaoComSenha('Apagar permanentemente configuracao desta madeira?')) {
         try {
             const docRef = doc(db, 'produtos', id);
             await deleteDoc(docRef);

@@ -410,7 +410,8 @@ async function salvarItemEstoque() {
 }
 
 window.excluirItemEstoque = async function(id) {
-    if (!confirm('Deseja realmente ocultar este item do estoque? O historico sera preservado.')) return;
+    const autorizado = await window.confirmarExclusaoComSenha('Deseja realmente ocultar este item do estoque? O historico sera preservado.');
+    if (!autorizado) return;
 
     try {
         const todos = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
@@ -720,7 +721,8 @@ async function validarSenhaMovimentacaoEstoque(mensagem = 'Digite sua senha de l
 
 // Estorna a movimentacao e remove o lancamento do historico.
 window.excluirMovimentacaoEstoque = async function(id) {
-    if (!confirm('Deseja realmente ESTORNAR este movimento? Isso revertera o estoque e removera o registro.')) return;
+    const autorizado = await window.confirmarExclusaoComSenha('Deseja realmente ESTORNAR este movimento? Isso revertera o estoque e removera o registro.');
+    if (!autorizado) return;
 
     try {
         const movs = JSON.parse(localStorage.getItem(MOV_KEY) || '[]');

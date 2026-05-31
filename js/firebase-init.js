@@ -28,6 +28,33 @@ export async function reautenticarUsuarioAtual(senha) {
     return true;
 }
 
+window.confirmarExclusaoComSenha = async function(mensagemConfirmacao = 'Deseja realmente excluir este registro?', mensagemSenha = 'Digite sua senha de login para confirmar a exclusao:') {
+    if (!confirm(mensagemConfirmacao)) return false;
+
+    const senha = prompt(mensagemSenha);
+    if (!senha) return false;
+
+    try {
+        await reautenticarUsuarioAtual(senha);
+        return true;
+    } catch (error) {
+        console.error('Falha ao validar senha para exclusao:', error);
+
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            alert('Senha incorreta. Exclusao cancelada.');
+            return false;
+        }
+
+        if (error.code === 'auth/requires-recent-login') {
+            alert('Por seguranca, entre novamente no sistema e tente excluir logo em seguida.');
+            return false;
+        }
+
+        alert('Nao foi possivel validar a senha. Exclusao cancelada.');
+        return false;
+    }
+};
+
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 
 function getCurrentUserMeta() {

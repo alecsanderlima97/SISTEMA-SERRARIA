@@ -206,7 +206,8 @@ async function addEvent() {
 }
 
 window.deleteEventFirebase = async function(id) {
-    if (!confirm("Excluir este compromisso?")) return;
+    const autorizado = await window.confirmarExclusaoComSenha("Excluir este compromisso?");
+    if (!autorizado) return;
     try {
         await deleteDoc(doc(db, "agenda", id));
         

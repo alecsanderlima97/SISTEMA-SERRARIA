@@ -160,7 +160,7 @@ window.excluirClienteSub = async (id) => {
     const cli = clientesSubprodutosCache.find(x => x.id === id);
     if (!cli) return;
     
-    if (confirm(`Deseja realmente excluir permanentemente o cliente ${cli.nome}?`)) {
+    if (await window.confirmarExclusaoComSenha(`Deseja realmente excluir permanentemente o cliente ${cli.nome}?`)) {
         try {
             await deleteDoc(doc(db, 'clientes_subprodutos', id));
             alert("Cliente de subproduto excluído com sucesso!");

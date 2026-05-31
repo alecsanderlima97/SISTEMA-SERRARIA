@@ -119,7 +119,7 @@ window.editarTransporte = function(id) {
 }
 
 window.apagarTransporte = async function(id) {
-    if(confirm('Apagar permanentemente esta transportadora/fretista do sistema?')) {
+    if(await window.confirmarExclusaoComSenha('Apagar permanentemente esta transportadora/fretista do sistema?')) {
         try {
             const docRef = doc(db, 'transportes', id);
             await deleteDoc(docRef);

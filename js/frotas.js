@@ -371,7 +371,8 @@ window.editarVeiculo = function(id) {
 };
 
 window.excluirVeiculo = async function(id) {
-    if (!confirm("Tem certeza que deseja excluir este veículo? Isso não apagará o histórico de abastecimentos e manutenções dele, mas ele não constará na listagem principal.")) return;
+    const autorizado = await window.confirmarExclusaoComSenha("Tem certeza que deseja excluir este veiculo? Isso nao apagara o historico de abastecimentos e manutencoes dele, mas ele nao constara na listagem principal.");
+    if (!autorizado) return;
 
     const okNuvem = await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
     if (!okNuvem) return;
@@ -875,7 +876,8 @@ function renderizarAbastecimentosVeiculo(veiculoId) {
 }
 
 window.excluirAbastecimento = async function(id, veiculoId) {
-    if (!confirm('Tem certeza que deseja estornar este abastecimento? Diesel da serraria volta ao estoque; diesel posto remove a despesa financeira.')) return;
+    const autorizado = await window.confirmarExclusaoComSenha('Tem certeza que deseja estornar este abastecimento? Diesel da serraria volta ao estoque; diesel posto remove a despesa financeira.');
+    if (!autorizado) return;
 
     const ab = abastecimentos.find(a => a.id === id);
     if (ab) {
@@ -1223,7 +1225,8 @@ function renderizarManutencoesVeiculo(veiculoId) {
 }
 
 window.excluirManutencao = async function(id, veiculoId) {
-    if (!confirm("Tem certeza que deseja excluir esta manutenção? Isso devolverá todas as peças utilizadas de volta ao estoque.")) return;
+    const autorizado = await window.confirmarExclusaoComSenha("Tem certeza que deseja excluir esta manutencao? Isso devolvera todas as pecas utilizadas de volta ao estoque.");
+    if (!autorizado) return;
 
     const m = manutencoes.find(item => item.id === id);
     if (m && m.pecas && m.pecas.length > 0) {

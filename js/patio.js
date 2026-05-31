@@ -400,14 +400,14 @@ function limparTudoPatio() {
 }
 
 // Ações dinÃ¢micas de incremento/decremento (+1 / -)
-window.alterarPacotesPatio = function(id, delta) {
+window.alterarPacotesPatio = async function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
 
     const novoPacotes = item.pacotes + delta;
     if (novoPacotes < 0) {
         // Se for menor que zero, pergunta se deseja excluir
-        if (confirm(" deseja remover este lote da lista?")) {
+        if (await window.confirmarExclusaoComSenha("Deseja remover este lote da lista?")) {
             itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
         } else {
             return;
@@ -422,8 +422,8 @@ window.alterarPacotesPatio = function(id, delta) {
 };
 
 // Remover linha diretamente pela lixeira
-window.removerLinhaPatio = function(id) {
-    if (confirm(" deseja remover este lote?")) {
+window.removerLinhaPatio = async function(id) {
+    if (await window.confirmarExclusaoComSenha("Deseja remover este lote?")) {
         itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
         renderizarItensPatioTemp();
     }
@@ -748,7 +748,7 @@ async function carregarHistoricoPatio() {
 
 // Excluir registro do histórico
 window.deletarHistoricoPatio = async function(id) {
-    if (confirm("⚠️ Tem certeza absoluta que deseja excluir este relatório de contagem do pátio?")) {
+    if (await window.confirmarExclusaoComSenha("Tem certeza absoluta que deseja excluir este relatorio de contagem do patio?")) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
             alert("✅ Relatório de pátio excluÃ­do com sucesso!");

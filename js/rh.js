@@ -553,7 +553,7 @@ window.iniciarExcluirRH = async (id) => {
     const f = funcionariosAtuais.find(x => x.id === id);
     if (!f) return;
 
-    if (confirm(`⚠️ OPERAÇÃO CRÍTICA!\nDeseja realmente EXCLUIR permanentemente o funcionário "${f.nome}"?\nTodos os históricos de férias e horas extras deste funcionário serão apagados para sempre.`)) {
+    if (await window.confirmarExclusaoComSenha(`OPERACAO CRITICA!\nDeseja realmente EXCLUIR permanentemente o funcionario "${f.nome}"?\nTodos os historicos de ferias e horas extras deste funcionario serao apagados para sempre.`)) {
         try {
             const docRef = doc(db, 'funcionarios', id);
             await deleteDoc(docRef);
@@ -735,7 +735,7 @@ window.removerHoraExtra = async (idHE) => {
     const f = funcionariosAtuais.find(x => x.id === idFunc);
     if (!f || !f.horasExtras) return;
 
-    if (confirm("Deseja realmente excluir este lançamento?")) {
+    if (await window.confirmarExclusaoComSenha("Deseja realmente excluir este lancamento?")) {
         f.horasExtras = f.horasExtras.filter(h => h.id !== idHE);
         try {
             await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras });
@@ -858,7 +858,7 @@ window.removerFalta = async (idFalta) => {
     const f = funcionariosAtuais.find(x => x.id === idFunc);
     if (!f || !f.faltas) return;
 
-    if (confirm("Deseja realmente excluir esta falta?")) {
+    if (await window.confirmarExclusaoComSenha("Deseja realmente excluir esta falta?")) {
         f.faltas = f.faltas.filter(x => x.id !== idFalta);
         try {
             await window.FS.updateDoc('funcionarios', idFunc, { faltas: f.faltas });

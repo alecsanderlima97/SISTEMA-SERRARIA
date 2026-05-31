@@ -139,7 +139,7 @@ window.editarCliente = function(id) {
 
 // Excluir e Renderizar
 window.apagarCliente = async function(id) {
-    if(confirm('Tem certeza que deseja apagar permanentemente este cliente do banco de dados?')) {
+    if(await window.confirmarExclusaoComSenha('Tem certeza que deseja apagar permanentemente este cliente do banco de dados?')) {
         try {
             const clienteRef = doc(db, 'clientes', id);
             await deleteDoc(clienteRef);

@@ -253,7 +253,7 @@ if(formEmpreiteiro) {
 }
 
 window.deletarEmpreiteiro = async function(id) {
-    if(confirm("Tem certeza que deseja remover este empreiteiro?")) {
+    if(await window.confirmarExclusaoComSenha("Tem certeza que deseja remover este empreiteiro?")) {
         try {
             await deleteDoc(doc(db, 'empreiteiros', id));
             await carregarEmpreiteiros();
@@ -928,7 +928,7 @@ function configurarSubmitEntrada() {
 }
 
 window.deletarEntrada = async function(id) {
-    if(confirm("Tem certeza que deseja apagar este registro de entrada?")) {
+    if(await window.confirmarExclusaoComSenha("Tem certeza que deseja apagar este registro de entrada?")) {
         try {
             await deleteDoc(doc(db, 'entradas', id));
             entradasSelecionadas.delete(id);

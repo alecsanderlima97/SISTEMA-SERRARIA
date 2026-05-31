@@ -1009,7 +1009,8 @@ window.salvarUsuario = async function() {
 };
 
 window.excluirUsuario = async function(id) {
-    if (!confirm("Tem certeza que deseja excluir o cadastro e acesso deste usuário?")) return;
+    const autorizado = await window.confirmarExclusaoComSenha("Tem certeza que deseja excluir o cadastro e acesso deste usuário?");
+    if (!autorizado) return;
     try {
         await deleteDoc(doc(db, 'usuarios', id));
         alert("Usuário excluído com sucesso!");
