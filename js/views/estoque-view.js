@@ -152,19 +152,19 @@
 
                 <!-- SUB-VIEW 2: SIMULADOR DE TANQUES (INSUMOS) -->
                 <div id="subview-estoque-tanques" class="subview-estoque-section" style="display: none;">
-                    <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                    <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; align-items: start;">
                         
                         <!-- SIMULADOR TANQUE DE DIESEL (5.000 L) -->
-                        <div class="glass-panel" style="padding: 25px; border-radius: 16px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div class="glass-panel" style="padding: 20px; border-radius: 16px; position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 14px; align-self: start;">
                             <div class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
                                 <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 8px;">
                                     <i class="fa-solid fa-gas-pump" style="color: #eab308;"></i> Tanque Principal de Diesel
                                 </h3>
                             </div>
                             
-                            <div style="display: grid; grid-template-columns: minmax(120px, 170px) 1fr; gap: 20px; align-items: end; margin: 20px 0;">
+                            <div style="display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 16px; align-items: end; margin: 8px 0;">
                                 <div style="display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: stretch;">
-                                    <div style="height: 230px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 2px 0;">
+                                    <div style="height: 190px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 2px 0;">
                                         <span>5000</span>
                                         <span>4000</span>
                                         <span>3000</span>
@@ -172,7 +172,7 @@
                                         <span>1000</span>
                                         <span>0</span>
                                     </div>
-                                    <div style="height: 230px; border-left: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(to top, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px); position: relative;">
+                                    <div style="height: 190px; border-left: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(to top, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px); position: relative;">
                                         <div id="dieselLiquidLevel" style="position: absolute; bottom: 0; left: 26%; width: 56%; height: 0%; min-height: 2px; background: repeating-linear-gradient(to top, #f97316 0 2px, #fff7ed 2px 3px, #fb923c 3px 5px); border: 1px solid rgba(249,115,22,0.95); box-shadow: 0 0 16px rgba(249,115,22,0.45); transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden;">
                                             <div style="position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); animation: waveAnim 2.2s infinite linear;"></div>
                                         </div>
@@ -184,7 +184,7 @@
                                     <div style="border: 1px solid var(--panel-border); background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
                                         <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700;">QUANTIDADE REAL NO TANQUE DE DIESEL</span>
                                         <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
-                                            <strong style="font-size: 2.4rem; line-height: 1; color: #ef4444;" id="dieselLitersText">0</strong>
+                                            <strong style="font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1; color: #ef4444;" id="dieselLitersText">0</strong>
                                             <span style="color: white; font-style: italic;">LITROS</span>
                                         </div>
                                     </div>

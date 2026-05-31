@@ -113,6 +113,29 @@
                             </div>
                         </div>
 
+                        <!-- Atestado e CAT -->
+                        <h3 style="font-size: 0.9rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <i class="fa-solid fa-file-medical"></i> Atestados e CAT
+                        </h3>
+                        <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="input-group">
+                                <label>Atestado médico</label>
+                                <input type="file" id="rh-atestado-arquivo" accept="image/*,.pdf" style="display:none;">
+                                <button type="button" class="btn-secondary" onclick="document.getElementById('rh-atestado-arquivo').click()" style="padding: 10px 14px; border-radius: 8px; justify-content: center;">
+                                    <i class="fa-solid fa-file-circle-plus"></i> Adicionar Atestado
+                                </button>
+                                <small id="rh-atestado-nome" style="color: var(--text-muted); display:block; margin-top:6px;">Nenhum arquivo selecionado</small>
+                            </div>
+                            <div class="input-group">
+                                <label>Registro de CAT</label>
+                                <input type="file" id="rh-cat-arquivo" accept="image/*,.pdf" style="display:none;">
+                                <button type="button" class="btn-secondary" onclick="document.getElementById('rh-cat-arquivo').click()" style="padding: 10px 14px; border-radius: 8px; justify-content: center;">
+                                    <i class="fa-solid fa-kit-medical"></i> Adicionar CAT
+                                </button>
+                                <small id="rh-cat-nome" style="color: var(--text-muted); display:block; margin-top:6px;">Nenhum arquivo selecionado</small>
+                            </div>
+                        </div>
+
                         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                             <button type="button" id="btnCancelarRH" class="btn-secondary" style="padding: 12px 24px; border-radius: 8px;">
                                 Cancelar

@@ -5,6 +5,8 @@ import { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } fr
 const funcionariosCollection = collection(db, 'funcionarios');
 let funcionariosAtuais = [];
 let funcionarioEditandoId = null;
+let anexoAtestadoAtual = null;
+let anexoCatAtual = null;
 
 // Elementos do DOM
 const viewRH = document.getElementById('view-rh');
@@ -109,8 +111,16 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
         document.getElementById('rh-ferias-inicio').value = func.feriasInicio || '';
         document.getElementById('rh-ferias-fim').value = func.feriasFim || '';
+        anexoAtestadoAtual = func.atestado || null;
+        anexoCatAtual = func.cat || null;
+        atualizarNomeAnexoRH('atestado', anexoAtestadoAtual);
+        atualizarNomeAnexoRH('cat', anexoCatAtual);
     } else {
         window.switchTabRH('form', false);
+        anexoAtestadoAtual = null;
+        anexoCatAtual = null;
+        atualizarNomeAnexoRH('atestado', null);
+        atualizarNomeAnexoRH('cat', null);
     }
 }
 
@@ -118,10 +128,60 @@ function fecharFormularioRH() {
     window.switchTabRH('lista');
     if (formFuncionario) formFuncionario.reset();
     funcionarioEditandoId = null;
+    anexoAtestadoAtual = null;
+    anexoCatAtual = null;
+    atualizarNomeAnexoRH('atestado', null);
+    atualizarNomeAnexoRH('cat', null);
+}
+
+function atualizarNomeAnexoRH(tipo, anexo) {
+    const el = document.getElementById(tipo === 'cat' ? 'rh-cat-nome' : 'rh-atestado-nome');
+    if (!el) return;
+    el.textContent = anexo?.nome || 'Nenhum arquivo selecionado';
+    el.style.color = anexo?.nome ? 'var(--accent-color)' : 'var(--text-muted)';
+}
+
+function lerArquivoRH(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({
+            nome: file.name,
+            tipo: file.type || 'application/octet-stream',
+            tamanho: file.size,
+            dados: reader.result,
+            atualizadoEm: new Date().toISOString()
+        });
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function configurarAnexosRH() {
+    const atestadoInput = document.getElementById('rh-atestado-arquivo');
+    const catInput = document.getElementById('rh-cat-arquivo');
+
+    if (atestadoInput) {
+        atestadoInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            anexoAtestadoAtual = await lerArquivoRH(file);
+            atualizarNomeAnexoRH('atestado', anexoAtestadoAtual);
+        });
+    }
+
+    if (catInput) {
+        catInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            anexoCatAtual = await lerArquivoRH(file);
+            atualizarNomeAnexoRH('cat', anexoCatAtual);
+        });
+    }
 }
 
 // Configuração de máscaras nos inputs e eventos
 function configurarFormulariosRH() {
+    configurarAnexosRH();
     // Máscara de Salário, Vale, valores de horas extras, adicionais e faltas
     ['rh-salario', 'rh-vale', 'rh-valor-he-normal', 'rh-valor-he-especial', 'he-adicional', 'falta-valor'].forEach(id => {
         const el = document.getElementById(id);
@@ -303,6 +363,8 @@ function renderizarFuncionarios(lista) {
         const adm = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
         const heTotal = f.horasExtras ? f.horasExtras.reduce((acc, h) => acc + (parseFloat(h.horas) || 0), 0) : 0;
         const faltasTotal = f.faltas ? f.faltas.length : 0;
+        const temAtestado = !!f.atestado?.dados;
+        const temCat = !!f.cat?.dados;
         
         const fSalario = f.salario ? f.salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
         const fVale = f.vale ? f.vale.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
@@ -354,6 +416,12 @@ function renderizarFuncionarios(lista) {
                         <button onclick="window.abrirModalFaltas('${f.id}')" class="btn-icon" style="color:#f43f5e; font-size:1.1rem; padding: 4px;" title="Controle de Faltas (${faltasTotal})">
                             <i class="fa-solid fa-user-slash"></i> <span style="font-size: 0.8rem; font-weight:bold;">${faltasTotal}</span>
                         </button>
+                        <button onclick="window.abrirAnexoRH('${f.id}', 'atestado')" class="btn-icon" style="color:${temAtestado ? '#22c55e' : '#94a3b8'}; font-size:1.1rem; padding: 4px;" title="${temAtestado ? 'Abrir atestado' : 'Sem atestado cadastrado'}">
+                            <i class="fa-solid fa-file-medical"></i>
+                        </button>
+                        <button onclick="window.abrirAnexoRH('${f.id}', 'cat')" class="btn-icon" style="color:${temCat ? '#f59e0b' : '#94a3b8'}; font-size:1.1rem; padding: 4px;" title="${temCat ? 'Abrir CAT' : 'Sem CAT cadastrado'}">
+                            <i class="fa-solid fa-kit-medical"></i>
+                        </button>
                         <button onclick="window.iniciarEditarRH('${f.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Funcionário">
                             <i class="fa-solid fa-user-pen"></i>
                         </button>
@@ -368,6 +436,23 @@ function renderizarFuncionarios(lista) {
 }
 
 // Filtrar funcionários em tempo real
+window.abrirAnexoRH = function(id, tipo) {
+    const f = funcionariosAtuais.find(x => x.id === id);
+    const anexo = tipo === 'cat' ? f?.cat : f?.atestado;
+    if (!anexo?.dados) {
+        alert(tipo === 'cat' ? 'Nenhuma CAT cadastrada para este funcionário.' : 'Nenhum atestado cadastrado para este funcionário.');
+        return;
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Libere pop-ups para visualizar o anexo.');
+        return;
+    }
+    win.document.write(`<title>${anexo.nome || 'Anexo RH'}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
+    win.document.close();
+};
+
 function filtrarFuncionarios() {
     const inputBusca = document.getElementById('buscaFuncionario');
     const queryStr = (inputBusca?.value || '').toLowerCase().trim();
@@ -425,6 +510,8 @@ async function salvarFuncionario() {
             valorHeNormal: parseFloat(valorHeNormal) || 0,
             valorHeEspecial: parseFloat(valorHeEspecial) || 0,
             formaPagamento, dadosBancarios, feriasDias, feriasInicio, feriasFim,
+            atestado: anexoAtestadoAtual,
+            cat: anexoCatAtual,
             atualizadoEm: new Date().toISOString()
         };
 

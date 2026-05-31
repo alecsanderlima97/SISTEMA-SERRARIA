@@ -1,4 +1,4 @@
-import { db, auth, signInWithEmailAndPassword, collection, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, reautenticarUsuarioAtual, collection, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
 
 const listaHistorico = document.getElementById('listaHistorico');
 const filtroCliente = document.getElementById('filtroHistoricoCliente');
@@ -462,7 +462,7 @@ function inicializarModuloHistorico() {
 
             try {
                 // Validar senha fazendo login em background com a mesma conta ativa
-                await signInWithEmailAndPassword(auth, user.email, senha);
+                await reautenticarUsuarioAtual(senha);
                 
                 // Se chegou aqui, a senha está correta!
                 if (acaoPendente === 'editar') {

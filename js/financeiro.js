@@ -73,12 +73,14 @@ async function salvarFinanceiroNuvem(item) {
 }
 
 async function excluirFinanceiroNuvem(id) {
-    if (!window.FS || !id) return;
+    if (!window.FS || !id) return true;
     try {
         await window.FS.deleteDoc(FINANCEIRO_COLLECTION, id);
+        return true;
     } catch (error) {
         console.error(`Falha ao excluir financeiro/${id} no Firestore.`, error);
-        alert('Lancamento removido localmente, mas nao foi possivel sincronizar a exclusao na nuvem agora.');
+        alert('Nao foi possivel excluir na nuvem agora. O lancamento foi mantido localmente para evitar divergencia. Tente novamente em alguns instantes.');
+        return false;
     }
 }
 
@@ -316,9 +318,10 @@ window.alternarPagoFinanceiro = async function(id) {
 };
 
 window.excluirFinanceiro = async function(id) {
-    if (!confirm('Deseja excluir este lançamento financeiro?')) return;
+    if (!confirm('Deseja excluir este lan?amento financeiro?')) return;
+    const okNuvem = await excluirFinanceiroNuvem(id);
+    if (!okNuvem) return;
     salvarLancamentosFinanceiros(obterLancamentosFinanceiros().filter(item => item.id !== id));
-    await excluirFinanceiroNuvem(id);
     renderFinanceiro();
 };
 

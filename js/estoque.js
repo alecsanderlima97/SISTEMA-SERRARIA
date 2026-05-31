@@ -1,4 +1,4 @@
-import { auth, signInWithEmailAndPassword } from './firebase-init.js';
+import { auth, reautenticarUsuarioAtual } from './firebase-init.js';
 
 // --- CONTROLE DE ESTOQUE SAAS PREMIUM & INTEGRADO ---
 // Sincronizado com os módulos de Frotas (Manutenção de Peças e Insumos)
@@ -709,7 +709,7 @@ async function validarSenhaMovimentacaoEstoque(mensagem = 'Digite sua senha de l
     }
 
     try {
-        await signInWithEmailAndPassword(auth, user.email, senha);
+        await reautenticarUsuarioAtual(senha);
         return true;
     } catch (err) {
         console.error('Senha invalida para operacao de estoque:', err);

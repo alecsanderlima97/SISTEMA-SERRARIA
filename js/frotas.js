@@ -121,12 +121,14 @@ async function salvarDocFrota(collName, item) {
 }
 
 async function excluirDocFrota(collName, id) {
-    if (!window.FS || !id) return;
+    if (!window.FS || !id) return true;
     try {
         await window.FS.deleteDoc(collName, id);
+        return true;
     } catch (error) {
         console.error(`Falha ao excluir ${collName}/${id} no Firestore.`, error);
-        alert('Registro removido localmente, mas nao foi possivel sincronizar a exclusao na nuvem agora.');
+        alert('Nao foi possivel excluir na nuvem agora. O registro foi mantido localmente para evitar divergencia. Tente novamente em alguns instantes.');
+        return false;
     }
 }
 
@@ -369,11 +371,13 @@ window.editarVeiculo = function(id) {
 };
 
 window.excluirVeiculo = async function(id) {
-    if (!confirm("Tem certeza que deseja excluir este veículo? Isso não apagará o histórico de abastecimentos e manutenções dele, mas ele não constará na listagem principal.")) return;
+    if (!confirm("Tem certeza que deseja excluir este ve?culo? Isso n?o apagar? o hist?rico de abastecimentos e manuten??es dele, mas ele n?o constar? na listagem principal.")) return;
+
+    const okNuvem = await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
+    if (!okNuvem) return;
 
     frota = frota.filter(v => v.id !== id);
     salvarBanco(KEYS.FROTA, frota);
-    await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
     renderizarFrota();
     atualizarKPIsFrota();
 };

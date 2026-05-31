@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, setDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBJBUSmLTTvBriPk4R_Mt4zQq4w9CoP-pk",
@@ -16,6 +16,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+export async function reautenticarUsuarioAtual(senha) {
+    const user = auth.currentUser;
+    if (!user?.email) {
+        throw new Error('Usuário autenticado não encontrado. Faça login novamente.');
+    }
+    const credential = EmailAuthProvider.credential(user.email, senha);
+    await reauthenticateWithCredential(user, credential);
+    return true;
+}
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 
@@ -139,7 +149,7 @@ window.FS = {
 export { 
     collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, setDoc, onSnapshot, runTransaction,
     signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged,
-    GoogleAuthProvider, signInWithRedirect, getRedirectResult
+    GoogleAuthProvider, signInWithRedirect, getRedirectResult, EmailAuthProvider, reauthenticateWithCredential
 };
 
 
