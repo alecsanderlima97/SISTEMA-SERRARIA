@@ -1,7 +1,7 @@
 import { 
     auth, db, doc, getDoc, setDoc, getDocs, collection, query, where, deleteDoc, updateDoc,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    GoogleAuthProvider, signInWithRedirect, getRedirectResult
+    GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult
 } from './firebase-init.js';
 
 // ======================================================
@@ -105,67 +105,82 @@ if (tabBtnLogin && tabBtnRegister && loginForm && registerForm) {
 }
 
 // 2. TRATAMENTO DO REDIRECIONAMENTO E LOGIN COM GOOGLE
+async function prepararUsuarioGoogle(user) {
+    const userRef = doc(db, 'usuarios', user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) return;
+
+    const usersColl = collection(db, 'usuarios');
+    const q = query(usersColl, where('email', '==', user.email));
+    const qSnap = await getDocs(q);
+
+    if (!qSnap.empty) {
+        const docExistente = qSnap.docs[0];
+        const dadosExistentes = docExistente.data();
+
+        await setDoc(userRef, {
+            ...dadosExistentes,
+            uid: user.uid,
+            empresaId: dadosExistentes.empresaId || DEFAULT_EMPRESA_ID,
+            atualizadoEm: new Date().toISOString()
+        });
+
+        if (docExistente.id !== user.uid) {
+            await deleteDoc(doc(db, 'usuarios', docExistente.id));
+        }
+        return;
+    }
+
+    const cargoGoogle = getCargoInicial(user.email);
+    await setDoc(userRef, {
+        nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
+        email: user.email.toLowerCase(),
+        cargo: cargoGoogle,
+        cargoNormalizado: cargoGoogle === 'PENDENTE' ? 'PENDENTE' : cargoGoogle,
+        empresaId: DEFAULT_EMPRESA_ID,
+        criadoEm: new Date().toISOString()
+    });
+
+    if (cargoGoogle === 'PENDENTE') {
+        alert('Seu cadastro foi realizado com sucesso! Aguarde a aprova??o do Gerente para acessar o sistema.');
+    }
+}
+
 async function checkGoogleRedirectResult() {
     try {
         const result = await getRedirectResult(auth);
         if (result && result.user) {
-            const user = result.user;
-            
-            // Verifica se o usuário já tem registro de cargo no Firestore
-            const userRef = doc(db, 'usuarios', user.uid);
-            const userSnap = await getDoc(userRef);
-            
-            if (!userSnap.exists()) {
-                // Verifica se há pré-cadastro por email
-                const usersColl = collection(db, 'usuarios');
-                const q = query(usersColl, where('email', '==', user.email));
-                const qSnap = await getDocs(q);
-                
-                if (!qSnap.empty) {
-                    const docExistente = qSnap.docs[0];
-                    const dadosExistentes = docExistente.data();
-                    
-                    await setDoc(userRef, {
-                        ...dadosExistentes,
-                        uid: user.uid,
-                        empresaId: dadosExistentes.empresaId || DEFAULT_EMPRESA_ID,
-                        atualizadoEm: new Date().toISOString()
-                    });
-                    
-                    if (docExistente.id !== user.uid) {
-                        await deleteDoc(doc(db, 'usuarios', docExistente.id));
-                    }
-                } else {
-                    // Usuário totalmente novo cadastrando com Google
-                    const cargoGoogle = getCargoInicial(user.email);
-                    await setDoc(userRef, {
-                        nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
-                        email: user.email.toLowerCase(),
-                        cargo: cargoGoogle,
-                        empresaId: DEFAULT_EMPRESA_ID,
-                        criadoEm: new Date().toISOString()
-                    });
-                    if (cargoGoogle === 'PENDENTE') {
-                        alert("Seu cadastro foi realizado com sucesso! Aguarde a aprovação do Gerente para acessar o sistema.");
-                    }
-                }
-            }
+            await prepararUsuarioGoogle(result.user);
             goToSystemWithEntranceSound();
         }
     } catch (error) {
-        console.error("Erro no redirecionamento do Google:", error);
-        showError("Falha na autenticação com o Google. Tente novamente.");
+        console.error('Erro no redirecionamento do Google:', error);
+        showError('Falha na autentica??o com o Google. Tente novamente.');
     }
 }
 
-// Inicializa a escuta do redirect do Google
 checkGoogleRedirectResult();
 
-// Login com Google
 if (btnGoogleLogin) {
-    btnGoogleLogin.addEventListener('click', () => {
+    btnGoogleLogin.addEventListener('click', async () => {
         const provider = new GoogleAuthProvider();
-        signInWithRedirect(auth, provider);
+        provider.setCustomParameters({ prompt: 'select_account' });
+        btnGoogleLogin.disabled = true;
+        try {
+            const result = await signInWithPopup(auth, provider);
+            await prepararUsuarioGoogle(result.user);
+            goToSystemWithEntranceSound();
+        } catch (error) {
+            console.error('Erro no login popup do Google:', error);
+            if (['auth/popup-blocked', 'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment'].includes(error.code)) {
+                await signInWithRedirect(auth, provider);
+                return;
+            }
+            showError('Falha ao acessar com Google. Verifique se pop-ups estão liberados e tente novamente.');
+        } finally {
+            btnGoogleLogin.disabled = false;
+        }
     });
 }
 

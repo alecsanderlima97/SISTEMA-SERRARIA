@@ -176,8 +176,10 @@ function renderLineChart(label, dados) {
     const canvas = document.getElementById('chartVendasPeriodo');
     if (!canvas || typeof Chart === 'undefined') return;
     setChartTitle('chartDashboardLineTitle', label, 'chart-line');
-    const labels = Object.keys(dados).map(abreviarLabel);
-    const values = Object.values(dados);
+    const entries = Object.entries(dados || {}).sort(([a], [b]) => a.localeCompare(b));
+    const hasData = entries.some(([, value]) => Number(value) > 0);
+    const labels = hasData ? entries.map(([key]) => abreviarLabel(key)) : ['Sem dados'];
+    const values = hasData ? entries.map(([, value]) => Number(value) || 0) : [0];
     if (chartVendasInstance) chartVendasInstance.destroy();
     chartVendasInstance = new Chart(canvas.getContext('2d'), {
         type: 'line',
@@ -197,7 +199,12 @@ function renderLineChart(label, dados) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { labels: { color: '#e5e7eb' } },
-                tooltip: { backgroundColor: '#111827', titleColor: '#fff', bodyColor: '#e5e7eb' }
+                tooltip: {
+                    backgroundColor: '#111827',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumberChart(ctx.parsed.y)}` }
+                }
             },
             layout: { padding: { top: 8, right: 18, bottom: 24, left: 12 } },
             scales: {
@@ -205,7 +212,7 @@ function renderLineChart(label, dados) {
                     ticks: { color: '#9ca3af', maxRotation: 35, minRotation: 0, autoSkip: true, padding: 8 },
                     grid: { color: 'rgba(255,255,255,0.06)' }
                 },
-                y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: formatNumberChart }, grid: { color: 'rgba(255,255,255,0.06)' } }
             }
         }
     });
@@ -215,8 +222,12 @@ function renderBarChart(label, dados) {
     const canvas = document.getElementById('chartVolumeEspessura');
     if (!canvas || typeof Chart === 'undefined') return;
     setChartTitle('chartDashboardBarTitle', label, 'chart-bar');
-    const labels = Object.keys(dados).map(abreviarLabel);
-    const values = Object.values(dados);
+    const entries = Object.entries(dados || {})
+        .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
+        .slice(0, 8);
+    const hasData = entries.some(([, value]) => Number(value) > 0);
+    const labels = hasData ? entries.map(([key]) => abreviarLabel(key)) : ['Sem dados'];
+    const values = hasData ? entries.map(([, value]) => Number(value) || 0) : [0];
     if (chartVolumeInstance) chartVolumeInstance.destroy();
     chartVolumeInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
@@ -235,7 +246,12 @@ function renderBarChart(label, dados) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { labels: { color: '#e5e7eb' } },
-                tooltip: { backgroundColor: '#111827', titleColor: '#fff', bodyColor: '#e5e7eb' }
+                tooltip: {
+                    backgroundColor: '#111827',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumberChart(ctx.parsed.y)}` }
+                }
             },
             layout: { padding: { top: 8, right: 18, bottom: 28, left: 12 } },
             scales: {
@@ -243,7 +259,7 @@ function renderBarChart(label, dados) {
                     ticks: { color: '#9ca3af', maxRotation: 35, minRotation: 0, autoSkip: false, padding: 8 },
                     grid: { color: 'rgba(255,255,255,0.06)' }
                 },
-                y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: formatNumberChart }, grid: { color: 'rgba(255,255,255,0.06)' } }
             }
         }
     });
@@ -257,6 +273,11 @@ function setChartTitle(id, text, icon) {
 function abreviarLabel(label) {
     const texto = String(label || '-').trim();
     return texto.length > 18 ? `${texto.slice(0, 16)}...` : texto;
+}
+
+function formatNumberChart(value) {
+    const numero = Number(value) || 0;
+    return numero.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 }
 
 function getDataKey(item) {

@@ -1,6 +1,7 @@
-import { 
+import {
     auth, signOut, onAuthStateChanged, db, collection, getDocs,
-    doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot
+    doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot,
+    updatePassword
 } from './firebase-init.js';
 
 
@@ -1018,6 +1019,54 @@ window.excluirUsuario = async function(id) {
     } catch (err) {
         console.error("Erro ao excluir usuário:", err);
         alert("Erro ao excluir usuário.");
+    }
+};
+
+window.alterarSenhaPerfil = async function() {
+    const novaSenhaEl = document.getElementById('perfilNovaSenha');
+    const confirmarSenhaEl = document.getElementById('perfilConfirmarSenha');
+    const btn = document.getElementById('btnAlterarSenhaPerfil');
+    const novaSenha = (novaSenhaEl?.value || '').trim();
+    const confirmarSenha = (confirmarSenhaEl?.value || '').trim();
+
+    if (!auth.currentUser) {
+        alert('Sessão expirada. Faça login novamente para alterar a senha.');
+        return;
+    }
+    if (novaSenha.length < 6) {
+        alert('A nova senha precisa ter no mínimo 6 caracteres.');
+        return;
+    }
+    if (novaSenha !== confirmarSenha) {
+        alert('As senhas digitadas não coincidem.');
+        return;
+    }
+
+    const original = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Alterando...';
+    }
+
+    try {
+        await updatePassword(auth.currentUser, novaSenha);
+        novaSenhaEl.value = '';
+        confirmarSenhaEl.value = '';
+        alert('Senha alterada com sucesso. Use a nova senha no próximo login.');
+    } catch (err) {
+        console.error('Erro ao alterar senha:', err);
+        if (err.code === 'auth/requires-recent-login') {
+            alert('Por segurança, o Firebase exige login recente. Saia do sistema, entre novamente com e-mail e senha, e tente alterar a senha logo em seguida.');
+        } else if (err.code === 'auth/provider-already-linked' || err.code === 'auth/operation-not-allowed') {
+            alert('Esta conta usa provedor externo. Para contas Google, altere a senha diretamente na Conta Google.');
+        } else {
+            alert('Não foi possível alterar a senha agora. Verifique se você entrou com e-mail/senha e tente novamente.');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original || 'Alterar Senha';
+        }
     }
 };
 

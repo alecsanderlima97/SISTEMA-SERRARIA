@@ -128,13 +128,13 @@
                         <div style="display: flex; flex-direction: column; gap: 16px;">
                             <div>
                                 <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Nova Senha</label>
-                                <input type="password" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                <input type="password" id="perfilNovaSenha" autocomplete="new-password" minlength="6" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                             </div>
                             <div>
                                 <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Confirmar Senha</label>
-                                <input type="password" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                <input type="password" id="perfilConfirmarSenha" autocomplete="new-password" minlength="6" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                             </div>
-                            <button class="btn-primary" style="background: #0ea5e9; border-color: #0ea5e9; width: 100%; justify-content: center;" onclick="alert('Senha alterada!')">
+                            <button class="btn-primary" id="btnAlterarSenhaPerfil" style="background: #0ea5e9; border-color: #0ea5e9; width: 100%; justify-content: center;" onclick="window.alterarSenhaPerfil && window.alterarSenhaPerfil()">
                                 Alterar Senha
                             </button>
                         </div>

@@ -131,7 +131,7 @@
                         <canvas id="chartVolumeEspessura"></canvas>
                     </div>
                     <div class="chart-box glass-panel" style="min-height: 360px; padding-bottom: 28px;">
-                        <h3><i class="fa-solid fa-chart-line"></i> Vendas por Período</h3>
+                        <h3 id="chartDashboardLineTitle"><i class="fa-solid fa-chart-line"></i> Vendas por Período</h3>
 	                        <canvas id="chartVendasPeriodo"></canvas>
 	                </div>
                 <div id="dashboardResumoAnalitico" class="glass-panel" style="margin-top: 20px; padding: 18px; border-radius: 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
