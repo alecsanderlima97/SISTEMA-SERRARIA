@@ -1071,6 +1071,9 @@ const App = {
 
     carregarTabelaUsuarios() {
         const tbody = document.getElementById('tbodyConfigUsuarios');
+        const onlineAgoraEl = document.getElementById('usuariosOnlineAgora');
+        const ativosTotalEl = document.getElementById('usuariosAtivosTotal');
+        const pendentesTotalEl = document.getElementById('usuariosPendentesTotal');
         if (!tbody) return;
         
         // Se já existe um listener ativo para a lista de usuários, não recriamos
@@ -1092,6 +1095,8 @@ const App = {
                 }
                 
                 let html = '';
+                let totalOnline = 0;
+                let totalPendentes = 0;
                 this.usuariosConfigById = {};
                 qSnap.forEach(doc => {
                     const u = doc.data();
@@ -1101,6 +1106,8 @@ const App = {
                     const cargoFormatado = getRoleDisplayName(u.cargo);
                     const isPending = normalizeRole(u.cargo) === 'PENDENTE' || (permissions.allowedSections || []).length === 0;
                     const estaOnline = usuarioEstaOnline(u);
+                    if (isPending) totalPendentes += 1;
+                    if (estaOnline) totalOnline += 1;
                     const statusBadge = isPending 
                         ? `<span style="background: rgba(230,126,34,0.15); color: #e67e22; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(230,126,34,0.3);">Pendente</span>`
                         : `<span style="background: rgba(46,204,113,0.15); color: #2ecc71; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(46,204,113,0.3);">Ativo</span>`;
@@ -1133,6 +1140,9 @@ const App = {
                         </tr>
                     `;
                 });
+                if (onlineAgoraEl) onlineAgoraEl.textContent = String(totalOnline);
+                if (ativosTotalEl) ativosTotalEl.textContent = String(Math.max(0, qSnap.size - totalPendentes));
+                if (pendentesTotalEl) pendentesTotalEl.textContent = String(totalPendentes);
                 tbody.innerHTML = html;
             }, (error) => {
                 console.error("Erro na escuta da lista de usuários em tempo real:", error);

@@ -156,6 +156,21 @@
                             </button>
                         </div>
 
+                        <div id="usuariosPresenceResumo" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+                            <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.02);">
+                                <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Online agora</div>
+                                <strong id="usuariosOnlineAgora" style="font-size:22px; color:#4ade80;">0</strong>
+                            </div>
+                            <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.02);">
+                                <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Usuarios ativos</div>
+                                <strong id="usuariosAtivosTotal" style="font-size:22px; color:#f8fafc;">0</strong>
+                            </div>
+                            <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.02);">
+                                <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Pendentes</div>
+                                <strong id="usuariosPendentesTotal" style="font-size:22px; color:#f59e0b;">0</strong>
+                            </div>
+                        </div>
+
                         <div class="table-container">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead>
