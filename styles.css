@@ -1713,13 +1713,13 @@ body.role-pendente .global-header {
 }
 
 .assistant-home-search {
-    flex: 0 1 420px;
-    max-width: 420px;
-    min-width: 240px;
+    flex: 0 1 320px;
+    max-width: 320px;
+    min-width: 180px;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 1px solid var(--panel-border);
     border-radius: 10px;
     background: rgba(255,255,255,0.05);
@@ -2031,6 +2031,20 @@ body.role-pendente .global-header {
     gap: 12px;
 }
 
+.header-date-time {
+    min-width: 148px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: right;
+    white-space: nowrap;
+}
+
 .header-user-text {
     text-align: right;
 }
@@ -2192,7 +2206,7 @@ body.role-pendente .global-header {
 
     .assistant-home-search {
         min-width: 0;
-        max-width: none;
+        max-width: 240px;
         width: 100%;
         padding: 7px 9px;
         gap: 8px;
@@ -2205,6 +2219,12 @@ body.role-pendente .global-header {
     .header-user-group {
         gap: 8px;
         min-width: 0;
+    }
+
+    .header-date-time {
+        min-width: 126px;
+        padding: 5px 8px;
+        font-size: 0.72rem;
     }
 
     .header-user-text {

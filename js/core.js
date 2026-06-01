@@ -509,6 +509,7 @@ const App = {
     deepLinkFrotaAplicado: false,
     presenceIntervalId: null,
     presenceListenersReady: false,
+    headerClockIntervalId: null,
 
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
@@ -517,6 +518,7 @@ const App = {
         this.setupNavigation();
         this.setupSidebarCollapse();
         this.loadProfilePic();
+        this.iniciarRelogioCabecalho();
         inicializarMascarasPerfil();
         atualizarResumoBackup();
         
@@ -528,6 +530,34 @@ const App = {
             });
         }
         this.renderPermissionEditor();
+    },
+
+    iniciarRelogioCabecalho() {
+        const target = document.getElementById('headerDateTime');
+        if (!target) return;
+
+        const render = () => {
+            const agora = new Date();
+            const data = agora.toLocaleDateString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            const hora = agora.toLocaleTimeString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            target.innerHTML = `${data}<br>${hora} BRT`;
+        };
+
+        render();
+        if (this.headerClockIntervalId) {
+            clearInterval(this.headerClockIntervalId);
+        }
+        this.headerClockIntervalId = window.setInterval(render, 1000);
     },
 
     async atualizarMinhaPresenca(online = true, registrarAcesso = false) {
