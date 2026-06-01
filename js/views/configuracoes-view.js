@@ -120,6 +120,44 @@
 
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                            <i class="fa-solid fa-envelope-open-text" style="font-size: 24px; color: #60a5fa;"></i>
+                            <h2 style="margin: 0; font-size: 20px;">Integracao de E-mail</h2>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:14px;">
+                            <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
+                                <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Conta monitorada</div>
+                                <strong id="outlookAccountEmail" style="font-size:16px; color:#f8fafc;">escritoriovanmarte@hotmail.com</strong>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                                <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
+                                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Status</div>
+                                    <strong id="outlookIntegrationStatus" style="font-size:16px; color:#f59e0b;">Preparando</strong>
+                                </div>
+                                <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
+                                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Escopo inicial</div>
+                                    <strong style="font-size:16px; color:#f8fafc;">Leitura de e-mails</strong>
+                                </div>
+                            </div>
+
+                            <p id="outlookIntegrationHint" style="color:#cbd5e1; font-size:13px; line-height:1.6; margin:0;">
+                                Vamos usar a conta Outlook/Hotmail para receber documentos e mandar para fila de conferencia antes da importacao.
+                            </p>
+
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <button class="btn-primary" type="button" style="padding: 12px 16px;" onclick="window.iniciarConexaoOutlook && window.iniciarConexaoOutlook()">
+                                    <i class="fa-solid fa-link"></i> Conectar Outlook
+                                </button>
+                                <button class="btn-secondary" type="button" style="padding: 12px 16px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="window.verificarIntegracaoOutlook && window.verificarIntegracaoOutlook()">
+                                    <i class="fa-solid fa-rotate-right"></i> Atualizar Status
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-shield" style="font-size: 24px; color: #0ea5e9;"></i>
                             <h2 style="margin: 0; font-size: 20px;">Seguranca</h2>
                         </div>

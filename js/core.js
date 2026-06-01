@@ -178,6 +178,22 @@ const BACKUP_COLLECTIONS = [
     'usuarios'
 ];
 
+function definirStatusIntegracaoOutlook(status, mensagem) {
+    const statusEl = document.getElementById('outlookIntegrationStatus');
+    const hintEl = document.getElementById('outlookIntegrationHint');
+    if (statusEl) {
+        statusEl.textContent = status;
+        statusEl.style.color = status === 'Pronto para conectar'
+            ? '#4ade80'
+            : status === 'Configuracao pendente'
+                ? '#f59e0b'
+                : '#f8fafc';
+    }
+    if (hintEl && mensagem) {
+        hintEl.textContent = mensagem;
+    }
+}
+
 const BACKUP_LOCAL_KEYS = [
     'orquestrasis_theme',
     'orquestrasis_profile_pic',
@@ -519,6 +535,7 @@ const App = {
         this.setupSidebarCollapse();
         this.loadProfilePic();
         this.iniciarRelogioCabecalho();
+        this.verificarIntegracaoOutlook();
         inicializarMascarasPerfil();
         atualizarResumoBackup();
         
@@ -558,6 +575,53 @@ const App = {
             clearInterval(this.headerClockIntervalId);
         }
         this.headerClockIntervalId = window.setInterval(render, 1000);
+    },
+
+    async verificarIntegracaoOutlook() {
+        const emailEl = document.getElementById('outlookAccountEmail');
+        try {
+            const response = await fetch('/api/outlook-status');
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Falha ao consultar status da integracao.');
+            }
+
+            if (emailEl && data.accountEmail) {
+                emailEl.textContent = data.accountEmail;
+            }
+
+            if (data.configured) {
+                definirStatusIntegracaoOutlook(
+                    'Pronto para conectar',
+                    'A estrutura do Outlook ja foi preparada. O proximo passo e autorizar a conta Microsoft para leitura dos documentos recebidos.'
+                );
+            } else {
+                definirStatusIntegracaoOutlook(
+                    'Configuracao pendente',
+                    'Falta finalizar as credenciais da Microsoft na Vercel para ativar a conexao segura com o Outlook.'
+                );
+            }
+        } catch (error) {
+            console.error('Erro ao verificar integracao Outlook:', error);
+            definirStatusIntegracaoOutlook(
+                'Indisponivel',
+                'Nao foi possivel consultar a integracao Outlook agora. Tente atualizar o status novamente.'
+            );
+        }
+    },
+
+    async iniciarConexaoOutlook() {
+        try {
+            const response = await fetch('/api/outlook-auth');
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'A conexao Outlook ainda nao esta pronta.');
+            }
+            window.location.href = data.url;
+        } catch (error) {
+            console.error('Erro ao iniciar conexao Outlook:', error);
+            alert(error.message || 'Nao foi possivel iniciar a conexao com o Outlook agora.');
+        }
     },
 
     async atualizarMinhaPresenca(online = true, registrarAcesso = false) {
@@ -1197,6 +1261,8 @@ if (document.readyState === 'loading') {
 }
 
 window.App = App;
+window.verificarIntegracaoOutlook = () => App.verificarIntegracaoOutlook();
+window.iniciarConexaoOutlook = () => App.iniciarConexaoOutlook();
 window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
 window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
 window.navegarPara = function(targetId) {
