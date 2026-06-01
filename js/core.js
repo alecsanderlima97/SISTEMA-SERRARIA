@@ -184,9 +184,30 @@ const BACKUP_LOCAL_KEYS = [
     'orquestra_frota_relatos'
 ];
 
+const USER_ONLINE_TIMEOUT_MS = 1000 * 60 * 2;
+const USER_PRESENCE_HEARTBEAT_MS = 1000 * 45;
+
 function canRunCloudSnapshotForRole(role) {
     const normalized = normalizeRole(role);
     return normalized === 'gerente' || normalized === 'admin';
+}
+
+function formatarDataHoraCurta(valor) {
+    if (!valor) return '-';
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return '-';
+    return data.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function usuarioEstaOnline(userData = {}) {
+    if (!userData.online) return false;
+    const ultimaAtividade = new Date(userData.ultimaAtividadeEm || userData.onlineAtualizadoEm || 0).getTime();
+    return !!ultimaAtividade && (Date.now() - ultimaAtividade) <= USER_ONLINE_TIMEOUT_MS;
 }
 
 
@@ -486,6 +507,8 @@ const App = {
     userUnsubscribe: null, // Guarda a função de desinscrição do onSnapshot
     usuariosUnsubscribe: null, // Guarda a função de desinscrição da lista de usuários
     deepLinkFrotaAplicado: false,
+    presenceIntervalId: null,
+    presenceListenersReady: false,
 
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
@@ -505,6 +528,70 @@ const App = {
             });
         }
         this.renderPermissionEditor();
+    },
+
+    async atualizarMinhaPresenca(online = true, registrarAcesso = false) {
+        if (!this.user?.uid) return;
+        try {
+            const agora = new Date().toISOString();
+            const payload = {
+                online,
+                ultimaAtividadeEm: agora,
+                onlineAtualizadoEm: agora
+            };
+            if (registrarAcesso) payload.ultimoAcessoEm = agora;
+            await setDoc(doc(db, 'usuarios', this.user.uid), payload, { merge: true });
+        } catch (error) {
+            console.error('Erro ao atualizar presenca do usuario:', error);
+        }
+    },
+
+    iniciarPresencaUsuario() {
+        if (!this.user?.uid) return;
+
+        if (this.presenceIntervalId) {
+            clearInterval(this.presenceIntervalId);
+        }
+
+        this.atualizarMinhaPresenca(true, true);
+        this.presenceIntervalId = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                this.atualizarMinhaPresenca(true, false);
+            }
+        }, USER_PRESENCE_HEARTBEAT_MS);
+
+        if (this.presenceListenersReady) return;
+        this.presenceListenersReady = true;
+
+        const marcarAtividade = () => {
+            if (document.visibilityState === 'visible') {
+                this.atualizarMinhaPresenca(true, false);
+            }
+        };
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.atualizarMinhaPresenca(false, false);
+            } else {
+                marcarAtividade();
+            }
+        });
+        window.addEventListener('focus', marcarAtividade);
+        window.addEventListener('click', marcarAtividade, true);
+        window.addEventListener('keydown', marcarAtividade, true);
+        window.addEventListener('pagehide', () => {
+            this.atualizarMinhaPresenca(false, false);
+        });
+    },
+
+    pararPresencaUsuario() {
+        if (this.presenceIntervalId) {
+            clearInterval(this.presenceIntervalId);
+            this.presenceIntervalId = null;
+        }
+        if (this.user?.uid) {
+            this.atualizarMinhaPresenca(false, false);
+        }
     },
 
     getCurrentPermissions() {
@@ -877,9 +964,11 @@ const App = {
                 }
                 
                 carregarDadosSerrariaEmitente();
+                this.iniciarPresencaUsuario();
                 
             } else {
                 console.warn("Core: Usuário desautenticado ou desconectado.");
+                this.pararPresencaUsuario();
                 if (!window.location.pathname.includes('login.html')) {
                     window.location.href = 'login.html';
                 }
@@ -913,6 +1002,7 @@ const App = {
 
     async logout() {
         try {
+            this.pararPresencaUsuario();
             await signOut(auth);
             window.location.href = 'login.html';
         } catch (error) {
@@ -1010,16 +1100,26 @@ const App = {
                     const permissions = getEffectivePermissions(u);
                     const cargoFormatado = getRoleDisplayName(u.cargo);
                     const isPending = normalizeRole(u.cargo) === 'PENDENTE' || (permissions.allowedSections || []).length === 0;
+                    const estaOnline = usuarioEstaOnline(u);
                     const statusBadge = isPending 
                         ? `<span style="background: rgba(230,126,34,0.15); color: #e67e22; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(230,126,34,0.3);">Pendente</span>`
                         : `<span style="background: rgba(46,204,113,0.15); color: #2ecc71; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(46,204,113,0.3);">Ativo</span>`;
+                    const presencaBadge = estaOnline
+                        ? `<span style="background: rgba(34,197,94,0.15); color: #4ade80; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(34,197,94,0.3);">Online agora</span>`
+                        : `<span style="background: rgba(148,163,184,0.15); color: #cbd5e1; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(148,163,184,0.25);">Offline</span>`;
+                    const ultimaAtividade = formatarDataHoraCurta(u.ultimaAtividadeEm || u.ultimoAcessoEm);
                     
                     html += `
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
                             <td><strong style="color: white;">${u.nome}</strong></td>
                             <td>${u.email}</td>
                             <td><span style="color: var(--accent-color); font-weight: 500;">${cargoFormatado}</span></td>
-                            <td>${statusBadge}</td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:6px;">
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap;">${statusBadge}${presencaBadge}</div>
+                                    <small style="color: var(--text-muted);">Ultima atividade: ${ultimaAtividade}</small>
+                                </div>
+                            </td>
                             <td style="text-align: right;">
                                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
                                     <button onclick="window.abrirEditarUsuario('${id}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">

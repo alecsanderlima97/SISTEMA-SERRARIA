@@ -163,7 +163,7 @@
                                         <th>Nome</th>
                                         <th>E-mail</th>
                                         <th>Perfil / Funcao</th>
-                                        <th>Status</th>
+                                        <th>Status / Presenca</th>
                                         <th style="text-align: right;">Acoes</th>
                                     </tr>
                                 </thead>

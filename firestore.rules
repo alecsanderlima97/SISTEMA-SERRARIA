@@ -34,7 +34,7 @@ service cloud.firestore {
       return signedIn()
         && userId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['nome', 'email', 'uid', 'atualizadoEm']);
+          .hasOnly(['nome', 'email', 'uid', 'atualizadoEm', 'online', 'ultimoAcessoEm', 'ultimaAtividadeEm', 'onlineAtualizadoEm']);
     }
 
     function isSafeSelfUserCreate(userId) {
