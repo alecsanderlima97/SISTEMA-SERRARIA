@@ -156,6 +156,23 @@
                                     <i class="fa-solid fa-link-slash"></i> Desconectar
                                 </button>
                             </div>
+
+                            <div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                                    <strong style="font-size:15px; color:#f8fafc;">Documentos recebidos</strong>
+                                    <button class="btn-secondary" type="button" style="padding: 10px 14px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="window.carregarMensagensOutlook && window.carregarMensagensOutlook()">
+                                        <i class="fa-solid fa-inbox"></i> Atualizar Caixa
+                                    </button>
+                                </div>
+                                <div id="outlookMessagesInfo" style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+                                    Conecte o Outlook para listar os ultimos e-mails com anexos.
+                                </div>
+                                <div id="outlookMessagesList" style="display:flex; flex-direction:column; gap:10px;">
+                                    <div style="padding:12px; border:1px dashed rgba(255,255,255,0.12); border-radius:10px; color:#94a3b8;">
+                                        Nenhum documento carregado ainda.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

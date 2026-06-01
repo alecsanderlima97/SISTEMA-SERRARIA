@@ -36,12 +36,12 @@ Primeira etapa entregue:
 - endpoint `/api/outlook-auth`
 - endpoint `/api/outlook-callback`
 - endpoint `/api/outlook-disconnect`
+- endpoint `/api/outlook-messages`
 - painel visual em `Configuracoes` para mostrar status da integracao
 
 Proximas etapas:
 
 1. Registrar app na Microsoft
 2. Configurar variaveis de ambiente na Vercel
-3. Buscar mensagens e anexos
-4. Criar fila `documentos_recebidos`
-5. Validar/importar no sistema
+3. Criar fila `documentos_recebidos`
+4. Validar/importar no sistema

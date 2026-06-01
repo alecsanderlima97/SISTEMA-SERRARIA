@@ -44,6 +44,32 @@ function getOutlookConfig() {
     };
 }
 
+async function refreshOutlookAccessToken(refreshToken) {
+    const { clientId, clientSecret, tenantId } = getOutlookConfig();
+    if (!clientId || !clientSecret || !refreshToken) {
+        throw new Error('Credenciais Outlook incompletas para renovar acesso.');
+    }
+
+    const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+            scope: 'offline_access openid profile email Mail.Read'
+        })
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenData.access_token) {
+        throw new Error(tokenData.error_description || tokenData.error || 'Falha ao renovar acesso Outlook.');
+    }
+
+    return tokenData;
+}
+
 module.exports = {
     REFRESH_COOKIE,
     META_COOKIE,
@@ -51,5 +77,6 @@ module.exports = {
     serializeCookie,
     encodeMeta,
     decodeMeta,
-    getOutlookConfig
+    getOutlookConfig,
+    refreshOutlookAccessToken
 };

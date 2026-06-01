@@ -220,6 +220,15 @@ function tratarRetornoOutlook() {
     alert(mensagem);
 }
 
+function formatarTamanhoArquivo(bytes) {
+    const tamanho = Number(bytes || 0);
+    if (!tamanho) return '0 KB';
+    if (tamanho >= 1024 * 1024) {
+        return `${(tamanho / (1024 * 1024)).toFixed(2)} MB`;
+    }
+    return `${Math.max(1, Math.round(tamanho / 1024))} KB`;
+}
+
 const BACKUP_LOCAL_KEYS = [
     'orquestrasis_theme',
     'orquestrasis_profile_pic',
@@ -623,6 +632,7 @@ const App = {
                         'Conectado',
                         `Conta conectada: ${data.connectedEmail || 'Outlook autorizado'}. Agora ja podemos partir para a leitura dos documentos recebidos.`
                     );
+                    this.carregarMensagensOutlook();
                 } else {
                     definirStatusIntegracaoOutlook(
                         'Pronto para conectar',
@@ -665,11 +675,67 @@ const App = {
             if (!response.ok || !data.ok) {
                 throw new Error(data.error || 'Nao foi possivel desconectar o Outlook.');
             }
+            const infoEl = document.getElementById('outlookMessagesInfo');
+            const listEl = document.getElementById('outlookMessagesList');
+            if (infoEl) infoEl.textContent = 'Conecte o Outlook para listar os ultimos e-mails com anexos.';
+            if (listEl) {
+                listEl.innerHTML = '<div style="padding:12px; border:1px dashed rgba(255,255,255,0.12); border-radius:10px; color:#94a3b8;">Nenhum documento carregado ainda.</div>';
+            }
             await this.verificarIntegracaoOutlook();
             alert('Outlook desconectado com sucesso.');
         } catch (error) {
             console.error('Erro ao desconectar Outlook:', error);
             alert(error.message || 'Nao foi possivel desconectar o Outlook agora.');
+        }
+    },
+
+    async carregarMensagensOutlook() {
+        const infoEl = document.getElementById('outlookMessagesInfo');
+        const listEl = document.getElementById('outlookMessagesList');
+        if (!infoEl || !listEl) return;
+
+        infoEl.textContent = 'Carregando ultimos e-mails e anexos do Outlook...';
+        listEl.innerHTML = '<div style="padding:12px; border:1px dashed rgba(255,255,255,0.12); border-radius:10px; color:#94a3b8;">Buscando documentos...</div>';
+
+        try {
+            const response = await fetch('/api/outlook-messages');
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Nao foi possivel listar os e-mails do Outlook.');
+            }
+
+            const messages = Array.isArray(data.messages) ? data.messages : [];
+            infoEl.textContent = `${messages.length} e-mails carregados para ${data.connectedEmail || 'Outlook conectado'}.`;
+
+            if (!messages.length) {
+                listEl.innerHTML = '<div style="padding:12px; border:1px dashed rgba(255,255,255,0.12); border-radius:10px; color:#94a3b8;">Nenhum e-mail encontrado nesta leitura.</div>';
+                return;
+            }
+
+            listEl.innerHTML = messages.map((message) => {
+                const anexos = Array.isArray(message.anexos) ? message.anexos : [];
+                const anexosHtml = anexos.length
+                    ? anexos.map((anexo) => `<span style="display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.18); color:#bfdbfe; font-size:12px;">${anexo.nome} (${formatarTamanhoArquivo(anexo.tamanho)})</span>`).join(' ')
+                    : '<span style="color:#94a3b8; font-size:12px;">Sem anexos nesta mensagem.</span>';
+
+                return `
+                    <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
+                        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px;">
+                            <div>
+                                <strong style="display:block; color:#f8fafc; font-size:14px;">${message.assunto || '(Sem assunto)'}</strong>
+                                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">${message.remetenteNome || message.remetente || 'Remetente nao identificado'} • ${formatarDataHoraCurta(message.recebidoEm)}</div>
+                            </div>
+                            <span style="padding:5px 8px; border-radius:999px; background:${anexos.length ? 'rgba(74,222,128,0.12)' : 'rgba(148,163,184,0.12)'}; color:${anexos.length ? '#86efac' : '#cbd5e1'}; font-size:12px; border:1px solid ${anexos.length ? 'rgba(74,222,128,0.18)' : 'rgba(148,163,184,0.18)'};">${anexos.length ? `${anexos.length} anexo(s)` : 'Sem anexos'}</span>
+                        </div>
+                        <div style="font-size:13px; color:#cbd5e1; line-height:1.55; margin-bottom:10px;">${message.resumo || 'Sem resumo disponivel.'}</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">${anexosHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Erro ao carregar mensagens Outlook:', error);
+            infoEl.textContent = 'Nao foi possivel atualizar a caixa Outlook agora.';
+            listEl.innerHTML = `<div style="padding:12px; border:1px dashed rgba(248,113,113,0.35); border-radius:10px; color:#fecaca;">${error.message || 'Falha ao listar os e-mails.'}</div>`;
         }
     },
 
@@ -1313,6 +1379,7 @@ window.App = App;
 window.verificarIntegracaoOutlook = () => App.verificarIntegracaoOutlook();
 window.iniciarConexaoOutlook = () => App.iniciarConexaoOutlook();
 window.desconectarOutlook = () => App.desconectarOutlook();
+window.carregarMensagensOutlook = () => App.carregarMensagensOutlook();
 window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
 window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
 window.navegarPara = function(targetId) {
