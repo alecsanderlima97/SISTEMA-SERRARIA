@@ -97,18 +97,22 @@ function getEffectivePermissions(userData = {}) {
         const allowedSections = role === 'gerente'
             ? [...new Set([...custom.allowedSections, ...defaultSections])]
             : custom.allowedSections;
-        return {
+        return normalizePermissionModel({
             allowedSections,
             allowedSubsections: custom.allowedSubsections || {},
+            writeSections: custom.writeSections,
+            deleteSections: custom.deleteSections,
             readOnly: !!custom.readOnly
-        };
+        });
     }
     const defaults = getDefaultRolePermissions(userData.cargo);
-    return {
+    return normalizePermissionModel({
         allowedSections: defaults.allowedSections || [],
         allowedSubsections: {},
+        writeSections: defaults.readOnly ? [] : (defaults.allowedSections || []),
+        deleteSections: defaults.readOnly ? [] : (normalizeRole(userData.cargo) === 'gerente' ? (defaults.allowedSections || []) : []),
         readOnly: !!defaults.readOnly
-    };
+    });
 }
 
 function getRoleDisplayName(role) {
@@ -123,6 +127,25 @@ function permissionOptionHtml(item, checked = false) {
             <span style="font-size: 0.9rem; color: #f8fafc;">${item.label}</span>
         </label>
     `;
+}
+
+function normalizePermissionModel(selected = {}) {
+    const allowedSections = Array.isArray(selected.allowedSections) ? selected.allowedSections : [];
+    const allowedSubsections = selected.allowedSubsections || {};
+    const writeSections = Array.isArray(selected.writeSections)
+        ? selected.writeSections.filter(sectionId => allowedSections.includes(sectionId))
+        : (selected.readOnly ? [] : [...allowedSections]);
+    const deleteSections = Array.isArray(selected.deleteSections)
+        ? selected.deleteSections.filter(sectionId => allowedSections.includes(sectionId))
+        : [];
+
+    return {
+        allowedSections,
+        allowedSubsections,
+        writeSections,
+        deleteSections,
+        readOnly: writeSections.length === 0
+    };
 }
 
 const PROFILE_FIELD_IDS = {
@@ -480,6 +503,16 @@ const App = {
         return (permissions.allowedSections || []).includes(sectionId);
     },
 
+    canWriteSection(sectionId) {
+        const permissions = this.getCurrentPermissions();
+        return (permissions.writeSections || []).includes(sectionId);
+    },
+
+    canDeleteSection(sectionId) {
+        const permissions = this.getCurrentPermissions();
+        return (permissions.deleteSections || []).includes(sectionId);
+    },
+
     canAccessSubsection(sectionId, subId) {
         const permissions = this.getCurrentPermissions();
         const allowed = permissions.allowedSubsections || {};
@@ -518,9 +551,13 @@ const App = {
         const allowedSections = selected.allowedSections || [];
         container.innerHTML = SECTION_PERMISSIONS.map(item => permissionOptionHtml(item, allowedSections.includes(item.id))).join('');
         container.querySelectorAll('input[type="checkbox"]').forEach(input => {
-            input.addEventListener('change', () => this.renderSubPermissionEditor(this.getPermissionsFromForm()));
+            input.addEventListener('change', () => {
+                this.renderSubPermissionEditor(this.getPermissionsFromForm());
+                this.renderSectionActionEditor(this.getPermissionsFromForm());
+            });
         });
         this.renderSubPermissionEditor(selected);
+        this.renderSectionActionEditor(selected);
     },
 
     renderSubPermissionEditor(selected = {}) {
@@ -551,17 +588,62 @@ const App = {
         }).join('');
     },
 
+    renderSectionActionEditor(selected = {}) {
+        const wrap = document.getElementById('form-user-acoes-wrap');
+        const container = document.getElementById('form-user-acoes');
+        if (!wrap || !container) return;
+
+        const normalized = normalizePermissionModel(selected);
+        const allowedSections = normalized.allowedSections || [];
+        if (allowedSections.length === 0) {
+            wrap.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        wrap.style.display = 'block';
+        container.innerHTML = allowedSections.map(sectionId => {
+            const section = SECTION_PERMISSIONS.find(item => item.id === sectionId);
+            const canWrite = (normalized.writeSections || []).includes(sectionId);
+            const canDelete = (normalized.deleteSections || []).includes(sectionId);
+            return `
+                <label style="display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.025);">
+                    <span style="font-size:0.9rem; color:#f8fafc; font-weight:700;">${section?.label || sectionId}</span>
+                    <span style="display:flex; gap:14px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1;">
+                            <input type="checkbox" data-action-write="${sectionId}" ${canWrite ? 'checked' : ''}>
+                            <span>Editar</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1;">
+                            <input type="checkbox" data-action-delete="${sectionId}" ${canDelete ? 'checked' : ''}>
+                            <span>Excluir</span>
+                        </label>
+                    </span>
+                </label>
+            `;
+        }).join('');
+    },
+
     getPermissionsFromForm() {
         const sectionInputs = Array.from(document.querySelectorAll('#form-user-permissoes input[type="checkbox"]:checked'));
         const allowedSections = sectionInputs.map(input => input.value);
         const allowedSubsections = {};
+        const writeSections = [];
+        const deleteSections = [];
 
         document.querySelectorAll('#form-user-subpermissoes [data-subsection-group]').forEach(group => {
             const sectionId = group.getAttribute('data-subsection-group');
             allowedSubsections[sectionId] = Array.from(group.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);
         });
 
-        return { allowedSections, allowedSubsections, readOnly: false };
+        document.querySelectorAll('#form-user-acoes input[data-action-write]:checked').forEach(input => {
+            writeSections.push(input.getAttribute('data-action-write'));
+        });
+        document.querySelectorAll('#form-user-acoes input[data-action-delete]:checked').forEach(input => {
+            deleteSections.push(input.getAttribute('data-action-delete'));
+        });
+
+        return normalizePermissionModel({ allowedSections, allowedSubsections, writeSections, deleteSections });
     },
 
 

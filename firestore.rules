@@ -43,6 +43,181 @@ service cloud.firestore {
         && !(userDoc().data.cargo in ['PENDENTE', 'pendente']);
     }
 
+    function userRole() {
+      return userDoc().data.cargoNormalizado != null
+        ? userDoc().data.cargoNormalizado
+        : userDoc().data.cargo;
+    }
+
+    function hasRole(roles) {
+      return userRole() in roles;
+    }
+
+    function hasCustomPermissionList(listName) {
+      return 'permissoes' in userDoc().data
+        && listName in userDoc().data.permissoes
+        && userDoc().data.permissoes[listName] is list;
+    }
+
+    function collectionMatchesSections(collection, sections) {
+      return
+        ((collection in ['clientes']) && 'view-clientes' in sections)
+        || ((collection in ['clientes_subprodutos', 'vendas_subprodutos']) && 'view-cavaco' in sections)
+        || ((collection in ['romaneios']) && 'view-romaneio-v2' in sections)
+        || ((collection in ['historico', 'romaneios', 'vendas_subprodutos']) && 'view-historico' in sections)
+        || ((collection in ['transportes']) && 'view-transportes' in sections)
+        || ((collection in ['empreiteiros', 'entradas']) && 'view-entrada' in sections)
+        || ((collection in ['produtos']) && 'view-produtos' in sections)
+        || ((collection in ['estoque', 'estoque_movimentacoes']) && 'view-estoque' in sections)
+        || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']) && 'view-frotas' in sections)
+        || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais']) && 'view-financeiro' in sections)
+        || ((collection in ['funcionarios']) && 'view-rh' in sections)
+        || ((collection in ['agenda']) && 'view-agenda' in sections)
+        || ((collection in ['patio_relatorios']) && 'view-dashboard' in sections)
+        || ((collection in ['usuarios']) && 'view-configuracoes' in sections);
+    }
+
+    function canReadByCustomPermission(collection) {
+      return hasCustomPermissionList('allowedSections')
+        && collectionMatchesSections(collection, userDoc().data.permissoes.allowedSections);
+    }
+
+    function canWriteByCustomPermission(collection) {
+      return hasCustomPermissionList('writeSections')
+        && collectionMatchesSections(collection, userDoc().data.permissoes.writeSections);
+    }
+
+    function canDeleteByCustomPermission(collection) {
+      return hasCustomPermissionList('deleteSections')
+        && collectionMatchesSections(collection, userDoc().data.permissoes.deleteSections);
+    }
+
+    function canReadCollection(collection) {
+      return isAdmin() || isBootstrapAdmin()
+        || canReadByCustomPermission(collection)
+        || (
+        isApprovedUser() && (
+          hasRole(['patrao', 'PATRÃO', 'Patrao', 'PATRÃO'])
+          || (hasRole(['mecanico', 'MECANICO', 'Mecânico', 'Mecanico']) && collection in [
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes',
+            'estoque',
+            'estoque_movimentacoes',
+            'financeiro_lancamentos'
+          ])
+          || (hasRole(['muqueiro', 'MUQUEIRO', 'Muqueiro']) && collection in [
+            'empreiteiros',
+            'entradas'
+          ])
+          || (hasRole(['estoquista', 'ESTOQUISTA', 'Estoquista']) && collection in [
+            'estoque',
+            'estoque_movimentacoes',
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes'
+          ])
+          || (hasRole(['gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL', 'gerente geral', 'admin', 'ADMIN']) && collection in [
+            'clientes',
+            'clientes_subprodutos',
+            'produtos',
+            'transportes',
+            'empreiteiros',
+            'entradas',
+            'romaneios',
+            'historico',
+            'vendas_subprodutos',
+            'patio_relatorios',
+            'funcionarios',
+            'agenda',
+            'estoque',
+            'estoque_movimentacoes',
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes',
+            'financeiro_lancamentos',
+            'financeiro_relatorios_mensais'
+          ])
+        )
+      );
+    }
+
+    function canWriteCollection(collection) {
+      return isAdmin() || isBootstrapAdmin()
+        || canWriteByCustomPermission(collection)
+        || (
+        isApprovedUser() && (
+          (hasRole(['mecanico', 'MECANICO', 'Mecânico', 'Mecanico']) && collection in [
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes',
+            'estoque',
+            'estoque_movimentacoes',
+            'financeiro_lancamentos'
+          ])
+          || (hasRole(['muqueiro', 'MUQUEIRO', 'Muqueiro']) && collection in [
+            'empreiteiros',
+            'entradas'
+          ])
+          || (hasRole(['estoquista', 'ESTOQUISTA', 'Estoquista']) && collection in [
+            'estoque',
+            'estoque_movimentacoes'
+          ])
+          || (hasRole(['gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL', 'gerente geral', 'admin', 'ADMIN']) && collection in [
+            'clientes',
+            'clientes_subprodutos',
+            'produtos',
+            'transportes',
+            'empreiteiros',
+            'entradas',
+            'romaneios',
+            'historico',
+            'vendas_subprodutos',
+            'patio_relatorios',
+            'funcionarios',
+            'agenda',
+            'estoque',
+            'estoque_movimentacoes',
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes',
+            'financeiro_lancamentos',
+            'financeiro_relatorios_mensais'
+          ])
+        )
+      );
+    }
+
+    function canDeleteCollection(collection) {
+      return isAdmin() || isBootstrapAdmin()
+        || canDeleteByCustomPermission(collection)
+        || (
+        isApprovedUser() && (
+          (hasRole(['gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL', 'gerente geral', 'admin', 'ADMIN']) && collection in [
+            'clientes',
+            'clientes_subprodutos',
+            'produtos',
+            'transportes',
+            'empreiteiros',
+            'entradas',
+            'romaneios',
+            'historico',
+            'vendas_subprodutos',
+            'patio_relatorios',
+            'funcionarios',
+            'agenda',
+            'estoque',
+            'estoque_movimentacoes',
+            'frotas',
+            'frota_abastecimentos',
+            'frota_manutencoes',
+            'financeiro_lancamentos',
+            'financeiro_relatorios_mensais'
+          ])
+        )
+      );
+    }
+
     function sameEmpresaOnRead() {
       return !('empresaId' in resource.data)
         || !('empresaId' in userDoc().data)
@@ -63,7 +238,7 @@ service cloud.firestore {
     }
 
     match /{collection}/{document} {
-      allow read: if isApprovedUser()
+      allow read: if canReadCollection(collection)
         && sameEmpresaOnRead()
         && collection in [
           'clientes',
@@ -87,7 +262,7 @@ service cloud.firestore {
           'financeiro_relatorios_mensais'
         ];
 
-      allow create, update: if isApprovedUser()
+      allow create, update: if canWriteCollection(collection)
         && sameEmpresaOnWrite()
         && collection in [
           'clientes',
@@ -111,7 +286,7 @@ service cloud.firestore {
           'financeiro_relatorios_mensais'
         ];
 
-      allow delete: if isApprovedUser()
+      allow delete: if canDeleteCollection(collection)
         && sameEmpresaOnRead()
         && collection in [
           'clientes',

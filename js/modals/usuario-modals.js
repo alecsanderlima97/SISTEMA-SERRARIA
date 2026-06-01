@@ -29,6 +29,10 @@
                         <label>Telas internas liberadas</label>
                         <div id="form-user-subpermissoes" style="display: grid; gap: 12px; padding: 12px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;"></div>
                     </div>
+                    <div class="input-group" id="form-user-acoes-wrap" style="margin-bottom: 20px; display: none;">
+                        <label>Niveis por aba</label>
+                        <div id="form-user-acoes" style="display: grid; gap: 12px; padding: 12px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;"></div>
+                    </div>
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
                         <button type="button" class="btn-secondary" onclick="window.fecharModalUsuario()">Cancelar</button>
                         <button type="submit" class="btn-primary" id="btnSalvarUsuario">Salvar Usuário</button>
