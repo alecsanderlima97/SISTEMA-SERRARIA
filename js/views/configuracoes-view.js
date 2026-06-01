@@ -152,6 +152,9 @@
                                 <button class="btn-secondary" type="button" style="padding: 12px 16px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="window.verificarIntegracaoOutlook && window.verificarIntegracaoOutlook()">
                                     <i class="fa-solid fa-rotate-right"></i> Atualizar Status
                                 </button>
+                                <button class="btn-secondary" type="button" style="padding: 12px 16px; background: rgba(239,68,68,0.08); color: #fecaca; border: 1px solid rgba(239,68,68,0.22);" onclick="window.desconectarOutlook && window.desconectarOutlook()">
+                                    <i class="fa-solid fa-link-slash"></i> Desconectar
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -18,6 +18,10 @@ Configuracoes necessarias na Vercel:
 - `OUTLOOK_TENANT_ID` (opcional, pode usar `common`)
 - `OUTLOOK_TARGET_EMAIL=escritoriovanmarte@hotmail.com`
 
+Redirect URI sugerida:
+
+- `https://orquestracs.com/api/outlook-callback`
+
 Escopos Microsoft planejados:
 
 - `offline_access`
@@ -30,13 +34,14 @@ Primeira etapa entregue:
 
 - endpoint `/api/outlook-status`
 - endpoint `/api/outlook-auth`
+- endpoint `/api/outlook-callback`
+- endpoint `/api/outlook-disconnect`
 - painel visual em `Configuracoes` para mostrar status da integracao
 
 Proximas etapas:
 
 1. Registrar app na Microsoft
 2. Configurar variaveis de ambiente na Vercel
-3. Implementar callback seguro e troca do `code` por token
-4. Buscar mensagens e anexos
-5. Criar fila `documentos_recebidos`
-6. Validar/importar no sistema
+3. Buscar mensagens e anexos
+4. Criar fila `documentos_recebidos`
+5. Validar/importar no sistema

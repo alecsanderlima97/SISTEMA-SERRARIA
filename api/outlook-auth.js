@@ -1,7 +1,7 @@
+const { getOutlookConfig } = require('./outlook-utils');
+
 function buildAuthUrl() {
-    const clientId = process.env.OUTLOOK_CLIENT_ID;
-    const redirectUri = process.env.OUTLOOK_REDIRECT_URI;
-    const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+    const { clientId, redirectUri, tenantId } = getOutlookConfig();
 
     if (!clientId || !redirectUri) {
         return null;

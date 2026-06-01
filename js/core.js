@@ -194,6 +194,32 @@ function definirStatusIntegracaoOutlook(status, mensagem) {
     }
 }
 
+function tratarRetornoOutlook() {
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get('outlook');
+    const motivo = url.searchParams.get('motivo');
+    const email = url.searchParams.get('email');
+    if (!status) return;
+
+    url.searchParams.delete('outlook');
+    url.searchParams.delete('motivo');
+    url.searchParams.delete('email');
+    window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : '') + url.hash);
+
+    if (status === 'conectado') {
+        alert('Outlook conectado com sucesso.');
+        return;
+    }
+
+    let mensagem = 'Nao foi possivel concluir a conexao com o Outlook.';
+    if (motivo === 'conta-diferente' && email) {
+        mensagem = `A conta conectada foi ${email}. Use o e-mail escritoriovanmarte@hotmail.com para continuar.`;
+    } else if (motivo) {
+        mensagem = `Falha ao conectar Outlook: ${motivo}`;
+    }
+    alert(mensagem);
+}
+
 const BACKUP_LOCAL_KEYS = [
     'orquestrasis_theme',
     'orquestrasis_profile_pic',
@@ -534,6 +560,7 @@ const App = {
         this.setupNavigation();
         this.setupSidebarCollapse();
         this.loadProfilePic();
+        tratarRetornoOutlook();
         this.iniciarRelogioCabecalho();
         this.verificarIntegracaoOutlook();
         inicializarMascarasPerfil();
@@ -591,10 +618,17 @@ const App = {
             }
 
             if (data.configured) {
-                definirStatusIntegracaoOutlook(
-                    'Pronto para conectar',
-                    'A estrutura do Outlook ja foi preparada. O proximo passo e autorizar a conta Microsoft para leitura dos documentos recebidos.'
-                );
+                if (data.connected) {
+                    definirStatusIntegracaoOutlook(
+                        'Conectado',
+                        `Conta conectada: ${data.connectedEmail || 'Outlook autorizado'}. Agora ja podemos partir para a leitura dos documentos recebidos.`
+                    );
+                } else {
+                    definirStatusIntegracaoOutlook(
+                        'Pronto para conectar',
+                        'A estrutura do Outlook ja foi preparada. O proximo passo e autorizar a conta Microsoft para leitura dos documentos recebidos.'
+                    );
+                }
             } else {
                 definirStatusIntegracaoOutlook(
                     'Configuracao pendente',
@@ -621,6 +655,21 @@ const App = {
         } catch (error) {
             console.error('Erro ao iniciar conexao Outlook:', error);
             alert(error.message || 'Nao foi possivel iniciar a conexao com o Outlook agora.');
+        }
+    },
+
+    async desconectarOutlook() {
+        try {
+            const response = await fetch('/api/outlook-disconnect', { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error || 'Nao foi possivel desconectar o Outlook.');
+            }
+            await this.verificarIntegracaoOutlook();
+            alert('Outlook desconectado com sucesso.');
+        } catch (error) {
+            console.error('Erro ao desconectar Outlook:', error);
+            alert(error.message || 'Nao foi possivel desconectar o Outlook agora.');
         }
     },
 
@@ -1263,6 +1312,7 @@ if (document.readyState === 'loading') {
 window.App = App;
 window.verificarIntegracaoOutlook = () => App.verificarIntegracaoOutlook();
 window.iniciarConexaoOutlook = () => App.iniciarConexaoOutlook();
+window.desconectarOutlook = () => App.desconectarOutlook();
 window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
 window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
 window.navegarPara = function(targetId) {
