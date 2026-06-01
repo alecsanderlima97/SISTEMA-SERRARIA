@@ -125,6 +125,42 @@ function permissionOptionHtml(item, checked = false) {
     `;
 }
 
+const PROFILE_FIELD_IDS = {
+    nome: 'perfilNome',
+    email: 'perfilEmail',
+    cpf: 'perfilCpf',
+    cnpj: 'perfilCnpj',
+    telefone: 'perfilTelefone',
+    instagram: 'perfilInstagram',
+    endereco: 'perfilEndereco'
+};
+
+const BACKUP_COLLECTIONS = [
+    'produtos',
+    'clientes',
+    'transportes',
+    'romaneios',
+    'entradas',
+    'empreiteiros',
+    'vendas_subprodutos',
+    'estoque',
+    'estoque_movimentacoes',
+    'frotas',
+    'frota_abastecimentos',
+    'frota_manutencoes',
+    'financeiro_lancamentos',
+    'financeiro_relatorios_mensais',
+    'patio_relatorios',
+    'agenda',
+    'usuarios'
+];
+
+const BACKUP_LOCAL_KEYS = [
+    'orquestrasis_theme',
+    'orquestrasis_profile_pic',
+    'orquestra_frota_relatos'
+];
+
 
 // Objeto de compatibilidade para evitar que scripts antigos travem o sistema
 window.DB = {
@@ -284,33 +320,29 @@ window.exportarBackup = async function(btnElement) {
 
     try {
         const backupData = {
-            produtos: [],
-            clientes: [],
-            romaneios: [],
-            entradas: [],
-            empreiteiros: [],
-            dataExportacao: new Date().toISOString()
+            versao: 2,
+            dataExportacao: new Date().toISOString(),
+            collectionsExportadas: [...BACKUP_COLLECTIONS],
+            localStorageKeysExportadas: [...BACKUP_LOCAL_KEYS],
+            firestore: {},
+            localStorage: {}
         };
 
-        // 1. Puxar Produtos
-        const prodSnap = await getDocs(collection(db, 'produtos'));
-        prodSnap.forEach(doc => backupData.produtos.push({ id: doc.id, ...doc.data() }));
+        for (const collName of BACKUP_COLLECTIONS) {
+            const snap = await getDocs(collection(db, collName));
+            backupData.firestore[collName] = [];
+            snap.forEach(itemDoc => backupData.firestore[collName].push({ id: itemDoc.id, ...itemDoc.data() }));
+        }
 
-        // 2. Puxar Clientes
-        const cliSnap = await getDocs(collection(db, 'clientes'));
-        cliSnap.forEach(doc => backupData.clientes.push({ id: doc.id, ...doc.data() }));
-
-        // 3. Puxar Romaneios
-        const romSnap = await getDocs(collection(db, 'romaneios'));
-        romSnap.forEach(doc => backupData.romaneios.push({ id: doc.id, ...doc.data() }));
-
-        // 4. Puxar Entradas de Tora
-        const entSnap = await getDocs(collection(db, 'entradas'));
-        entSnap.forEach(doc => backupData.entradas.push({ id: doc.id, ...doc.data() }));
-
-        // 5. Puxar Empreiteiros
-        const empSnap = await getDocs(collection(db, 'empreiteiros'));
-        empSnap.forEach(doc => backupData.empreiteiros.push({ id: doc.id, ...doc.data() }));
+        BACKUP_LOCAL_KEYS.forEach(key => {
+            const raw = localStorage.getItem(key);
+            if (raw === null) return;
+            try {
+                backupData.localStorage[key] = JSON.parse(raw);
+            } catch {
+                backupData.localStorage[key] = raw;
+            }
+        });
 
         // Gerar arquivo JSON e fazer o download
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
@@ -321,7 +353,7 @@ window.exportarBackup = async function(btnElement) {
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
 
-        if (!btnElement) alert('Backup concluído e baixado com sucesso!');
+        if (!btnElement) alert('Backup concluido e baixado com sucesso!');
 
     } catch (error) {
         console.error("Erro ao gerar backup:", error);
@@ -334,8 +366,84 @@ window.exportarBackup = async function(btnElement) {
     }
 };
 
+function aplicarMascaraCpf(valor = '') {
+    return valor.replace(/\D/g, '').slice(0, 11)
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function aplicarMascaraCnpj(valor = '') {
+    return valor.replace(/\D/g, '').slice(0, 14)
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+}
+
+function aplicarMascaraTelefone(valor = '') {
+    const numeros = valor.replace(/\D/g, '').slice(0, 11);
+    if (numeros.length <= 10) {
+        return numeros
+            .replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return numeros
+        .replace(/^(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function preencherFormularioPerfil(userData = {}, authUser = null) {
+    const values = {
+        nome: userData.nome || authUser?.displayName || authUser?.email?.split('@')[0] || '',
+        email: authUser?.email || userData.email || '',
+        cpf: userData.cpf || '',
+        cnpj: userData.cnpj || '',
+        telefone: userData.telefone || '',
+        instagram: userData.instagram || '',
+        endereco: userData.endereco || ''
+    };
+
+    Object.entries(PROFILE_FIELD_IDS).forEach(([key, id]) => {
+        const input = document.getElementById(id);
+        if (input) input.value = values[key] || '';
+    });
+}
+
+function atualizarResumoBackup() {
+    const box = document.getElementById('backupInfoResumo');
+    if (!box) return;
+    box.textContent = `Firestore: ${BACKUP_COLLECTIONS.join(', ')}. Local: ${BACKUP_LOCAL_KEYS.join(', ')}.`;
+}
+
+function inicializarMascarasPerfil() {
+    const cpfInput = document.getElementById(PROFILE_FIELD_IDS.cpf);
+    const cnpjInput = document.getElementById(PROFILE_FIELD_IDS.cnpj);
+    const telefoneInput = document.getElementById(PROFILE_FIELD_IDS.telefone);
+
+    if (cpfInput && !cpfInput.dataset.maskReady) {
+        cpfInput.dataset.maskReady = 'true';
+        cpfInput.addEventListener('input', event => {
+            event.target.value = aplicarMascaraCpf(event.target.value);
+        });
+    }
+    if (cnpjInput && !cnpjInput.dataset.maskReady) {
+        cnpjInput.dataset.maskReady = 'true';
+        cnpjInput.addEventListener('input', event => {
+            event.target.value = aplicarMascaraCnpj(event.target.value);
+        });
+    }
+    if (telefoneInput && !telefoneInput.dataset.maskReady) {
+        telefoneInput.dataset.maskReady = 'true';
+        telefoneInput.addEventListener('input', event => {
+            event.target.value = aplicarMascaraTelefone(event.target.value);
+        });
+    }
+}
+
 const App = {
     user: null,
+    userData: null,
     userRole: 'PENDENTE',
     userPermissions: { allowedSections: ['view-pendente'], allowedSubsections: {}, readOnly: true },
     usuariosConfigById: {},
@@ -350,6 +458,8 @@ const App = {
         this.setupNavigation();
         this.setupSidebarCollapse();
         this.loadProfilePic();
+        inicializarMascarasPerfil();
+        atualizarResumoBackup();
         
         const btnSalvar = document.getElementById('btnSalvarUsuario');
         if (btnSalvar) {
@@ -578,6 +688,7 @@ const App = {
                         const novoCargo = userData.cargo || 'PENDENTE';
                         const novoNome = userData.nome || user.email.split('@')[0].toUpperCase();
                         const novasPermissoes = getEffectivePermissions(userData);
+                        this.userData = userData;
                         window.AppUserContext = {
                             uid: user.uid,
                             email: user.email,
@@ -609,6 +720,9 @@ const App = {
                         const roleHeader = document.querySelector('.header-user-role');
                         if (nameHeader) nameHeader.textContent = this.userName;
                         if (roleHeader) roleHeader.textContent = getRoleDisplayName(this.userRole);
+                        preencherFormularioPerfil(userData, user);
+                        inicializarMascarasPerfil();
+                        atualizarResumoBackup();
                         this.applyPermissionVisibility();
                         
                         // Direcionar telas de acordo com a permissão atômica atualizada
@@ -892,6 +1006,65 @@ window.previewFotoPerfil = function(event) {
             localStorage.setItem('orquestrasis_profile_pic', e.target.result);
         };
         reader.readAsDataURL(file);
+    }
+};
+
+window.salvarPerfilUsuario = async function() {
+    const btn = document.getElementById('btnSalvarPerfil');
+    const authUser = auth.currentUser;
+    if (!authUser) {
+        alert('Sessao expirada. Faca login novamente.');
+        return;
+    }
+
+    const nome = (document.getElementById(PROFILE_FIELD_IDS.nome)?.value || '').trim().toUpperCase();
+    const cpf = aplicarMascaraCpf(document.getElementById(PROFILE_FIELD_IDS.cpf)?.value || '');
+    const cnpj = aplicarMascaraCnpj(document.getElementById(PROFILE_FIELD_IDS.cnpj)?.value || '');
+    const telefone = aplicarMascaraTelefone(document.getElementById(PROFILE_FIELD_IDS.telefone)?.value || '');
+    const instagram = (document.getElementById(PROFILE_FIELD_IDS.instagram)?.value || '').trim();
+    const endereco = (document.getElementById(PROFILE_FIELD_IDS.endereco)?.value || '').trim().toUpperCase();
+
+    if (!nome) {
+        alert('Informe o nome do usuario.');
+        return;
+    }
+
+    const original = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
+    }
+
+    try {
+        const userRef = doc(db, 'usuarios', authUser.uid);
+        const payload = {
+            nome,
+            email: authUser.email || '',
+            cpf,
+            cnpj,
+            telefone,
+            instagram,
+            endereco,
+            atualizadoEm: new Date().toISOString()
+        };
+        await setDoc(userRef, payload, { merge: true });
+
+        if (App) {
+            App.userName = nome;
+            App.userData = { ...(App.userData || {}), ...payload };
+        }
+        preencherFormularioPerfil(payload, authUser);
+        const nameHeader = document.getElementById('userNameHeader');
+        if (nameHeader) nameHeader.textContent = nome;
+        alert('Perfil salvo com sucesso.');
+    } catch (err) {
+        console.error('Erro ao salvar perfil do usuario:', err);
+        alert('Nao foi possivel salvar o perfil agora.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original || 'SALVAR CONFIGURACOES';
+        }
     }
 };
 

@@ -1,17 +1,16 @@
 (function() {
     const html = `            <section id="view-configuracoes" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-gear"></i> Configurações do Sistema</h1>
-                    <p>Gerencie seus dados e backups com segurança.</p>
+                    <h1><i class="fa-solid fa-gear"></i> Configuracoes do Sistema</h1>
+                    <p>Gerencie seus dados e backups com seguranca.</p>
                 </div>
 
                 <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
                     
-                    <!-- Perfil Administrador -->
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-user" style="font-size: 24px; color: var(--accent-color);"></i>
-                            <h2 style="margin: 0; font-size: 20px;">Perfil do Usuário</h2>
+                            <h2 style="margin: 0; font-size: 20px;">Perfil do Usuario</h2>
                         </div>
                         
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 24px;">
@@ -29,46 +28,45 @@
                             <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Nome</label>
-                                    <input type="text" value="Administrador" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilNome" value="Administrador" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">E-mail</label>
-                                    <input type="email" value="admin@orquestra.cs" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="email" id="perfilEmail" value="admin@orquestra.cs" readonly style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white; opacity: 0.75;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">CPF</label>
-                                    <input type="text" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilCpf" placeholder="000.000.000-00" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">CNPJ</label>
-                                    <input type="text" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilCnpj" placeholder="00.000.000/0000-00" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Telefone</label>
-                                    <input type="text" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilTelefone" placeholder="(00) 00000-0000" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Instagram</label>
-                                    <input type="text" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilInstagram" placeholder="@seuinstagram" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div style="grid-column: span 2;">
-                                    <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Endereço Completo</label>
-                                    <input type="text" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Endereco Completo</label>
+                                    <input type="text" id="perfilEndereco" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                             </div>
 
-                            <button class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="alert('Configurações de perfil salvas com sucesso!')">
+                            <button class="btn-primary" id="btnSalvarPerfil" style="width: 100%; justify-content: center; padding: 14px;" onclick="window.salvarPerfilUsuario && window.salvarPerfilUsuario()">
                                 <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i>
-                                SALVAR CONFIGURAÇÕES
+                                SALVAR CONFIGURACOES
                             </button>
                         </div>
                     </div>
 
-                    <!-- Personalização de Tema -->
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-palette" style="font-size: 24px; color: var(--accent-color);"></i>
-                            <h2 style="margin: 0; font-size: 20px;">Personalização</h2>
+                            <h2 style="margin: 0; font-size: 20px;">Personalizacao</h2>
                         </div>
                         
                         <p style="color: #ccc; font-size: 14px; margin-bottom: 16px;">Escolha o visual que mais combina com seu estilo:</p>
@@ -93,7 +91,6 @@
                         </div>
                     </div>
                     
-                    <!-- Backup e Restauração -->
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent-color);"></i>
@@ -101,8 +98,11 @@
                         </div>
                         
                         <p style="color: #ccc; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
-                            Exporte ou importe todos os dados do sistema para segurança ou migração.
+                            Exporte ou importe todos os dados do sistema para seguranca ou migracao.
                         </p>
+                        <div id="backupInfoResumo" style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 18px;">
+                            O backup inclui os principais cadastros e movimentos salvos no Firestore, mais algumas preferencias locais do navegador.
+                        </div>
 
                         <div style="display: flex; flex-direction: column; gap: 16px;">
                             <button class="btn-primary" style="width: 100%; justify-content: center; padding: 16px;" onclick="window.exportarBackup(this)">
@@ -118,11 +118,10 @@
                         </div>
                     </div>
 
-                    <!-- Segurança e Senha -->
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-shield" style="font-size: 24px; color: #0ea5e9;"></i>
-                            <h2 style="margin: 0; font-size: 20px;">Segurança</h2>
+                            <h2 style="margin: 0; font-size: 20px;">Seguranca</h2>
                         </div>
                         
                         <div style="display: flex; flex-direction: column; gap: 16px;">
@@ -141,20 +140,19 @@
 
                         <div style="margin-top: 24px; padding: 15px; background: rgba(14, 165, 233, 0.05); border-radius: 12px; border: 1px solid rgba(14, 165, 233, 0.1);">
                             <p style="color: #0ea5e9; font-size: 12px; margin: 0;">
-                                Sua autenticação é feita com segurança usando Firebase Auth.
+                                Sua autenticacao e feita com seguranca usando Firebase Auth.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Painel Usuários e Permissões -->
                     <div class="glass-panel" id="panelConfigUsuarios" style="grid-column: span 2; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <i class="fa-solid fa-users-gear" style="font-size: 24px; color: var(--accent-color);"></i>
-                                <h2 style="margin: 0; font-size: 20px;">Controle de Usuários & Permissões</h2>
+                                <h2 style="margin: 0; font-size: 20px;">Controle de Usuarios e Permissoes</h2>
                             </div>
                             <button class="btn-primary" onclick="window.abrirModalNovoUsuario()" style="padding: 8px 16px; font-size: 14px;">
-                                <i class="fa-solid fa-user-plus"></i> Novo Usuário
+                                <i class="fa-solid fa-user-plus"></i> Novo Usuario
                             </button>
                         </div>
 
@@ -164,14 +162,14 @@
                                     <tr>
                                         <th>Nome</th>
                                         <th>E-mail</th>
-                                        <th>Perfil / Função</th>
+                                        <th>Perfil / Funcao</th>
                                         <th>Status</th>
-                                        <th style="text-align: right;">Ações</th>
+                                        <th style="text-align: right;">Acoes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyConfigUsuarios">
                                     <tr>
-                                        <td colspan="5" style="text-align: center; color: #888;">Carregando usuários...</td>
+                                        <td colspan="5" style="text-align: center; color: #888;">Carregando usuarios...</td>
                                     </tr>
                                 </tbody>
                             </table>
