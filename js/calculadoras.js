@@ -552,6 +552,53 @@ renderListaCaminhoesSub();
 });
 
 // Emissão de recibos de subprodutos
+function gerarHtmlReciboSubproduto(venda) {
+    const esc = window.DocActions?.escapeHtml || ((value) => String(value ?? ''));
+    return `
+        <div class="doc-header">
+            <div>
+                <img src="logo.png" alt="VANMARTE" class="doc-logo" onerror="this.style.display='none'">
+                <div style="margin-top:10px; color:#334155; font-size:13px;"><strong>Recibo de Venda de Subprodutos</strong></div>
+            </div>
+            <div class="doc-title">
+                <h1>${esc(venda.cliente)} - ${esc(venda.romaneio)}</h1>
+                <p><strong>Subprodutos</strong></p>
+                <p>Emitido em ${new Date().toLocaleString('pt-BR')}</p>
+            </div>
+        </div>
+        <div class="doc-grid">
+            <div class="doc-card">
+                <h3>Comprador</h3>
+                <p><strong>Cliente/Empresa:</strong> ${esc(venda.cliente)}</p>
+                <p><strong>CNPJ/CPF:</strong> ${esc(venda.documento)}</p>
+                <p><strong>Insc. Estadual:</strong> ${esc(venda.ie)}</p>
+                <p><strong>Endereco:</strong> ${esc(venda.logradouro)}</p>
+                <p><strong>Cidade/Estado:</strong> ${esc(venda.cidadeEstado)}</p>
+            </div>
+            <div class="doc-card">
+                <h3>Transporte</h3>
+                <p><strong>Motorista:</strong> ${esc(venda.motorista)}</p>
+                <p><strong>Caminhao:</strong> ${esc(venda.caminhao)}</p>
+                <p><strong>Placa Caminhao:</strong> ${esc(venda.placaCaminhao)}</p>
+                <p><strong>Placa Carreta:</strong> ${esc(venda.placaCarreta)}</p>
+                <p><strong>Medidas:</strong> ${esc(venda.medidasTexto)}</p>
+            </div>
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>Romaneio</th><th>Romaneio Cliente</th><th>Produto</th><th>Quantidade</th><th>Valor Unit.</th><th>Total</th></tr></thead>
+            <tbody><tr>
+                <td>${esc(venda.romaneio)}</td>
+                <td>${esc(venda.romaneioCliente)}</td>
+                <td>${esc(venda.tipo)}</td>
+                <td><strong>${Number(venda.quantidade || 0).toLocaleString('pt-BR')} ${esc(venda.unidade)}</strong></td>
+                <td>R$ ${Number(venda.valorUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td class="doc-money">R$ ${Number(venda.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            </tr></tbody>
+        </table>
+        <div class="doc-signatures"><div>Responsavel / Conferente</div><div>Cliente / Motorista</div></div>
+    `;
+}
+
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
         const tipo = document.getElementById('calcCavTipo').value;
@@ -616,49 +663,37 @@ if (btnCalcCavaco) {
             console.log("Calculadoras: Venda de subproduto salva no Firebase");
             document.dispatchEvent(new Event('historicoUpdated'));
 
-            // Preencher área de impressão
-            document.getElementById('printCavRomaneio').textContent = romaneio;
-            document.getElementById('printCavRomaneioCliente').textContent = romaneioCliente;
-            document.getElementById('printCavCliente').textContent = cliente;
-            document.getElementById('printCavDoc').textContent = docCli;
-            document.getElementById('printCavIE').textContent = ieCli;
-            document.getElementById('printCavLogradouro').textContent = logradouro;
-            document.getElementById('printCavCidadeEstado').textContent = cidadeEstado;
-            
-            document.getElementById('printCavMotorista').textContent = motorista;
-            document.getElementById('printCavCaminhao').textContent = caminhao;
-            document.getElementById('printCavPlacaCaminhao').textContent = placaCaminhao;
-            document.getElementById('printCavPlacaCarreta').textContent = placaCarreta;
-            
             let medidasStr = '---';
             if (alt > 0 && larg > 0 && comp > 0) {
                 medidasStr = `${alt.toFixed(2)}m (Alt) x ${larg.toFixed(2)}m (Larg) x ${comp.toFixed(2)}m (Comp)`;
                 if (cupimAdicional > 0) {
-                    medidasStr += ` + ${cupimAdicional.toFixed(2)} m³ (Cupim adicional)`;
+                    medidasStr += ` + ${cupimAdicional.toFixed(2)} m3 (Cupim adicional)`;
                 }
             }
-            document.getElementById('printCavMedidas').textContent = medidasStr;
 
-            document.getElementById('printCavData').textContent = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('printCavTipo').textContent = tipo;
-            document.getElementById('printCavQtd').textContent = qtd.toLocaleString('pt-BR');
-            document.getElementById('printCavUni').textContent = unidade;
-            document.getElementById('printCavValorUni').textContent = valorUni.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('printCavTotal').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const docName = window.DocActions?.buildDocumentName
+                ? window.DocActions.buildDocumentName([cliente, romaneio])
+                : `${cliente} - ${romaneio}`;
+            const contentHtml = gerarHtmlReciboSubproduto({
+                ...novaVenda,
+                medidasTexto: medidasStr
+            });
 
-            const printArea = document.getElementById('printAreaSubprodutos');
-            if (printArea) {
-                printArea.style.display = 'block';
-                window.print();
-                printArea.style.display = 'none';
-                
-                alert("Venda de subproduto registrada e enviada para impressão!");
-                
-                // Limpar apenas o formulário de emissão de recibo para manter a SPA fluida
-                document.getElementById('formCavaco').reset();
-                if (document.getElementById('calcCavSelectCliente')) {
-                    document.getElementById('calcCavSelectCliente').value = '';
+            if (window.DocActions?.printHtml) {
+                window.DocActions.printHtml({ title: docName, contentHtml });
+            } else {
+                const win = window.open('', '_blank');
+                if (win) {
+                    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docName}</title></head><body>${contentHtml}</body></html>`);
+                    win.document.close();
+                    win.print();
                 }
+            }
+
+            alert("Venda de subproduto registrada e enviada para impressao!");
+            document.getElementById('formCavaco').reset();
+            if (document.getElementById('calcCavSelectCliente')) {
+                document.getElementById('calcCavSelectCliente').value = '';
             }
         } catch (e) {
             console.error("Erro ao salvar venda de subproduto:", e);
