@@ -420,6 +420,7 @@ if (selectCavCli) {
             document.getElementById('calcCavAlt').value = '';
             document.getElementById('calcCavLarg').value = '';
             document.getElementById('calcCavComp').value = '';
+            document.getElementById('calcCavCupimAdicional').value = '';
             
             document.getElementById('calcCavQtd').value = '';
             document.getElementById('calcCavValor').value = '';
@@ -440,6 +441,7 @@ if (selectCavCli) {
                     document.getElementById('calcCavAlt').value = cli.medidas.alt || '';
                     document.getElementById('calcCavLarg').value = cli.medidas.larg || '';
                     document.getElementById('calcCavComp').value = cli.medidas.comp || '';
+                    document.getElementById('calcCavCupimAdicional').value = cli.medidas.cupimAdicional || '';
                 }
                 
                 const chkParticular = document.getElementById('calcCavCarregamentoParticular');
@@ -490,10 +492,11 @@ function calcularCubagemCaminhaoTempoReal() {
     const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
     const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
     const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
+    const cupimAdicional = parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0;
     const qtdInput = document.getElementById('calcCavQtd');
     
     if (alt > 0 && larg > 0 && comp > 0) {
-        const vol = alt * larg * comp;
+        const vol = (alt * larg * comp) + cupimAdicional;
         if (qtdInput) {
             qtdInput.value = String(Math.round(vol));
         }
@@ -541,7 +544,7 @@ if (chkCavParticular) {
 renderListaCaminhoesSub();
 
 // Ouvintes de cubagem
-['calcCavAlt', 'calcCavLarg', 'calcCavComp'].forEach(id => {
+['calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         input.addEventListener('input', calcularCubagemCaminhaoTempoReal);
@@ -572,6 +575,7 @@ if (btnCalcCavaco) {
         const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
         const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
         const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
+        const cupimAdicional = parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0;
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
@@ -599,7 +603,7 @@ if (btnCalcCavaco) {
                 caminhao: caminhao.toUpperCase().trim(),
                 placaCaminhao: placaCaminhao.toUpperCase().trim(),
                 placaCarreta: placaCarreta.toUpperCase().trim(),
-                medidas: { alt, larg, comp },
+                medidas: { alt, larg, comp, cupimAdicional },
                 tipo: tipo,
                 unidade: unidade,
                 quantidade: qtd,
@@ -629,6 +633,9 @@ if (btnCalcCavaco) {
             let medidasStr = '---';
             if (alt > 0 && larg > 0 && comp > 0) {
                 medidasStr = `${alt.toFixed(2)}m (Alt) x ${larg.toFixed(2)}m (Larg) x ${comp.toFixed(2)}m (Comp)`;
+                if (cupimAdicional > 0) {
+                    medidasStr += ` + ${cupimAdicional.toFixed(2)} m³ (Cupim adicional)`;
+                }
             }
             document.getElementById('printCavMedidas').textContent = medidasStr;
 

@@ -207,7 +207,7 @@
                             </div>
 
                             <!-- 3 Medidas para Calcular Volume em m3 -->
-                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
                                     <input type="number" id="calcCavAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -219,6 +219,10 @@
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Comp (COMP)</label>
                                     <input type="number" id="calcCavComp" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: #ccc;">Cupim Adic.</label>
+                                    <input type="number" id="calcCavCupimAdicional" step="0.01" placeholder="m³" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                             </div>
                             
