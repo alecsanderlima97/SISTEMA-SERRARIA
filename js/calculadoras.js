@@ -65,6 +65,78 @@ const btnCalcCavaco = document.getElementById('btnCalcCavaco');
 
 let clientesSubprodutosCache = [];
 let clienteSubprodutoEditandoId = null;
+let caminhoesSubprodutoForm = [];
+
+function normalizarCaminhoesSubproduto(cli = {}) {
+    if (Array.isArray(cli.caminhoes) && cli.caminhoes.length) {
+        return cli.caminhoes.map(item => ({
+            modelo: (item.modelo || '').toUpperCase().trim(),
+            placaCaminhao: (item.placaCaminhao || '').toUpperCase().trim(),
+            placaCarreta: (item.placaCarreta || '').toUpperCase().trim()
+        })).filter(item => item.modelo || item.placaCaminhao || item.placaCarreta);
+    }
+
+    const legado = {
+        modelo: (cli.caminhao || '').toUpperCase().trim(),
+        placaCaminhao: (cli.placaCaminhao || '').toUpperCase().trim(),
+        placaCarreta: (cli.placaCarreta || '').toUpperCase().trim()
+    };
+
+    return legado.modelo || legado.placaCaminhao || legado.placaCarreta ? [legado] : [];
+}
+
+function renderListaCaminhoesSub() {
+    const lista = document.getElementById('subCliListaCaminhoes');
+    if (!lista) return;
+
+    if (!caminhoesSubprodutoForm.length) {
+        lista.innerHTML = '<div style="font-size:0.8rem; color:#94a3b8;">Nenhum caminhão adicional cadastrado.</div>';
+        return;
+    }
+
+    lista.innerHTML = caminhoesSubprodutoForm.map((item, index) => `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(15,23,42,0.35);">
+            <div style="font-size:0.85rem; line-height:1.5;">
+                <div><strong>${item.modelo || 'Sem modelo'}</strong></div>
+                <div>Placa cavalo: ${item.placaCaminhao || '-'}</div>
+                <div>Placa carreta: ${item.placaCarreta || '-'}</div>
+            </div>
+            <button type="button" class="btn-icon" style="color:var(--danger-color);" onclick="window.removerCaminhaoSub(${index})" title="Remover caminhão">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function preencherCaminhaoSelecionadoSub(caminhao) {
+    document.getElementById('calcCavCaminhao').value = caminhao?.modelo || '';
+    document.getElementById('calcCavPlacaCaminhao').value = caminhao?.placaCaminhao || '';
+    document.getElementById('calcCavPlacaCarreta').value = caminhao?.placaCarreta || '';
+}
+
+function preencherSeletorCaminhoesSub(cli) {
+    const select = document.getElementById('calcCavCaminhaoSelecionado');
+    if (!select) return;
+
+    const caminhoes = normalizarCaminhoesSubproduto(cli);
+    select.innerHTML = '<option value="">Selecionar caminhão cadastrado</option>';
+
+    caminhoes.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        const partes = [item.modelo, item.placaCaminhao, item.placaCarreta].filter(Boolean);
+        option.textContent = partes.join(' | ') || `Caminhão ${index + 1}`;
+        select.appendChild(option);
+    });
+
+    if (caminhoes.length) {
+        select.value = '0';
+        preencherCaminhaoSelecionadoSub(caminhoes[0]);
+    } else {
+        select.value = '';
+        preencherCaminhaoSelecionadoSub(null);
+    }
+}
 
 // --- Gestão de Clientes de Subprodutos (CRUD & Sync) ---
 
@@ -135,10 +207,14 @@ window.editarClienteSub = (id) => {
     
     document.getElementById('subCliValorCavaco').value = window.formatCurrencyValue(cli.valorCavaco);
     document.getElementById('subCliValorPo').value = window.formatCurrencyValue(cli.valorPo);
+    document.getElementById('subCliValorCavacoParticular').value = window.formatCurrencyValue(cli.valorCavacoParticular || 0);
+    document.getElementById('subCliValorPoParticular').value = window.formatCurrencyValue(cli.valorPoParticular || 0);
     
-    document.getElementById('subCliCaminhao').value = cli.caminhao || '';
-    document.getElementById('subCliPlacaCaminhao').value = cli.placaCaminhao || '';
-    document.getElementById('subCliPlacaCarreta').value = cli.placaCarreta || '';
+    caminhoesSubprodutoForm = normalizarCaminhoesSubproduto(cli);
+    document.getElementById('subCliCaminhao').value = '';
+    document.getElementById('subCliPlacaCaminhao').value = '';
+    document.getElementById('subCliPlacaCarreta').value = '';
+    renderListaCaminhoesSub();
     
     if (cli.medidas) {
         document.getElementById('subCliAlt').value = cli.medidas.alt || '';
@@ -186,6 +262,8 @@ if (formCliSub) {
         
         const valorCavaco = window.parseCurrencyValue(document.getElementById('subCliValorCavaco').value);
         const valorPo = window.parseCurrencyValue(document.getElementById('subCliValorPo').value);
+        const valorCavacoParticular = window.parseCurrencyValue(document.getElementById('subCliValorCavacoParticular').value);
+        const valorPoParticular = window.parseCurrencyValue(document.getElementById('subCliValorPoParticular').value);
         
         const caminhao = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
         const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
@@ -200,6 +278,16 @@ if (formCliSub) {
             return;
         }
         
+        const caminhoes = [
+            ...caminhoesSubprodutoForm,
+            ...(caminhao || placaCaminhao || placaCarreta ? [{
+                modelo: caminhao,
+                placaCaminhao,
+                placaCarreta
+            }] : [])
+        ];
+        const caminhaoPrincipal = caminhoes[0] || { modelo: '', placaCaminhao: '', placaCarreta: '' };
+
         const dadosCli = {
             nome,
             documento: docNum,
@@ -208,9 +296,12 @@ if (formCliSub) {
             cidadeEstado,
             valorCavaco,
             valorPo,
-            caminhao,
-            placaCaminhao,
-            placaCarreta,
+            valorCavacoParticular,
+            valorPoParticular,
+            caminhao: caminhaoPrincipal.modelo,
+            placaCaminhao: caminhaoPrincipal.placaCaminhao,
+            placaCarreta: caminhaoPrincipal.placaCarreta,
+            caminhoes,
             medidas: { alt, larg, comp }
         };
         
@@ -233,6 +324,8 @@ if (formCliSub) {
             }
             
             formCliSub.reset();
+            caminhoesSubprodutoForm = [];
+            renderListaCaminhoesSub();
             await carregarClientesSubprodutos();
         } catch (error) {
             console.error("Erro ao salvar cliente:", error);
@@ -316,9 +409,13 @@ if (selectCavCli) {
             document.getElementById('calcCavLogradouro').value = '';
             document.getElementById('calcCavCidadeEstado').value = '';
             
+            const selectCaminhao = document.getElementById('calcCavCaminhaoSelecionado');
+            if (selectCaminhao) selectCaminhao.innerHTML = '<option value="">Selecionar caminhão cadastrado</option>';
             document.getElementById('calcCavCaminhao').value = '';
             document.getElementById('calcCavPlacaCaminhao').value = '';
             document.getElementById('calcCavPlacaCarreta').value = '';
+            const chkParticular = document.getElementById('calcCavCarregamentoParticular');
+            if (chkParticular) chkParticular.checked = false;
             
             document.getElementById('calcCavAlt').value = '';
             document.getElementById('calcCavLarg').value = '';
@@ -337,9 +434,7 @@ if (selectCavCli) {
                 document.getElementById('calcCavLogradouro').value = cli.logradouro || '';
                 document.getElementById('calcCavCidadeEstado').value = cli.cidadeEstado || '';
                 
-                document.getElementById('calcCavCaminhao').value = cli.caminhao || '';
-                document.getElementById('calcCavPlacaCaminhao').value = cli.placaCaminhao || '';
-                document.getElementById('calcCavPlacaCarreta').value = cli.placaCarreta || '';
+                preencherSeletorCaminhoesSub(cli);
                 
                 if (cli.medidas) {
                     document.getElementById('calcCavAlt').value = cli.medidas.alt || '';
@@ -347,6 +442,8 @@ if (selectCavCli) {
                     document.getElementById('calcCavComp').value = cli.medidas.comp || '';
                 }
                 
+                const chkParticular = document.getElementById('calcCavCarregamentoParticular');
+                if (chkParticular) chkParticular.checked = false;
                 atualizarPrecoAcordadoCavacoPo(cli);
                 calcularCubagemCaminhaoTempoReal();
             }
@@ -365,13 +462,17 @@ function atualizarPrecoAcordadoCavacoPo(cli) {
     if (!cli) return;
     
     const tipo = document.getElementById('calcCavTipo').value;
+    const tipoNormalizado = (tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const valInput = document.getElementById('calcCavValor');
     
     if (valInput) {
-        if (tipo === 'Cavaco / Maravalha') {
-            valInput.value = window.formatCurrencyValue(cli.valorCavaco);
-        } else if (tipo === 'Pó de Serra') {
-            valInput.value = window.formatCurrencyValue(cli.valorPo);
+        const carregamentoParticular = !!document.getElementById('calcCavCarregamentoParticular')?.checked;
+        if (tipoNormalizado === 'Cavaco / Maravalha') {
+            const valor = carregamentoParticular && (cli.valorCavacoParticular || 0) > 0 ? cli.valorCavacoParticular : cli.valorCavaco;
+            valInput.value = window.formatCurrencyValue(valor);
+        } else if (tipoNormalizado === 'Po de Serra') {
+            const valor = carregamentoParticular && (cli.valorPoParticular || 0) > 0 ? cli.valorPoParticular : cli.valorPo;
+            valInput.value = window.formatCurrencyValue(valor);
         }
     }
 }
@@ -394,10 +495,50 @@ function calcularCubagemCaminhaoTempoReal() {
     if (alt > 0 && larg > 0 && comp > 0) {
         const vol = alt * larg * comp;
         if (qtdInput) {
-            qtdInput.value = vol.toFixed(3);
+            qtdInput.value = String(Math.round(vol));
         }
     }
 }
+
+const btnAdicionarCaminhaoSub = document.getElementById('btnAdicionarCaminhaoSub');
+if (btnAdicionarCaminhaoSub) {
+    btnAdicionarCaminhaoSub.addEventListener('click', () => {
+        const modelo = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
+        const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
+        const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
+        if (!modelo && !placaCaminhao && !placaCarreta) {
+            alert('Preencha pelo menos modelo ou placa para adicionar o caminhão.');
+            return;
+        }
+        caminhoesSubprodutoForm.push({ modelo, placaCaminhao, placaCarreta });
+        document.getElementById('subCliCaminhao').value = '';
+        document.getElementById('subCliPlacaCaminhao').value = '';
+        document.getElementById('subCliPlacaCarreta').value = '';
+        renderListaCaminhoesSub();
+    });
+}
+
+window.removerCaminhaoSub = (index) => {
+    caminhoesSubprodutoForm.splice(index, 1);
+    renderListaCaminhoesSub();
+};
+
+const selectCavCaminhao = document.getElementById('calcCavCaminhaoSelecionado');
+if (selectCavCaminhao) {
+    selectCavCaminhao.addEventListener('change', function() {
+        const cli = clientesSubprodutosCache.find(x => x.id === document.getElementById('calcCavSelectCliente')?.value);
+        const caminhoes = normalizarCaminhoesSubproduto(cli);
+        const item = caminhoes[Number(this.value)] || null;
+        preencherCaminhaoSelecionadoSub(item);
+    });
+}
+
+const chkCavParticular = document.getElementById('calcCavCarregamentoParticular');
+if (chkCavParticular) {
+    chkCavParticular.addEventListener('change', () => atualizarPrecoAcordadoCavacoPo());
+}
+
+renderListaCaminhoesSub();
 
 // Ouvintes de cubagem
 ['calcCavAlt', 'calcCavLarg', 'calcCavComp'].forEach(id => {

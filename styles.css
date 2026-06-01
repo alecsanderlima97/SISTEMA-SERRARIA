@@ -2031,27 +2031,24 @@ body.role-pendente .global-header {
     gap: 12px;
 }
 
-.header-user-topline {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
 .header-date-time {
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 500;
-    line-height: 1;
-    text-align: left;
+    line-height: 1.2;
+    text-align: right;
     white-space: nowrap;
+    margin-bottom: 4px;
 }
 
 .header-user-text {
     text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
 }
 
 .header-user-name {

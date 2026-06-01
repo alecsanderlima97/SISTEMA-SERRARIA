@@ -602,7 +602,7 @@ const App = {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            target.textContent = `${data} ${hora}`;
+            target.textContent = `${data} - ${hora}`;
         };
 
         render();

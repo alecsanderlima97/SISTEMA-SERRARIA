@@ -56,6 +56,14 @@
                                 <label>R\$ m³ Pó *</label>
                                 <input type="text" id="subCliValorPo" required placeholder="R\$ 0,00">
                             </div>
+                            <div class="input-group" style="margin-bottom:10px;">
+                                <label>R\$ m³ Cavaco "Carregamento Particular"</label>
+                                <input type="text" id="subCliValorCavacoParticular" placeholder="R\$ 0,00">
+                            </div>
+                            <div class="input-group" style="margin-bottom:10px;">
+                                <label>R\$ m³ Pó "Carregamento Particular"</label>
+                                <input type="text" id="subCliValorPoParticular" placeholder="R\$ 0,00">
+                            </div>
 
                             <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
                                 <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Logística do Cliente (Opcional)</h3>
@@ -72,6 +80,12 @@
                             <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Placa Carreta / Reboque</label>
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
+                            </div>
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                                <button type="button" id="btnAdicionarCaminhaoSub" class="btn-secondary" style="padding: 10px 14px;">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Caminhão
+                                </button>
+                                <div id="subCliListaCaminhoes" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
                             </div>
                             
                             <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
@@ -165,6 +179,18 @@
                             <div class="input-group col-span-2" style="margin-bottom:10px;">
                                 <label>Motorista do Caminhão</label>
                                 <input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista">
+                            </div>
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                                <label>Caminhão do Cliente</label>
+                                <select id="calcCavCaminhaoSelecionado" style="width: 100%;">
+                                    <option value="">Selecionar caminhão cadastrado</option>
+                                </select>
+                            </div>
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                                <label style="display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" id="calcCavCarregamentoParticular" style="width:auto; margin:0;">
+                                    Carregamento particular
+                                </label>
                             </div>
 
                             <div class="input-group" style="margin-bottom:10px;">

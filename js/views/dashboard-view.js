@@ -144,7 +144,7 @@
                         <strong style="display:block;">Relatório mensal painel de controle</strong>
                         <small id="dash-relatorio-mensal-info" style="color: var(--text-muted);">Fechamento mensal ainda não salvo.</small>
                     </div>
-                    <button type="button" class="btn-secondary" onclick="window.salvarRelatorioMensalDashboard && window.salvarRelatorioMensalDashboard()" style="padding:8px 12px;"><i class="fa-solid fa-floppy-disk"></i> Salvar mês</button>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="btn-secondary" onclick="window.visualizarRelatorioMensalDashboard && window.visualizarRelatorioMensalDashboard()" style="padding:8px 12px;"><i class="fa-solid fa-eye"></i> Visualizar mês</button><button type="button" class="btn-secondary" onclick="window.salvarRelatorioMensalDashboard && window.salvarRelatorioMensalDashboard()" style="padding:8px 12px;"><i class="fa-solid fa-floppy-disk"></i> Salvar mês</button></div>
                 </div>
                 </div>
             </section>`;

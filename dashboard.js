@@ -543,6 +543,24 @@ function renderRelatorioMensalDashboard() {
         : 'Fechamento mensal ainda não salvo.';
 }
 
+window.visualizarRelatorioMensalDashboard = function() {
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const relatoriosLocais = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
+    const salvo = dashboardData.relatoriosFinanceiros.find(item => item.id === mesAtual || item.mes === mesAtual) || relatoriosLocais[mesAtual];
+    if (!salvo) {
+        alert('Ainda não existe relatório salvo para este mês.');
+        return;
+    }
+
+    alert(
+        `RELATÓRIO MENSAL - ${mesAtual}\n\n` +
+        `Despesas: ${formatBRL(salvo.despesas || 0)}\n` +
+        `Faturamento: ${formatBRL(salvo.faturamento || 0)}\n` +
+        `Comparativo: ${formatBRL(salvo.comparativoFinanceiro || 0)}\n` +
+        `Salvo em: ${new Date(salvo.salvoEm || Date.now()).toLocaleString('pt-BR')}`
+    );
+};
 window.salvarRelatorioMensalDashboard = async function() {
     const hoje = new Date();
     const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
