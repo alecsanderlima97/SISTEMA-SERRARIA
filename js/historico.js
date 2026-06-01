@@ -10,6 +10,64 @@ let acaoPendente = null; // 'editar' ou 'excluir'
 let cargaPendenteId = null;
 let tipoPendente = 'madeira'; // 'madeira' ou 'subprodutos'
 
+function gerarHtmlDocumentoSubproduto(r) {
+    return `
+        <div class="doc-header">
+            <div>
+                <img src="logo.png" alt="VANMARTE" class="doc-logo" onerror="this.style.display='none'">
+                <div style="margin-top:10px; color:#334155; font-size:13px;">
+                    <strong>Venda de Subprodutos</strong><br>
+                    Cliente: ${r.cliente || '-'}<br>
+                    Documento: ${r.documento || '-'}
+                </div>
+            </div>
+            <div class="doc-title">
+                <h1>Recibo</h1>
+                <p><strong>Romaneio ${r.romaneio || r.romaneioCliente || '-'}</strong></p>
+            </div>
+        </div>
+        <div class="doc-grid">
+            <div class="doc-card">
+                <h3>Dados do Cliente</h3>
+                <p><strong>Cliente:</strong> ${r.cliente || '-'}</p>
+                <p><strong>CPF/CNPJ:</strong> ${r.documento || '-'}</p>
+                <p><strong>IE:</strong> ${r.ie || '-'}</p>
+                <p><strong>Endereco:</strong> ${r.logradouro || '-'}</p>
+                <p><strong>Cidade/Estado:</strong> ${r.cidadeEstado || '-'}</p>
+            </div>
+            <div class="doc-card">
+                <h3>Transporte</h3>
+                <p><strong>Data:</strong> ${r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</p>
+                <p><strong>Motorista:</strong> ${r.motorista || '-'}</p>
+                <p><strong>Caminhao:</strong> ${r.caminhao || '-'}</p>
+                <p><strong>Placas:</strong> ${r.placaCaminhao || '-'} ${r.placaCarreta ? `/ ${r.placaCarreta}` : ''}</p>
+            </div>
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>Subproduto</th><th>Unidade</th><th>Quantidade</th><th>Valor Unitario</th><th>Total</th></tr></thead>
+            <tbody><tr><td><strong>${r.tipo || '-'}</strong></td><td>${r.unidade || '-'}</td><td>${Number(r.quantidade || 0).toLocaleString('pt-BR')}</td><td>R$ ${Number(r.valorUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td class="doc-money">R$ ${Number(r.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr></tbody>
+        </table>
+        <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>
+    `;
+}
+
+window.subprodutoDocActions = {
+    current: null,
+    set(record) { this.current = record; window.modalDetalhesActions = this; },
+    print() {
+        if (!this.current) return;
+        window.DocActions.printHtml({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+    },
+    pdf() {
+        if (!this.current) return;
+        return window.DocActions.downloadPdf({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, filename: `recibo-subproduto-${this.current.romaneio || this.current.romaneioCliente || 'venda'}`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+    },
+    whatsapp() {
+        if (!this.current) return;
+        return window.DocActions.sendWhatsApp({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, filename: `recibo-subproduto-${this.current.romaneio || this.current.romaneioCliente || 'venda'}`, message: `Segue o recibo da venda de subprodutos ${this.current.romaneio || this.current.romaneioCliente || ''}.`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+    }
+};
+
 function formatarDataHistorico(valor) {
     if (!valor) return '-';
     if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
@@ -252,12 +310,19 @@ window.verDetalhesRomaneio = async (id) => {
                 </table>
             </div>
             
-            <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;" class="hide-on-print">
+            <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;" class="hide-on-print">
                  <button onclick="window.reimprimirReciboSubproduto('${r.id}')" class="btn-primary" style="background: #0ea5e9; border-color: #0ea5e9; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
                      <i class="fa-solid fa-print"></i> Reimprimir Recibo
                  </button>
+                 <button onclick="window.subprodutoDocActions.pdf()" class="btn-primary" style="background: #16a34a; border-color: #16a34a; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
+                     <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+                 </button>
+                 <button onclick="window.subprodutoDocActions.whatsapp()" class="btn-primary" style="background: #22c55e; border-color: #22c55e; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
+                     <i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp
+                 </button>
             </div>
         `;
+        window.subprodutoDocActions.set(r);
         return;
     }
 
@@ -318,6 +383,10 @@ window.verDetalhesRomaneio = async (id) => {
             <small>Taxa aplicada: ${r.financeiro?.taxaNF || 0}%</small>
         </div>
     `;
+    if (typeof window.definirDocumentoRomaneioAtual === 'function') {
+        window.definirDocumentoRomaneioAtual(r, { cidade: r.cidade || '', contato: r.telefone || '' });
+        window.modalDetalhesActions = window.romaneioDocActions;
+    }
 }
 
 window.fecharModalDetalhes = () => {

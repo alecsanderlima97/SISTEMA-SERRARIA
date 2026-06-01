@@ -149,7 +149,9 @@
             </div>
 
             <div class="modal-footer-v2 hide-on-print" style="margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="window.print()" class="btn-v2" style="background: #0ea5e9; color: white;"><i class="fa-solid fa-print"></i> Imprimir Recibo</button>
+                <button onclick="window.rhDocumentoActions.print('holerite')" class="btn-v2" style="background: #0ea5e9; color: white;"><i class="fa-solid fa-print"></i> Imprimir Recibo</button>
+                <button onclick="window.rhDocumentoActions.pdf('holerite')" class="btn-v2" style="background: #16a34a; color: white;"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
+                <button onclick="window.rhDocumentoActions.whatsapp('holerite')" class="btn-v2" style="background: #22c55e; color: white;"><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
                 <button onclick="window.fecharModalHolerite()" class="btn-v2" style="background: #94a3b8; color: black;">Fechar</button>
             </div>
         </div>
@@ -169,7 +171,9 @@
             </div>
 
             <div class="modal-footer-v2 hide-on-print" style="margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="window.print()" class="btn-v2" style="background: #2563eb; color: white;"><i class="fa-solid fa-print"></i> Imprimir Relatório</button>
+                <button onclick="window.rhDocumentoActions.print('relatorio')" class="btn-v2" style="background: #2563eb; color: white;"><i class="fa-solid fa-print"></i> Imprimir Relatório</button>
+                <button onclick="window.rhDocumentoActions.pdf('relatorio')" class="btn-v2" style="background: #16a34a; color: white;"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
+                <button onclick="window.rhDocumentoActions.whatsapp('relatorio')" class="btn-v2" style="background: #22c55e; color: white;"><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
                 <button onclick="window.fecharModalRelatorioHE()" class="btn-v2" style="background: #94a3b8; color: black;">Fechar</button>
             </div>
         </div>

@@ -730,6 +730,12 @@ async function carregarHistoricoPatio() {
                         <button type="button" onclick="imprimirHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #2563eb !important;" title="Imprimir Relatório">
                             <i class="fa-solid fa-print"></i>
                         </button>
+                        <button type="button" onclick="baixarPdfHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #ecfdf5 !important; border: 1px solid #86efac !important; color: #15803d !important;" title="Baixar PDF">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
+                        <button type="button" onclick="enviarWhatsappHistoricoPatio('${rel.id}')" class="btn-patio-light" style="padding: 5px 12px !important; font-size: 0.72rem !important; border-radius: 6px !important; background: #dcfce7 !important; border: 1px solid #86efac !important; color: #16a34a !important;" title="Enviar WhatsApp">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </button>
                         <button type="button" onclick="deletarHistoricoPatio('${rel.id}')" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1rem; transition: color 0.1s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'" title="Apagar Registro">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -767,13 +773,53 @@ window.deletarHistoricoPatio = async function(id) {
 window.imprimirHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
+    window.patioDocActions.set(rel);
     gerarLayoutImpressaoPatio(rel);
 };
 
 window.visualizarHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
+    window.patioDocActions.set(rel);
     gerarLayoutImpressaoPatio(rel);
+};
+
+window.baixarPdfHistoricoPatio = function(id) {
+    const rel = historicoPatioAtuais.find(r => r.id === id);
+    if (!rel) return;
+    window.patioDocActions.set(rel);
+    window.patioDocActions.pdf();
+};
+
+window.enviarWhatsappHistoricoPatio = function(id) {
+    const rel = historicoPatioAtuais.find(r => r.id === id);
+    if (!rel) return;
+    window.patioDocActions.set(rel);
+    window.patioDocActions.whatsapp();
+};
+
+window.patioDocActions = {
+    current: null,
+    set(rel) {
+        if (!rel) return;
+        const itens = Array.isArray(rel.itens) ? rel.itens : [];
+        const linhas = itens.map(i => {
+            const detalhes = obterDetalhesPacoteEtiqueta(i);
+            return `<tr><td>${i.tipo}</td><td>${formatDecimal(i.espessura, 1)} / ${formatDecimal(i.largura, 1)} / ${formatDecimal(i.comprimento, 2)}</td><td>${i.pacotes}</td><td>${detalhes.alturas || '-'}</td><td>${detalhes.largura || '-'}</td><td>${detalhes.amarras || '-'}</td><td>${i.totalPecas}</td><td class="doc-total">${formatDecimalMockup(i.volume)} m3</td></tr>`;
+        }).join('');
+        const dtStr = rel.data ? new Date(rel.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
+        this.current = {
+            title: `Relacao Patio ${rel.data || ''}`,
+            filename: `patio-${rel.data || rel.id || 'relatorio'}`,
+            contentHtml: `
+                <div class="doc-header"><div><img src="logo.png" alt="Serraria Vanmarte" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>Relacao de Patio Diario</h1><p>${dtStr} - ${rel.periodo || ''}</p></div></div>
+                <div class="doc-grid"><div class="doc-card"><h3>Contagem</h3><p><strong>Horario:</strong> ${rel.horario || 'N/A'}</p><p><strong>Serrando:</strong> ${rel.serrando || 'N/A'}</p></div><div class="doc-card"><h3>Totais</h3><p><strong>Pacotes:</strong> ${rel.totais?.totalPacotes || 0}</p><p><strong>Pecas:</strong> ${rel.totais?.totalPecas || 0}</p><p><strong>Volume:</strong> <span class="doc-money">${formatDecimalMockup(rel.totais?.totalVolume || 0)} m3</span></p></div></div>
+                <table class="doc-table"><thead><tr><th>Produto</th><th>Bitolas</th><th>Pacotes</th><th>Alturas</th><th>Largura</th><th>Amarras</th><th>Total Pecas</th><th>Volume</th></tr></thead><tbody>${linhas}</tbody></table>`
+        };
+    },
+    print() { if (this.current) window.DocActions.printHtml(this.current); },
+    pdf() { if (this.current) window.DocActions.downloadPdf(this.current); },
+    whatsapp() { if (this.current) window.DocActions.sendWhatsApp({ title: this.current.title, filename: this.current.filename, contentHtml: this.current.contentHtml, message: `Segue a ${this.current.title}.` }); }
 };
 
 window.editarHistoricoPatio = function(id) {

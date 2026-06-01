@@ -72,7 +72,11 @@
                             <tbody id="financeiroRelatorioLista"></tbody>
                         </table>
                     </div>
-                    <div class="financeiro-form-actions" style="margin-top:14px;"><button type="button" class="btn-primary" onclick="window.imprimirRelatorioFinanceiro()"><i class="fa-solid fa-print"></i> Imprimir relatório</button></div>
+                    <div class="financeiro-form-actions" style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" class="btn-primary" onclick="window.imprimirRelatorioFinanceiro()"><i class="fa-solid fa-print"></i> Imprimir</button>
+                        <button type="button" class="btn-primary" style="background:#16a34a; border-color:#16a34a;" onclick="window.baixarPdfRelatorioFinanceiro()"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
+                        <button type="button" class="btn-primary" style="background:#22c55e; border-color:#22c55e;" onclick="window.enviarRelatorioFinanceiroWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
+                    </div>
                 </div>
             </section>
 

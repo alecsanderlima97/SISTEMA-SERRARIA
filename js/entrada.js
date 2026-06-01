@@ -500,6 +500,12 @@ function renderizarEntradas() {
                     <button onclick="window.imprimirEntrada('${en.id}')" class="btn-icon" style="color:#3498db; font-size:1.1rem; padding: 4px;" title="Imprimir Comprovante">
                         <i class="fa-solid fa-print"></i>
                     </button>
+                    <button onclick="window.baixarPdfEntrada('${en.id}')" class="btn-icon" style="color:#16a34a; font-size:1.1rem; padding: 4px;" title="Baixar PDF">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </button>
+                    <button onclick="window.enviarEntradaWhatsapp('${en.id}')" class="btn-icon" style="color:#22c55e; font-size:1.1rem; padding: 4px;" title="Enviar WhatsApp">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </button>
                     <button onclick="window.deletarEntrada('${en.id}')" class="btn-icon" style="color:var(--danger-color); font-size:1.1rem; padding: 4px;" title="Excluir Registro">
                         <i class="fa-solid fa-trash"></i>
                     </button>
@@ -1030,6 +1036,40 @@ window.alterarEntrada = function(id) {
     calcularVolumeAtual();
 };
 
+function gerarHtmlReciboEntrada(en) {
+    const dtObj = new Date(en.data + 'T12:00:00');
+    const dtStr = dtObj.toLocaleDateString('pt-BR');
+    const reciboFinanceiro = usuarioPodeVerFinanceiroEmpreiteiro()
+        ? `<br><p><strong>Valor Empreiteiro por MÂ³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
+<p><strong>Total Empreiteiro:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</p>
+<p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`
+        : `<br><p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`;
+    return `
+        <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>Recibo de Entrada de Toras</strong></div></div><div class="doc-title"><h1>Entrada</h1><p><strong>Romaneio ${en.romaneioNum || 'N/A'}</strong></p></div></div>
+        <div class="doc-grid"><div class="doc-card"><h3>Dados Gerais</h3><p><strong>Empreiteiro:</strong> ${en.empreiteiroNome || en.fornecedor || 'N/A'}</p><p><strong>Motorista:</strong> ${en.motorista || 'N/A'}</p><p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p><p><strong>Veiculo:</strong> ${en.caminhao || 'N/A'} - ${en.placa || '-'}</p></div><div class="doc-card"><h3>Medidas</h3><p><strong>Comprimento:</strong> ${formatDecimalValue(en.comp)}m</p><p><strong>Largura:</strong> ${formatDecimalValue(en.larg)}m</p><p><strong>Altura media:</strong> ${formatDecimalValue(en.mediaAltura)}m</p><p><strong>Volume:</strong> <span class="doc-total">${en.volume.toFixed(2).replace('.', ',')} m3</span></p></div></div>
+        <div class="doc-note">${reciboFinanceiro}</div>
+        <div class="doc-signatures"><div>Assinatura</div><div>Conferencia</div></div>`;
+}
+
+window.entradaDocActions = {
+    current: null,
+    set(record) { this.current = record; },
+    print() {
+        if (!this.current) return;
+        window.DocActions.printHtml({ title: `Entrada ${this.current.romaneioNum || ''}`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+    },
+    pdf() {
+        if (!this.current) return;
+        return window.DocActions.downloadPdf({ title: `Entrada ${this.current.romaneioNum || ''}`, filename: `entrada-${this.current.romaneioNum || this.current.id || 'carga'}`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+    },
+    whatsapp() {
+        if (!this.current) return;
+        return window.DocActions.sendWhatsApp({ title: `Entrada ${this.current.romaneioNum || ''}`, filename: `entrada-${this.current.romaneioNum || this.current.id || 'carga'}`, message: `Segue o recibo da entrada ${this.current.romaneioNum || ''}.`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+    }
+};
+
 window.imprimirEntrada = function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
@@ -1062,6 +1102,27 @@ ${reciboFinanceiro}
     `);
     win.document.close();
     win.print();
+};
+
+window.imprimirEntrada = function(id) {
+    const en = window.entradasAtuaisLista.find(e => e.id === id);
+    if (!en) return;
+    window.entradaDocActions.set(en);
+    window.entradaDocActions.print();
+};
+
+window.baixarPdfEntrada = function(id) {
+    const en = window.entradasAtuaisLista.find(e => e.id === id);
+    if (!en) return;
+    window.entradaDocActions.set(en);
+    window.entradaDocActions.pdf();
+};
+
+window.enviarEntradaWhatsapp = function(id) {
+    const en = window.entradasAtuaisLista.find(e => e.id === id);
+    if (!en) return;
+    window.entradaDocActions.set(en);
+    window.entradaDocActions.whatsapp();
 };
 
 window.switchTabEntrada = function(tabName) {

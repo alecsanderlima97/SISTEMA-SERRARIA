@@ -560,6 +560,83 @@ function getCorPorQualidade(qual) {
     return '#10b981'; // Padrão Verde Água
 }
 
+window.romaneioDocumentoAtual = null;
+
+function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
+    const emitente = window.dadosSerrariaEmitente || {};
+    const pacotes = Array.isArray(r.pacotes) ? r.pacotes : [];
+    let totalPcts = 0;
+    let totalPcs = 0;
+    let totalM3Madeira = 0;
+    let totalMadeira = 0;
+    let totalM3Frete = 0;
+
+    pacotes.forEach(p => {
+        totalPcts += Number(p.qtdPacotes || 0);
+        totalPcs += Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
+        totalM3Madeira += Number(p.m3VendaTotal || 0);
+        totalMadeira += Number(p.valorTotalWood || 0);
+        totalM3Frete += Number(p.m3FreteTotal || p.m3VendaTotal || 0);
+    });
+
+    const taxa = Number(r.financeiro?.taxaNF || 0);
+    const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
+    const imposto = (totalMadeira + adicionalMadeira) * (taxa / 100);
+    const subtotalLiquido = totalMadeira + adicionalMadeira + imposto;
+    const valorFrete = Number(r.logistica?.valorFrete || 0);
+    const freteBruto = totalM3Frete * valorFrete;
+    const freteFinal = freteBruto + Number(r.logistica?.adicionalFrete || 0);
+    const totalCarga = Number(r.financeiro?.totalGeral || subtotalLiquido);
+    return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
+}
+
+function gerarHtmlDocumentoRomaneio(payload) {
+    const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
+    const pacotesHtml = `
+        <table class="doc-table">
+            <thead><tr><th>Classificacao</th><th>Madeira</th><th>Pcts</th><th>Config</th><th>Pcs/Pct</th><th>Total Pecas</th><th>m3 Venda</th><th>V. Unit.</th><th>Total</th></tr></thead>
+            <tbody>
+                ${pacotes.map(p => {
+                    const cor = getCorPorQualidade(p.qualidade || 'PADRAO');
+                    const totalPecas = Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
+                    const valorUnit = totalPecas ? (Number(p.valorTotalWood || 0) / totalPecas) : 0;
+                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${p.medidas || '-'}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${Number(p.m3VendaTotal || 0).toFixed(3)}</td><td>R$ ${valorUnit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${Number(p.valorTotalWood || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+    return `
+        <div class="doc-header"><div><img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong><br>${emitente.cnpj ? `CNPJ: ${emitente.cnpj}<br>` : ''}${(emitente.logradouro || '')} ${(emitente.numero || '')}<br>${emitente.cidade || ''}</div></div><div class="doc-title"><h1>Romaneio de Carga</h1><p><strong>N ${r.numero || r.numeroCarga || '-'}</strong></p><p>Emitido em ${new Date().toLocaleString('pt-BR')}</p></div></div>
+        <div class="doc-grid"><div class="doc-card"><h3>Dados do Comprador</h3><p><strong>Cliente:</strong> ${r.cliente || '-'}</p><p><strong>CNPJ/CPF:</strong> ${clienteObj.cnpj || clienteObj.cpf || '-'}</p><p><strong>Cidade:</strong> ${clienteObj.cidade || '-'}</p>${r.formaPagamento ? `<p><strong>Pagamento:</strong> ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</p>` : ''}${r.observacaoCliente ? `<p><strong>Obs. cliente:</strong> ${r.observacaoCliente}</p>` : ''}</div><div class="doc-card"><h3>Dados Logisticos</h3><p><strong>Data carreg.:</strong> ${r.logistica?.dataCarregamento || '-'}</p><p><strong>Data descarreg.:</strong> ${r.logistica?.dataDescarregamento || '-'}</p><p><strong>Motorista:</strong> ${r.logistica?.motorista || '-'}</p><p><strong>Caminhao:</strong> ${r.logistica?.caminhao || '-'}</p><p><strong>Placa:</strong> ${r.logistica?.placa || '-'}</p><p><strong>Transporte:</strong> ${r.logistica?.responsavelFrete || '-'}</p></div></div>
+        ${pacotesHtml}
+        <div class="doc-grid" style="margin-top:20px;"><div class="doc-card"><h3>Resumo da Carga</h3><p><strong>Total de pacotes:</strong> ${totalPcts}</p><p><strong>Total de pecas:</strong> ${totalPcs}</p><p><strong>Total m3:</strong> <span class="doc-total">${totalM3Madeira.toFixed(3)} m3</span></p></div><div class="doc-card"><h3>Resumo Financeiro</h3><p><strong>Soma dos produtos:</strong> <span class="doc-money">R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>${Number(r.financeiro?.adicionalMadeira || 0) ? `<p><strong>Ajuste madeira:</strong> R$ ${Number(r.financeiro?.adicionalMadeira || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.financeiro?.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}<p><strong>Impostos / taxa NF (${taxa}%):</strong> R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><p><strong>Subtotal liquido:</strong> <span class="doc-money">R$ ${subtotalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p><strong>Frete base:</strong> ${totalM3Frete.toFixed(3)} m3 x R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>${Number(r.logistica?.adicionalFrete || 0) ? `<p><strong>Ajuste frete:</strong> R$ ${Number(r.logistica?.adicionalFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.logistica?.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}<p><strong>Total frete:</strong> <span style="color:#1d4ed8; font-weight:800;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p style="font-size:20px; margin-top:14px;"><strong>Total da carga:</strong> <span class="doc-money">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p></div></div>
+        ${r.observacaoCarga ? `<div class="doc-note"><strong>Observacoes da carga</strong><div style="margin-top:8px; white-space:pre-wrap;">${r.observacaoCarga}</div></div>` : ''}
+        <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>`;
+}
+
+function definirDocumentoRomaneioAtual(r, clienteObj = {}) {
+    window.romaneioDocumentoAtual = normalizarRomaneioDocumento(r, clienteObj);
+    return window.romaneioDocumentoAtual;
+}
+window.definirDocumentoRomaneioAtual = definirDocumentoRomaneioAtual;
+
+window.romaneioDocActions = {
+    print() {
+        if (!window.romaneioDocumentoAtual) return;
+        window.DocActions.printHtml({ title: `Romaneio ${window.romaneioDocumentoAtual.romaneio.numero || ''}`, contentHtml: gerarHtmlDocumentoRomaneio(window.romaneioDocumentoAtual) });
+    },
+    pdf() {
+        if (!window.romaneioDocumentoAtual) return window.Promise?.resolve?.();
+        return window.DocActions.downloadPdf({ title: `Romaneio ${window.romaneioDocumentoAtual.romaneio.numero || ''}`, filename: `romaneio-${window.romaneioDocumentoAtual.romaneio.numero || 'carga'}`, contentHtml: gerarHtmlDocumentoRomaneio(window.romaneioDocumentoAtual) });
+    },
+    whatsapp() {
+        if (!window.romaneioDocumentoAtual) return window.Promise?.resolve?.();
+        const phone = window.romaneioDocumentoAtual.clienteObj?.contato || window.romaneioDocumentoAtual.clienteObj?.telefone || '';
+        return window.DocActions.sendWhatsApp({ title: `Romaneio ${window.romaneioDocumentoAtual.romaneio.numero || ''}`, filename: `romaneio-${window.romaneioDocumentoAtual.romaneio.numero || 'carga'}`, phone, message: `Segue o romaneio ${window.romaneioDocumentoAtual.romaneio.numero || ''} da carga de madeira serrada.`, contentHtml: gerarHtmlDocumentoRomaneio(window.romaneioDocumentoAtual) });
+    }
+};
+
+window.modalDetalhesActions = window.romaneioDocActions;
+
 function renderizarTabelaPacotes() {
     const container = document.getElementById('v2-lista-classes');
     if (!container) return;
@@ -680,8 +757,14 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                 <div class="total-value" style="font-size: 3rem; line-height: 1;">R$ ${totalComTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 
                 <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="verPreviaRomaneioV2()" class="btn-v2" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--border); flex: 1; max-width: 200px;">
+                    <button onclick="verPreviaRomaneioV2()" class="btn-v2" style="background: #f59e0b; color: #111827; border: 1px solid rgba(245,158,11,0.55); font-weight: 800; flex: 1; max-width: 200px;">
                         <i class="fa-solid fa-eye"></i> Prévia
+                    </button>
+                    <button onclick="window.romaneioDocActions.pdf()" class="btn-v2" style="background: #16a34a; color: white; border: 1px solid rgba(22,163,74,0.55); flex: 1; max-width: 200px;">
+                        <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+                    </button>
+                    <button onclick="window.romaneioDocActions.whatsapp()" class="btn-v2" style="background: #22c55e; color: white; border: 1px solid rgba(34,197,94,0.55); flex: 1; max-width: 220px;">
+                        <i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp
                     </button>
                     <button onclick="finalizarRomaneioV2()" class="btn-v2" style="background: #00ff88; color: black; font-weight: 900; flex: 2; max-width: 300px; box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);">
                         <i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR CARGA
@@ -1050,6 +1133,8 @@ window.verPreviaRomaneioV2 = () => {
             Desenvolvido por: Orquestra.cs - sistema industrial personalizado
         </div>
     `;
+    definirDocumentoRomaneioAtual(r, clienteObj);
+    conteudo.innerHTML = gerarHtmlDocumentoRomaneio(window.romaneioDocumentoAtual);
 };
 
 window.fecharModalDetalhes = () => {

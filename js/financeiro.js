@@ -523,6 +523,36 @@ function injetarEstilosFinanceiro() {
     document.head.appendChild(style);
 }
 
+window.imprimirRelatorioFinanceiro = function() {
+    const selecionados = new Set(Array.from(document.querySelectorAll('.financeiro-relatorio-check:checked')).map(input => input.value));
+    const lista = financeiroRelatorioAtual.filter(item => selecionados.has(item.id));
+    if (lista.length === 0) {
+        alert('Selecione pelo menos um lancamento para gerar o relatorio.');
+        return;
+    }
+    const total = lista.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const contentHtml = `
+        <div class="doc-header">
+            <div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"></div>
+            <div class="doc-title"><h1>Relatorio Financeiro</h1><p>${FINANCEIRO_ABAS[financeiroAbaAtiva].titulo}</p></div>
+        </div>
+        <div class="doc-note"><strong>Periodo:</strong> ${dataBR(document.getElementById('financeiroRelatorioInicio').value)} ate ${dataBR(document.getElementById('financeiroRelatorioFim').value)}<br><strong>Valor total:</strong> <span class="doc-money">${formatarMoeda(total)}</span></div>
+        <table class="doc-table"><thead><tr><th>Tipo</th><th>Descricao</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>${lista.map(item => `<tr><td>${item.tipo}</td><td>${item.descricao}</td><td>${dataBR(item.vencimento)}</td><td>${obterStatusItem(item).label}</td><td class="doc-money">${formatarMoeda(item.valor)}</td></tr>`).join('')}</tbody></table>
+    `;
+    window.financeiroDocAtual = { title: `Relatorio Financeiro ${FINANCEIRO_ABAS[financeiroAbaAtiva].titulo}`, filename: `financeiro-${financeiroAbaAtiva}`, contentHtml };
+    window.DocActions.printHtml(window.financeiroDocAtual);
+};
+
+window.baixarPdfRelatorioFinanceiro = function() {
+    if (!window.financeiroDocAtual) return window.imprimirRelatorioFinanceiro();
+    window.DocActions.downloadPdf(window.financeiroDocAtual);
+};
+
+window.enviarRelatorioFinanceiroWhatsapp = function() {
+    if (!window.financeiroDocAtual) return window.imprimirRelatorioFinanceiro();
+    window.DocActions.sendWhatsApp({ title: window.financeiroDocAtual.title, filename: window.financeiroDocAtual.filename, contentHtml: window.financeiroDocAtual.contentHtml, message: `Segue o ${window.financeiroDocAtual.title}.` });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     injetarEstilosFinanceiro();
     document.getElementById('financeiroForm')?.addEventListener('submit', salvarFinanceiroSubmit);

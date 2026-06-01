@@ -22,6 +22,34 @@ const txtToggleFormRH = document.getElementById('txtToggleFormRH');
 const btnCancelarRH = document.getElementById('btnCancelarRH');
 const btnLimparBuscaRH = document.getElementById('btnLimparBuscaRH');
 
+window.rhDocumentoActions = {
+    getPayload(tipo) {
+        const map = {
+            holerite: { elementId: 'conteudoHolerite', title: 'Recibo de Pagamento', filename: 'recibo-rh' },
+            relatorio: { elementId: 'conteudoRelatorioHE', title: 'Relatorio Mensal de Horas Extras', filename: 'relatorio-he' }
+        };
+        return map[tipo] || map.holerite;
+    },
+    print(tipo) {
+        const payload = this.getPayload(tipo);
+        const el = document.getElementById(payload.elementId);
+        if (!el) return;
+        window.DocActions.printHtml({ title: payload.title, contentHtml: el.innerHTML });
+    },
+    pdf(tipo) {
+        const payload = this.getPayload(tipo);
+        const el = document.getElementById(payload.elementId);
+        if (!el) return;
+        return window.DocActions.downloadPdf({ title: payload.title, filename: payload.filename, contentHtml: el.innerHTML });
+    },
+    whatsapp(tipo) {
+        const payload = this.getPayload(tipo);
+        const el = document.getElementById(payload.elementId);
+        if (!el) return;
+        return window.DocActions.sendWhatsApp({ title: payload.title, filename: payload.filename, message: `Segue o documento ${payload.title}.`, contentHtml: el.innerHTML });
+    }
+};
+
 // Inicialização segura
 function inicializarModuloRH() {
     if (!viewRH) return;

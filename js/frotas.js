@@ -586,6 +586,12 @@ function renderizarFrota() {
                         <button onclick="window.imprimirRelatorioGeralFrota('${v.id}')" class="btn-icon" style="color:#a78bfa; font-size:1.1rem; padding: 4px;" title="Relatorio Geral da Maquina">
                             <i class="fa-solid fa-file-lines"></i>
                         </button>
+                        <button onclick="window.baixarPdfRelatorioGeralFrota('${v.id}')" class="btn-icon" style="color:#16a34a; font-size:1.1rem; padding: 4px;" title="Baixar PDF do Relatorio">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
+                        <button onclick="window.enviarWhatsappRelatorioGeralFrota('${v.id}')" class="btn-icon" style="color:#22c55e; font-size:1.1rem; padding: 4px;" title="Enviar Relatorio no WhatsApp">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </button>
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button onclick="window.editarVeiculo('${v.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Dados do Veículo">
@@ -651,6 +657,42 @@ window.imprimirRelatorioGeralFrota = function(veiculoId) {
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
+};
+
+window.frotaDocActions = {
+    current: null,
+    setRelatorioGeral(veiculoId) {
+        const v = frota.find(item => item.id === veiculoId);
+        if (!v) return;
+        const abs = abastecimentos.filter(a => a.veiculoId === veiculoId);
+        const mans = manutencoes.filter(m => m.veiculoId === veiculoId);
+        const relatos = relatosFrota.filter(r => r.veiculoId === veiculoId);
+        this.current = {
+            title: `Relatorio Frota ${v.placa}`,
+            filename: `frota-${v.placa || veiculoId}`,
+            contentHtml: `
+                <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>Relatorio Geral da Maquina</h1><p>${v.modelo} - ${v.placa}</p></div></div>
+                <div class="doc-grid"><div class="doc-card"><h3>Veiculo</h3><p><strong>Codigo:</strong> ${garantirCodigoFrota(v)}</p><p><strong>Setor:</strong> ${v.grupo}</p><p><strong>Ano:</strong> ${v.ano}</p></div><div class="doc-card"><h3>Totais</h3><p><strong>Abastecimentos:</strong> <span class="doc-money">${formatarMoedaFrota(abs.reduce((acc, a) => acc + Number(a.total || 0), 0))}</span></p><p><strong>Manutencoes:</strong> <span class="doc-money">${formatarMoedaFrota(mans.reduce((acc, m) => acc + Number(m.totalPecas || 0), 0))}</span></p><p><strong>Relatos:</strong> ${relatos.length}</p></div></div>
+                <table class="doc-table"><thead><tr><th>Tipo</th><th>Data</th><th>Descricao</th><th>Valor</th></tr></thead><tbody>
+                    ${abs.map(a => `<tr><td>Abastecimento</td><td>${formatarDataFrota(a.data)}</td><td>${tipoAbastecimentoLabel(a.tipo)} - ${a.qtd || 0}L</td><td class="doc-money">${formatarMoedaFrota(a.total)}</td></tr>`).join('')}
+                    ${mans.map(m => `<tr><td>Manutencao</td><td>${formatarDataFrota(m.data)}</td><td>${m.tipo || '-'} - ${m.observacao || '-'}</td><td class="doc-money">${formatarMoedaFrota(m.totalPecas)}</td></tr>`).join('')}
+                    ${relatos.map(r => `<tr><td>Relato</td><td>${formatarDataFrota(r.data)}</td><td>${r.relato || '-'}</td><td>-</td></tr>`).join('')}
+                </tbody></table>`
+        };
+    },
+    print() { if (this.current) window.DocActions.printHtml(this.current); },
+    pdf() { if (this.current) window.DocActions.downloadPdf(this.current); },
+    whatsapp() { if (this.current) window.DocActions.sendWhatsApp({ title: this.current.title, filename: this.current.filename, contentHtml: this.current.contentHtml, message: `Segue o ${this.current.title}.` }); }
+};
+
+window.baixarPdfRelatorioGeralFrota = function(veiculoId) {
+    window.frotaDocActions.setRelatorioGeral(veiculoId);
+    window.frotaDocActions.pdf();
+};
+
+window.enviarWhatsappRelatorioGeralFrota = function(veiculoId) {
+    window.frotaDocActions.setRelatorioGeral(veiculoId);
+    window.frotaDocActions.whatsapp();
 };
 
 // Download/visualizacao do documento anexo. Aceita URL local/publica ou base64 legado.
