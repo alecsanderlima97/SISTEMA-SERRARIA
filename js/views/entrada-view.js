@@ -117,10 +117,6 @@
                                     <input type="text" id="entLarg" inputmode="decimal" required placeholder="Ex: 2,40">
                                 </div>
                                 <div class="input-group" style="grid-column: span 2;">
-                                    <label>Cupim adicional (m³)</label>
-                                    <input type="text" id="entCupimAdicional" inputmode="decimal" placeholder="Ex: 0,80">
-                                </div>
-                                <div class="input-group" style="grid-column: span 2;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
                                     <input type="text" id="entValorDescarga" placeholder="R\$ 1,05" value="R\$ 1,05">
                                 </div>

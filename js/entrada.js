@@ -266,7 +266,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entMato, entComp, entLarg, entCupimAdicional, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
+let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entMato, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -342,7 +342,6 @@ function formatDecimal2Input(e) {
 function calcularVolumeAtual() {
     const c = parseDecimalValue(entComp?.value) || 0;
     const l = parseDecimalValue(entLarg?.value) || 0;
-    const cupimAdicional = parseDecimalValue(entCupimAdicional?.value) || 0;
     
     const valoresAltura = inputsAlt.map(i => parseDecimalValue(i?.value)).filter(v => !isNaN(v) && v > 0);
     
@@ -357,12 +356,9 @@ function calcularVolumeAtual() {
     if (c > 0 && l > 0 && mediaAltura > 0) {
         volume = c * l * mediaAltura;
     }
-    if (volume > 0) {
-        volume = Math.round(volume + cupimAdicional);
-    }
-
-    if (resVolume) resVolume.textContent = `${Math.round(volume || 0)} m³`;
-    if (resInfo) resInfo.textContent = `Altura média: ${formatDecimalValue(mediaAltura)} m (${valoresAltura.length} pontos medidos) | Cupim adicional: ${formatDecimalValue(cupimAdicional)} m³`;
+    
+    if (resVolume) resVolume.textContent = volume.toFixed(2).replace('.', ',') + ' m³';
+    if (resInfo) resInfo.textContent = `Altura média: ${formatDecimalValue(mediaAltura)} m (${valoresAltura.length} pontos medidos)`;
     
     // Calculo Financeiro
     let valorMetro = 0;
@@ -382,7 +378,7 @@ function calcularVolumeAtual() {
     if (infoDescarga) infoDescarga.textContent = `Baseado em ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m³`;
 
     aplicarVisibilidadeFinanceiraEntrada();
-    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, cupimAdicional, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
+    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
 }
 
 async function carregarEntradas() {
@@ -883,7 +879,6 @@ function configurarSubmitEntrada() {
             comp: calcData.comp,
             larg: calcData.larg,
             mediaAltura: calcData.mediaAltura,
-            cupimAdicional: calcData.cupimAdicional,
             pontos: calcData.pontos,
             volume: calcData.volume,
             alturas: inputsAlt.map(i => parseDecimalValue(i?.value) || 0), // Salvar alturas individuais
@@ -1011,8 +1006,6 @@ window.alterarEntrada = function(id) {
     document.getElementById('entPlaca').value = en.placa || '';
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
-    const cupimInput = document.getElementById('entCupimAdicional');
-    if (cupimInput) cupimInput.value = formatDecimalValue(en.cupimAdicional || 0) || '';
     if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(en.valorDescargaM3 || 1.05) : formatDecimalValue(en.valorDescargaM3 || 1.05);
     
     // Carregar alturas individuais se existirem
@@ -1252,7 +1245,6 @@ function inicializarModuloEntrada() {
     entMato = document.getElementById('entMato');
     entComp = document.getElementById('entComp');
     entLarg = document.getElementById('entLarg');
-    entCupimAdicional = document.getElementById('entCupimAdicional');
     inputsAlt = [
         document.getElementById('entAltEsq1'), document.getElementById('entAltEsq2'), document.getElementById('entAltEsq3'),
         document.getElementById('entAltDir1'), document.getElementById('entAltDir2'), document.getElementById('entAltDir3')
@@ -1277,7 +1269,7 @@ function inicializarModuloEntrada() {
     });
     
     // Aplicar máscara decimal com 2 casas e escuta de cálculo em tempo real nas medidas
-    const decimalInputs = [entComp, entLarg, entCupimAdicional, ...inputsAlt];
+    const decimalInputs = [entComp, entLarg, ...inputsAlt];
     decimalInputs.forEach(input => {
         if(input) {
             input.addEventListener('input', formatDecimal2Input);
