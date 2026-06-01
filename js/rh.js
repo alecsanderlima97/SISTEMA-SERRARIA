@@ -24,9 +24,12 @@ const btnLimparBuscaRH = document.getElementById('btnLimparBuscaRH');
 
 window.rhDocumentoActions = {
     getPayload(tipo) {
+        const nomeFuncionario = (document.getElementById('he-funcionario-nome')?.textContent || '').trim()
+            || (document.getElementById('falta-funcionario-nome')?.textContent || '').trim()
+            || 'funcionario';
         const map = {
-            holerite: { elementId: 'conteudoHolerite', title: 'Recibo de Pagamento', filename: 'recibo-rh' },
-            relatorio: { elementId: 'conteudoRelatorioHE', title: 'Relatorio Mensal de Horas Extras', filename: 'relatorio-he' }
+            holerite: { elementId: 'conteudoHolerite', title: `${nomeFuncionario} - Recibo de Pagamento`, filename: `${nomeFuncionario} - recibo de pagamento` },
+            relatorio: { elementId: 'conteudoRelatorioHE', title: `${nomeFuncionario} - Relatorio Mensal de Horas Extras`, filename: `${nomeFuncionario} - relatorio mensal he` }
         };
         return map[tipo] || map.holerite;
     },

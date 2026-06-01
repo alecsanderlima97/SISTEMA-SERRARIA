@@ -22,8 +22,8 @@ function gerarHtmlDocumentoSubproduto(r) {
                 </div>
             </div>
             <div class="doc-title">
-                <h1>Recibo</h1>
-                <p><strong>Romaneio ${r.romaneio || r.romaneioCliente || '-'}</strong></p>
+                <h1>${r.cliente || 'Comprador'} - ${r.romaneio || r.romaneioCliente || '-'}</h1>
+                <p><strong>Recibo</strong></p>
             </div>
         </div>
         <div class="doc-grid">
@@ -56,15 +56,18 @@ window.subprodutoDocActions = {
     set(record) { this.current = record; window.modalDetalhesActions = this; },
     print() {
         if (!this.current) return;
-        window.DocActions.printHtml({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+        const docName = window.DocActions.buildDocumentName([this.current.cliente, this.current.romaneio || this.current.romaneioCliente]);
+        window.DocActions.printHtml({ title: docName, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
     },
     pdf() {
         if (!this.current) return;
-        return window.DocActions.downloadPdf({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, filename: `recibo-subproduto-${this.current.romaneio || this.current.romaneioCliente || 'venda'}`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+        const docName = window.DocActions.buildDocumentName([this.current.cliente, this.current.romaneio || this.current.romaneioCliente]);
+        return window.DocActions.downloadPdf({ title: docName, filename: docName, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
     },
     whatsapp() {
         if (!this.current) return;
-        return window.DocActions.sendWhatsApp({ title: `Recibo ${this.current.romaneio || this.current.romaneioCliente || 'subproduto'}`, filename: `recibo-subproduto-${this.current.romaneio || this.current.romaneioCliente || 'venda'}`, message: `Segue o recibo da venda de subprodutos ${this.current.romaneio || this.current.romaneioCliente || ''}.`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
+        const docName = window.DocActions.buildDocumentName([this.current.cliente, this.current.romaneio || this.current.romaneioCliente]);
+        return window.DocActions.sendWhatsApp({ title: docName, filename: docName, message: `Segue o recibo de subprodutos ${docName}.`, contentHtml: gerarHtmlDocumentoSubproduto(this.current) });
     }
 };
 
@@ -308,18 +311,6 @@ window.verDetalhesRomaneio = async (id) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
-            
-            <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;" class="hide-on-print">
-                 <button onclick="window.reimprimirReciboSubproduto('${r.id}')" class="btn-primary" style="background: #0ea5e9; border-color: #0ea5e9; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
-                     <i class="fa-solid fa-print"></i> Reimprimir Recibo
-                 </button>
-                 <button onclick="window.subprodutoDocActions.pdf()" class="btn-primary" style="background: #16a34a; border-color: #16a34a; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
-                     <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-                 </button>
-                 <button onclick="window.subprodutoDocActions.whatsapp()" class="btn-primary" style="background: #22c55e; border-color: #22c55e; font-size: 0.9rem; padding: 10px 18px; display: flex; align-items: center; gap: 8px; justify-content: center;">
-                     <i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp
-                 </button>
             </div>
         `;
         window.subprodutoDocActions.set(r);

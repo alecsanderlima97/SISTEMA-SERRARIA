@@ -667,11 +667,12 @@ window.frotaDocActions = {
         const abs = abastecimentos.filter(a => a.veiculoId === veiculoId);
         const mans = manutencoes.filter(m => m.veiculoId === veiculoId);
         const relatos = relatosFrota.filter(r => r.veiculoId === veiculoId);
+        const nomeFrota = [v.modelo, v.placa].filter(Boolean).join(' - ');
         this.current = {
-            title: `Relatorio Frota ${v.placa}`,
-            filename: `frota-${v.placa || veiculoId}`,
+            title: `${nomeFrota || 'Frota'} - Relatorio Geral`,
+            filename: `${nomeFrota || `frota-${veiculoId}`} - relatorio geral`,
             contentHtml: `
-                <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>Relatorio Geral da Maquina</h1><p>${v.modelo} - ${v.placa}</p></div></div>
+                <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>${nomeFrota || 'Frota'} - Relatorio Geral</h1><p>Maquina / veiculo</p></div></div>
                 <div class="doc-grid"><div class="doc-card"><h3>Veiculo</h3><p><strong>Codigo:</strong> ${garantirCodigoFrota(v)}</p><p><strong>Setor:</strong> ${v.grupo}</p><p><strong>Ano:</strong> ${v.ano}</p></div><div class="doc-card"><h3>Totais</h3><p><strong>Abastecimentos:</strong> <span class="doc-money">${formatarMoedaFrota(abs.reduce((acc, a) => acc + Number(a.total || 0), 0))}</span></p><p><strong>Manutencoes:</strong> <span class="doc-money">${formatarMoedaFrota(mans.reduce((acc, m) => acc + Number(m.totalPecas || 0), 0))}</span></p><p><strong>Relatos:</strong> ${relatos.length}</p></div></div>
                 <table class="doc-table"><thead><tr><th>Tipo</th><th>Data</th><th>Descricao</th><th>Valor</th></tr></thead><tbody>
                     ${abs.map(a => `<tr><td>Abastecimento</td><td>${formatarDataFrota(a.data)}</td><td>${tipoAbastecimentoLabel(a.tipo)} - ${a.qtd || 0}L</td><td class="doc-money">${formatarMoedaFrota(a.total)}</td></tr>`).join('')}

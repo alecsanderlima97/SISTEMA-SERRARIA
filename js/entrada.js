@@ -1058,15 +1058,21 @@ window.entradaDocActions = {
     set(record) { this.current = record; },
     print() {
         if (!this.current) return;
-        window.DocActions.printHtml({ title: `Entrada ${this.current.romaneioNum || ''}`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+        const nome = this.current.empreiteiroNome || this.current.fornecedor || 'empreiteiro';
+        const docName = window.DocActions.buildDocumentName([nome, this.current.romaneioNum || this.current.id]);
+        window.DocActions.printHtml({ title: docName, contentHtml: gerarHtmlReciboEntrada(this.current) });
     },
     pdf() {
         if (!this.current) return;
-        return window.DocActions.downloadPdf({ title: `Entrada ${this.current.romaneioNum || ''}`, filename: `entrada-${this.current.romaneioNum || this.current.id || 'carga'}`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+        const nome = this.current.empreiteiroNome || this.current.fornecedor || 'empreiteiro';
+        const docName = window.DocActions.buildDocumentName([nome, this.current.romaneioNum || this.current.id]);
+        return window.DocActions.downloadPdf({ title: docName, filename: docName, contentHtml: gerarHtmlReciboEntrada(this.current) });
     },
     whatsapp() {
         if (!this.current) return;
-        return window.DocActions.sendWhatsApp({ title: `Entrada ${this.current.romaneioNum || ''}`, filename: `entrada-${this.current.romaneioNum || this.current.id || 'carga'}`, message: `Segue o recibo da entrada ${this.current.romaneioNum || ''}.`, contentHtml: gerarHtmlReciboEntrada(this.current) });
+        const nome = this.current.empreiteiroNome || this.current.fornecedor || 'empreiteiro';
+        const docName = window.DocActions.buildDocumentName([nome, this.current.romaneioNum || this.current.id]);
+        return window.DocActions.sendWhatsApp({ title: docName, filename: docName, message: `Segue o recibo de entrada ${docName}.`, contentHtml: gerarHtmlReciboEntrada(this.current) });
     }
 };
 

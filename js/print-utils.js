@@ -17,6 +17,13 @@
             .toLowerCase() || 'documento';
     }
 
+    function buildDocumentName(parts = []) {
+        const clean = parts
+            .map(part => String(part || '').trim())
+            .filter(Boolean);
+        return clean.join(' - ') || 'documento';
+    }
+
     function createBaseStyles() {
         return `
             <style>
@@ -73,9 +80,12 @@
 
         const wrapper = document.createElement('div');
         wrapper.style.position = 'fixed';
-        wrapper.style.left = '-99999px';
+        wrapper.style.left = '0';
         wrapper.style.top = '0';
         wrapper.style.width = '1120px';
+        wrapper.style.opacity = '0';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.style.zIndex = '-1';
         wrapper.innerHTML = `<div class="doc-shell"><div class="doc-paper">${contentHtml}</div></div>${createBaseStyles()}`;
         document.body.appendChild(wrapper);
 
@@ -120,6 +130,7 @@
     window.DocActions = {
         escapeHtml,
         sanitizeFileName,
+        buildDocumentName,
         buildPrintableHtml,
         printHtml,
         downloadPdf,
