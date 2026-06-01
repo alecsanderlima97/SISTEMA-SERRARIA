@@ -362,6 +362,29 @@ window.formatCurrencyInput = function(e) {
     e.target.value = "R$ " + (isNegative ? "-" : "") + value;
 };
 
+window.parseDecimalValue = function(val) {
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'number') return val;
+    return parseFloat(String(val).replace(/\./g, '').replace(',', '.').trim()) || 0;
+};
+
+window.formatDecimalValue = function(val, decimals = 2) {
+    if (val === null || val === undefined || val === '') return '';
+    const num = Number(val);
+    if (Number.isNaN(num)) return '';
+    return num.toFixed(decimals).replace('.', ',');
+};
+
+window.formatDecimalInput = function(e) {
+    let value = e.target.value || '';
+    value = value.replace(/\D/g, '');
+    if (!value) {
+        e.target.value = '';
+        return;
+    }
+    e.target.value = (parseInt(value, 10) / 100).toFixed(2).replace('.', ',');
+};
+
 window.forceUppercaseInput = function(e) {
     let start = e.target.selectionStart;
     let end = e.target.selectionEnd;

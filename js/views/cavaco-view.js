@@ -91,15 +91,15 @@
                             <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Altura (m)</label>
-                                    <input type="number" id="subCliAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="subCliAlt" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Largura (m)</label>
-                                    <input type="number" id="subCliLarg" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="subCliLarg" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Compr. (m)</label>
-                                    <input type="number" id="subCliComp" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="subCliComp" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                             </div>
 
@@ -210,19 +210,19 @@
                             <div class="col-span-2" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
-                                    <input type="number" id="calcCavAlt" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="calcCavAlt" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Larg (LARG)</label>
-                                    <input type="number" id="calcCavLarg" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="calcCavLarg" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Comp (COMP)</label>
-                                    <input type="number" id="calcCavComp" step="0.01" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="calcCavComp" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Cupim Adic.</label>
-                                    <input type="number" id="calcCavCupimAdicional" step="0.01" placeholder="m³" style="padding: 8px; font-size: 0.85rem;">
+                                    <input type="text" id="calcCavCupimAdicional" inputmode="decimal" placeholder="m³" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
                             </div>
                             
@@ -232,7 +232,7 @@
                                     <option value="Cavaco / Maravalha">Cavaco / Maravalha</option>
                                     <option value="Pó de Serra">Pó de Serra</option>
                                     <option value="Casca">Casca</option>
-                                    <option value="Lenha">Lenha de Refugo</option>
+                                    <option value="Lenha">LENHA DE REFUGO</option>
                                 </select>
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">

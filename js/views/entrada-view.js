@@ -82,9 +82,9 @@
                                     <label for="entProdutoCarga">Produto da carga *</label>
                                     <select id="entProdutoCarga" required>
                                         <option value="">Selecione...</option>
-                                        <option value="TORA DE EUCALIPTO">Tora de eucalipto</option>
-                                        <option value="TORA DE PINO">Tora de pino</option>
-                                        <option value="LENHA">Lenha</option>
+                                        <option value="TORA DE EUCALIPTO">TORA DE EUCALIPTO</option>
+                                        <option value="TORA DE PINO">TORA DE PINO</option>
+                                        <option value="LENHA">LENHA</option>
                                     </select>
                                 </div>
                                 <div class="input-group">

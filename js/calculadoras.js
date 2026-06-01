@@ -269,9 +269,9 @@ if (formCliSub) {
         const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
         const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
         
-        const alt = parseFloat(document.getElementById('subCliAlt').value) || 0;
-        const larg = parseFloat(document.getElementById('subCliLarg').value) || 0;
-        const comp = parseFloat(document.getElementById('subCliComp').value) || 0;
+        const alt = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliAlt').value) : (parseFloat(document.getElementById('subCliAlt').value) || 0);
+        const larg = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliLarg').value) : (parseFloat(document.getElementById('subCliLarg').value) || 0);
+        const comp = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliComp').value) : (parseFloat(document.getElementById('subCliComp').value) || 0);
         
         if (!nome || !docNum || valorCavaco <= 0 || valorPo <= 0) {
             alert("Por favor, preencha todos os campos obrigatórios (*)");
@@ -489,10 +489,10 @@ if (selectCavTipoInput) {
 
 // Função de Cubagem Automática em Tempo Real (ALT x LARG x COMP)
 function calcularCubagemCaminhaoTempoReal() {
-    const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
-    const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
-    const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
-    const cupimAdicional = parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0;
+    const alt = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavAlt').value) : (parseFloat(document.getElementById('calcCavAlt').value) || 0);
+    const larg = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavLarg').value) : (parseFloat(document.getElementById('calcCavLarg').value) || 0);
+    const comp = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavComp').value) : (parseFloat(document.getElementById('calcCavComp').value) || 0);
+    const cupimAdicional = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavCupimAdicional')?.value) : (parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0);
     const qtdInput = document.getElementById('calcCavQtd');
     
     if (alt > 0 && larg > 0 && comp > 0) {
@@ -544,9 +544,10 @@ if (chkCavParticular) {
 renderListaCaminhoesSub();
 
 // Ouvintes de cubagem
-['calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional'].forEach(id => {
+['subCliAlt', 'subCliLarg', 'subCliComp', 'calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
+        if (window.formatDecimalInput) input.addEventListener('input', window.formatDecimalInput);
         input.addEventListener('input', calcularCubagemCaminhaoTempoReal);
     }
 });
@@ -619,10 +620,10 @@ if (btnCalcCavaco) {
         const placaCaminhao = document.getElementById('calcCavPlacaCaminhao').value || '---';
         const placaCarreta = document.getElementById('calcCavPlacaCarreta').value || '---';
 
-        const alt = parseFloat(document.getElementById('calcCavAlt').value) || 0;
-        const larg = parseFloat(document.getElementById('calcCavLarg').value) || 0;
-        const comp = parseFloat(document.getElementById('calcCavComp').value) || 0;
-        const cupimAdicional = parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0;
+        const alt = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavAlt').value) : (parseFloat(document.getElementById('calcCavAlt').value) || 0);
+        const larg = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavLarg').value) : (parseFloat(document.getElementById('calcCavLarg').value) || 0);
+        const comp = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavComp').value) : (parseFloat(document.getElementById('calcCavComp').value) || 0);
+        const cupimAdicional = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavCupimAdicional')?.value) : (parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0);
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
