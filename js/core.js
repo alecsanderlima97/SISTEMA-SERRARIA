@@ -595,15 +595,14 @@ const App = {
                 timeZone: 'America/Sao_Paulo',
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric'
+                year: '2-digit'
             });
             const hora = agora.toLocaleTimeString('pt-BR', {
                 timeZone: 'America/Sao_Paulo',
                 hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
+                minute: '2-digit'
             });
-            target.innerHTML = `${data}<br>${hora} BRT`;
+            target.textContent = `${data} ${hora}`;
         };
 
         render();

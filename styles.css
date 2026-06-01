@@ -2031,17 +2031,22 @@ body.role-pendente .global-header {
     gap: 12px;
 }
 
+.header-user-topline {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
 .header-date-time {
-    min-width: 148px;
-    padding: 6px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--text-muted);
-    font-size: 0.8rem;
-    font-weight: 600;
-    line-height: 1.35;
-    text-align: right;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-align: left;
     white-space: nowrap;
 }
 
@@ -2221,10 +2226,12 @@ body.role-pendente .global-header {
         min-width: 0;
     }
 
+    .header-user-topline {
+        justify-content: flex-end;
+    }
+
     .header-date-time {
-        min-width: 126px;
-        padding: 5px 8px;
-        font-size: 0.72rem;
+        display: none;
     }
 
     .header-user-text {
