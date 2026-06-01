@@ -872,6 +872,8 @@ function configurarSubmitEntrada() {
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
             mato: ((document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
+            produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
+            observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
@@ -967,6 +969,7 @@ Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`;
 Romaneio: ${en.romaneioNum || 'N/A'}
 Empreiteiro: ${en.empreiteiroNome || en.fornecedor || 'N/A'}
 Mato: ${en.mato || 'N/A'}
+Produto da Carga: ${en.produtoCarga || 'N/A'}
 Motorista: ${en.motorista || 'N/A'}
 Data: ${en.data} ${en.horario || ''}
 Caminhão/Placa: ${en.caminhao || 'N/A'} / ${en.placa}
@@ -981,6 +984,7 @@ Volume Total: ${en.volume.toFixed(2).replace('.', ',')}m³
 
 --- FINANCEIRO ---
 ${financeiroDetalhe}
+Observacao: ${en.observacaoCarga || 'N/A'}
 `);
 };
 
@@ -1000,6 +1004,10 @@ window.alterarEntrada = function(id) {
         entMatoSelect.value = en.mato || '';
     }
     if(entMato) entMato.value = en.mato || '';
+    const produtoCargaInput = document.getElementById('entProdutoCarga');
+    if (produtoCargaInput) produtoCargaInput.value = en.produtoCarga || '';
+    const observacaoCargaInput = document.getElementById('entObservacaoCarga');
+    if (observacaoCargaInput) observacaoCargaInput.value = en.observacaoCarga || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
@@ -1048,7 +1056,8 @@ function gerarHtmlReciboEntrada(en) {
 <h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`;
     return `
         <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>Recibo de Entrada de Toras</strong></div></div><div class="doc-title"><h1>Entrada</h1><p><strong>Romaneio ${en.romaneioNum || 'N/A'}</strong></p></div></div>
-        <div class="doc-grid"><div class="doc-card"><h3>Dados Gerais</h3><p><strong>Empreiteiro:</strong> ${en.empreiteiroNome || en.fornecedor || 'N/A'}</p><p><strong>Motorista:</strong> ${en.motorista || 'N/A'}</p><p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p><p><strong>Veiculo:</strong> ${en.caminhao || 'N/A'} - ${en.placa || '-'}</p></div><div class="doc-card"><h3>Medidas</h3><p><strong>Comprimento:</strong> ${formatDecimalValue(en.comp)}m</p><p><strong>Largura:</strong> ${formatDecimalValue(en.larg)}m</p><p><strong>Altura media:</strong> ${formatDecimalValue(en.mediaAltura)}m</p><p><strong>Volume:</strong> <span class="doc-total">${en.volume.toFixed(2).replace('.', ',')} m3</span></p></div></div>
+        <div class="doc-grid"><div class="doc-card"><h3>Dados Gerais</h3><p><strong>Empreiteiro:</strong> ${en.empreiteiroNome || en.fornecedor || 'N/A'}</p><p><strong>Produto:</strong> ${en.produtoCarga || 'N/A'}</p><p><strong>Mato:</strong> ${en.mato || 'N/A'}</p><p><strong>Motorista:</strong> ${en.motorista || 'N/A'}</p><p><strong>Data/Hora:</strong> ${dtStr} ${en.horario || ''}</p><p><strong>Veiculo:</strong> ${en.caminhao || 'N/A'} - ${en.placa || '-'}</p></div><div class="doc-card"><h3>Medidas</h3><p><strong>Comprimento:</strong> ${formatDecimalValue(en.comp)}m</p><p><strong>Largura:</strong> ${formatDecimalValue(en.larg)}m</p><p><strong>Altura media:</strong> ${formatDecimalValue(en.mediaAltura)}m</p><p><strong>Volume:</strong> <span class="doc-total">${en.volume.toFixed(2).replace('.', ',')} m3</span></p></div></div>
+        ${en.observacaoCarga ? `<div class="doc-note"><strong>Observacao da carga:</strong><br>${en.observacaoCarga}</div>` : ''}
         <div class="doc-note">${reciboFinanceiro}</div>
         <div class="doc-signatures"><div>Assinatura</div><div>Conferencia</div></div>`;
 }
@@ -1261,7 +1270,7 @@ function inicializarModuloEntrada() {
     configurarSubmitEntrada();
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);

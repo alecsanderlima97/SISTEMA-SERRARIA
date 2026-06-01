@@ -79,6 +79,15 @@
                                     <input type="text" id="entMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                 </div>
                                 <div class="input-group">
+                                    <label for="entProdutoCarga">Produto da carga *</label>
+                                    <select id="entProdutoCarga" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="TORA DE EUCALIPTO">Tora de eucalipto</option>
+                                        <option value="TORA DE PINO">Tora de pino</option>
+                                        <option value="LENHA">Lenha</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
                                     <label for="entRomaneio">Nº Romaneio *</label>
                                     <input type="text" id="entRomaneio" class="text-uppercase-input" required placeholder="Ex: ROM-1004">
                                 </div>
@@ -169,6 +178,11 @@
                                         <div id="entResultadoDescarga" style="font-size: 1.8rem; font-weight: bold; color:#f59e0b; margin-top: 5px;">R\$ 0,00</div>
                                         <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Base: R\$ 1,05/m³</small>
                                     </div>
+                                </div>
+
+                                <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
+                                    <label for="entObservacaoCarga">Observação da carga</label>
+                                    <textarea id="entObservacaoCarga" class="text-uppercase-input" rows="3" placeholder="Observações sobre a carga, produto ou conferência..." style="width:100%; resize:vertical;"></textarea>
                                 </div>
 
                                 <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
