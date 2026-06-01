@@ -184,6 +184,11 @@ const BACKUP_LOCAL_KEYS = [
     'orquestra_frota_relatos'
 ];
 
+function canRunCloudSnapshotForRole(role) {
+    const normalized = normalizeRole(role);
+    return normalized === 'gerente' || normalized === 'admin';
+}
+
 
 // Objeto de compatibilidade para evitar que scripts antigos travem o sistema
 window.DB = {
@@ -342,6 +347,14 @@ window.exportarBackup = async function(btnElement) {
     }
 
     try {
+        if (window.FS?.gerarSnapshotNuvem) {
+            try {
+                await window.FS.gerarSnapshotNuvem({ motivo: 'manual', force: true });
+            } catch (snapshotError) {
+                console.warn('Snapshot em nuvem nao concluido antes do backup manual:', snapshotError);
+            }
+        }
+
         const backupData = {
             versao: 2,
             dataExportacao: new Date().toISOString(),
@@ -436,7 +449,7 @@ function preencherFormularioPerfil(userData = {}, authUser = null) {
 function atualizarResumoBackup() {
     const box = document.getElementById('backupInfoResumo');
     if (!box) return;
-    box.textContent = `Firestore: ${BACKUP_COLLECTIONS.join(', ')}. Local: ${BACKUP_LOCAL_KEYS.join(', ')}.`;
+    box.textContent = `Firestore: ${BACKUP_COLLECTIONS.join(', ')}. Local: ${BACKUP_LOCAL_KEYS.join(', ')}. Snapshot automatico em nuvem para gerente/admin com retencao dos 10 mais recentes.`;
 }
 
 function inicializarMascarasPerfil() {
@@ -806,6 +819,11 @@ const App = {
                         inicializarMascarasPerfil();
                         atualizarResumoBackup();
                         this.applyPermissionVisibility();
+                        if (canRunCloudSnapshotForRole(novoCargo) && window.FS?.gerarSnapshotNuvem) {
+                            window.FS.gerarSnapshotNuvem({ motivo: 'login' }).catch(error => {
+                                console.error('Falha ao gerar snapshot automatico:', error);
+                            });
+                        }
                         
                         // Direcionar telas de acordo com a permissão atômica atualizada
                         if (normalizeRole(this.userRole) === 'PENDENTE') {

@@ -56,6 +56,25 @@ window.confirmarExclusaoComSenha = async function(mensagemConfirmacao = 'Deseja 
 };
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
+const CLOUD_SNAPSHOT_COLLECTIONS = [
+    'produtos',
+    'clientes',
+    'transportes',
+    'romaneios',
+    'entradas',
+    'empreiteiros',
+    'vendas_subprodutos',
+    'estoque',
+    'estoque_movimentacoes',
+    'frotas',
+    'frota_abastecimentos',
+    'frota_manutencoes',
+    'financeiro_lancamentos',
+    'financeiro_relatorios_mensais',
+    'patio_relatorios',
+    'agenda',
+    'usuarios'
+];
 
 function getCurrentUserMeta() {
     return window.AppUserContext || {
@@ -84,6 +103,71 @@ window.AppTenant = {
     getCurrentUserMeta,
     withTenantMeta
 };
+
+async function limparSnapshotsAntigos(maxSnapshots = 10) {
+    const snap = await getDocs(query(collection(db, 'backup_snapshots'), orderBy('criadoEmEpoch', 'desc')));
+    const docs = snap.docs || [];
+    if (docs.length <= maxSnapshots) return;
+
+    const antigos = docs.slice(maxSnapshots);
+    for (const backupDoc of antigos) {
+        const itensSnap = await getDocs(query(collection(db, 'backup_snapshot_itens'), where('snapshotId', '==', backupDoc.id)));
+        for (const itemDoc of itensSnap.docs) {
+            await deleteDoc(itemDoc.ref);
+        }
+        await deleteDoc(backupDoc.ref);
+    }
+}
+
+async function gerarSnapshotNuvem({ motivo = 'automatico', collections = CLOUD_SNAPSHOT_COLLECTIONS, force = false } = {}) {
+    const meta = getCurrentUserMeta();
+    const intervalMs = 1000 * 60 * 60 * 6;
+    const cacheKey = `orquestrasis_last_cloud_snapshot_at_${meta.empresaId || DEFAULT_EMPRESA_ID}`;
+    const ultimo = Number(localStorage.getItem(cacheKey) || 0);
+    const agora = Date.now();
+
+    if (!force && ultimo && (agora - ultimo) < intervalMs) {
+        return { skipped: true, reason: 'intervalo', nextAllowedAt: ultimo + intervalMs };
+    }
+
+    const backupRef = await addDoc(collection(db, 'backup_snapshots'), withTenantMeta({
+        motivo,
+        criadoEmEpoch: agora,
+        totalColecoes: collections.length,
+        colecoes: collections,
+        status: 'processando'
+    }, true));
+
+    try {
+        for (const collName of collections) {
+            const snap = await getDocs(collection(db, collName));
+            const items = [];
+            snap.forEach(itemDoc => items.push({ id: itemDoc.id, ...itemDoc.data() }));
+
+            await addDoc(collection(db, 'backup_snapshot_itens'), withTenantMeta({
+                snapshotId: backupRef.id,
+                colecao: collName,
+                totalItens: items.length,
+                items
+            }, true));
+        }
+
+        await updateDoc(doc(db, 'backup_snapshots', backupRef.id), withTenantMeta({
+            status: 'concluido',
+            concluidoEm: new Date(agora).toISOString()
+        }, false));
+
+        localStorage.setItem(cacheKey, String(agora));
+        await limparSnapshotsAntigos(10);
+        return { skipped: false, snapshotId: backupRef.id };
+    } catch (error) {
+        await updateDoc(doc(db, 'backup_snapshots', backupRef.id), withTenantMeta({
+            status: 'erro',
+            erro: error?.message || 'Falha ao gerar snapshot'
+        }, false));
+        throw error;
+    }
+}
 
 // Helper global para simplificar operações no Firestore em scripts legado
 window.FS = {
@@ -167,6 +251,14 @@ window.FS = {
             await deleteDoc(doc(db, collName, docId));
         } catch (err) {
             console.error(`Erro ao excluir doc ${collName}/${docId}:`, err);
+            throw err;
+        }
+    },
+    async gerarSnapshotNuvem(options = {}) {
+        try {
+            return await gerarSnapshotNuvem(options);
+        } catch (err) {
+            console.error('Erro ao gerar snapshot em nuvem:', err);
             throw err;
         }
     }
