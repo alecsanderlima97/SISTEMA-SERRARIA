@@ -498,10 +498,38 @@ function parseConfigPacote(raw) {
     return match ? { alt: match[1], cam: match[2], am: match[3] || '' } : {};
 }
 
+function ordenarItensPatio(lista) {
+    return [...lista].sort((a, b) => {
+        const classeA = obterNumeroClasse(a.classe) || 99;
+        const classeB = obterNumeroClasse(b.classe) || 99;
+        if (classeA !== classeB) return classeA - classeB;
+
+        const compDiff = (Number(b.comprimento) || 0) - (Number(a.comprimento) || 0);
+        if (compDiff !== 0) return compDiff;
+
+        const espDiff = (Number(b.espessura) || 0) - (Number(a.espessura) || 0);
+        if (espDiff !== 0) return espDiff;
+
+        const largDiff = (Number(b.largura) || 0) - (Number(a.largura) || 0);
+        if (largDiff !== 0) return largDiff;
+
+        const pecasDiff = (Number(b.pecas) || 0) - (Number(a.pecas) || 0);
+        if (pecasDiff !== 0) return pecasDiff;
+
+        return String(a.id || '').localeCompare(String(b.id || ''));
+    });
+}
+
+function ordenarItensPatioTemp() {
+    itensPatioTemp = ordenarItensPatio(itensPatioTemp);
+}
+
 // Renderizar lista do pátio exatamente igual ao mockup
 function renderizarItensPatioTemp() {
     const tbody = document.getElementById('listaItensPatioTemp');
     if (!tbody) return;
+
+    ordenarItensPatioTemp();
 
     if (itensPatioTemp.length === 0) {
         tbody.innerHTML = `
@@ -680,8 +708,9 @@ async function salvarRelatorioPatio() {
     let totalPacotes = 0;
     let totalVolume = 0;
     let totalPecas = 0;
+    const itensOrdenados = ordenarItensPatio(itensPatioTemp);
 
-    itensPatioTemp.forEach(item => {
+    itensOrdenados.forEach(item => {
         totalPacotes += item.pacotes;
         totalVolume += item.volume;
         totalPecas += item.totalPecas;
@@ -692,7 +721,7 @@ async function salvarRelatorioPatio() {
         periodo: periodoVal,
         horario: horarioVal,
         serrando: serrandoVal,
-        itens: itensPatioTemp.map(item => ({ ...item })),
+        itens: itensOrdenados.map(item => ({ ...item })),
         totais: {
             totalVolume: totalVolume,
             totalPacotes: totalPacotes,
