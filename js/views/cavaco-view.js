@@ -17,6 +17,9 @@
                     <button type="button" id="btnTabSubListaClientes" onclick="window.switchTabSubprodutos('lista-clientes')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-users-gear"></i> Gerenciar Clientes
                     </button>
+                    <button type="button" id="btnTabSubLancamentos" onclick="window.switchTabSubprodutos('lancamentos')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Ultimos Lancamentos
+                    </button>
                 </div>
 
                 <div class="subprodutos-container" id="subprodutosContainer" style="max-width: 900px; margin: 0 auto; position: relative;">
@@ -246,7 +249,7 @@
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>Quantidade (m³ / un)</label>
-                                <input type="number" id="calcCavQtd" step="0.01" placeholder="Ex: 15">
+                                <input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00">
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>Valor Unitário R\$ / m³ *</label>
@@ -256,9 +259,40 @@
                             <button type="button" class="btn-primary col-span-2"
                                 style="padding: 15px; font-size: 1.1rem; margin-top:15px;"
                                 id="btnCalcCavaco">
-                                <i class="fa-solid fa-print"></i> Gerar e Imprimir Recibo
+                                <i class="fa-solid fa-save"></i> Salvar Registro
                             </button>
+                            <div class="col-span-2" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+                                <button type="button" class="btn-secondary" id="btnPrintUltimoSubproduto" style="padding: 12px;">
+                                    <i class="fa-solid fa-print"></i> Imprimir
+                                </button>
+                                <button type="button" class="btn-secondary" id="btnPdfUltimoSubproduto" style="padding: 12px;">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF
+                                </button>
+                                <button type="button" class="btn-secondary" id="btnWhatsUltimoSubproduto" style="padding: 12px;">
+                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                                </button>
+                            </div>
                         </form>
+                    </div>
+
+                    <div class="glass-panel" id="panelLancamentosSub" style="display: none;">
+                        <div class="section-title">
+                            <h2><i class="fa-solid fa-clock-rotate-left"></i> Ultimos Lancamentos</h2>
+                        </div>
+                        <div style="max-height: 430px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="background: rgba(0,0,0,0.2); color: var(--text-muted);">
+                                        <th style="padding: 10px; text-align: left;">Data</th>
+                                        <th style="padding: 10px; text-align: left;">Cliente</th>
+                                        <th style="padding: 10px; text-align: left;">Produto</th>
+                                        <th style="padding: 10px; text-align: right;">Total</th>
+                                        <th style="padding: 10px; text-align: right;">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaLancamentosSubprodutos"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                 </div>

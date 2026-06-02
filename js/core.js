@@ -72,6 +72,15 @@ const SUBSECTION_PERMISSIONS = {
             { id: 'descarregamento', label: 'Descarregamento' },
             { id: 'empreiteiros', label: 'Empreiteiros' }
         ]
+    },
+    'view-cavaco': {
+        label: 'Venda de Subprodutos',
+        items: [
+            { id: 'recibo', label: 'Emitir recibo' },
+            { id: 'clientes', label: 'Cadastrar clientes' },
+            { id: 'lista-clientes', label: 'Gerenciar clientes' },
+            { id: 'lancamentos', label: 'Ultimos lancamentos' }
+        ]
     }
 };
 
@@ -873,6 +882,9 @@ const App = {
         });
         if (typeof window.atualizarPermissoesEntrada === 'function') {
             window.atualizarPermissoesEntrada();
+        }
+        if (typeof window.atualizarPermissoesSubprodutos === 'function') {
+            window.atualizarPermissoesSubprodutos();
         }
     },
 

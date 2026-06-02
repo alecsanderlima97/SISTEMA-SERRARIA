@@ -64,7 +64,10 @@ if (btnCalcDiesel) {
 const btnCalcCavaco = document.getElementById('btnCalcCavaco');
 
 let clientesSubprodutosCache = [];
+let vendasSubprodutosCache = [];
 let clienteSubprodutoEditandoId = null;
+let vendaSubprodutoEditandoId = null;
+let ultimoDocumentoSubproduto = null;
 let caminhoesSubprodutoForm = [];
 
 function normalizarCaminhoesSubproduto(cli = {}) {
@@ -196,6 +199,9 @@ async function carregarClientesSubprodutos() {
 window.editarClienteSub = (id) => {
     const cli = clientesSubprodutosCache.find(x => x.id === id);
     if (!cli) return;
+    if (typeof window.switchTabSubprodutos === 'function') {
+        window.switchTabSubprodutos('clientes');
+    }
     
     clienteSubprodutoEditandoId = id;
     
@@ -544,7 +550,7 @@ if (chkCavParticular) {
 renderListaCaminhoesSub();
 
 // Ouvintes de cubagem
-['subCliAlt', 'subCliLarg', 'subCliComp', 'calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional'].forEach(id => {
+['subCliAlt', 'subCliLarg', 'subCliComp', 'calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional', 'calcCavQtd'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         if (window.formatDecimalInput) input.addEventListener('input', window.formatDecimalInput);
@@ -600,11 +606,83 @@ function gerarHtmlReciboSubproduto(venda) {
     `;
 }
 
+function definirDocumentoSubprodutoAtual(venda) {
+    if (!venda) return;
+    const docName = window.DocActions?.buildDocumentName
+        ? window.DocActions.buildDocumentName([venda.cliente, venda.romaneio])
+        : `${venda.cliente} - ${venda.romaneio}`;
+    ultimoDocumentoSubproduto = {
+        title: docName,
+        filename: docName,
+        venda,
+        contentHtml: gerarHtmlReciboSubproduto(venda)
+    };
+}
+
+function executarAcaoDocumentoSubproduto(acao) {
+    if (!ultimoDocumentoSubproduto) {
+        alert('Salve ou selecione um lancamento primeiro.');
+        return;
+    }
+    if (acao === 'print') {
+        window.DocActions?.printHtml?.(ultimoDocumentoSubproduto);
+    } else if (acao === 'pdf') {
+        window.DocActions?.downloadPdf?.(ultimoDocumentoSubproduto);
+    } else if (acao === 'whatsapp') {
+        window.DocActions?.sendWhatsApp?.({
+            ...ultimoDocumentoSubproduto,
+            message: `Segue o recibo de subprodutos ${ultimoDocumentoSubproduto.title}.`
+        });
+    }
+}
+
+async function carregarLancamentosSubprodutos() {
+    const lista = document.getElementById('listaLancamentosSubprodutos');
+    if (!lista) return;
+    lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center;">Carregando...</td></tr>';
+
+    try {
+        const snap = await getDocs(collection(db, 'vendas_subprodutos'));
+        vendasSubprodutosCache = [];
+        snap.forEach(d => vendasSubprodutosCache.push({ id: d.id, ...d.data() }));
+        vendasSubprodutosCache.sort((a, b) => new Date(b.criadoEm || b.data || 0) - new Date(a.criadoEm || a.data || 0));
+
+        const ultimos = vendasSubprodutosCache.slice(0, 20);
+        if (!ultimos.length) {
+            lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
+            return;
+        }
+
+        lista.innerHTML = ultimos.map(venda => {
+            const data = venda.data ? new Date(`${venda.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
+            const total = Number(venda.total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:10px 8px;">${data}</td>
+                    <td style="padding:10px 8px; font-weight:700;">${venda.cliente || '-'}</td>
+                    <td style="padding:10px 8px;">${venda.tipo || '-'}</td>
+                    <td style="padding:10px 8px; text-align:right; color:var(--accent-color); font-weight:700;">${total}</td>
+                    <td style="padding:10px 8px; text-align:right; white-space:nowrap;">
+                        <button type="button" class="btn-icon" onclick="window.editarVendaSubproduto('${venda.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+                        <button type="button" class="btn-icon" onclick="window.excluirVendaSubproduto('${venda.id}')" title="Excluir" style="color:var(--danger-color);"><i class="fa-solid fa-trash"></i></button>
+                        <button type="button" class="btn-icon" onclick="window.imprimirVendaSubproduto('${venda.id}')" title="Imprimir"><i class="fa-solid fa-print"></i></button>
+                        <button type="button" class="btn-icon" onclick="window.pdfVendaSubproduto('${venda.id}')" title="PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                        <button type="button" class="btn-icon" onclick="window.whatsappVendaSubproduto('${venda.id}')" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Erro ao carregar vendas de subprodutos:', e);
+        lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center;">Erro ao carregar lancamentos.</td></tr>';
+    }
+}
+
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
         const tipo = document.getElementById('calcCavTipo').value;
         const unidade = document.getElementById('calcCavUnidade').value;
-        const qtd = parseFloat(document.getElementById('calcCavQtd').value) || 0;
+        const qtd = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavQtd').value) : (parseFloat(String(document.getElementById('calcCavQtd').value).replace(',', '.')) || 0);
         const valorUni = window.parseCurrencyValue(document.getElementById('calcCavValor').value) || 0;
 
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
@@ -660,7 +738,13 @@ if (btnCalcCavaco) {
                 criadoEm: new Date().toISOString()
             };
 
-            await window.FS.addDoc('vendas_subprodutos', novaVenda);
+            if (vendaSubprodutoEditandoId) {
+                await window.FS.updateDoc('vendas_subprodutos', vendaSubprodutoEditandoId, novaVenda);
+                novaVenda.id = vendaSubprodutoEditandoId;
+                vendaSubprodutoEditandoId = null;
+            } else {
+                novaVenda.id = await window.FS.addDoc('vendas_subprodutos', novaVenda);
+            }
             console.log("Calculadoras: Venda de subproduto salva no Firebase");
             document.dispatchEvent(new Event('historicoUpdated'));
 
@@ -672,42 +756,106 @@ if (btnCalcCavaco) {
                 }
             }
 
-            const docName = window.DocActions?.buildDocumentName
-                ? window.DocActions.buildDocumentName([cliente, romaneio])
-                : `${cliente} - ${romaneio}`;
-            const contentHtml = gerarHtmlReciboSubproduto({
+            definirDocumentoSubprodutoAtual({
                 ...novaVenda,
                 medidasTexto: medidasStr
             });
 
-            if (window.DocActions?.printHtml) {
-                window.DocActions.printHtml({ title: docName, contentHtml });
-            } else {
-                const win = window.open('', '_blank');
-                if (win) {
-                    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docName}</title></head><body>${contentHtml}</body></html>`);
-                    win.document.close();
-                    win.print();
-                }
-            }
-
-            alert("Venda de subproduto registrada e enviada para impressao!");
+            alert("Venda de subproduto salva com sucesso!");
             document.getElementById('formCavaco').reset();
             if (document.getElementById('calcCavSelectCliente')) {
                 document.getElementById('calcCavSelectCliente').value = '';
             }
+            await carregarLancamentosSubprodutos();
         } catch (e) {
             console.error("Erro ao salvar venda de subproduto:", e);
             alert("Erro ao salvar no Firebase.");
         } finally {
             btnCalcCavaco.disabled = false;
-            btnCalcCavaco.innerHTML = btnOriginalHTML;
+            btnCalcCavaco.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Registro';
         }
     });
 }
 
+const btnPrintUltimoSubproduto = document.getElementById('btnPrintUltimoSubproduto');
+if (btnPrintUltimoSubproduto) btnPrintUltimoSubproduto.addEventListener('click', () => executarAcaoDocumentoSubproduto('print'));
+const btnPdfUltimoSubproduto = document.getElementById('btnPdfUltimoSubproduto');
+if (btnPdfUltimoSubproduto) btnPdfUltimoSubproduto.addEventListener('click', () => executarAcaoDocumentoSubproduto('pdf'));
+const btnWhatsUltimoSubproduto = document.getElementById('btnWhatsUltimoSubproduto');
+if (btnWhatsUltimoSubproduto) btnWhatsUltimoSubproduto.addEventListener('click', () => executarAcaoDocumentoSubproduto('whatsapp'));
+
+function prepararDocumentoVendaSubproduto(id) {
+    const venda = vendasSubprodutosCache.find(item => item.id === id);
+    if (!venda) return null;
+    let medidasStr = '---';
+    const m = venda.medidas || {};
+    if ((Number(m.alt) || 0) > 0 && (Number(m.larg) || 0) > 0 && (Number(m.comp) || 0) > 0) {
+        medidasStr = `${Number(m.alt).toFixed(2)}m (Alt) x ${Number(m.larg).toFixed(2)}m (Larg) x ${Number(m.comp).toFixed(2)}m (Comp)`;
+        if ((Number(m.cupimAdicional) || 0) > 0) medidasStr += ` + ${Number(m.cupimAdicional).toFixed(2)} m3 (Cupim adicional)`;
+    }
+    definirDocumentoSubprodutoAtual({ ...venda, medidasTexto: medidasStr });
+    return venda;
+}
+
+window.imprimirVendaSubproduto = (id) => {
+    if (prepararDocumentoVendaSubproduto(id)) executarAcaoDocumentoSubproduto('print');
+};
+
+window.pdfVendaSubproduto = (id) => {
+    if (prepararDocumentoVendaSubproduto(id)) executarAcaoDocumentoSubproduto('pdf');
+};
+
+window.whatsappVendaSubproduto = (id) => {
+    if (prepararDocumentoVendaSubproduto(id)) executarAcaoDocumentoSubproduto('whatsapp');
+};
+
+window.editarVendaSubproduto = (id) => {
+    const venda = vendasSubprodutosCache.find(item => item.id === id);
+    if (!venda) return;
+    vendaSubprodutoEditandoId = id;
+    const set = (campo, valor) => {
+        const el = document.getElementById(campo);
+        if (el) el.value = valor || '';
+    };
+    set('calcCavRomaneio', venda.romaneio);
+    set('calcCavRomaneioCliente', venda.romaneioCliente);
+    set('calcCavCliente', venda.cliente);
+    set('calcCavDoc', venda.documento);
+    set('calcCavIE', venda.ie);
+    set('calcCavLogradouro', venda.logradouro);
+    set('calcCavCidadeEstado', venda.cidadeEstado);
+    set('calcCavMotorista', venda.motorista);
+    set('calcCavCaminhao', venda.caminhao);
+    set('calcCavPlacaCaminhao', venda.placaCaminhao);
+    set('calcCavPlacaCarreta', venda.placaCarreta);
+    set('calcCavTipo', venda.tipo);
+    set('calcCavUnidade', venda.unidade);
+    set('calcCavQtd', venda.quantidade);
+    set('calcCavValor', window.formatCurrencyValue ? window.formatCurrencyValue(venda.valorUnitario || 0) : venda.valorUnitario);
+    const m = venda.medidas || {};
+    set('calcCavAlt', m.alt);
+    set('calcCavLarg', m.larg);
+    set('calcCavComp', m.comp);
+    set('calcCavCupimAdicional', m.cupimAdicional);
+    const btn = document.getElementById('btnCalcCavaco');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Registro';
+    window.switchTabSubprodutos('recibo');
+};
+
+window.excluirVendaSubproduto = async (id) => {
+    const venda = vendasSubprodutosCache.find(item => item.id === id);
+    if (!venda) return;
+    if (await window.confirmarExclusaoComSenha(`Deseja realmente excluir a venda de subproduto ${venda.romaneio || ''}?`)) {
+        await deleteDoc(doc(db, 'vendas_subprodutos', id));
+        await carregarLancamentosSubprodutos();
+        document.dispatchEvent(new Event('historicoUpdated'));
+        alert('Venda de subproduto excluida com sucesso!');
+    }
+};
+
 // Iniciar os clientes de subprodutos na carga do script
 carregarClientesSubprodutos();
+carregarLancamentosSubprodutos();
 
 // 4. Cálculo de Fardo Completo
 const btnCalcFardo = document.getElementById('btnCalcFardo');
@@ -767,7 +915,7 @@ if (btnCalcFrete) {
 }
 
 // Inicializar listeners de máscara de R$ para as calculadoras
-const inputsFinanceirosCalc = ['calcPrecoDiesel', 'calcCavValor', 'freteValor', 'freteExtra', 'subCliValorCavaco', 'subCliValorPo'];
+const inputsFinanceirosCalc = ['calcPrecoDiesel', 'calcCavValor', 'freteValor', 'freteExtra', 'subCliValorCavaco', 'subCliValorPo', 'subCliValorCavacoParticular', 'subCliValorPoParticular'];
 inputsFinanceirosCalc.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
@@ -778,11 +926,18 @@ window.switchTabSubprodutos = function(tabName) {
     const tabRecibo = document.getElementById('panelEmissaoCavaco');
     const tabClientes = document.getElementById('panelCadastroClientesSub');
     const tabListaClientes = document.getElementById('panelListaClientesSub');
+    const tabLancamentos = document.getElementById('panelLancamentosSub');
     const btnRecibo = document.getElementById('btnTabSubRecibo');
     const btnClientes = document.getElementById('btnTabSubClientes');
     const btnListaClientes = document.getElementById('btnTabSubListaClientes');
+    const btnLancamentos = document.getElementById('btnTabSubLancamentos');
 
-    if (!tabRecibo || !tabClientes || !tabListaClientes || !btnRecibo || !btnClientes || !btnListaClientes) return;
+    if (!tabRecibo || !tabClientes || !tabListaClientes || !tabLancamentos || !btnRecibo || !btnClientes || !btnListaClientes || !btnLancamentos) return;
+
+    if (window.App?.canAccessSubsection && !window.App.canAccessSubsection('view-cavaco', tabName)) {
+        alert('Seu usuario nao tem permissao para acessar esta tela de Venda de Subprodutos.');
+        tabName = ['recibo', 'clientes', 'lista-clientes', 'lancamentos'].find(item => window.App.canAccessSubsection('view-cavaco', item)) || 'recibo';
+    }
 
     const setInactive = (btn) => {
         btn.style.color = 'var(--text-muted)';
@@ -796,7 +951,8 @@ window.switchTabSubprodutos = function(tabName) {
     tabRecibo.style.display = 'none';
     tabClientes.style.display = 'none';
     tabListaClientes.style.display = 'none';
-    [btnRecibo, btnClientes, btnListaClientes].forEach(setInactive);
+    tabLancamentos.style.display = 'none';
+    [btnRecibo, btnClientes, btnListaClientes, btnLancamentos].forEach(setInactive);
 
     if (tabName === 'recibo') {
         tabRecibo.style.display = 'block';
@@ -804,8 +960,27 @@ window.switchTabSubprodutos = function(tabName) {
     } else if (tabName === 'clientes') {
         tabClientes.style.display = 'block';
         setActive(btnClientes);
-    } else {
+    } else if (tabName === 'lista-clientes') {
         tabListaClientes.style.display = 'block';
         setActive(btnListaClientes);
+    } else {
+        tabLancamentos.style.display = 'block';
+        setActive(btnLancamentos);
+        carregarLancamentosSubprodutos();
     }
 };
+
+window.atualizarPermissoesSubprodutos = function() {
+    const tabs = [
+        { id: 'recibo', btn: document.getElementById('btnTabSubRecibo') },
+        { id: 'clientes', btn: document.getElementById('btnTabSubClientes') },
+        { id: 'lista-clientes', btn: document.getElementById('btnTabSubListaClientes') },
+        { id: 'lancamentos', btn: document.getElementById('btnTabSubLancamentos') }
+    ];
+    tabs.forEach(tab => {
+        if (tab.btn && window.App?.canAccessSubsection) {
+            tab.btn.style.display = window.App.canAccessSubsection('view-cavaco', tab.id) ? 'flex' : 'none';
+        }
+    });
+};
+window.atualizarPermissoesSubprodutos();
