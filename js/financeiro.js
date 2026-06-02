@@ -258,8 +258,8 @@ window.renderFinanceiro = function() {
     tbody.innerHTML = lista.map(item => {
         const status = obterStatusItem(item);
         const anexos = [
-            item.documento ? `<button type="button" class="financeiro-link" onclick="window.abrirAnexoFinanceiro('${item.id}', 'documento')"><i class="fa-solid fa-file-lines"></i> Doc</button>` : '',
-            item.comprovante ? `<button type="button" class="financeiro-link" onclick="window.abrirAnexoFinanceiro('${item.id}', 'comprovante')"><i class="fa-solid fa-receipt"></i> PG</button>` : ''
+            item.documento ? `<button type="button" class="btn-icon financeiro-link" style="color:#60a5fa; font-size:1.05rem; padding:4px;" onclick="window.abrirAnexoFinanceiro('${item.id}', 'documento')" title="Abrir documento"><i class="fa-solid fa-file-lines"></i></button>` : '',
+            item.comprovante ? `<button type="button" class="btn-icon financeiro-link" style="color:#22c55e; font-size:1.05rem; padding:4px;" onclick="window.abrirAnexoFinanceiro('${item.id}', 'comprovante')" title="Abrir comprovante"><i class="fa-solid fa-receipt"></i></button>` : ''
         ].filter(Boolean).join('');
 
         return `
@@ -271,9 +271,9 @@ window.renderFinanceiro = function() {
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
                 <td>${anexos || '<span style="color:var(--text-muted);">-</span>'}</td>
                 <td class="financeiro-acoes">
-                    <button type="button" onclick="window.editarFinanceiro('${item.id}')" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button type="button" onclick="window.alternarPagoFinanceiro('${item.id}')" title="Alterar status"><i class="fa-solid fa-circle-check"></i></button>
-                    <button type="button" onclick="window.excluirFinanceiro('${item.id}')" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                    <button type="button" class="btn-icon" style="color:var(--primary-color); font-size:1.05rem; padding:4px;" onclick="window.editarFinanceiro('${item.id}')" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button type="button" class="btn-icon" style="color:#22c55e; font-size:1.05rem; padding:4px;" onclick="window.alternarPagoFinanceiro('${item.id}')" title="Alterar status"><i class="fa-solid fa-circle-check"></i></button>
+                    <button type="button" class="btn-icon" style="color:var(--danger-color); font-size:1.05rem; padding:4px;" onclick="window.excluirFinanceiro('${item.id}')" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
                 </td>
             </tr>
         `;
@@ -510,7 +510,7 @@ function injetarEstilosFinanceiro() {
         .financeiro-status-badge.aberto { color:#f59e0b; background:rgba(245,158,11,0.12); }
         .financeiro-status-badge.vencido { color:#ef4444; background:rgba(239,68,68,0.12); }
         .financeiro-acoes, .financeiro-link { display:flex; gap:8px; align-items:center; }
-        .financeiro-acoes button, .financeiro-link { border:0; background:rgba(255,255,255,0.05); color:var(--text-color); border-radius:8px; padding:7px 9px; cursor:pointer; text-decoration:none; }
+        .financeiro-acoes button, .financeiro-link { cursor:pointer; text-decoration:none; }
         .financeiro-relatorio-card { padding:20px; margin-bottom:20px; }
         .financeiro-relatorio-filtros { display:grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap:12px; align-items:end; margin-bottom:14px; }
         .financeiro-relatorio-resumo { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:12px 0; }

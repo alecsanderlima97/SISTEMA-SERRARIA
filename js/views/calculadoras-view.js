@@ -6,7 +6,22 @@
                     <p>Utilitários rápidos do dia-a-dia da madeireira</p>
                 </div>
 
-                <div class="grid-form" style="grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                <style>
+                    #view-calculadoras .grid-form { width: 100% !important; max-width: 1180px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)) !important; gap: 14px !important; align-items: stretch; }
+                    #view-calculadoras .glass-panel { min-width: 0; height: 100%; padding: 16px !important; border-radius: 10px !important; display: flex; flex-direction: column; }
+                    #view-calculadoras .section-title { margin-bottom: 10px !important; }
+                    #view-calculadoras .section-title h2 { font-size: 0.98rem !important; }
+                    #view-calculadoras .input-group { margin-bottom: 7px !important; }
+                    #view-calculadoras label { font-size: 0.78rem !important; }
+                    #view-calculadoras input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 34px !important; padding: 7px 9px !important; font-size: 0.86rem !important; }
+                    #view-calculadoras .input-group > div { min-width: 0; }
+                    #view-calculadoras .input-group > div input { flex: 1 1 0; min-width: 0; }
+                    #view-calculadoras .btn-primary { min-height: 36px !important; padding: 8px 10px !important; margin-top: 8px !important; font-size: 0.86rem !important; }
+                    #view-calculadoras [id^="resultado"], #view-calculadoras #resFardoVol { margin-top: auto !important; padding-top: 10px; min-height: 34px; font-size: 1.08rem !important; display: flex; align-items: center; justify-content: center; }
+                    #view-calculadoras #resFardoQtd { font-size: 0.9rem !important; }
+                    @media (max-width: 680px) { #view-calculadoras .grid-form { grid-template-columns: 1fr !important; } }
+                </style>
+                <div class="grid-form">
                     <!-- Calc de Cubagem -->
                     <div class="glass-panel">
                         <div class="section-title">

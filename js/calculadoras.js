@@ -70,6 +70,16 @@ let vendaSubprodutoEditandoId = null;
 let ultimoDocumentoSubproduto = null;
 let caminhoesSubprodutoForm = [];
 
+function hojeIsoSubproduto() {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+}
+
+function garantirDataVendaSubproduto() {
+    const input = document.getElementById('calcCavData');
+    if (input && !input.value) input.value = hojeIsoSubproduto();
+}
+
 function normalizarCaminhoesSubproduto(cli = {}) {
     if (Array.isArray(cli.caminhoes) && cli.caminhoes.length) {
         return cli.caminhoes.map(item => ({
@@ -663,11 +673,13 @@ async function carregarLancamentosSubprodutos() {
                     <td style="padding:10px 8px;">${venda.tipo || '-'}</td>
                     <td style="padding:10px 8px; text-align:right; color:var(--accent-color); font-weight:700;">${total}</td>
                     <td style="padding:10px 8px; text-align:right; white-space:nowrap;">
-                        <button type="button" class="btn-icon" onclick="window.editarVendaSubproduto('${venda.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                        <button type="button" class="btn-icon" onclick="window.excluirVendaSubproduto('${venda.id}')" title="Excluir" style="color:var(--danger-color);"><i class="fa-solid fa-trash"></i></button>
-                        <button type="button" class="btn-icon" onclick="window.imprimirVendaSubproduto('${venda.id}')" title="Imprimir"><i class="fa-solid fa-print"></i></button>
-                        <button type="button" class="btn-icon" onclick="window.pdfVendaSubproduto('${venda.id}')" title="PDF"><i class="fa-solid fa-file-pdf"></i></button>
-                        <button type="button" class="btn-icon" onclick="window.whatsappVendaSubproduto('${venda.id}')" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+                            <button type="button" class="btn-icon" style="color:var(--primary-color); font-size:1.05rem; padding:4px;" onclick="window.editarVendaSubproduto('${venda.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+                            <button type="button" class="btn-icon" style="color:var(--danger-color); font-size:1.05rem; padding:4px;" onclick="window.excluirVendaSubproduto('${venda.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn-icon" style="color:#3498db; font-size:1.05rem; padding:4px;" onclick="window.imprimirVendaSubproduto('${venda.id}')" title="Imprimir"><i class="fa-solid fa-print"></i></button>
+                            <button type="button" class="btn-icon" style="color:#16a34a; font-size:1.05rem; padding:4px;" onclick="window.pdfVendaSubproduto('${venda.id}')" title="Baixar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button type="button" class="btn-icon" style="color:#22c55e; font-size:1.05rem; padding:4px;" onclick="window.whatsappVendaSubproduto('${venda.id}')" title="Enviar WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -682,6 +694,7 @@ if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
         const tipo = document.getElementById('calcCavTipo').value;
         const unidade = document.getElementById('calcCavUnidade').value;
+        const dataVenda = document.getElementById('calcCavData')?.value || hojeIsoSubproduto();
         const qtd = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavQtd').value) : (parseFloat(String(document.getElementById('calcCavQtd').value).replace(',', '.')) || 0);
         const valorUni = window.parseCurrencyValue(document.getElementById('calcCavValor').value) || 0;
 
@@ -717,7 +730,7 @@ if (btnCalcCavaco) {
         try {
             // Salvar a venda no Firestore
             const novaVenda = {
-                data: new Date().toISOString().split('T')[0],
+                data: dataVenda,
                 romaneio: romaneio.toUpperCase().trim(),
                 romaneioCliente: romaneioCliente.toUpperCase().trim(),
                 cliente: cliente.toUpperCase().trim(),
@@ -818,6 +831,7 @@ window.editarVendaSubproduto = (id) => {
         if (el) el.value = valor || '';
     };
     set('calcCavRomaneio', venda.romaneio);
+    set('calcCavData', venda.data || hojeIsoSubproduto());
     set('calcCavRomaneioCliente', venda.romaneioCliente);
     set('calcCavCliente', venda.cliente);
     set('calcCavDoc', venda.documento);
@@ -856,6 +870,7 @@ window.excluirVendaSubproduto = async (id) => {
 // Iniciar os clientes de subprodutos na carga do script
 carregarClientesSubprodutos();
 carregarLancamentosSubprodutos();
+garantirDataVendaSubproduto();
 
 // 4. Cálculo de Fardo Completo
 const btnCalcFardo = document.getElementById('btnCalcFardo');

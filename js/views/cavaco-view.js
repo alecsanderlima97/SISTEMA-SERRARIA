@@ -22,7 +22,7 @@
                     </button>
                 </div>
 
-                <div class="subprodutos-container" id="subprodutosContainer" style="max-width: 900px; margin: 0 auto; position: relative;">
+                <div class="subprodutos-container" id="subprodutosContainer" style="max-width: 1240px; margin: 0 auto; position: relative;">
                     
                     <!-- COLUNA 1: CADASTRO DE CLIENTES (CAVACO/PÓ) [OCULTO POR PADRÃO] -->
                     <div class="glass-panel" id="panelCadastroClientesSub" style="display: none;">
@@ -68,7 +68,7 @@
                                 <input type="text" id="subCliValorPoParticular" placeholder="R\$ 0,00">
                             </div>
 
-                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                            <div class="section-title" style="grid-column:1 / -1; margin: 8px 0 6px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
                                 <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Logística do Cliente (Opcional)</h3>
                             </div>
                             
@@ -84,7 +84,7 @@
                                 <label>Placa Carreta / Reboque</label>
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
                             </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                            <div class="input-group" style="margin-bottom:10px;">
                                 <button type="button" id="btnAdicionarCaminhaoSub" class="btn-secondary" style="padding: 10px 14px;">
                                     <i class="fa-solid fa-plus"></i> Adicionar Caminhão
                                 </button>
@@ -133,144 +133,74 @@
                     </div>
 
                     <!-- COLUNA 2: EMISSÃO DE RECIBOS [CENTRALIZADA POR PADRÃO] -->
-                    <div class="glass-panel" id="panelEmissaoCavaco" style="max-width: 600px; margin: 0 auto; display: block;">
+                    <div class="glass-panel" id="panelEmissaoCavaco" style="max-width: 1180px; margin: 0 auto; display: block;">
                         <div class="section-title">
                             <h2><i class="fa-solid fa-file-invoice-dollar"></i> Emitir Recibo</h2>
                         </div>
                         <form id="formCavaco" class="grid-form-fixed-2">
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label>Selecionar Cliente Cadastrado</label>
-                                <select id="calcCavSelectCliente" style="width: 100%;">
-                                    <option value="">Preenchimento Manual / Cliente Avulso</option>
-                                </select>
-                            </div>
-                            
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label>Cliente / Empresa Compradora *</label>
-                                <input type="text" id="calcCavCliente" class="text-uppercase-input" required placeholder="Ex: Móveis Silva Ltda">
-                            </div>
+                            <style>
+                                #formCavaco { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; align-items:start; }
+                                #formCavaco .sub-recibo-bloco { min-width:0; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; background:rgba(15,23,42,0.34); }
+                                #formCavaco .sub-recibo-bloco h3 { margin:0 0 12px 0; font-size:.92rem; color:var(--accent-color); display:flex; align-items:center; gap:8px; }
+                                #formCavaco .sub-recibo-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px 12px; }
+                                #formCavaco .sub-recibo-grid-4 { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:10px; }
+                                #formCavaco .input-group { margin-bottom:0 !important; min-width:0; }
+                                #formCavaco input, #formCavaco select { width:100%; min-width:0; box-sizing:border-box; }
+                                #formCavaco .span-2 { grid-column:span 2; }
+                                #formCavaco .span-all { grid-column:1 / -1; }
+                                #formCavaco .sub-recibo-acoes { grid-column:1 / -1; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; }
+                                @media (max-width: 980px) { #formCavaco { grid-template-columns:1fr; } }
+                                @media (max-width: 620px) { #formCavaco .sub-recibo-grid, #formCavaco .sub-recibo-grid-4 { grid-template-columns:1fr; } #formCavaco .span-2 { grid-column:span 1; } }
+                            </style>
 
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>CPF / CNPJ</label>
-                                <input type="text" id="calcCavDoc" placeholder="CPF/CNPJ Comprador">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Inscrição Estadual (IE)</label>
-                                <input type="text" id="calcCavIE" class="text-uppercase-input" placeholder="IE do Comprador">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Logradouro / Endereço</label>
-                                <input type="text" id="calcCavLogradouro" class="text-uppercase-input" placeholder="Logradouro">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Cidade / Estado</label>
-                                <input type="text" id="calcCavCidadeEstado" class="text-uppercase-input" placeholder="Cidade / UF">
-                            </div>
-
-                            <div class="section-title col-span-2" style="margin: 15px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
-                                <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-truck"></i> Dados de Transporte e Cubagem</h3>
-                            </div>
-
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Nosso Romaneio *</label>
-                                <input type="text" id="calcCavRomaneio" class="text-uppercase-input" required placeholder="Ex: 00123">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Romaneio do Cliente (Deles)</label>
-                                <input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987">
-                            </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label>Motorista do Caminhão</label>
-                                <input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista">
-                            </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label>Caminhão do Cliente</label>
-                                <select id="calcCavCaminhaoSelecionado" style="width: 100%;">
-                                    <option value="">Selecionar caminhão cadastrado</option>
-                                </select>
-                            </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label style="display:flex; align-items:center; gap:8px;">
-                                    <input type="checkbox" id="calcCavCarregamentoParticular" style="width:auto; margin:0;">
-                                    Carregamento particular
-                                </label>
-                            </div>
-
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Modelo Caminhão</label>
-                                <input type="text" id="calcCavCaminhao" class="text-uppercase-input" placeholder="Modelo do caminhão">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Placa Caminhão</label>
-                                <input type="text" id="calcCavPlacaCaminhao" class="text-uppercase-input" placeholder="ABC-1234">
-                            </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
-                                <label>Placa Carreta / Reboque</label>
-                                <input type="text" id="calcCavPlacaCarreta" class="text-uppercase-input" placeholder="XYZ-9876">
-                            </div>
-
-                            <!-- 3 Medidas para Calcular Volume em m3 -->
-                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
-                                <div class="input-group" style="margin-bottom: 0;">
-                                    <label style="font-size: 0.75rem; color: #ccc;">Alt (ALT)</label>
-                                    <input type="text" id="calcCavAlt" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
-                                </div>
-                                <div class="input-group" style="margin-bottom: 0;">
-                                    <label style="font-size: 0.75rem; color: #ccc;">Larg (LARG)</label>
-                                    <input type="text" id="calcCavLarg" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
-                                </div>
-                                <div class="input-group" style="margin-bottom: 0;">
-                                    <label style="font-size: 0.75rem; color: #ccc;">Comp (COMP)</label>
-                                    <input type="text" id="calcCavComp" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
-                                </div>
-                                <div class="input-group" style="margin-bottom: 0;">
-                                    <label style="font-size: 0.75rem; color: #ccc;">Cupim Adic.</label>
-                                    <input type="text" id="calcCavCupimAdicional" inputmode="decimal" placeholder="m³" style="padding: 8px; font-size: 0.85rem;">
+                            <div class="sub-recibo-bloco">
+                                <h3><i class="fa-solid fa-user-tie"></i> Dados do Comprador</h3>
+                                <div class="sub-recibo-grid">
+                                    <div class="input-group"><label>Data da Venda *</label><input type="date" id="calcCavData" required></div>
+                                    <div class="input-group"><label>Selecionar Cliente Cadastrado</label><select id="calcCavSelectCliente" style="width: 100%;"><option value="">Preenchimento Manual / Cliente Avulso</option></select></div>
+                                    <div class="input-group span-2"><label>Cliente / Empresa Compradora *</label><input type="text" id="calcCavCliente" class="text-uppercase-input" required placeholder="Ex: Moveis Silva Ltda"></div>
+                                    <div class="input-group"><label>CPF / CNPJ</label><input type="text" id="calcCavDoc" placeholder="CPF/CNPJ Comprador"></div>
+                                    <div class="input-group"><label>Inscricao Estadual (IE)</label><input type="text" id="calcCavIE" class="text-uppercase-input" placeholder="IE do Comprador"></div>
+                                    <div class="input-group"><label>Logradouro / Endereco</label><input type="text" id="calcCavLogradouro" class="text-uppercase-input" placeholder="Logradouro"></div>
+                                    <div class="input-group"><label>Cidade / Estado</label><input type="text" id="calcCavCidadeEstado" class="text-uppercase-input" placeholder="Cidade / UF"></div>
                                 </div>
                             </div>
-                            
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Tipo de Subproduto</label>
-                                <select id="calcCavTipo">
-                                    <option value="Cavaco / Maravalha">Cavaco / Maravalha</option>
-                                    <option value="Pó de Serra">Pó de Serra</option>
-                                    <option value="Casca">Casca</option>
-                                    <option value="Lenha">LENHA DE REFUGO</option>
-                                </select>
+
+                            <div class="sub-recibo-bloco">
+                                <h3><i class="fa-solid fa-truck"></i> Dados de Transporte</h3>
+                                <div class="sub-recibo-grid">
+                                    <div class="input-group"><label>Nosso Romaneio *</label><input type="text" id="calcCavRomaneio" class="text-uppercase-input" required placeholder="Ex: 00123"></div>
+                                    <div class="input-group"><label>Romaneio do Cliente</label><input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987"></div>
+                                    <div class="input-group"><label>Motorista do Caminhao</label><input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista"></div>
+                                    <div class="input-group"><label>Caminhao do Cliente</label><select id="calcCavCaminhaoSelecionado" style="width: 100%;"><option value="">Selecionar caminhao cadastrado</option></select></div>
+                                    <div class="input-group span-2"><label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="calcCavCarregamentoParticular" style="width:auto; margin:0;"> Carregamento particular</label></div>
+                                    <div class="input-group"><label>Modelo Caminhao</label><input type="text" id="calcCavCaminhao" class="text-uppercase-input" placeholder="Modelo do caminhao"></div>
+                                    <div class="input-group"><label>Placa Caminhao</label><input type="text" id="calcCavPlacaCaminhao" class="text-uppercase-input" placeholder="ABC-1234"></div>
+                                    <div class="input-group span-2"><label>Placa Carreta / Reboque</label><input type="text" id="calcCavPlacaCarreta" class="text-uppercase-input" placeholder="XYZ-9876"></div>
+                                </div>
                             </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Unidade de Medida</label>
-                                <select id="calcCavUnidade">
-                                    <option value="m³">Metros Cúbicos (m³)</option>
-                                    <option value="Tonelada">Toneladas (ton)</option>
-                                    <option value="Carga">Carga / Caminhão</option>
-                                    <option value="Saco">Saco</option>
-                                </select>
+
+                            <div class="sub-recibo-bloco span-all">
+                                <h3><i class="fa-solid fa-cube"></i> Cubagem e Valores</h3>
+                                <div class="sub-recibo-grid-4">
+                                    <div class="input-group"><label>Altura</label><input type="text" id="calcCavAlt" inputmode="decimal" placeholder="m"></div>
+                                    <div class="input-group"><label>Largura</label><input type="text" id="calcCavLarg" inputmode="decimal" placeholder="m"></div>
+                                    <div class="input-group"><label>Comprimento</label><input type="text" id="calcCavComp" inputmode="decimal" placeholder="m"></div>
+                                    <div class="input-group"><label>Cupim Adic.</label><input type="text" id="calcCavCupimAdicional" inputmode="decimal" placeholder="m3"></div>
+                                </div>
+                                <div class="sub-recibo-grid">
+                                    <div class="input-group"><label>Tipo de Subproduto</label><select id="calcCavTipo"><option value="Cavaco / Maravalha">Cavaco / Maravalha</option><option value="Po de Serra">Po de Serra</option><option value="Casca">Casca</option><option value="Lenha">LENHA DE REFUGO</option></select></div>
+                                    <div class="input-group"><label>Unidade de Medida</label><select id="calcCavUnidade"><option value="m3">Metros Cubicos (m3)</option><option value="Tonelada">Toneladas (ton)</option><option value="Carga">Carga / Caminhao</option><option value="Saco">Saco</option></select></div>
+                                    <div class="input-group"><label>Quantidade (m3 / un)</label><input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00"></div>
+                                    <div class="input-group"><label>Valor Unitario R$ / m3 *</label><input type="text" id="calcCavValor" placeholder="R$ 0,00"></div>
+                                </div>
                             </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Quantidade (m³ / un)</label>
-                                <input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00">
-                            </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <label>Valor Unitário R\$ / m³ *</label>
-                                <input type="text" id="calcCavValor" placeholder="R\$ 0,00">
-                            </div>
-                            
-                            <button type="button" class="btn-primary col-span-2"
-                                style="padding: 15px; font-size: 1.1rem; margin-top:15px;"
-                                id="btnCalcCavaco">
-                                <i class="fa-solid fa-save"></i> Salvar Registro
-                            </button>
-                            <div class="col-span-2" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-                                <button type="button" class="btn-secondary" id="btnPrintUltimoSubproduto" style="padding: 12px;">
-                                    <i class="fa-solid fa-print"></i> Imprimir
-                                </button>
-                                <button type="button" class="btn-secondary" id="btnPdfUltimoSubproduto" style="padding: 12px;">
-                                    <i class="fa-solid fa-file-pdf"></i> PDF
-                                </button>
-                                <button type="button" class="btn-secondary" id="btnWhatsUltimoSubproduto" style="padding: 12px;">
-                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
-                                </button>
+
+                            <div class="sub-recibo-acoes">
+                                <button type="button" class="btn-primary" style="padding: 12px 18px; font-size: 1rem;" id="btnCalcCavaco"><i class="fa-solid fa-save"></i> Salvar Registro</button>
+                                <button type="button" class="btn-secondary" id="btnPrintUltimoSubproduto" style="padding: 12px 14px;"><i class="fa-solid fa-print"></i> Imprimir</button>
+                                <button type="button" class="btn-secondary" id="btnPdfUltimoSubproduto" style="padding: 12px 14px;"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
+                                <button type="button" class="btn-secondary" id="btnWhatsUltimoSubproduto" style="padding: 12px 14px;"><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
                             </div>
                         </form>
                     </div>

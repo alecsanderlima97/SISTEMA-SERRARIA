@@ -99,20 +99,22 @@
         wrapper.style.width = '1120px';
         wrapper.style.background = '#ffffff';
         wrapper.style.pointerEvents = 'none';
-        wrapper.style.zIndex = '-1';
+        wrapper.style.zIndex = '0';
         wrapper.innerHTML = `<div class="doc-shell"><div class="doc-paper">${contentHtml}</div></div>${createBaseStyles()}`;
         document.body.appendChild(wrapper);
 
         try {
             await waitForDocumentAssets(wrapper);
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const paper = wrapper.querySelector('.doc-paper') || wrapper;
             await window.html2pdf().set({
                 margin: 8,
                 filename: `${sanitizeFileName(filename || title)}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'] }
-            }).from(wrapper).save();
+            }).from(paper).save();
         } finally {
             wrapper.remove();
         }

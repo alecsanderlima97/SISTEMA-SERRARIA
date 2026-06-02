@@ -785,6 +785,7 @@ window.abrirModalAbastecimento = function(veiculoId, tipoPadrao = 'DIESEL') {
     document.getElementById('abastHorimetro').value = obterUltimoHorimetro(v.id);
     document.getElementById('abastTipo').value = tipoPadrao;
     atualizarTituloModalAbastecimento(tipoPadrao);
+    preencherSelectLubrificantesFrota();
 
     // Informações no Header do modal
     document.getElementById('abastVeiculoCard').innerHTML = `
@@ -820,14 +821,33 @@ function atualizarTituloModalAbastecimento(tipo) {
         : '<i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lancar Abastecimento';
 }
 
+function ehItemLubrificante(item = {}) {
+    const nome = (item.nome || '').toUpperCase();
+    const categoria = (item.categoria || '').toUpperCase();
+    return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('Ã“LEO') || nome.includes('GRAXA');
+}
+
+function preencherSelectLubrificantesFrota() {
+    const select = document.getElementById('abastLubrificanteItem');
+    if (!select) return;
+    const lubrificantes = estoque.filter(ehItemLubrificante);
+    select.innerHTML = '<option value="">Selecione o lubrificante...</option>' + lubrificantes.map(item => (
+        `<option value="${item.id}">${item.nome} - Saldo: ${Number(item.quantidade || 0).toLocaleString('pt-BR')} L</option>`
+    )).join('');
+    if (lubrificantes.length) select.value = lubrificantes[0].id;
+}
+
 window.atualizarPrecoUnitarioEstoque = function() {
     const tipo = document.getElementById('abastTipo').value;
     const inputPreco = document.getElementById('abastPreco');
     const grupoReq = document.getElementById('grupoAbastRequisicao');
+    const grupoLubrificante = document.getElementById('grupoAbastLubrificante');
+    const selectLubrificante = document.getElementById('abastLubrificanteItem');
     const reqInput = document.getElementById('abastRequisicao');
     if (!inputPreco) return;
 
     if (grupoReq) grupoReq.style.display = tipo === 'DIESEL_POSTO' ? 'block' : 'none';
+    if (grupoLubrificante) grupoLubrificante.style.display = tipo === 'LUBRIFICANTE' ? 'block' : 'none';
     if (tipo !== 'DIESEL_POSTO' && reqInput) reqInput.value = '';
     atualizarTituloModalAbastecimento(tipo);
 
@@ -838,11 +858,8 @@ window.atualizarPrecoUnitarioEstoque = function() {
         inputPreco.value = '';
         setTimeout(() => inputPreco.focus(), 50);
     } else if (tipo === 'LUBRIFICANTE') {
-        const item = estoque.find(i => {
-            const nome = (i.nome || '').toUpperCase();
-            const categoria = (i.categoria || '').toUpperCase();
-            return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('ÓLEO');
-        });
+        if (selectLubrificante && selectLubrificante.options.length <= 1) preencherSelectLubrificantesFrota();
+        const item = estoque.find(i => i.id === selectLubrificante?.value) || estoque.find(ehItemLubrificante);
         inputPreco.value = item ? window.formatCurrencyValue(item.unitario) : '';
     }
     calcularTotalAbastecimento();
@@ -851,21 +868,15 @@ window.calcularTotalAbastecimento = function() {
     const qtd = parseFloat(document.getElementById('abastQtd').value) || 0;
     const preco = window.parseCurrencyValue(document.getElementById('abastPreco').value) || 0;
     const inputTotal = document.getElementById('abastTotal');
-
-    if (inputTotal) {
-        inputTotal.value = window.formatCurrencyValue(qtd * preco);
-    }
+    if (inputTotal) inputTotal.value = window.formatCurrencyValue(qtd * preco);
 };
 
-// Obter o último horímetro/KM lançado
 function obterUltimoHorimetro(veiculoId) {
     const filtrados = abastecimentos.filter(a => a.veiculoId === veiculoId);
     const filtradosManut = manutencoes.filter(m => m.veiculoId === veiculoId);
-    
     let max = 0;
     filtrados.forEach(a => { if (a.horimetro > max) max = a.horimetro; });
     filtradosManut.forEach(m => { if (m.horimetro > max) max = m.horimetro; });
-    
     return max > 0 ? max : '';
 }
 
@@ -883,7 +894,6 @@ async function salvarAbastecimento() {
         alert('Por favor, informe quantidade maior que zero e valores validos.');
         return;
     }
-
     if (tipo === 'DIESEL_POSTO' && !requisicao) {
         alert('Informe o numero da requisicao para abastecimento no posto.');
         document.getElementById('abastRequisicao')?.focus();
@@ -904,10 +914,9 @@ async function salvarAbastecimento() {
     };
 
     if (tipo === 'DIESEL') {
-        const estoqueNome = 'DIESEL COMUM';
         if (window.registrarSaidaEstoqueFrota) {
             const itemAtualizado = await window.registrarSaidaEstoqueFrota({
-                itemNome: estoqueNome,
+                itemNome: 'DIESEL COMUM',
                 tipoInsumo: 'DIESEL',
                 quantidade: qtd,
                 unitario: preco,
@@ -920,12 +929,13 @@ async function salvarAbastecimento() {
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
         }
     } else if (tipo === 'LUBRIFICANTE') {
-        const itemLubrificante = estoque.find(i => {
-            const nome = (i.nome || '').toUpperCase();
-            const categoria = (i.categoria || '').toUpperCase();
-            return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('ÓLEO');
-        });
-        if (itemLubrificante && window.registrarSaidaEstoqueFrota) {
+        const itemSelecionado = document.getElementById('abastLubrificanteItem')?.value || '';
+        const itemLubrificante = estoque.find(i => i.id === itemSelecionado) || estoque.find(ehItemLubrificante);
+        if (!itemLubrificante) {
+            alert('Cadastre um lubrificante no estoque antes de lancar o consumo.');
+            return;
+        }
+        if (window.registrarSaidaEstoqueFrota) {
             const itemAtualizado = await window.registrarSaidaEstoqueFrota({
                 itemNome: itemLubrificante.nome,
                 tipoInsumo: 'LUBRIFICANTE',
@@ -946,7 +956,6 @@ async function salvarAbastecimento() {
     abastecimentos.push(novo);
     salvarBanco(KEYS.ABASTECIMENTOS, abastecimentos);
     await salvarDocFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, novo);
-
     renderizarAbastecimentosVeiculo(veiculoId);
     if (typeof window.renderSimuladores === 'function') window.renderSimuladores();
     if (typeof window.renderizarEstoque === 'function') window.renderizarEstoque();
@@ -955,10 +964,14 @@ async function salvarAbastecimento() {
     document.getElementById('abastHorimetro').value = horimetro;
     if (tipo === 'DIESEL_POSTO') document.getElementById('abastRequisicao').value = '';
 
-    alert(tipo === 'DIESEL_POSTO'
+    const mensagemSucesso = tipo === 'DIESEL_POSTO'
         ? 'Abastecimento do posto registrado e despesa financeira gerada!'
-        : 'Abastecimento registrado. O diesel da serraria foi baixado do estoque sem gerar despesa.');
+        : tipo === 'LUBRIFICANTE'
+            ? 'Lubrificante registrado e baixado do estoque.'
+            : 'Abastecimento registrado. O diesel da serraria foi baixado do estoque sem gerar despesa.';
+    alert(mensagemSucesso);
 }
+
 function renderizarAbastecimentosVeiculo(veiculoId) {
     const tbody = document.getElementById('listaAbastecimentosVeiculo');
     if (!tbody) return;
