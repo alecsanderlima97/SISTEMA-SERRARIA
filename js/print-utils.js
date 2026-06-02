@@ -72,6 +72,20 @@
         setTimeout(() => win.print(), 350);
     }
 
+    function waitForDocumentAssets(root) {
+        const images = Array.from(root.querySelectorAll('img'));
+        const imagePromises = images.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 1200);
+            });
+        });
+        const fontPromise = document.fonts?.ready ? document.fonts.ready.catch(() => {}) : Promise.resolve();
+        return Promise.all([fontPromise, ...imagePromises]);
+    }
+
     async function downloadPdf({ title, contentHtml, filename }) {
         if (typeof window.html2pdf === 'undefined') {
             alert('Biblioteca de PDF ainda nao carregou. Tente novamente em alguns segundos.');
@@ -83,13 +97,14 @@
         wrapper.style.left = '0';
         wrapper.style.top = '0';
         wrapper.style.width = '1120px';
-        wrapper.style.opacity = '0';
+        wrapper.style.background = '#ffffff';
         wrapper.style.pointerEvents = 'none';
         wrapper.style.zIndex = '-1';
         wrapper.innerHTML = `<div class="doc-shell"><div class="doc-paper">${contentHtml}</div></div>${createBaseStyles()}`;
         document.body.appendChild(wrapper);
 
         try {
+            await waitForDocumentAssets(wrapper);
             await window.html2pdf().set({
                 margin: 8,
                 filename: `${sanitizeFileName(filename || title)}.pdf`,
