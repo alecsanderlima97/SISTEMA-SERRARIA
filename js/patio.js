@@ -1,10 +1,11 @@
-﻿import { db, collection, addDoc, getDocs, doc, deleteDoc } from './firebase-init.js';
+﻿import { db, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from './firebase-init.js';
 
 // ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
 
 let itensPatioTemp = [];
 let historicoPatioAtuais = [];
 let totaisSalvosHoje = { pacotes: 0, volume: 0 };
+let relatorioPatioEditandoId = null;
 
 // UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
 function parseDecimal(val) {
@@ -34,6 +35,7 @@ function inicializarPatioListeners() {
     const btnZerar = document.getElementById('btnZerarEtiquetas');
     const btnLimparTudo = document.getElementById('btnLimparTudoPatio');
     const btnImprimirEtiquetas = document.getElementById('btnImprimirEtiquetas');
+    const btnEtiquetasAvulsas = document.getElementById('btnEtiquetasAvulsasPatio');
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
 
     if (btnAbrir) {
@@ -57,6 +59,10 @@ function inicializarPatioListeners() {
 
     if (btnImprimirEtiquetas) {
         btnImprimirEtiquetas.addEventListener('click', imprimirEtiquetasFisicas);
+    }
+
+    if (btnEtiquetasAvulsas) {
+        btnEtiquetasAvulsas.addEventListener('click', gerarEtiquetasAvulsasPatio);
     }
 
     if (btnSalvar) {
@@ -138,8 +144,10 @@ window.abrirModalPatio = async function() {
     }
 
     // Inicializar itens do pátio
+    relatorioPatioEditandoId = null;
     itensPatioTemp = [];
     renderizarItensPatioTemp();
+    atualizarEstadoEdicaoPatio();
 
     // Carregar histórico do Firebase e calcular acumulados de hoje
     await carregarHistoricoPatio();
@@ -612,6 +620,21 @@ async function calcularAcumuladosHoje(hojeStr) {
 }
 
 // Salvar a Contagem Atual no Firebase
+function atualizarEstadoEdicaoPatio() {
+    const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
+    if (!btnSalvar) return;
+
+    if (relatorioPatioEditandoId) {
+        btnSalvar.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Lista do Pátio';
+        btnSalvar.style.background = '#f59e0b';
+        btnSalvar.style.color = '#111827';
+    } else {
+        btnSalvar.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar Lançamento do Pátio';
+        btnSalvar.style.background = '';
+        btnSalvar.style.color = '';
+    }
+}
+
 async function salvarRelatorioPatio() {
     if (itensPatioTemp.length === 0) {
         alert("⚠️ O pátio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
@@ -650,8 +673,12 @@ async function salvarRelatorioPatio() {
             totalPacotes: totalPacotes,
             totalPecas: totalPecas
         },
-        criadoEm: new Date().toISOString()
+        atualizadoEm: new Date().toISOString()
     };
+
+    if (!relatorioPatioEditandoId) {
+        relatorio.criadoEm = new Date().toISOString();
+    }
 
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
     const originalText = btnSalvar.innerHTML;
@@ -659,13 +686,20 @@ async function salvarRelatorioPatio() {
     btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
     try {
-        await window.FS.addDoc('patio_relatorios', relatorio);
-        alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
+        if (relatorioPatioEditandoId) {
+            await updateDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId), relatorio);
+            alert(`✅ Contagem do Pátio atualizada com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
+            relatorioPatioEditandoId = null;
+        } else {
+            await window.FS.addDoc('patio_relatorios', relatorio);
+            alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
+        }
         
         // Resetar rascunho
         document.getElementById('patioSerrando').value = '';
         itensPatioTemp = [];
         renderizarItensPatioTemp();
+        atualizarEstadoEdicaoPatio();
 
         // Recarregar histórico e atualizar os acumulados salvos do dia
         await carregarHistoricoPatio();
@@ -837,10 +871,50 @@ window.editarHistoricoPatio = function(id) {
     if (inputHorario) inputHorario.value = rel.horario || '';
     if (inputSerrando) inputSerrando.value = rel.serrando || '';
 
+    relatorioPatioEditandoId = id;
     itensPatioTemp = Array.isArray(rel.itens) ? rel.itens.map(item => ({ ...item })) : [];
     renderizarItensPatioTemp();
+    atualizarEstadoEdicaoPatio();
     alert("Lancamento carregado para edicao. Ajuste os itens e salve novamente quando finalizar.");
 };
+
+function gerarEtiquetasAvulsasPatio() {
+    const tipo = (prompt('Tipo da madeira para etiqueta:', 'TABUA') || '').toUpperCase().trim();
+    if (!tipo) return;
+
+    const especie = (prompt('Especie:', 'EUCALIPTO') || 'EUCALIPTO').toUpperCase().trim();
+    const classe = (prompt('Classe:', '1ª CLASSE') || '1ª CLASSE').toUpperCase().trim();
+    const esp = parseDecimal(prompt('Espessura em cm:', '1,8'));
+    const larg = parseDecimal(prompt('Largura em cm:', '7,0'));
+    const comp = parseDecimal(prompt('Comprimento em m:', '2,40'));
+    const pacotes = parseInt(prompt('Quantidade de etiquetas/pacotes:', '1'), 10) || 0;
+    const pecas = parseInt(prompt('Peças por pacote:', '1'), 10) || 0;
+
+    if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
+        alert('Preencha valores validos para gerar a etiqueta avulsa.');
+        return;
+    }
+
+    const hoje = new Date();
+    const dataRaw = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const volumeUnidade = (esp / 100) * (larg / 100) * comp * pecas;
+
+    imprimirEtiquetasFisicas([{
+        id: `avulso-${Date.now()}`,
+        dataRaw,
+        tipo,
+        classe,
+        especie,
+        espessura: esp,
+        largura: larg,
+        comprimento: comp,
+        pacotes,
+        pecas,
+        totalPecas: pacotes * pecas,
+        volumeUnidade,
+        volume: volumeUnidade * pacotes
+    }]);
+}
 
 // Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas(lista = itensPatioTemp) {

@@ -21,6 +21,10 @@
                     <button type="button" id="btnImprimirEtiquetas" class="btn-patio-print">
                         <i class="fa-solid fa-print"></i> Imprimir Etiquetas
                     </button>
+
+                    <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
+                        <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
+                    </button>
                     
                     <button type="button" onclick="window.fecharModalPatio()" class="btn-patio-exit">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
