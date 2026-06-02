@@ -3,7 +3,7 @@
             <div id="modalAbastecimento" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
                 <div class="modal-content-v2" style="width: 100%; max-width: 650px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lancar Abastecimento</h2>
+                        <h2 id="tituloModalAbastecimento" style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: var(--danger-color);"></i> Lancar Abastecimento</h2>
                         <button type="button" class="btn-action-card" onclick="window.fecharModalAbastecimento()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
 
@@ -24,6 +24,7 @@
                             <select id="abastTipo" onchange="window.atualizarPrecoUnitarioEstoque()">
                                 <option value="DIESEL">DIESEL COMUM - SERRARIA</option>
                                 <option value="DIESEL_POSTO">DIESEL POSTO - CIDADE</option>
+                                <option value="LUBRIFICANTE">LUBRIFICANTE / OLEO</option>
                             </select>
                         </div>
 
