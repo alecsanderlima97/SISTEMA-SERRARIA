@@ -6,6 +6,7 @@ let itensPatioTemp = [];
 let historicoPatioAtuais = [];
 let totaisSalvosHoje = { pacotes: 0, volume: 0 };
 let relatorioPatioEditandoId = null;
+let etiquetasAvulsasPatio = [];
 
 // UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
 function parseDecimal(val) {
@@ -37,6 +38,7 @@ function inicializarPatioListeners() {
     const btnImprimirEtiquetas = document.getElementById('btnImprimirEtiquetas');
     const btnEtiquetasAvulsas = document.getElementById('btnEtiquetasAvulsasPatio');
     const btnFecharEtiquetaAvulsa = document.getElementById('btnFecharEtiquetaAvulsaPatio');
+    const btnAdicionarEtiquetaAvulsa = document.getElementById('btnAdicionarEtiquetaAvulsaPatio');
     const btnImprimirEtiquetaAvulsa = document.getElementById('btnImprimirEtiquetaAvulsaPatio');
     const btnLimparEtiquetaAvulsa = document.getElementById('btnLimparEtiquetaAvulsaPatio');
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
@@ -70,6 +72,10 @@ function inicializarPatioListeners() {
 
     if (btnFecharEtiquetaAvulsa) {
         btnFecharEtiquetaAvulsa.addEventListener('click', fecharEtiquetaAvulsaPatio);
+    }
+
+    if (btnAdicionarEtiquetaAvulsa) {
+        btnAdicionarEtiquetaAvulsa.addEventListener('click', adicionarEtiquetaAvulsaPatio);
     }
 
     if (btnImprimirEtiquetaAvulsa) {
@@ -921,12 +927,26 @@ function limparEtiquetaAvulsaPatio() {
     atualizarPreviewEtiquetaAvulsaPatio();
 }
 
+function calcularEtiquetaAvulsaPatio() {
+    const esp = parseDecimal(obterCampoEtiquetaAvulsa('etqAvBitola1'));
+    const larg = parseDecimal(obterCampoEtiquetaAvulsa('etqAvBitola2'));
+    const comp = parseDecimal(obterCampoEtiquetaAvulsa('etqAvBitola3'));
+    const alturas = parseInt(obterCampoEtiquetaAvulsa('etqAvAlturas'), 10) || 0;
+    const larguraPacote = parseInt(obterCampoEtiquetaAvulsa('etqAvLargura'), 10) || 0;
+    const amarras = parseInt(obterCampoEtiquetaAvulsa('etqAvAmarras'), 10) || 0;
+    const pecas = alturas > 0 && larguraPacote > 0 ? (alturas * larguraPacote) + amarras : 0;
+    const volumeUnidade = esp > 0 && larg > 0 && comp > 0 && pecas > 0 ? (esp / 100) * (larg / 100) * comp * pecas : 0;
+
+    return { esp, larg, comp, alturas, larguraPacote, amarras, pecas, volumeUnidade };
+}
+
 function obterCampoEtiquetaAvulsa(id) {
     const el = document.getElementById(id);
     return el ? (el.value || '').trim() : '';
 }
 
 function coletarDadosEtiquetaAvulsaPatio() {
+    const calculo = calcularEtiquetaAvulsaPatio();
     return {
         produto: obterCampoEtiquetaAvulsa('etqAvProduto') || 'Eucalipto',
         classificacao: obterCampoEtiquetaAvulsa('etqAvClassificacao'),
@@ -936,9 +956,51 @@ function coletarDadosEtiquetaAvulsaPatio() {
         alturas: obterCampoEtiquetaAvulsa('etqAvAlturas'),
         largura: obterCampoEtiquetaAvulsa('etqAvLargura'),
         amarras: obterCampoEtiquetaAvulsa('etqAvAmarras'),
-        totalPecas: obterCampoEtiquetaAvulsa('etqAvTotalPecas'),
-        totalM3: obterCampoEtiquetaAvulsa('etqAvTotalM3')
+        totalPecas: calculo.pecas ? String(calculo.pecas) : '',
+        totalM3: calculo.volumeUnidade ? formatDecimalMockup(calculo.volumeUnidade) : '',
+        calculo
     };
+}
+
+function montarItemEtiquetaAvulsaPatio() {
+    const dados = coletarDadosEtiquetaAvulsaPatio();
+    const { esp, larg, comp, alturas, larguraPacote, amarras, pecas, volumeUnidade } = dados.calculo;
+
+    if (!dados.produto || !dados.classificacao || esp <= 0 || larg <= 0 || comp <= 0 || alturas <= 0 || larguraPacote <= 0 || pecas <= 0) {
+        alert('Preencha produto, classificacao, bitolas, alturas e largura para adicionar a etiqueta.');
+        return null;
+    }
+
+    const hoje = new Date();
+    const dataRaw = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    return {
+        id: `avulsa-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        dataRaw,
+        dataFormatted: hoje.toLocaleDateString('pt-BR'),
+        tipo: 'AVULSA',
+        classe: dados.classificacao.toUpperCase(),
+        especie: dados.produto.toUpperCase(),
+        espessura: esp,
+        largura: larg,
+        comprimento: comp,
+        pacotes: 1,
+        pecas,
+        pecasRaw: `${alturas}x${larguraPacote}${amarras > 0 ? `+${amarras}` : ''}`,
+        altura: alturas,
+        camada: larguraPacote,
+        amarras,
+        totalPecas: pecas,
+        volumeUnidade,
+        volume: volumeUnidade
+    };
+}
+
+function adicionarEtiquetaAvulsaPatio() {
+    const item = montarItemEtiquetaAvulsaPatio();
+    if (!item) return;
+    etiquetasAvulsasPatio.push(item);
+    limparEtiquetaAvulsaPatio();
+    renderizarFilaEtiquetasAvulsasPatio();
 }
 
 function escapeHtmlEtiquetaAvulsa(valor) {
@@ -1009,34 +1071,63 @@ function obterCssEtiquetaAvulsaPatio(incluirPagina = false) {
 }
 
 function atualizarPreviewEtiquetaAvulsaPatio() {
-    const preview = document.getElementById('previewEtiquetaAvulsaPatio');
-    if (!preview) return;
-    preview.innerHTML = `<style>${obterCssEtiquetaAvulsaPatio()}</style>${gerarHtmlEtiquetaAvulsaPatio(coletarDadosEtiquetaAvulsaPatio())}`;
+    const dados = coletarDadosEtiquetaAvulsaPatio();
+    const totalPecas = document.getElementById('etqAvTotalPecas');
+    const totalM3 = document.getElementById('etqAvTotalM3');
+    if (totalPecas) totalPecas.value = dados.totalPecas;
+    if (totalM3) totalM3.value = dados.totalM3;
+    renderizarFilaEtiquetasAvulsasPatio();
 }
 
 function imprimirEtiquetaAvulsaPatio() {
+    if (etiquetasAvulsasPatio.length === 0) {
+        const itemAtual = montarItemEtiquetaAvulsaPatio();
+        if (itemAtual) etiquetasAvulsasPatio.push(itemAtual);
+    }
+    if (etiquetasAvulsasPatio.length === 0) return;
+    imprimirEtiquetasFisicas(etiquetasAvulsasPatio);
+}
+
+function removerEtiquetaAvulsaPatio(id) {
+    etiquetasAvulsasPatio = etiquetasAvulsasPatio.filter(item => item.id !== id);
+    renderizarFilaEtiquetasAvulsasPatio();
+}
+
+function renderizarFilaEtiquetasAvulsasPatio() {
+    const preview = document.getElementById('previewEtiquetaAvulsaPatio');
+    if (!preview) return;
     const dados = coletarDadosEtiquetaAvulsaPatio();
-    const win = window.open('', '_blank');
-    if (!win) {
-        alert('Nao foi possivel abrir a etiqueta. Libere pop-ups para este site e tente novamente.');
+    const resumoAtual = dados.totalPecas
+        ? `<div style="font-size:.84rem; color:#cbd5e1; margin-bottom:10px;">Atual: <strong style="color:#fff;">${dados.totalPecas} pecas</strong> | <strong style="color:#fff;">${dados.totalM3} m3</strong></div>`
+        : '<div style="font-size:.84rem; color:#94a3b8; margin-bottom:10px;">Preencha as medidas para calcular pecas e volume.</div>';
+
+    if (etiquetasAvulsasPatio.length === 0) {
+        preview.innerHTML = `
+            <strong style="display:block; margin-bottom:6px;">Etiquetas adicionadas</strong>
+            ${resumoAtual}
+            <div style="font-size:.86rem; color:#94a3b8;">Nenhuma etiqueta adicionada ainda. Preencha os campos e clique em Adicionar.</div>
+        `;
         return;
     }
-    win.document.open();
-    win.document.write(`
-        <html>
-        <head>
-            <title>Etiqueta Avulsa - ${escapeHtmlEtiquetaAvulsa(dados.produto)}</title>
-            <style>${obterCssEtiquetaAvulsaPatio(true)}</style>
-        </head>
-        <body>${gerarHtmlEtiquetaAvulsaPatio(dados)}</body>
-        </html>
-    `);
-    win.document.close();
-    setTimeout(() => {
-        win.focus();
-        win.print();
-    }, 250);
+
+    const linhas = etiquetasAvulsasPatio.map((item, index) => `
+        <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:8px 0; border-top:1px solid rgba(255,255,255,.1);">
+            <div style="font-size:.86rem;">
+                <strong>${index + 1}. ${item.especie}</strong><br>
+                <span style="color:#cbd5e1;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)} - ${item.pecas} pecas - ${formatDecimalMockup(item.volumeUnidade)} m3</span>
+            </div>
+            <button type="button" onclick="window.removerEtiquetaAvulsaPatio('${item.id}')" style="border:none; background:#ef4444; color:#fff; border-radius:6px; padding:6px 8px; cursor:pointer;">Excluir</button>
+        </div>
+    `).join('');
+
+    preview.innerHTML = `
+        <strong style="display:block; margin-bottom:6px;">Etiquetas adicionadas: ${etiquetasAvulsasPatio.length}</strong>
+        ${resumoAtual}
+        ${linhas}
+    `;
 }
+
+window.removerEtiquetaAvulsaPatio = removerEtiquetaAvulsaPatio;
 
 // Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas(lista = itensPatioTemp) {

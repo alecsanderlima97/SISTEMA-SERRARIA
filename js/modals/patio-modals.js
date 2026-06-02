@@ -55,15 +55,16 @@
                         <div class="input-group" style="margin-bottom:0;"><label>Alturas (pecas)</label><input type="text" id="etqAvAlturas" data-etiqueta-avulsa></div>
                         <div class="input-group" style="margin-bottom:0;"><label>Largura (pecas)</label><input type="text" id="etqAvLargura" data-etiqueta-avulsa></div>
                         <div class="input-group" style="margin-bottom:0;"><label>Amarras pezinhos e meios</label><input type="text" id="etqAvAmarras" data-etiqueta-avulsa></div>
-                        <div class="input-group" style="margin-bottom:0;"><label>Total pecas</label><input type="text" id="etqAvTotalPecas" data-etiqueta-avulsa></div>
-                        <div class="input-group" style="margin-bottom:0;"><label>Total m3 cubicos</label><input type="text" id="etqAvTotalM3" data-etiqueta-avulsa placeholder="Ex: 1,120"></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Total pecas</label><input type="text" id="etqAvTotalPecas" data-etiqueta-avulsa readonly style="background:rgba(0,0,0,0.1) !important; cursor:not-allowed;"></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Total m3 cubicos</label><input type="text" id="etqAvTotalM3" data-etiqueta-avulsa readonly style="background:rgba(0,0,0,0.1) !important; cursor:not-allowed;"></div>
                         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                            <button type="button" id="btnAdicionarEtiquetaAvulsaPatio" class="btn-patio-print" style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%) !important;"><i class="fa-solid fa-plus"></i> Adicionar</button>
                             <button type="button" id="btnImprimirEtiquetaAvulsaPatio" class="btn-patio-print"><i class="fa-solid fa-print"></i> Imprimir</button>
                             <button type="button" id="btnLimparEtiquetaAvulsaPatio" class="btn-patio-zerar"><i class="fa-solid fa-eraser"></i> Limpar</button>
                         </div>
                     </form>
 
-                    <div id="previewEtiquetaAvulsaPatio" style="background:#fff; color:#000; width:265px; min-height:337px; border:1px solid #111; padding:6px 0 8px; font-family:Arial, Helvetica, sans-serif; box-shadow:0 12px 26px rgba(0,0,0,.22); justify-self:start;"></div>
+                    <div id="previewEtiquetaAvulsaPatio" style="background:rgba(15,23,42,.55); color:#fff; min-height:180px; border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px; font-family:Arial, Helvetica, sans-serif; justify-self:stretch;"></div>
                 </div>
             </div>
 
