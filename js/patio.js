@@ -36,6 +36,9 @@ function inicializarPatioListeners() {
     const btnLimparTudo = document.getElementById('btnLimparTudoPatio');
     const btnImprimirEtiquetas = document.getElementById('btnImprimirEtiquetas');
     const btnEtiquetasAvulsas = document.getElementById('btnEtiquetasAvulsasPatio');
+    const btnFecharEtiquetaAvulsa = document.getElementById('btnFecharEtiquetaAvulsaPatio');
+    const btnImprimirEtiquetaAvulsa = document.getElementById('btnImprimirEtiquetaAvulsaPatio');
+    const btnLimparEtiquetaAvulsa = document.getElementById('btnLimparEtiquetaAvulsaPatio');
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
 
     if (btnAbrir) {
@@ -64,6 +67,22 @@ function inicializarPatioListeners() {
     if (btnEtiquetasAvulsas) {
         btnEtiquetasAvulsas.addEventListener('click', gerarEtiquetasAvulsasPatio);
     }
+
+    if (btnFecharEtiquetaAvulsa) {
+        btnFecharEtiquetaAvulsa.addEventListener('click', fecharEtiquetaAvulsaPatio);
+    }
+
+    if (btnImprimirEtiquetaAvulsa) {
+        btnImprimirEtiquetaAvulsa.addEventListener('click', imprimirEtiquetaAvulsaPatio);
+    }
+
+    if (btnLimparEtiquetaAvulsa) {
+        btnLimparEtiquetaAvulsa.addEventListener('click', limparEtiquetaAvulsaPatio);
+    }
+
+    document.querySelectorAll('[data-etiqueta-avulsa]').forEach(input => {
+        input.addEventListener('input', atualizarPreviewEtiquetaAvulsaPatio);
+    });
 
     if (btnSalvar) {
         btnSalvar.addEventListener('click', salvarRelatorioPatio);
@@ -879,41 +898,144 @@ window.editarHistoricoPatio = function(id) {
 };
 
 function gerarEtiquetasAvulsasPatio() {
-    const tipo = (prompt('Tipo da madeira para etiqueta:', 'TABUA') || '').toUpperCase().trim();
-    if (!tipo) return;
+    const painel = document.getElementById('painelEtiquetaAvulsaPatio');
+    if (!painel) return;
+    painel.style.display = 'block';
+    atualizarPreviewEtiquetaAvulsaPatio();
+    painel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-    const especie = (prompt('Especie:', 'EUCALIPTO') || 'EUCALIPTO').toUpperCase().trim();
-    const classe = (prompt('Classe:', '1ª CLASSE') || '1ª CLASSE').toUpperCase().trim();
-    const esp = parseDecimal(prompt('Espessura em cm:', '1,8'));
-    const larg = parseDecimal(prompt('Largura em cm:', '7,0'));
-    const comp = parseDecimal(prompt('Comprimento em m:', '2,40'));
-    const pacotes = parseInt(prompt('Quantidade de etiquetas/pacotes:', '1'), 10) || 0;
-    const pecas = parseInt(prompt('Peças por pacote:', '1'), 10) || 0;
+function fecharEtiquetaAvulsaPatio() {
+    const painel = document.getElementById('painelEtiquetaAvulsaPatio');
+    if (painel) painel.style.display = 'none';
+}
 
-    if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
-        alert('Preencha valores validos para gerar a etiqueta avulsa.');
+function limparEtiquetaAvulsaPatio() {
+    const campos = ['etqAvClassificacao', 'etqAvBitola1', 'etqAvBitola2', 'etqAvBitola3', 'etqAvAlturas', 'etqAvLargura', 'etqAvAmarras', 'etqAvTotalPecas', 'etqAvTotalM3'];
+    campos.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
+    const produto = document.getElementById('etqAvProduto');
+    if (produto) produto.value = 'Eucalipto';
+    atualizarPreviewEtiquetaAvulsaPatio();
+}
+
+function obterCampoEtiquetaAvulsa(id) {
+    const el = document.getElementById(id);
+    return el ? (el.value || '').trim() : '';
+}
+
+function coletarDadosEtiquetaAvulsaPatio() {
+    return {
+        produto: obterCampoEtiquetaAvulsa('etqAvProduto') || 'Eucalipto',
+        classificacao: obterCampoEtiquetaAvulsa('etqAvClassificacao'),
+        bitola1: obterCampoEtiquetaAvulsa('etqAvBitola1'),
+        bitola2: obterCampoEtiquetaAvulsa('etqAvBitola2'),
+        bitola3: obterCampoEtiquetaAvulsa('etqAvBitola3'),
+        alturas: obterCampoEtiquetaAvulsa('etqAvAlturas'),
+        largura: obterCampoEtiquetaAvulsa('etqAvLargura'),
+        amarras: obterCampoEtiquetaAvulsa('etqAvAmarras'),
+        totalPecas: obterCampoEtiquetaAvulsa('etqAvTotalPecas'),
+        totalM3: obterCampoEtiquetaAvulsa('etqAvTotalM3')
+    };
+}
+
+function escapeHtmlEtiquetaAvulsa(valor) {
+    return String(valor || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function linhaEtiquetaAvulsa(valor, texto) {
+    return `
+        <div class="linha-etiqueta">
+            <span class="linha-valor">${escapeHtmlEtiquetaAvulsa(valor)}</span>
+            <span class="linha-seta">→</span>
+            <span class="linha-texto">${texto}</span>
+        </div>
+    `;
+}
+
+function gerarHtmlEtiquetaAvulsaPatio(dados) {
+    const bitolas = [dados.bitola1, dados.bitola2, dados.bitola3].map(escapeHtmlEtiquetaAvulsa);
+    return `
+        <div class="etiqueta-avulsa">
+            <div class="etq-titulo">SERRARIA VANMARTE</div>
+            <div class="etq-cidade">RIBEIRAO BRANCO - SP</div>
+            <div class="etq-contato">E-mail: escritoriovanmarte@hotmail.com</div>
+            <div class="etq-contato">Cel: (15) 99629-7072</div>
+            <div class="etq-produto">
+                <strong>Produto</strong> ${escapeHtmlEtiquetaAvulsa(dados.produto)}
+                <strong>Classificacao</strong> ${escapeHtmlEtiquetaAvulsa(dados.classificacao)}
+            </div>
+            <div class="etq-bitolas"><strong>BITOLAS:</strong> <span>${bitolas[0]}</span> / <span>${bitolas[1]}</span> / <span>${bitolas[2]}</span></div>
+            <div class="etq-linhas">
+                ${linhaEtiquetaAvulsa(dados.alturas, 'ALTURAS&nbsp;&nbsp;&nbsp;&nbsp;(PECAS)')}
+                ${linhaEtiquetaAvulsa(dados.largura, 'LARGURA&nbsp;&nbsp;&nbsp;&nbsp;(PECAS)')}
+                ${linhaEtiquetaAvulsa(dados.amarras, 'AMARRAS PEZINHOS E MEIOS')}
+                ${linhaEtiquetaAvulsa(dados.totalPecas, '<strong>TOTAL PECAS</strong>')}
+                ${linhaEtiquetaAvulsa(dados.totalM3, '<strong>TOTAL MTS CUBICOS</strong>')}
+            </div>
+        </div>
+    `;
+}
+
+function obterCssEtiquetaAvulsaPatio(incluirPagina = false) {
+    return `
+        ${incluirPagina ? 'body { margin:0; padding:0; background:#fff; font-family:Arial, Helvetica, sans-serif; }' : ''}
+        .etiqueta-avulsa { width:265px; min-height:337px; box-sizing:border-box; border:1px solid #111; background:#fff; color:#000; padding:5px 0 8px; }
+        .etq-titulo { text-align:center; font-size:21px; line-height:1.1; font-weight:900; letter-spacing:0; }
+        .etq-cidade { text-align:center; font-size:16px; line-height:1.1; margin-top:1px; }
+        .etq-contato { text-align:center; font-size:15px; line-height:1.08; white-space:nowrap; }
+        .etq-produto { font-size:14px; line-height:1.15; margin-top:6px; padding:0 0 0 0; white-space:nowrap; }
+        .etq-produto strong { font-weight:900; }
+        .etq-bitolas { display:flex; align-items:flex-end; justify-content:center; gap:8px; font-size:22px; margin-top:8px; line-height:1; }
+        .etq-bitolas strong { font-size:23px; font-weight:900; }
+        .etq-bitolas span { min-width:28px; border-bottom:2px solid #111; display:inline-block; text-align:center; }
+        .etq-linhas { margin-top:16px; }
+        .linha-etiqueta { display:grid; grid-template-columns:52px 28px 1fr; align-items:end; min-height:31px; font-size:14px; }
+        .linha-valor { border-bottom:2px solid #111; min-height:18px; padding-left:2px; font-size:15px; font-weight:700; }
+        .linha-seta { text-align:center; font-size:18px; line-height:1; }
+        .linha-texto { font-size:14px; line-height:1.05; white-space:nowrap; }
+        @media print {
+            @page { size:auto; margin:6mm; }
+            body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        }
+    `;
+}
+
+function atualizarPreviewEtiquetaAvulsaPatio() {
+    const preview = document.getElementById('previewEtiquetaAvulsaPatio');
+    if (!preview) return;
+    preview.innerHTML = `<style>${obterCssEtiquetaAvulsaPatio()}</style>${gerarHtmlEtiquetaAvulsaPatio(coletarDadosEtiquetaAvulsaPatio())}`;
+}
+
+function imprimirEtiquetaAvulsaPatio() {
+    const dados = coletarDadosEtiquetaAvulsaPatio();
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Nao foi possivel abrir a etiqueta. Libere pop-ups para este site e tente novamente.');
         return;
     }
-
-    const hoje = new Date();
-    const dataRaw = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
-    const volumeUnidade = (esp / 100) * (larg / 100) * comp * pecas;
-
-    imprimirEtiquetasFisicas([{
-        id: `avulso-${Date.now()}`,
-        dataRaw,
-        tipo,
-        classe,
-        especie,
-        espessura: esp,
-        largura: larg,
-        comprimento: comp,
-        pacotes,
-        pecas,
-        totalPecas: pacotes * pecas,
-        volumeUnidade,
-        volume: volumeUnidade * pacotes
-    }]);
+    win.document.open();
+    win.document.write(`
+        <html>
+        <head>
+            <title>Etiqueta Avulsa - ${escapeHtmlEtiquetaAvulsa(dados.produto)}</title>
+            <style>${obterCssEtiquetaAvulsaPatio(true)}</style>
+        </head>
+        <body>${gerarHtmlEtiquetaAvulsaPatio(dados)}</body>
+        </html>
+    `);
+    win.document.close();
+    setTimeout(() => {
+        win.focus();
+        win.print();
+    }, 250);
 }
 
 // Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)

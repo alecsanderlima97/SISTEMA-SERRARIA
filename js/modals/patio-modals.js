@@ -33,6 +33,40 @@
             </div>
 
             <!-- SEÇÃO DE PARÂMETROS GERAIS -->
+            <div id="painelEtiquetaAvulsaPatio" class="glass-panel hide-on-print" style="display: none; margin-bottom: 25px; padding: 20px; border-radius: 12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                    <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-tag" style="color:#2563eb;"></i> Etiqueta avulsa
+                    </h3>
+                    <button type="button" id="btnFecharEtiquetaAvulsaPatio" class="btn-patio-exit" style="padding:8px 12px;">
+                        <i class="fa-solid fa-xmark"></i> Fechar
+                    </button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:minmax(280px, 360px) 1fr; gap:18px; align-items:start;">
+                    <form id="formEtiquetaAvulsaPatio" style="display:grid; gap:10px;">
+                        <div class="input-group" style="margin-bottom:0;"><label>Produto</label><input type="text" id="etqAvProduto" data-etiqueta-avulsa value="Eucalipto" class="text-uppercase-input"></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Classificacao</label><input type="text" id="etqAvClassificacao" data-etiqueta-avulsa placeholder="Ex: 1A CLASSE"></div>
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                            <div class="input-group" style="margin-bottom:0;"><label>Bitola 1</label><input type="text" id="etqAvBitola1" data-etiqueta-avulsa placeholder="1,8"></div>
+                            <div class="input-group" style="margin-bottom:0;"><label>Bitola 2</label><input type="text" id="etqAvBitola2" data-etiqueta-avulsa placeholder="7,0"></div>
+                            <div class="input-group" style="margin-bottom:0;"><label>Bitola 3</label><input type="text" id="etqAvBitola3" data-etiqueta-avulsa placeholder="2,40"></div>
+                        </div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Alturas (pecas)</label><input type="text" id="etqAvAlturas" data-etiqueta-avulsa></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Largura (pecas)</label><input type="text" id="etqAvLargura" data-etiqueta-avulsa></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Amarras pezinhos e meios</label><input type="text" id="etqAvAmarras" data-etiqueta-avulsa></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Total pecas</label><input type="text" id="etqAvTotalPecas" data-etiqueta-avulsa></div>
+                        <div class="input-group" style="margin-bottom:0;"><label>Total m3 cubicos</label><input type="text" id="etqAvTotalM3" data-etiqueta-avulsa placeholder="Ex: 1,120"></div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                            <button type="button" id="btnImprimirEtiquetaAvulsaPatio" class="btn-patio-print"><i class="fa-solid fa-print"></i> Imprimir</button>
+                            <button type="button" id="btnLimparEtiquetaAvulsaPatio" class="btn-patio-zerar"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                        </div>
+                    </form>
+
+                    <div id="previewEtiquetaAvulsaPatio" style="background:#fff; color:#000; width:265px; min-height:337px; border:1px solid #111; padding:6px 0 8px; font-family:Arial, Helvetica, sans-serif; box-shadow:0 12px 26px rgba(0,0,0,.22); justify-self:start;"></div>
+                </div>
+            </div>
+
             <div class="glass-panel hide-on-print patio-params-grid" style="margin-bottom: 25px; padding: 20px; border-radius: 12px;">
                 <div class="input-group" style="margin-bottom: 0;">
                     <label><i class="fa-solid fa-calendar-day"></i> Data da Contagem</label>
