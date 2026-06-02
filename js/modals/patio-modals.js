@@ -25,7 +25,6 @@
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
                         <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
                     </button>
-                    
                     <button type="button" onclick="window.fecharModalPatio()" class="btn-patio-exit">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
                     </button>
@@ -235,12 +234,11 @@
             </div>
 
             <!-- SEÇÃO DE PERSISTÊNCIA -->
-            <div class="hide-on-print" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 25px;">
+            <div class="hide-on-print" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
                 <button type="button" id="btnSalvarRelatorioPatio" class="btn-patio-save" style="padding: 12px 28px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                     <i class="fa-solid fa-floppy-disk"></i> Salvar Lançamento do Pátio
                 </button>
             </div>
-
             <!-- HISTÓRICO DE CONTAGENS -->
             <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px;">
                 <h3 style="margin: 0 0 15px 0; font-size: 1rem; display: flex; align-items: center; gap: 8px;">

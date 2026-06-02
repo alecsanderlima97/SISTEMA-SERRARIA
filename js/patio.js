@@ -692,7 +692,7 @@ async function salvarRelatorioPatio() {
         periodo: periodoVal,
         horario: horarioVal,
         serrando: serrandoVal,
-        itens: itensPatioTemp,
+        itens: itensPatioTemp.map(item => ({ ...item })),
         totais: {
             totalVolume: totalVolume,
             totalPacotes: totalPacotes,
@@ -719,7 +719,7 @@ async function salvarRelatorioPatio() {
             await window.FS.addDoc('patio_relatorios', relatorio);
             alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         }
-        
+
         // Resetar rascunho
         document.getElementById('patioSerrando').value = '';
         itensPatioTemp = [];
@@ -862,18 +862,32 @@ window.patioDocActions = {
     set(rel) {
         if (!rel) return;
         const itens = Array.isArray(rel.itens) ? rel.itens : [];
-        const linhas = itens.map(i => {
-            const detalhes = obterDetalhesPacoteEtiqueta(i);
-            return `<tr><td>${i.tipo}</td><td>${formatDecimal(i.espessura, 1)} / ${formatDecimal(i.largura, 1)} / ${formatDecimal(i.comprimento, 2)}</td><td>${i.pacotes}</td><td>${detalhes.alturas || '-'}</td><td>${detalhes.largura || '-'}</td><td>${detalhes.amarras || '-'}</td><td>${i.totalPecas}</td><td class="doc-total">${formatDecimalMockup(i.volume)} m3</td></tr>`;
-        }).join('');
+        const resumo = new Map();
+        itens.forEach(i => {
+            const classificacao = i.classe || i.classificacao || 'Sem classificacao';
+            const cubagem = `${formatDecimal(i.espessura, 1)} x ${formatDecimal(i.largura, 1)} x ${formatDecimal(i.comprimento, 2)}`;
+            const chave = `${classificacao}|${cubagem}`;
+            const atual = resumo.get(chave) || { classificacao, cubagem, pacotes: 0, volume: 0 };
+            atual.pacotes += Number(i.pacotes || 0);
+            atual.volume += Number(i.volume || 0);
+            resumo.set(chave, atual);
+        });
+        const linhas = Array.from(resumo.values()).map(item => `
+            <tr>
+                <td>${item.classificacao}</td>
+                <td>${item.cubagem}</td>
+                <td style="text-align:center;">${item.pacotes}</td>
+                <td class="doc-total">${formatDecimalMockup(item.volume)} m³</td>
+            </tr>
+        `).join('');
         const dtStr = rel.data ? new Date(rel.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
         this.current = {
-            title: `Relacao Patio ${rel.data || ''}`,
-            filename: `patio-${rel.data || rel.id || 'relatorio'}`,
+            title: `Resumo do Patio ${rel.data || ''}`,
+            filename: `resumo-patio-${rel.data || rel.id || 'relatorio'}`,
             contentHtml: `
-                <div class="doc-header"><div><img src="logo.png" alt="Serraria Vanmarte" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>Relacao de Patio Diario</h1><p>${dtStr} - ${rel.periodo || ''}</p></div></div>
-                <div class="doc-grid"><div class="doc-card"><h3>Contagem</h3><p><strong>Horario:</strong> ${rel.horario || 'N/A'}</p><p><strong>Serrando:</strong> ${rel.serrando || 'N/A'}</p></div><div class="doc-card"><h3>Totais</h3><p><strong>Pacotes:</strong> ${rel.totais?.totalPacotes || 0}</p><p><strong>Pecas:</strong> ${rel.totais?.totalPecas || 0}</p><p><strong>Volume:</strong> <span class="doc-money">${formatDecimalMockup(rel.totais?.totalVolume || 0)} m3</span></p></div></div>
-                <table class="doc-table"><thead><tr><th>Produto</th><th>Bitolas</th><th>Pacotes</th><th>Alturas</th><th>Largura</th><th>Amarras</th><th>Total Pecas</th><th>Volume</th></tr></thead><tbody>${linhas}</tbody></table>`
+                <div class="doc-header"><div><img src="logo.png" alt="Serraria Vanmarte" class="doc-logo" onerror="this.style.display='none'"></div><div class="doc-title"><h1>Resumo da Contagem do Patio</h1><p>${dtStr} - ${rel.periodo || ''}</p></div></div>
+                <div class="doc-grid"><div class="doc-card"><h3>Contagem</h3><p><strong>Horario:</strong> ${rel.horario || 'N/A'}</p><p><strong>Madeira:</strong> ${rel.serrando || 'N/A'}</p></div><div class="doc-card"><h3>Total geral</h3><p><strong>Pacotes:</strong> ${rel.totais?.totalPacotes || 0}</p><p><strong>Volume:</strong> <span class="doc-money">${formatDecimalMockup(rel.totais?.totalVolume || 0)} m³</span></p></div></div>
+                <table class="doc-table"><thead><tr><th>Classificacao</th><th>Cubagem da madeira</th><th>Qtd. pacotes</th><th>Volume m³</th></tr></thead><tbody>${linhas}</tbody></table>`
         };
     },
     print() { if (this.current) window.DocActions.printHtml(this.current); },
@@ -1293,9 +1307,17 @@ function gerarLayoutImpressaoPatio(rel) {
     const dtObj = new Date(rel.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
 
-    const itens1 = rel.itens.filter(i => i.classe === '1Âª CLASSE');
-    const itens2 = rel.itens.filter(i => i.classe === '2Âª CLASSE');
-    const itens3 = rel.itens.filter(i => i.classe === '3Âª CLASSE');
+    const obterNumeroClasse = (item) => {
+        const texto = String(item.classe || item.classificacao || '').trim();
+        const match = texto.match(/[123]/);
+        return match ? match[0] : 'sem-classe';
+    };
+
+    const itens = Array.isArray(rel.itens) ? rel.itens : [];
+    const itens1 = itens.filter(i => obterNumeroClasse(i) === '1');
+    const itens2 = itens.filter(i => obterNumeroClasse(i) === '2');
+    const itens3 = itens.filter(i => obterNumeroClasse(i) === '3');
+    const itensSemClasse = itens.filter(i => obterNumeroClasse(i) === 'sem-classe');
 
     // Calcular subtotais por classe
     const calcularSubtotais = (lista) => {
@@ -1311,61 +1333,62 @@ function gerarLayoutImpressaoPatio(rel) {
     const sub1 = calcularSubtotais(itens1);
     const sub2 = calcularSubtotais(itens2);
     const sub3 = calcularSubtotais(itens3);
+    const subSemClasse = calcularSubtotais(itensSemClasse);
 
     const win = window.open('', '_blank');
     
     win.document.write(`
 <html>
 <head>
-    <title>RelaÃ§Ã£o de Pátio - Madeira Serrada</title>
+    <title>Relatorio de Patio - Madeira Serrada</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             color: #1e293b;
-            padding: 30px;
+            padding: 12px;
             margin: 0;
-            line-height: 1.4;
+            line-height: 1.25;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 2px solid #0f172a;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
         }
         .header-logo-img {
-            max-height: 72px;
-            max-width: 260px;
+            max-height: 58px;
+            max-width: 220px;
             display: block;
             object-fit: contain;
         }
         .meta-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 8px;
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 25px;
+            padding: 10px;
+            margin-bottom: 14px;
         }
         .meta-item {
-            font-size: 14px;
+            font-size: 15px;
         }
         .meta-item strong {
             color: #0f172a;
         }
         .class-section {
-            margin-bottom: 25px;
+            margin-bottom: 14px;
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid #e2e8f0;
         }
         .class-header {
-            padding: 10px 15px;
+            padding: 10px 12px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 18px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             display: flex;
@@ -1386,43 +1409,77 @@ function gerarLayoutImpressaoPatio(rel) {
             color: #991b1b;
             border-bottom: 2px solid #ef4444;
         }
+        .class-header-sem {
+            background-color: #f1f5f9;
+            color: #334155;
+            border-bottom: 2px solid #64748b;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
         th, td {
-            padding: 8px 8px;
-            text-align: left;
-            font-size: 12px;
-            border-bottom: 1px solid #edf2f7;
+            padding: 9px 2px;
+            text-align: center;
+            font-size: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            vertical-align: middle;
         }
         th {
-            background: #f8fafc;
-            color: #475569;
+            background: #e0f2fe;
+            color: #075985;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 19px;
+            border-bottom: 2px solid #38bdf8;
         }
         .num-col {
             text-align: center;
         }
+        .qtd-col {
+            text-align: center;
+            font-weight: 800;
+        }
         .vol-col {
-            text-align: right;
+            text-align: center;
             font-weight: bold;
+            color: #15803d;
+        }
+        .classe-col {
+            font-weight: 900;
+            font-size: 20px;
+        }
+        .cubagem-col {
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+            font-size: 20px;
+            padding-right: 2px;
+        }
+        .config-col {
+            font-size: 16px;
+            color: #334155;
+            font-weight: 900;
+            white-space: nowrap;
+            padding-left: 4px;
+            padding-right: 4px;
         }
         .subtotal-row {
-            background: #f8fafc;
-            font-weight: bold;
+            background: #f0fdf4;
+            font-size: 17px;
+            font-weight: 900;
+            color: #15803d;
         }
         .consolidated-card {
             background: #0f172a;
             color: #ffffff;
             border-radius: 8px;
-            padding: 20px;
-            margin-top: 30px;
+            padding: 14px;
+            margin-top: 18px;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
             text-align: center;
         }
         .consolidated-box {
@@ -1432,14 +1489,14 @@ function gerarLayoutImpressaoPatio(rel) {
             border-right: none;
         }
         .consolidated-title {
-            font-size: 11px;
+            font-size: 13px;
             text-transform: uppercase;
             color: #94a3b8;
             letter-spacing: 0.5px;
             margin-bottom: 5px;
         }
         .consolidated-val {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 800;
         }
         .print-footer {
@@ -1451,11 +1508,14 @@ function gerarLayoutImpressaoPatio(rel) {
             padding-top: 15px;
         }
         @media print {
-            body { padding: 10px; }
+            @page { size: A4 portrait; margin: 8mm; }
+            body { padding: 0; }
             .consolidated-card { background: #0f172a !important; color: white !important; -webkit-print-color-adjust: exact; }
             .class-header-1 { background-color: #eff6ff !important; color: #1e40af !important; -webkit-print-color-adjust: exact; }
             .class-header-2 { background-color: #fffbeb !important; color: #92400e !important; -webkit-print-color-adjust: exact; }
             .class-header-3 { background-color: #fef2f2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; }
+            .class-header-sem { background-color: #f1f5f9 !important; color: #334155 !important; -webkit-print-color-adjust: exact; }
+            tr, .class-section { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -1465,15 +1525,15 @@ function gerarLayoutImpressaoPatio(rel) {
             <img src="logo.png" alt="Serraria Vanmarte" class="header-logo-img" onerror="this.style.display='none'">
         </div>
         <div style="text-align: right;">
-            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">RelaÃ§Ã£o de Pátio DiÃ¡rio</h2>
-            <small style="color: #64748b;">Controle de Estoque de Madeira Serrada para Clientes</small>
+            <h2 style="margin: 0; color: #0f172a; font-size: 22px;">Contagem de Pátio</h2>
+            <small style="color: #64748b; font-size: 14px;">Resumo de madeira serrada</small>
         </div>
     </div>
 
     <div class="meta-container">
         <div class="meta-item"><strong>Data da Contagem:</strong> ${dtStr}</div>
         <div class="meta-item"><strong>Turno / Período:</strong> ${rel.periodo}</div>
-        <div class="meta-item"><strong>HorÃ¡rio da Contagem:</strong> ${rel.horario || 'N/A'}</div>
+        <div class="meta-item"><strong>Horario da Contagem:</strong> ${rel.horario || 'N/A'}</div>
         <div class="meta-item"><strong>Madeira Serrando no Momento:</strong> <span style="color: #e67e22; font-weight: bold;">${rel.serrando || 'N/A'}</span></div>
     </div>
     `);
@@ -1484,17 +1544,12 @@ function gerarLayoutImpressaoPatio(rel) {
         
         let rowsHtml = '';
         itens.forEach(i => {
-            const detalhes = obterDetalhesPacoteEtiqueta(i);
+            const classeTexto = classeName;
             rowsHtml += `
                 <tr>
-                    <td style="font-weight: bold;">${i.tipo}</td>
-                    <td>${formatDecimal(i.espessura, 1)} / ${formatDecimal(i.largura, 1)} / ${formatDecimal(i.comprimento, 2)}</td>
-                    <td class="num-col">${i.pacotes}</td>
-                    <td class="num-col">${detalhes.alturas || '-'}</td>
-                    <td class="num-col">${detalhes.largura || '-'}</td>
-                    <td class="num-col">${detalhes.amarras || '-'}</td>
-                    <td class="num-col" style="font-weight: 500;">${i.totalPecas}</td>
-                    <td class="vol-col">${formatDecimalMockup(i.volume)} m³</td>
+                    <td class="classe-col">${classeTexto}</td>
+                    <td class="cubagem-col">${formatDecimal(i.espessura, 1)}/${formatDecimal(i.largura, 1)}/${formatDecimal(i.comprimento, 2)}</td>
+                    <td class="vol-col">${formatDecimalMockup(i.volume)} m3</td>
                 </tr>
             `;
         });
@@ -1503,31 +1558,20 @@ function gerarLayoutImpressaoPatio(rel) {
             <div class="class-section">
                 <div class="class-header ${headerClass}">
                     <span>${classeName}</span>
-                    <span>Subtotal: ${formatDecimalMockup(totalClasse.volume)} m³</span>
                 </div>
                 <table>
                     <thead>
                         <tr>
-                            <th>Produto</th>
-                            <th>Bitolas</th>
-                            <th class="num-col">Pacotes</th>
-                            <th class="num-col">Alturas</th>
-                            <th class="num-col">Largura</th>
-                            <th class="num-col">Amarras</th>
-                            <th class="num-col">Total Peças</th>
-                            <th class="vol-col">Volume (m³)</th>
+                            <th style="width: 31%;">Classe</th>
+                            <th style="width: 34%;">Cubagem</th>
+                            <th class="vol-col" style="width: 35%;">Vol m3</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${rowsHtml}
                         <tr class="subtotal-row">
-                            <td colspan="2">TOTAL ${classeName}</td>
-                            <td class="num-col">${totalClasse.pacotes}</td>
-                            <td class="num-col">-</td>
-                            <td class="num-col">-</td>
-                            <td class="num-col">-</td>
-                            <td class="num-col">${totalClasse.pecas}</td>
-                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} m³</td>
+                            <td colspan="2">Subtotal ${classeName}</td>
+                            <td class="vol-col">${formatDecimalMockup(totalClasse.volume)} m3</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1535,9 +1579,10 @@ function gerarLayoutImpressaoPatio(rel) {
         `;
     }
 
-    win.document.write(gerarTabelaClasse(itens1, '1Âª CLASSE (VERDE)', 'class-header-1', sub1));
-    win.document.write(gerarTabelaClasse(itens2, '2Âª CLASSE (AMARELO)', 'class-header-2', sub2));
-    win.document.write(gerarTabelaClasse(itens3, '3Âª CLASSE (VERMELHO)', 'class-header-3', sub3));
+    win.document.write(gerarTabelaClasse(itens1, '1a CLASSE', 'class-header-1', sub1));
+    win.document.write(gerarTabelaClasse(itens2, '2a CLASSE', 'class-header-2', sub2));
+    win.document.write(gerarTabelaClasse(itens3, '3a CLASSE', 'class-header-3', sub3));
+    win.document.write(gerarTabelaClasse(itensSemClasse, 'SEM CLASSIFICACAO', 'class-header-sem', subSemClasse));
 
     // Escrever bloco consolidado geral
     win.document.write(`
@@ -1552,16 +1597,12 @@ function gerarLayoutImpressaoPatio(rel) {
         </div>
         <div class="consolidated-box" style="border-right: none;">
             <div class="consolidated-title">Volume Geral Pátio</div>
-            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} m³</div>
-        </div>
-        <div class="consolidated-box" style="border-right: none; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 5px;">
-            <div style="font-size: 9px; text-transform: uppercase; color: #94a3b8;">Status do Pátio</div>
-            <div style="font-size: 14px; font-weight: bold; color: #e67e22; text-transform: uppercase;">Pronto p/ Venda</div>
+            <div class="consolidated-val" style="color: #16a34a;">${formatDecimalMockup(rel.totais.totalVolume)} m3</div>
         </div>
     </div>
 
     <div class="print-footer">
-        <p>RelaÃ§Ã£o emitida automaticamente pelo sistema da Serraria Vanmarte.</p>
+        <p>Relatorio emitido automaticamente pelo sistema da Serraria Vanmarte.</p>
         <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
     </div>
 </body>
