@@ -8,39 +8,54 @@
                     </div>
                     <div class="hide-on-print" style="margin: 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
                         <button type="button" class="btn-action-card" id="btnAbrirControleProducao" onclick="window.abrirModalPatio()" style="padding: 12px 24px; gap: 10px;">
-                            <i class="fa-solid fa-industry" style="font-size: 1.15rem;"></i> Controle de Produção
+                            <i class="fa-solid fa-industry" style="font-size: 1.15rem;"></i> Controle de Producao Geral
                         </button>
-                        <button type="button" class="btn-action-card" id="btnAbrirFluxoPatio" onclick="window.abrirFluxoPatio()" style="padding: 12px 24px; gap: 10px; background: rgba(44,201,144,0.12); border-color: rgba(44,201,144,0.35);">
-                            <i class="fa-solid fa-warehouse" style="font-size: 1.15rem;"></i> Fluxo do Patio
+                        <button type="button" class="btn-action-card" id="btnAbrirProducaoPatio" onclick="window.abrirProducaoPatio()" style="padding: 12px 24px; gap: 10px; background: rgba(37,99,235,0.12); border-color: rgba(96,165,250,0.35);">
+                            <i class="fa-solid fa-truck-ramp-box" style="font-size: 1.15rem;"></i> Fluxo do Patio
                         </button>
+
                     </div>
                 </div>
 
-                <div id="panelFluxoPatio" class="glass-panel" style="display: none; margin-bottom: 25px; padding: 22px; border-radius: 10px;">
+                <div id="panelProducaoPatio" class="glass-panel" style="display: none; margin-bottom: 25px; padding: 22px; border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 16px;">
                         <div>
-                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-warehouse" style="color: var(--accent-color);"></i> Fluxo do Patio</h2>
-                            <p id="fluxoPatioInfo" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Visao rapida do ultimo controle de producao salvo.</p>
+                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Patio</h2>
+                            <p id="producaoPatioInfo" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Atualizacao operacional do fluxo do patio.</p>
                         </div>
-                        <button type="button" class="btn-secondary" onclick="window.fecharFluxoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
+                        <button type="button" class="btn-secondary" onclick="window.fecharProducaoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
                     </div>
-                    <div id="fluxoPatioResumo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px;"></div>
+                    <div style="display:grid; grid-template-columns:minmax(240px, 1fr) auto auto; gap:10px; align-items:end; margin-bottom:16px;">
+                        <div class="input-group" style="margin:0;"><label>Madeira sendo serrada</label><input type="text" id="producaoPatioSerrando" class="text-uppercase-input" placeholder="Ex: 1,7/11,0/1,20"></div>
+                        <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
+                        <button type="button" class="btn-secondary" onclick="window.toggleFormProducaoPatio()" style="height:42px;"><i class="fa-solid fa-plus"></i> Nova cubagem</button>
+                    </div>
+                    <div id="formProducaoPatio" style="display:none; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end; margin-bottom:16px;">
+                        <div class="input-group" style="margin:0;"><label>Classe</label><select id="prodPatioClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
+                        <div class="input-group" style="margin:0;"><label>Esp.</label><input type="text" id="prodPatioEsp" placeholder="1,7"></div>
+                        <div class="input-group" style="margin:0;"><label>Larg.</label><input type="text" id="prodPatioLarg" placeholder="11,0"></div>
+                        <div class="input-group" style="margin:0;"><label>Comp.</label><input type="text" id="prodPatioComp" placeholder="1,20"></div>
+                        <div class="input-group" style="margin:0;"><label>Pacotes</label><input type="number" id="prodPatioPacotes" min="1" value="1"></div>
+                        <div class="input-group" style="margin:0;"><label>Alturas</label><input type="number" id="prodPatioAlturas" min="1" placeholder="50"></div>
+                        <div class="input-group" style="margin:0;"><label>Largura</label><input type="number" id="prodPatioLarguraPacote" min="1" placeholder="10"></div>
+                        <div class="input-group" style="margin:0;"><label>Amarras</label><input type="number" id="prodPatioAmarras" min="0" value="0"></div>
+                        <div style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); border-radius:8px; padding:9px 10px;">
+                            <div style="font-size:.72rem; color:#86efac; text-transform:uppercase; font-weight:800;">Pecas do pacote</div>
+                            <div id="prodPatioTotalPecas" style="font-size:1.15rem; color:#4ade80; font-weight:900;">0 pç</div>
+                        </div>
+                        <div style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); border-radius:8px; padding:9px 10px;">
+                            <div style="font-size:.72rem; color:#86efac; text-transform:uppercase; font-weight:800;">Volume total</div>
+                            <div id="prodPatioTotalVolume" style="font-size:1.15rem; color:#4ade80; font-weight:900;">0,000 m³</div>
+                        </div>
+                        <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
+                    </div>
+                    <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
                     <div class="table-container">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Classe</th>
-                                    <th>Cubagem</th>
-                                    <th>Pacotes</th>
-                                    <th>Volume</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fluxoPatioLista">
-                                <tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra o fluxo para carregar os dados do patio.</td></tr>
-                            </tbody>
+                            <thead><tr><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th><th style="text-align:center;">Acoes</th></tr></thead>
+                            <tbody id="producaoPatioLista"><tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
                         </table>
                     </div>
-                    <div id="fluxoPatioClasses" style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;"></div>
                 </div>
 
                 <!-- Cards de Resumo -->

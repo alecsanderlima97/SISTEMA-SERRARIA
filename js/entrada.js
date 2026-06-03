@@ -917,7 +917,7 @@ function configurarSubmitEntrada() {
             }
             
             formEntrada.reset();
-            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(1.05) : 'R$ 1,05';
+            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(1.12) : 'R$ 1,12';
             if(entData) entData.valueAsDate = new Date();
             if(entHorario) {
                 const now = new Date();
@@ -1014,7 +1014,7 @@ window.alterarEntrada = function(id) {
     document.getElementById('entPlaca').value = en.placa || '';
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
-    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(en.valorDescargaM3 || 1.05) : formatDecimalValue(en.valorDescargaM3 || 1.05);
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(en.valorDescargaM3 || 1.12) : formatDecimalValue(en.valorDescargaM3 || 1.12);
     
     // Carregar alturas individuais se existirem
     if (en.alturas && Array.isArray(en.alturas)) {

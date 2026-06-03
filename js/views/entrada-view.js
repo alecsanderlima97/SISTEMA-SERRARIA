@@ -127,7 +127,7 @@
                                 </div>
                                 <div class="input-group" style="grid-column: span 2;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
-                                    <input type="text" id="entValorDescarga" placeholder="R\$ 1,05" value="R\$ 1,05">
+                                    <input type="text" id="entValorDescarga" placeholder="R\$ 1,12" value="R\$ 1,12">
                                 </div>
 
                                 <!-- Alturas -->
@@ -176,7 +176,7 @@
                                     <div id="entCardFinanceiroDescarga" style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Total Descarga</h4>
                                         <div id="entResultadoDescarga" style="font-size: 1.8rem; font-weight: bold; color:#f59e0b; margin-top: 5px;">R\$ 0,00</div>
-                                        <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Base: R\$ 1,05/m³</small>
+                                        <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Base: R\$ 1,12/m³</small>
                                     </div>
                                 </div>
 

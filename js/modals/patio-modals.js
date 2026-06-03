@@ -2,22 +2,22 @@
     const html = `    <!-- MODAL: CONTROLE DE PRODUÇÃO E CONTAGEM DE PÁTIO -->
     <div id="modalControleProducao" class="modal-v2 patio-wood-theme" style="display: none; overflow-y: auto; background: rgba(0, 0, 0, 0.88); z-index: 9999;">
         <div class="modal-content-v2" style="max-width: 1200px; width: 95%; padding: 25px; border-radius: 16px; border: none; font-family: var(--font-main);">
-            
+
             <!-- TOPO DA TELA (BOTÕES DE AÇÃO DO MOCKUP) -->
             <div class="patio-header-actions hide-on-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <i class="fa-solid fa-boxes-stacked" style="font-size: 2rem; color: #e67e22; filter: drop-shadow(0 2px 8px rgba(230,126,34,0.3));"></i>
                     <div>
-                        <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800;">Controle de Pátio &amp; Etiquetas</h2>
-                        <small style="font-weight: 600;">Gerenciamento de pacotes físicos e cubagem em tempo real</small>
+                        <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800;">Controle de Producao Geral</h2>
+                        <small style="font-weight: 600;">Contagem geral, etiquetas e cubagem da producao</small>
                     </div>
                 </div>
-                
+
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                     <button type="button" id="btnZerarEtiquetas" class="btn-patio-zerar">
                         <i class="fa-solid fa-circle-minus"></i> Zerar Quantidades
                     </button>
-                    
+
                     <button type="button" id="btnImprimirEtiquetas" class="btn-patio-print">
                         <i class="fa-solid fa-print"></i> Imprimir Etiquetas
                     </button>
@@ -100,7 +100,7 @@
                     </div>
                     <div id="lblTotalPacotes" class="kpi-value">0</div>
                 </div>
-                
+
                 <!-- TOTAL M³ -->
                 <div class="patio-kpi-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -109,7 +109,7 @@
                     </div>
                     <div id="lblTotalVolume" class="kpi-value">0,000</div>
                 </div>
-                
+
                 <!-- PCTS HOJE -->
                 <div class="patio-kpi-card patio-kpi-blue">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -118,7 +118,7 @@
                     </div>
                     <div id="lblPacotesHoje" class="kpi-value">0</div>
                 </div>
-                
+
                 <!-- HOJE M³ -->
                 <div class="patio-kpi-card patio-kpi-green">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -134,7 +134,7 @@
                 <!-- FORMULÁRIO DE LANÇAMENTO -->
                 <div class="hide-on-print" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed rgba(230,126,34,0.15);">
                     <h3 style="margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-circle-plus" style="color:#e67e22;"></i> Cadastrar Novo Lote no Pátio</h3>
-                    
+
                     <form id="formAdicionarItemPatio" class="patio-form-grid">
                         <div class="input-group" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-tree"></i> Tipo de Madeira</label>
@@ -209,23 +209,22 @@
                             LIMPAR TUDO
                         </button>
                     </div>
-                    
+
                     <div class="table-container" style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 1.5px solid #543725;">
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">DATA</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">CLASSE</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">QUANT.</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">MEDIDAS</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">FORMAÇÃO</th>
+                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">PACOTES</th>
+                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">TOTAL PÇS</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: right;">VOLUME (M³)</th>
                                     <th class="hide-on-print" style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">AÇÕES</th>
                                 </tr>
                             </thead>
                             <tbody id="listaItensPatioTemp">
                                 <tr>
-                                    <td colspan="7" style="text-align: center; color: #c4a482; padding: 30px; font-size: 0.9rem;">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</td>
+                                    <td colspan="6" style="text-align: center; color: #c4a482; padding: 30px; font-size: 0.9rem;">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -239,12 +238,14 @@
                     <i class="fa-solid fa-floppy-disk"></i> Salvar Lançamento do Pátio
                 </button>
             </div>
+            <div id="patioUltimaAlteracao" class="hide-on-print" style="display:none; margin:-10px 0 20px 0; padding:10px 12px; border-radius:8px; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.35); color:#bfdbfe; font-size:.86rem; font-weight:700;"></div>
+
             <!-- HISTÓRICO DE CONTAGENS -->
             <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px;">
                 <h3 style="margin: 0 0 15px 0; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-clock-rotate-left"></i> Histórico de Contagens Recentes (Pátio Diário)
                 </h3>
-                
+
                 <div class="table-container" style="max-height: 250px; overflow-y: auto;">
                     <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
@@ -260,13 +261,13 @@
                         </thead>
                         <tbody id="listaHistoricoPatio">
                             <tr>
-                                <td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Carregando histórico...</td>
+                                <td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Carregando histórico...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
         </div>
     </div>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
