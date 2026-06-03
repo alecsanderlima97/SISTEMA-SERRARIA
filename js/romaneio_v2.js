@@ -647,6 +647,32 @@ function renderizarTabelaPacotes() {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhum pacote adicionado.</p>';
         return;
     }
+    const numeroMedida = (valor) => {
+        const n = parseFloat(String(valor || '').replace(',', '.').replace(/[^\d.-]/g, ''));
+        return Number.isFinite(n) ? n : 0;
+    };
+    const ordenarPorCubagem = (lista) => [...lista].sort((a, b) => {
+        const ma = String(a.medidas || '').split('/').map(numeroMedida);
+        const mb = String(b.medidas || '').split('/').map(numeroMedida);
+        return (mb[2] || 0) - (ma[2] || 0)
+            || (mb[0] || 0) - (ma[0] || 0)
+            || (mb[1] || 0) - (ma[1] || 0)
+            || (b.pecasPorPacote || 0) - (a.pecasPorPacote || 0);
+    });
+    const montarMedidaRomaneio = (p, primeiraCubagem, cor) => {
+        const config = `${p.configPct || '-'} = ${p.pecasPorPacote || 0} pç`;
+        const configHtml = `
+            <div style="display:grid; grid-template-columns:22px 1fr; align-items:center; gap:6px; margin-top:${primeiraCubagem ? '5px' : '0'}; color:#f8fafc; font-size:0.78rem; font-weight:800; white-space:nowrap;">
+                <span style="text-align:center;">*</span>
+                <span>${config}</span>
+            </div>
+        `;
+        if (!primeiraCubagem) return configHtml;
+        return `
+            <div style="font-weight:900; color:${cor}; font-size:0.95rem; white-space:nowrap;">${p.medidas}</div>
+            ${configHtml}
+        `;
+    };
     const grupos = {};
     romaneioAtual.pacotes.forEach(p => {
         if (!grupos[p.qualidade]) grupos[p.qualidade] = { itens: [], subtotalM3: 0, subtotalValor: 0 };
@@ -672,8 +698,6 @@ function renderizarTabelaPacotes() {
                             <tr>
                                 <th>Madeira / Medida</th>
                                 <th>Pcts</th>
-                                <th>Config</th>
-                                <th>Pçs/Pct</th>
                                 <th>Total Pçs</th>
                                 <th>m³ Venda</th>
                                 <th>V. Unit.</th>
@@ -683,23 +707,29 @@ function renderizarTabelaPacotes() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${g.itens.map(p => `
-                                <tr>
-                                    <td><strong>${p.produtoNome}</strong><br><small>${p.medidas}</small></td>
-                                    <td>${p.qtdPacotes}</td>
-                                    <td><small>${p.configPct}</small></td>
-                                    <td>${p.pecasPorPacote}</td>
-                                    <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
-                                    <td>${p.m3VendaTotal.toFixed(3)}</td>
-                                    <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                    <td>R$ ${p.precoM3.toLocaleString('pt-BR')}</td>
-                                    <td><strong>R$ ${p.valorTotalWood.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-                                    <td class="hide-on-print">
-                                        <button onclick="editarPacoteV2(${p.id})" class="btn-icon text-warning" style="margin-right:10px;"><i class="fa-solid fa-pencil"></i></button>
-                                        <button onclick="removerPacoteV2(${p.id})" class="btn-icon text-danger"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('')}
+                            ${(() => {
+                                let ultimaCubagem = '';
+                                return ordenarPorCubagem(g.itens).map(p => {
+                                    const cubagemAtual = `${p.produtoNome || ''}|${p.medidas || ''}`;
+                                    const primeiraCubagem = cubagemAtual !== ultimaCubagem;
+                                    ultimaCubagem = cubagemAtual;
+                                    return `
+                                        <tr>
+                                            <td>${primeiraCubagem ? `<strong>${p.produtoNome}</strong><br>` : ''}${montarMedidaRomaneio(p, primeiraCubagem, cor)}</td>
+                                            <td>${p.qtdPacotes}</td>
+                                            <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
+                                            <td>${p.m3VendaTotal.toFixed(3)}</td>
+                                            <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td>R$ ${p.precoM3.toLocaleString('pt-BR')}</td>
+                                            <td><strong>R$ ${p.valorTotalWood.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+                                            <td class="hide-on-print">
+                                                <button onclick="editarPacoteV2(${p.id})" class="btn-icon text-warning" style="margin-right:10px;"><i class="fa-solid fa-pencil"></i></button>
+                                                <button onclick="removerPacoteV2(${p.id})" class="btn-icon text-danger"><i class="fa-solid fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            })()}
                         </tbody>
                     </table>
                 </div>
