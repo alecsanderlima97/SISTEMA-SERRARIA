@@ -309,6 +309,7 @@ window.abrirProducaoPatio = async function() {
     const panel = document.getElementById('panelProducaoPatio');
     if (!panel) return;
     panel.style.display = 'block';
+    setFormProducaoPatioAberto(false);
     aplicarPermissoesDashboardPatio();
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await renderizarProducaoPatio();
@@ -371,9 +372,7 @@ function instalarListenersProducaoPatio() {
 function atualizarResumoClassesProducaoPatio() {
     const container = document.getElementById('resumoProducaoPatioClasses');
     if (!container) return;
-    const form = document.getElementById('formProducaoPatio');
-    const formAberto = form?.dataset.aberto === '1';
-    if (formAberto || !producaoPatioRelatorioAtual) {
+    if (!producaoPatioRelatorioAtual) {
         container.innerHTML = '';
         return;
     }
