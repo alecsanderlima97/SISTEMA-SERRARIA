@@ -6,8 +6,8 @@ const funcionariosCollection = collection(db, 'funcionarios');
 let funcionariosAtuais = [];
 let funcionarioEditandoId = null;
 let horaExtraEditandoId = null;
-let anexoAtestadoAtual = null;
-let anexoCatAtual = null;
+let anexosAtestadoAtual = [];
+let anexosCatAtual = [];
 
 // Elementos do DOM
 const viewRH = document.getElementById('view-rh');
@@ -143,16 +143,16 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
         document.getElementById('rh-ferias-inicio').value = func.feriasInicio || '';
         document.getElementById('rh-ferias-fim').value = func.feriasFim || '';
-        anexoAtestadoAtual = func.atestado || null;
-        anexoCatAtual = func.cat || null;
-        atualizarNomeAnexoRH('atestado', anexoAtestadoAtual);
-        atualizarNomeAnexoRH('cat', anexoCatAtual);
+        anexosAtestadoAtual = normalizarAnexosRH(func, 'atestado');
+        anexosCatAtual = normalizarAnexosRH(func, 'cat');
+        atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
+        atualizarNomeAnexoRH('cat', anexosCatAtual);
     } else {
         window.switchTabRH('form', false);
-        anexoAtestadoAtual = null;
-        anexoCatAtual = null;
-        atualizarNomeAnexoRH('atestado', null);
-        atualizarNomeAnexoRH('cat', null);
+        anexosAtestadoAtual = [];
+        anexosCatAtual = [];
+        atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
+        atualizarNomeAnexoRH('cat', anexosCatAtual);
     }
 }
 
@@ -160,17 +160,25 @@ function fecharFormularioRH() {
     window.switchTabRH('lista');
     if (formFuncionario) formFuncionario.reset();
     funcionarioEditandoId = null;
-    anexoAtestadoAtual = null;
-    anexoCatAtual = null;
-    atualizarNomeAnexoRH('atestado', null);
-    atualizarNomeAnexoRH('cat', null);
+    anexosAtestadoAtual = [];
+        anexosCatAtual = [];
+        atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
+        atualizarNomeAnexoRH('cat', anexosCatAtual);
 }
 
-function atualizarNomeAnexoRH(tipo, anexo) {
+function normalizarAnexosRH(func, tipo) {
+    const lista = tipo === 'cat' ? func.cats : func.atestados;
+    const legado = tipo === 'cat' ? func.cat : func.atestado;
+    if (Array.isArray(lista)) return lista.filter(a => a?.dados);
+    return legado?.dados ? [legado] : [];
+}
+
+function atualizarNomeAnexoRH(tipo, anexos) {
     const el = document.getElementById(tipo === 'cat' ? 'rh-cat-nome' : 'rh-atestado-nome');
     if (!el) return;
-    el.textContent = anexo?.nome || 'Nenhum arquivo selecionado';
-    el.style.color = anexo?.nome ? 'var(--accent-color)' : 'var(--text-muted)';
+    const lista = Array.isArray(anexos) ? anexos : [];
+    el.textContent = lista.length ? lista.length + ' arquivo(s) selecionado(s)' : 'Nenhum arquivo selecionado';
+    el.style.color = lista.length ? 'var(--accent-color)' : 'var(--text-muted)';
 }
 
 function lerArquivoRH(file) {
@@ -196,8 +204,9 @@ function configurarAnexosRH() {
         atestadoInput.addEventListener('change', async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            anexoAtestadoAtual = await lerArquivoRH(file);
-            atualizarNomeAnexoRH('atestado', anexoAtestadoAtual);
+            anexosAtestadoAtual.push(await lerArquivoRH(file));
+            atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
+            atestadoInput.value = '';
         });
     }
 
@@ -205,8 +214,9 @@ function configurarAnexosRH() {
         catInput.addEventListener('change', async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            anexoCatAtual = await lerArquivoRH(file);
-            atualizarNomeAnexoRH('cat', anexoCatAtual);
+            anexosCatAtual.push(await lerArquivoRH(file));
+            atualizarNomeAnexoRH('cat', anexosCatAtual);
+            catInput.value = '';
         });
     }
 }
@@ -341,6 +351,51 @@ function formatarMoedaRH(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function calcularResumoHorasExtras(func, lista = null) {
+    const heList = Array.isArray(lista) ? lista : (func.horasExtras || []);
+    const valorHE50 = func.valorHeNormal !== undefined ? (parseFloat(func.valorHeNormal) || 0) : (((func.salario || 0) / 220) * 1.5);
+    const valorHE100 = func.valorHeEspecial !== undefined ? (parseFloat(func.valorHeEspecial) || 0) : (((func.salario || 0) / 220) * 2.0);
+    return heList.reduce((acc, h) => {
+        const horas = parseFloat(h.horas) || 0;
+        const tarifa = h.tipo === 'ESPECIAL' ? valorHE100 : valorHE50;
+        const adicional = parseFloat(h.adicional) || 0;
+        acc.horas += horas;
+        acc.valor += (horas * tarifa) + adicional;
+        return acc;
+    }, { horas: 0, valor: 0 });
+}
+
+function obterMesReferenciaHE(lista) {
+    const datas = (lista || []).map(h => h.data).filter(Boolean).sort();
+    const base = datas[0] ? new Date(datas[0] + 'T12:00:00') : new Date();
+    return {
+        chave: `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`,
+        label: base.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()
+    };
+}
+
+function renderizarHistoricoHE(func) {
+    const tbody = document.getElementById('listaHistoricoHE');
+    if (!tbody) return;
+    const historico = Array.isArray(func.historicoHorasExtras) ? func.historicoHorasExtras : [];
+    if (!historico.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:10px;">Nenhum fechamento salvo.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = [...historico].sort((a, b) => String(b.mes || '').localeCompare(String(a.mes || ''))).map(fech => `
+        <tr>
+            <td><strong>${fech.mesLabel || fech.mes || '-'}</strong></td>
+            <td>${Number(fech.totalHoras || 0).toLocaleString('pt-BR')}h</td>
+            <td style="color:#00ff88; font-weight:800;">${formatarMoedaRH(fech.totalValor || 0)}</td>
+            <td>${fech.fechadoEm ? new Date(fech.fechadoEm).toLocaleDateString('pt-BR') : '-'}</td>
+            <td style="display:flex; gap:8px; align-items:center;">
+                <button onclick="window.editarFechamentoHE('${fech.id}')" class="btn-icon" style="color:var(--accent-color);" title="Editar fechamento"><i class="fa-solid fa-pencil"></i></button>
+                <button onclick="window.abrirRelatorioFechamentoHE('${fech.id}')" class="btn-icon" style="color:#22c55e;" title="Visualizar relatorio"><i class="fa-solid fa-file-lines"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
 function aplicarVisibilidadeValoresRH() {
     const icon = document.getElementById('iconValoresRH');
     const botao = document.getElementById('btnToggleValoresRH');
@@ -359,6 +414,7 @@ function atualizarKPIsRH() {
     const totalFerias = funcionariosAtuais.filter(funcionarioEmFerias).length;
     const totalSalarios = funcionariosAtuais.reduce((acc, f) => acc + Number(f.salario || 0), 0);
     const totalVales = funcionariosAtuais.reduce((acc, f) => acc + Number(f.vale || 0), 0);
+    const totalHorasExtras = funcionariosAtuais.reduce((acc, f) => acc + calcularResumoHorasExtras(f).valor, 0);
 
     const setText = (id, value) => {
         const el = document.getElementById(id);
@@ -374,6 +430,7 @@ function atualizarKPIsRH() {
     setText('rhKpiFerias', totalFerias.toLocaleString('pt-BR'));
     setValor('rhKpiSalarios', totalSalarios);
     setValor('rhKpiVales', totalVales);
+    setValor('rhKpiHorasExtras', totalHorasExtras);
     aplicarVisibilidadeValoresRH();
 }
 
@@ -395,8 +452,8 @@ function renderizarFuncionarios(lista) {
         const adm = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
         const heTotal = f.horasExtras ? f.horasExtras.reduce((acc, h) => acc + (parseFloat(h.horas) || 0), 0) : 0;
         const faltasTotal = f.faltas ? f.faltas.length : 0;
-        const temAtestado = !!f.atestado?.dados;
-        const temCat = !!f.cat?.dados;
+        const temAtestado = normalizarAnexosRH(f, 'atestado').length > 0;
+        const temCat = normalizarAnexosRH(f, 'cat').length > 0;
         
         const fSalario = f.salario ? f.salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
         const fVale = f.vale ? f.vale.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
@@ -470,9 +527,16 @@ function renderizarFuncionarios(lista) {
 // Filtrar funcionários em tempo real
 window.abrirAnexoRH = function(id, tipo) {
     const f = funcionariosAtuais.find(x => x.id === id);
-    const anexo = tipo === 'cat' ? f?.cat : f?.atestado;
+    const anexos = normalizarAnexosRH(f || {}, tipo);
+    let anexo = anexos[0];
+    if (anexos.length > 1) {
+        const lista = anexos.map((item, index) => (index + 1) + ' - ' + (item.nome || 'Arquivo sem nome')).join('\n');
+        const escolha = parseInt(prompt('Escolha o arquivo para abrir:\n\n' + lista), 10);
+        if (!escolha || !anexos[escolha - 1]) return;
+        anexo = anexos[escolha - 1];
+    }
     if (!anexo?.dados) {
-        alert(tipo === 'cat' ? 'Nenhuma CAT cadastrada para este funcionário.' : 'Nenhum atestado cadastrado para este funcionário.');
+        alert(tipo === 'cat' ? 'Nenhuma CAT cadastrada para este funcionario.' : 'Nenhum atestado cadastrado para este funcionario.');
         return;
     }
 
@@ -481,7 +545,7 @@ window.abrirAnexoRH = function(id, tipo) {
         alert('Libere pop-ups para visualizar o anexo.');
         return;
     }
-    win.document.write(`<title>${anexo.nome || 'Anexo RH'}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
+    win.document.write('<title>' + (anexo.nome || 'Anexo RH') + '</title><iframe src="' + anexo.dados + '" style="width:100%; height:100vh; border:0;"></iframe>');
     win.document.close();
 };
 
@@ -542,8 +606,10 @@ async function salvarFuncionario() {
             valorHeNormal: parseFloat(valorHeNormal) || 0,
             valorHeEspecial: parseFloat(valorHeEspecial) || 0,
             formaPagamento, dadosBancarios, feriasDias, feriasInicio, feriasFim,
-            atestado: anexoAtestadoAtual,
-            cat: anexoCatAtual,
+            atestados: anexosAtestadoAtual,
+            cats: anexosCatAtual,
+            atestado: anexosAtestadoAtual[0] || null,
+            cat: anexosCatAtual[0] || null,
             atualizadoEm: new Date().toISOString()
         };
 
@@ -627,6 +693,7 @@ window.abrirModalHE = (id) => {
     if (presetDropdown) presetDropdown.value = 'NENHUM';
 
     renderizarTabelaHE(f);
+    renderizarHistoricoHE(f);
 
     const modal = document.getElementById('modalHorasExtras');
     if (modal) modal.style.display = 'flex';
@@ -784,6 +851,7 @@ async function adicionarHoraExtra() {
         
         // Atualizar lista em memória local e UI
         renderizarTabelaHE(f);
+        renderizarHistoricoHE(f);
         document.getElementById('he-horas').value = '';
         document.getElementById('he-adicional').value = '';
         document.getElementById('he-observacao').value = '';
@@ -811,6 +879,7 @@ window.removerHoraExtra = async (idHE) => {
         try {
             await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras });
             renderizarTabelaHE(f);
+            renderizarHistoricoHE(f);
             
             // Atualizar tabela principal de funcionários
             filtrarFuncionarios();
@@ -819,6 +888,63 @@ window.removerHoraExtra = async (idHE) => {
             alert("Erro ao remover lançamento.");
         }
     }
+};
+
+window.salvarFechamentoMensalHE = async function() {
+    const idFunc = document.getElementById('he-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f) return;
+    const lista = Array.isArray(f.horasExtras) ? f.horasExtras : [];
+    if (!lista.length) {
+        alert('Nao ha lancamentos de horas extras para fechar.');
+        return;
+    }
+    const ref = obterMesReferenciaHE(lista);
+    if (!confirm('Salvar fechamento de ' + ref.label + ' e zerar os lancamentos atuais?')) return;
+    const resumo = calcularResumoHorasExtras(f, lista);
+    const historico = Array.isArray(f.historicoHorasExtras) ? f.historicoHorasExtras : [];
+    const fechamento = {
+        id: Date.now().toString(),
+        mes: ref.chave,
+        mesLabel: ref.label,
+        lancamentos: JSON.parse(JSON.stringify(lista)),
+        totalHoras: resumo.horas,
+        totalValor: resumo.valor,
+        fechadoEm: new Date().toISOString()
+    };
+    f.historicoHorasExtras = historico.concat(fechamento);
+    f.horasExtras = [];
+    await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: [], historicoHorasExtras: f.historicoHorasExtras });
+    renderizarTabelaHE(f);
+    renderizarHistoricoHE(f);
+    filtrarFuncionarios();
+    alert('Fechamento mensal salvo com sucesso.');
+};
+
+window.editarFechamentoHE = async function(idFechamento) {
+    const idFunc = document.getElementById('he-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f) return;
+    const historico = Array.isArray(f.historicoHorasExtras) ? f.historicoHorasExtras : [];
+    const fechamento = historico.find(item => item.id === idFechamento);
+    if (!fechamento) return;
+    if ((f.horasExtras || []).length && !confirm('Existem lancamentos atuais. Ao editar este fechamento, eles serao substituidos. Continuar?')) return;
+    f.horasExtras = JSON.parse(JSON.stringify(fechamento.lancamentos || []));
+    f.historicoHorasExtras = historico.filter(item => item.id !== idFechamento);
+    await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras, historicoHorasExtras: f.historicoHorasExtras });
+    renderizarTabelaHE(f);
+    renderizarHistoricoHE(f);
+    filtrarFuncionarios();
+};
+
+window.abrirRelatorioFechamentoHE = function(idFechamento) {
+    const idFunc = document.getElementById('he-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    const fechamento = f?.historicoHorasExtras?.find(item => item.id === idFechamento);
+    if (!f || !fechamento) return;
+    gerarRelatorioHEHtml({ ...f, horasExtras: fechamento.lancamentos || [] }, fechamento.mesLabel);
+    const modal = document.getElementById('modalRelatorioHE');
+    if (modal) modal.style.display = 'flex';
 };
 
 
@@ -951,7 +1077,28 @@ window.abrirModalHolerite = (id) => {
     const f = funcionariosAtuais.find(x => x.id === id);
     if (!f) return;
 
-    gerarHoleriteHtml(f);
+    const historico = Array.isArray(f.historicoHorasExtras) ? f.historicoHorasExtras : [];
+    const opcoes = [];
+    if ((f.horasExtras || []).length) opcoes.push({ tipo: 'aberto', label: 'MES EM ABERTO', lancamentos: f.horasExtras });
+    historico
+        .slice()
+        .sort((a, b) => String(b.mes || '').localeCompare(String(a.mes || '')))
+        .forEach(fechamento => opcoes.push({
+            tipo: 'fechado',
+            label: fechamento.mesLabel || fechamento.mes || 'FECHAMENTO',
+            lancamentos: fechamento.lancamentos || []
+        }));
+
+    if (opcoes.length > 1) {
+        const lista = opcoes.map((op, index) => `${index + 1} - ${op.label}`).join('\n');
+        const escolha = parseInt(prompt(`Escolha o mes do holerite/ficha:\n\n${lista}`), 10);
+        if (!escolha || !opcoes[escolha - 1]) return;
+        gerarHoleriteHtml(f, opcoes[escolha - 1].lancamentos, opcoes[escolha - 1].label);
+    } else if (opcoes.length === 1) {
+        gerarHoleriteHtml(f, opcoes[0].lancamentos, opcoes[0].label);
+    } else {
+        gerarHoleriteHtml(f, [], 'SEM LANCAMENTOS');
+    }
 
     const modal = document.getElementById('modalHolerite');
     if (modal) modal.style.display = 'flex';
@@ -997,13 +1144,13 @@ window.addEventListener('afterprint', () => {
     document.body.classList.remove('printing-relatorio');
 });
 
-function gerarHoleriteHtml(f) {
+function gerarHoleriteHtml(f, listaHorasExtras = null, mesReferenciaManual = null) {
     const container = document.getElementById('conteudoHolerite');
     if (!container) return;
 
     const salarioBase = f.salario || 0;
     const vale = f.vale || 0;
-    const heList = f.horasExtras || [];
+    const heList = Array.isArray(listaHorasExtras) ? listaHorasExtras : (f.horasExtras || []);
     const faltasCount = f.faltas ? f.faltas.length : 0;
 
     // Calcular dias trabalhados reais pelos lançamentos
@@ -1046,6 +1193,11 @@ function gerarHoleriteHtml(f) {
     // Cálculo do total de descontos (DESCONTOS) incluindo o vale e descontos diários
     const totalDescontos = vale + descontosAdicionais;
     const valorLiquido = totalVencimentos - totalDescontos;
+    const totalHorasExtras = horas50 + horas100;
+    const atestadosCount = normalizarAnexosRH(f, 'atestado').length;
+    const catsCount = normalizarAnexosRH(f, 'cat').length;
+    const faltasValor = (f.faltas || []).reduce((acc, falta) => acc + (parseFloat(falta.valor) || 0), 0);
+    const dadosPagamento = (f.dadosBancarios || 'Nao informado').toUpperCase();
 
     const emitente = window.dadosSerrariaEmitente || {
         nome: "COMERCIO DE MADEIRAS VANMART LTDA",
@@ -1064,7 +1216,7 @@ function gerarHoleriteHtml(f) {
     
     // Mes de referencia atual
     const opcoesMes = { month: 'long', year: 'numeric' };
-    const mesReferencia = new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
+    const mesReferencia = mesReferenciaManual || new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
 
     container.innerHTML = `
         <div style="border: 2px solid black; padding: 15px; color: black; background: white;">
@@ -1210,7 +1362,7 @@ function gerarHoleriteHtml(f) {
 }
 
 
-function gerarRelatorioHEHtml(f) {
+function gerarRelatorioHEHtml(f, mesReferenciaManual = null) {
     const container = document.getElementById('conteudoRelatorioHE');
     if (!container) return;
 
@@ -1268,7 +1420,7 @@ function gerarRelatorioHEHtml(f) {
 
     // Mes de referencia atual
     const opcoesMes = { month: 'long', year: 'numeric' };
-    const mesReferencia = new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
+    const mesReferencia = mesReferenciaManual || new Date().toLocaleDateString('pt-BR', opcoesMes).toUpperCase();
 
     // Gerar linhas da tabela de lançamentos diários
     const linhasTabela = sortedList.map(h => {

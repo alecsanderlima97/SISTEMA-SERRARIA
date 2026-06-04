@@ -1,7 +1,7 @@
 (function() {
     const html = `    <!-- MODAL: CONTROLE DE HORAS EXTRAS -->
     <div id="modalHorasExtras" class="modal-v2" style="display: none;">
-        <div class="modal-content-v2 card-v2" style="max-width: 700px; width: 95%;">
+        <div class="modal-content-v2 card-v2" style="max-width: 1120px; width: 98%;">
             <div class="modal-header-v2">
                 <h2><i class="fa-solid fa-clock"></i> Controle de Horas Extras e Lançamentos Diários</h2>
                 <button onclick="window.fecharModalHE()" class="btn-close-v2">&times;</button>
@@ -47,7 +47,7 @@
                 </form>
 
                 <!-- Tabela de Lançamentos de Horas Extras -->
-                <div style="max-height: 250px; overflow-y: auto;">
+                <div style="max-height: 430px; overflow-y: auto;">
                     <table class="package-table" style="font-size: 0.85rem;">
                         <thead>
                             <tr>
@@ -65,6 +65,15 @@
                         </tbody>
                     </table>
                 </div>
+                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+                    <h3 style="font-size:0.95rem; margin:0 0 10px 0; color:white;"><i class="fa-solid fa-clock-rotate-left"></i> Historico mensal</h3>
+                    <div style="max-height:180px; overflow-y:auto;">
+                        <table class="package-table" style="font-size:0.82rem;">
+                            <thead><tr><th>Mes</th><th>Horas</th><th>Total</th><th>Fechado em</th><th>Acoes</th></tr></thead>
+                            <tbody id="listaHistoricoHE"><tr><td colspan="5" style="text-align:center; color:#aaa; padding:10px;">Nenhum fechamento salvo.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer-v2" style="justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 15px;">
                 <div style="font-size: 1.05rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -74,6 +83,7 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="window.abrirRelatorioMensalHE()" class="btn-v2" style="background: #2563eb; color: white; font-weight: bold;"><i class="fa-solid fa-file-invoice"></i> Relatório Fiscal</button>
+                    <button onclick="window.salvarFechamentoMensalHE()" class="btn-v2" style="background: #16a34a; color: white; font-weight: bold;"><i class="fa-solid fa-floppy-disk"></i> Salvar Fechamento</button>
                     <button onclick="window.fecharModalHE()" class="btn-v2" style="background: var(--border); color: white;">Fechar</button>
                 </div>
             </div>

@@ -172,6 +172,10 @@
                             <small style="color:var(--text-muted); font-weight:700;">TOTAL VALES</small>
                             <div id="rhKpiVales" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#f87171; margin-top:8px;">R$ 0,00</div>
                         </div>
+                        <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">
+                            <small style="color:var(--text-muted); font-weight:700;">TOTAL H. EXTRAS</small>
+                            <div id="rhKpiHorasExtras" class="rh-kpi-valor" style="font-size:1.35rem; font-weight:900; color:#38bdf8; margin-top:8px;">R$ 0,00</div>
+                        </div>
                     </div>
                     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                         <h2><i class="fa-solid fa-users-viewfinder"></i> Quadro de Funcionários</h2>
