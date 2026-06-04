@@ -96,17 +96,22 @@ service cloud.firestore {
     function canWriteFluxoPatio(collection) {
       return collection == 'patio_relatorios'
         && isApprovedUser()
-        && 'permissoes' in userDoc().data
-        && 'allowedSections' in userDoc().data.permissoes
-        && 'view-dashboard' in userDoc().data.permissoes.allowedSections
         && (
-          (
-            'allowedSubsections' in userDoc().data.permissoes
+          hasRole(['empilhaderista', 'EMPILHADEIRISTA', 'Empilhaderista'])
+          || (
+            'permissoes' in userDoc().data
+            && 'allowedSections' in userDoc().data.permissoes
+            && 'view-dashboard' in userDoc().data.permissoes.allowedSections
+          )
+          || (
+            'permissoes' in userDoc().data
+            && 'allowedSubsections' in userDoc().data.permissoes
             && 'view-dashboard' in userDoc().data.permissoes.allowedSubsections
             && 'fluxo-patio' in userDoc().data.permissoes.allowedSubsections['view-dashboard']
           )
           || (
-            'writeSections' in userDoc().data.permissoes
+            'permissoes' in userDoc().data
+            && 'writeSections' in userDoc().data.permissoes
             && 'view-dashboard' in userDoc().data.permissoes.writeSections
           )
         );
@@ -299,7 +304,7 @@ service cloud.firestore {
         ];
 
       allow create, update: if canWriteCollection(collection)
-        && sameEmpresaOnWrite()
+        && (sameEmpresaOnWrite() || collection == 'patio_relatorios')
         && collection in [
           'clientes',
           'clientes_subprodutos',

@@ -5,6 +5,7 @@ import { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } fr
 const funcionariosCollection = collection(db, 'funcionarios');
 let funcionariosAtuais = [];
 let funcionarioEditandoId = null;
+let horaExtraEditandoId = null;
 let anexoAtestadoAtual = null;
 let anexoCatAtual = null;
 
@@ -620,6 +621,8 @@ window.abrirModalHE = (id) => {
     document.getElementById('he-horas').value = '';
     document.getElementById('he-adicional').value = '';
     document.getElementById('he-observacao').value = '';
+    horaExtraEditandoId = null;
+    atualizarBotaoHoraExtra();
     const presetDropdown = document.getElementById('he-preset');
     if (presetDropdown) presetDropdown.value = 'NENHUM';
 
@@ -630,6 +633,8 @@ window.abrirModalHE = (id) => {
 };
 
 window.fecharModalHE = () => {
+    horaExtraEditandoId = null;
+    atualizarBotaoHoraExtra();
     const modal = document.getElementById('modalHorasExtras');
     if (modal) modal.style.display = 'none';
 };
@@ -693,8 +698,11 @@ function renderizarTabelaHE(func) {
                     <strong style="color:#00ff88; font-size:0.95rem;">${valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><br>
                     <small style="color:#aaa;">(Tarifa: ${tarifa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h)</small>
                 </td>
-                <td>
-                    <button onclick="window.removerHoraExtra('${h.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Lançamento">
+                <td style="display:flex; gap:8px; align-items:center;">
+                    <button onclick="window.editarHoraExtra('${h.id}')" class="btn-icon" style="color:var(--accent-color);" title="Editar Lancamento">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button onclick="window.removerHoraExtra('${h.id}')" class="btn-icon" style="color:var(--danger-color);" title="Excluir Lancamento">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </td>
@@ -705,6 +713,32 @@ function renderizarTabelaHE(func) {
     if (totalSoma) totalSoma.textContent = `${somaHoras}h`;
     if (totalValor) totalValor.textContent = somaValores.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+
+function atualizarBotaoHoraExtra() {
+    const btn = document.getElementById('btnSalvarHE');
+    if (!btn) return;
+    btn.innerHTML = horaExtraEditandoId
+        ? '<i class="fa-solid fa-floppy-disk"></i> ATUALIZAR REGISTRO'
+        : '<i class="fa-solid fa-plus"></i> ADICIONAR REGISTRO DIARIO';
+}
+
+window.editarHoraExtra = function(idHE) {
+    const idFunc = document.getElementById('he-funcionario-id').value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    const h = f?.horasExtras?.find(item => item.id === idHE);
+    if (!h) return;
+
+    horaExtraEditandoId = idHE;
+    document.getElementById('he-data').value = h.data || '';
+    document.getElementById('he-horas').value = h.horas || '';
+    document.getElementById('he-tipo-dia').value = h.tipo || 'NORMAL';
+    document.getElementById('he-adicional').value = h.adicional ? window.formatCurrencyValue(h.adicional) : '';
+    document.getElementById('he-observacao').value = h.observacao || '';
+    const presetDropdown = document.getElementById('he-preset');
+    if (presetDropdown) presetDropdown.value = 'NENHUM';
+    atualizarBotaoHoraExtra();
+    document.getElementById('he-horas')?.focus();
+};
 
 async function adicionarHoraExtra() {
     const idFunc = document.getElementById('he-funcionario-id').value;
@@ -731,7 +765,7 @@ async function adicionarHoraExtra() {
     if (!f.horasExtras) f.horasExtras = [];
 
     const novoLote = {
-        id: Date.now().toString(),
+        id: horaExtraEditandoId || Date.now().toString(),
         data,
         horas: parseFloat(horas) || 0,
         tipo,
@@ -739,7 +773,11 @@ async function adicionarHoraExtra() {
         observacao
     };
 
-    f.horasExtras.push(novoLote);
+    if (horaExtraEditandoId) {
+        f.horasExtras = f.horasExtras.map(h => h.id === horaExtraEditandoId ? novoLote : h);
+    } else {
+        f.horasExtras.push(novoLote);
+    }
 
     try {
         await window.FS.updateDoc('funcionarios', idFunc, { horasExtras: f.horasExtras });
@@ -749,6 +787,8 @@ async function adicionarHoraExtra() {
         document.getElementById('he-horas').value = '';
         document.getElementById('he-adicional').value = '';
         document.getElementById('he-observacao').value = '';
+        horaExtraEditandoId = null;
+        atualizarBotaoHoraExtra();
         const presetDropdown = document.getElementById('he-preset');
         if (presetDropdown) presetDropdown.value = 'NENHUM';
         document.getElementById('he-horas').focus();

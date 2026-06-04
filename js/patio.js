@@ -1,4 +1,4 @@
-﻿import { db, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from './firebase-init.js';
+﻿import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from './firebase-init.js';
 
 // ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
 
@@ -314,7 +314,15 @@ window.abrirProducaoPatio = async function() {
     await renderizarProducaoPatio();
 };
 
+function setFormProducaoPatioAberto(aberto) {
+    const form = document.getElementById('formProducaoPatio');
+    if (!form) return;
+    form.dataset.aberto = aberto ? '1' : '0';
+    form.style.display = aberto ? 'grid' : 'none';
+}
+
 window.fecharProducaoPatio = function() {
+    setFormProducaoPatioAberto(false);
     const panel = document.getElementById('panelProducaoPatio');
     if (panel) panel.style.display = 'none';
 };
@@ -322,7 +330,8 @@ window.fecharProducaoPatio = function() {
 window.toggleFormProducaoPatio = function() {
     const form = document.getElementById('formProducaoPatio');
     if (!form) return;
-    form.style.display = form.style.display === 'grid' ? 'none' : 'grid';
+    const aberto = form.dataset.aberto === '1';
+    setFormProducaoPatioAberto(!aberto);
     atualizarResumoClassesProducaoPatio();
     atualizarResumoNovaCubagemProducaoPatio();
 };
@@ -362,7 +371,8 @@ function instalarListenersProducaoPatio() {
 function atualizarResumoClassesProducaoPatio() {
     const container = document.getElementById('resumoProducaoPatioClasses');
     if (!container) return;
-    const formAberto = document.getElementById('formProducaoPatio')?.style.display === 'grid';
+    const form = document.getElementById('formProducaoPatio');
+    const formAberto = form?.dataset.aberto === '1';
     if (formAberto || !producaoPatioRelatorioAtual) {
         container.innerHTML = '';
         return;
@@ -518,6 +528,7 @@ window.adicionarCubagemProducaoPatio = async function() {
     const pacotesInput = document.getElementById('prodPatioPacotes');
     if (pacotesInput) pacotesInput.value = '1';
     atualizarResumoNovaCubagemProducaoPatio();
+    setFormProducaoPatioAberto(false);
     await renderizarProducaoPatio();
 };
 
@@ -605,7 +616,7 @@ function obterNumeroClasse(classe) {
 }
 
 function obterUsuarioPatioAtual() {
-    const user = auth.currentUser || {};
+    const user = auth?.currentUser || {};
     const nomeHeader = document.getElementById('userNameHeader')?.textContent?.trim();
     return window.App?.userName || nomeHeader || user.displayName || user.email || 'Usuario nao identificado';
 }

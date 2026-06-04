@@ -41,7 +41,7 @@
                         </div>
                     </div>
                     <input type="hidden" id="he-tipo-dia" value="NORMAL">
-                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; background: #00ff88; color: black; font-weight: bold; border-color: #00ff88;">
+                    <button type="submit" id="btnSalvarHE" class="btn-primary" style="width: 100%; justify-content: center; background: #00ff88; color: black; font-weight: bold; border-color: #00ff88;">
                         <i class="fa-solid fa-plus"></i> ADICIONAR REGISTRO DIÁRIO
                     </button>
                 </form>
