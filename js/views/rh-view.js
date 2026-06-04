@@ -151,9 +151,14 @@
                 <div id="panelListaRH" class="glass-panel hide-on-print">
                     <div class="rh-kpi-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
                         <h3 style="margin:0; color:white; font-size:1rem; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-chart-simple" style="color:var(--accent-color);"></i> Indicadores do RH</h3>
-                        <button type="button" id="btnToggleValoresRH" onclick="window.toggleValoresRH()" class="btn-action-card" style="padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-eye" id="iconValoresRH"></i> Valores
-                        </button>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <select id="rhFiltroMesIndicadores" onchange="window.alterarMesIndicadoresRH(this.value)" style="height:38px; border-radius:8px; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--panel-border); padding:0 10px; min-width:190px;">
+                                <option value="aberto">Mês em aberto</option>
+                            </select>
+                            <button type="button" id="btnToggleValoresRH" onclick="window.toggleValoresRH()" class="btn-action-card" style="padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-eye" id="iconValoresRH"></i> Valores
+                            </button>
+                        </div>
                     </div>
                     <div class="rh-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:22px;">
                         <div class="glass-panel" style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.035);">

@@ -8,6 +8,7 @@ let funcionarioEditandoId = null;
 let horaExtraEditandoId = null;
 let anexosAtestadoAtual = [];
 let anexosCatAtual = [];
+let mesIndicadoresRH = 'aberto';
 
 // Elementos do DOM
 const viewRH = document.getElementById('view-rh');
@@ -331,6 +332,7 @@ async function carregarFuncionarios() {
             funcionariosAtuais.push({ id: docSnap.id, ...docSnap.data() });
         });
         
+        preencherFiltroMesIndicadoresRH();
         atualizarKPIsRH();
         filtrarFuncionarios();
     } catch (e) {
@@ -399,7 +401,7 @@ function renderizarHistoricoHE(func) {
 function aplicarVisibilidadeValoresRH() {
     const icon = document.getElementById('iconValoresRH');
     const botao = document.getElementById('btnToggleValoresRH');
-    document.querySelectorAll('.rh-kpi-valor').forEach(el => {
+    document.querySelectorAll('.rh-kpi-valor, .rh-lista-valor').forEach(el => {
         el.textContent = valoresRHOcultos ? 'R$ ••••••' : (el.dataset.valorReal || 'R$ 0,00');
     });
     if (icon) {
@@ -409,12 +411,43 @@ function aplicarVisibilidadeValoresRH() {
     if (botao) botao.title = valoresRHOcultos ? 'Mostrar valores' : 'Ocultar valores';
 }
 
+function obterFechamentoFuncionarioMes(func, mes) {
+    const historico = Array.isArray(func.historicoHorasExtras) ? func.historicoHorasExtras : [];
+    return historico.find(item => item.mes === mes) || null;
+}
+
+function preencherFiltroMesIndicadoresRH() {
+    const select = document.getElementById('rhFiltroMesIndicadores');
+    if (!select) return;
+    const meses = new Map();
+    funcionariosAtuais.forEach(func => {
+        (func.historicoHorasExtras || []).forEach(fech => {
+            if (fech?.mes) meses.set(fech.mes, fech.mesLabel || fech.mes);
+        });
+    });
+    const valorAtual = mesIndicadoresRH;
+    select.innerHTML = '<option value="aberto">Mes em aberto</option>' + [...meses.entries()]
+        .sort((a, b) => String(b[0]).localeCompare(String(a[0])))
+        .map(([mes, label]) => `<option value="${mes}">${label}</option>`)
+        .join('');
+    select.value = meses.has(valorAtual) || valorAtual === 'aberto' ? valorAtual : 'aberto';
+    mesIndicadoresRH = select.value;
+}
+
 function atualizarKPIsRH() {
     const totalFuncionarios = funcionariosAtuais.length;
     const totalFerias = funcionariosAtuais.filter(funcionarioEmFerias).length;
-    const totalSalarios = funcionariosAtuais.reduce((acc, f) => acc + Number(f.salario || 0), 0);
-    const totalVales = funcionariosAtuais.reduce((acc, f) => acc + Number(f.vale || 0), 0);
-    const totalHorasExtras = funcionariosAtuais.reduce((acc, f) => acc + calcularResumoHorasExtras(f).valor, 0);
+    const usandoMesFechado = mesIndicadoresRH !== 'aberto';
+    const funcionariosDoPeriodo = usandoMesFechado
+        ? funcionariosAtuais.filter(f => obterFechamentoFuncionarioMes(f, mesIndicadoresRH))
+        : funcionariosAtuais;
+    const totalSalarios = funcionariosDoPeriodo.reduce((acc, f) => acc + Number(f.salario || 0), 0);
+    const totalVales = funcionariosDoPeriodo.reduce((acc, f) => acc + Number(f.vale || 0), 0);
+    const totalHorasExtras = funcionariosDoPeriodo.reduce((acc, f) => {
+        if (!usandoMesFechado) return acc + calcularResumoHorasExtras(f).valor;
+        const fechamento = obterFechamentoFuncionarioMes(f, mesIndicadoresRH);
+        return acc + Number(fechamento?.totalValor || 0);
+    }, 0);
 
     const setText = (id, value) => {
         const el = document.getElementById(id);
@@ -426,7 +459,7 @@ function atualizarKPIsRH() {
         el.dataset.valorReal = formatarMoedaRH(value);
     };
 
-    setText('rhKpiFuncionarios', totalFuncionarios.toLocaleString('pt-BR'));
+    setText('rhKpiFuncionarios', (usandoMesFechado ? funcionariosDoPeriodo.length : totalFuncionarios).toLocaleString('pt-BR'));
     setText('rhKpiFerias', totalFerias.toLocaleString('pt-BR'));
     setValor('rhKpiSalarios', totalSalarios);
     setValor('rhKpiVales', totalVales);
@@ -438,6 +471,11 @@ window.toggleValoresRH = function() {
     valoresRHOcultos = !valoresRHOcultos;
     localStorage.setItem('orquestra_rh_ocultar_valores', String(valoresRHOcultos));
     aplicarVisibilidadeValoresRH();
+};
+
+window.alterarMesIndicadoresRH = function(mes) {
+    mesIndicadoresRH = mes || 'aberto';
+    atualizarKPIsRH();
 };
 
 // Renderizar Tabela de Funcionários
@@ -490,8 +528,8 @@ function renderizarFuncionarios(lista) {
                     <small style="color:#888;">CPF: ${f.cpf || '-'}</small>
                 </td>
                 <td>
-                    <span style="color:#00ff88; font-weight:bold;">${fSalario}</span><br>
-                    <small style="color:#ef4444;">Vale: ${fVale}</small>
+                    <span class="rh-lista-valor" data-valor-real="${fSalario}" style="color:#00ff88; font-weight:bold;">${valoresRHOcultos ? 'R$ ******' : fSalario}</span><br>
+                    <small style="color:#ef4444;">Vale: <span class="rh-lista-valor" data-valor-real="${fVale}">${valoresRHOcultos ? 'R$ ******' : fVale}</span></small>
                 </td>
                 <td>${feriasInfo}</td>
                 <td>
