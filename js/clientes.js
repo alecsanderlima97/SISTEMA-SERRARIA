@@ -39,6 +39,7 @@ if (formCliente) {
             cidade: document.getElementById('cliCidade').value,
             valorFrete: window.parseCurrencyValue(document.getElementById('cliValorFrete').value),
             porcentagemNF: parseFloat(document.getElementById('cliPorcentagemNF').value) || 0,
+            baseNF: document.getElementById('cliBaseNF')?.value || 'INTEIRA',
             formaPagamento: document.getElementById('cliFormaPagamento').value,
             prazoPagamento: document.getElementById('cliPrazoPagamento').value.toUpperCase().trim(),
             madeira1: window.parseCurrencyValue(document.getElementById('cliMadeira1').value),
@@ -110,6 +111,7 @@ window.editarCliente = function(id) {
         document.getElementById('cliCidade').value = c.cidade || '';
         document.getElementById('cliValorFrete').value = window.formatCurrencyValue(c.valorFrete);
         document.getElementById('cliPorcentagemNF').value = c.porcentagemNF || '';
+        if (document.getElementById('cliBaseNF')) document.getElementById('cliBaseNF').value = c.baseNF || 'INTEIRA';
         document.getElementById('cliFormaPagamento').value = c.formaPagamento || '';
         
         const containerPrazo = document.getElementById('containerPrazo');

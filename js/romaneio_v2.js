@@ -25,6 +25,7 @@ let romaneioAtual = {
         taxaNF: 0,
         totalGeral: 0,
         adicionalMadeira: 0,
+        baseNF: 'INTEIRA',
         obsMadeira: ''
     }
 };
@@ -33,6 +34,11 @@ let produtosDisponiveis = [];
 let clientesDisponiveis = [];
 let transportadorasDisponiveis = [];
 let pacoteEditandoId = null;
+
+function parseNumeroBR(valor) {
+    const n = parseFloat(String(valor || '').replace(',', '.').replace(/[^\d.-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+}
 
 // 1. INICIALIZAÇÃO IMEDIATA (Para data e eventos)
 function prepararInterface() {
@@ -116,6 +122,23 @@ async function carregarProdutosParaRomaneio() {
         snap.forEach(doc => {
             const p = { id: doc.id, ...doc.data() };
             produtosDisponiveis.push(p);
+        });
+        produtosDisponiveis.sort((a, b) => {
+            const classe = (valor) => {
+                const texto = String(valor || '').toUpperCase();
+                if (texto.includes('1')) return 1;
+                if (texto.includes('2')) return 2;
+                if (texto.includes('3')) return 3;
+                return 99;
+            };
+            return classe(a.classe || a.qualidade) - classe(b.classe || b.qualidade)
+                || (Number(b.comprimentoVenda) || 0) - (Number(a.comprimentoVenda) || 0)
+                || (Number(b.espessura) || 0) - (Number(a.espessura) || 0)
+                || (Number(b.largura) || 0) - (Number(a.largura) || 0)
+                || (Number(b.pecasPorPacote) || 0) - (Number(a.pecasPorPacote) || 0)
+                || String(a.tipo || '').localeCompare(String(b.tipo || ''));
+        });
+        produtosDisponiveis.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = `${p.tipo || 'Sem Tipo'} (${p.espessura}x${p.largura}x${p.comprimentoVenda}m)`;
@@ -170,6 +193,7 @@ function configurarEventos() {
 
     // Ao mudar a qualidade, preencher preco automaticamente
     const inputQualidade = document.getElementById('v2-qualidade');
+    if (inputQualidade) inputQualidade.addEventListener('change', () => { atualizarVisualClasseRomaneio(); preencherPrecoPorQualidade(); });
     if (inputQualidade) inputQualidade.addEventListener('blur', preencherPrecoPorQualidade);
     if (inputQualidade) inputQualidade.addEventListener('input', preencherPrecoPorQualidade);
 
@@ -225,6 +249,7 @@ async function selecionarClienteCadastrado(e) {
     romaneioAtual.formaPagamento = cli.formaPagamento || '';
     romaneioAtual.prazoPagamento = cli.prazoPagamento || '';
     romaneioAtual.observacaoCliente = cli.observacao || '';
+    romaneioAtual.financeiro.baseNF = cli.baseNF || 'INTEIRA';
     
     // Atualizar box de informações comerciais
     if (infoBox && infoTexto) {
@@ -301,7 +326,8 @@ function selecionarMadeiraCadastrada(e) {
     document.getElementById('v2-largura').value = p.largura;
     document.getElementById('v2-comprimento').value = p.comprimentoVenda;
     document.getElementById('v2-comprimento-real').value = p.comprimentoReal || p.comprimentoVenda;
-    document.getElementById('v2-preco-m3-item').value = window.formatCurrencyValue(p.preco);
+    const especieMadeira = document.getElementById('v2-especie');
+    if (especieMadeira && p.especie) especieMadeira.value = p.especie.toUpperCase();
     
     // Ao selecionar produto, verificar se já tem qualidade preenchida e tentar preencher preço
     preencherPrecoPorQualidade();
@@ -309,8 +335,27 @@ function selecionarMadeiraCadastrada(e) {
 }
 
 // Preenche o Preço m³ automaticamente com base na qualidade selecionada e cliente
+function obterClasseRomaneio() {
+    const classe = document.getElementById('v2-qualidade')?.value || '1a CLASSE';
+    if (classe === 'OUTRO') {
+        return (document.getElementById('v2-classe-outro')?.value || 'OUTRO').toUpperCase().trim();
+    }
+    return classe;
+}
+
+function atualizarVisualClasseRomaneio() {
+    const select = document.getElementById('v2-qualidade');
+    const grupoOutro = document.getElementById('grupoV2ClasseOutro');
+    if (!select) return;
+    select.classList.remove('patio-classe-1', 'patio-classe-2', 'patio-classe-3');
+    if (select.value.includes('1')) select.classList.add('patio-classe-1');
+    else if (select.value.includes('2')) select.classList.add('patio-classe-2');
+    else if (select.value.includes('3')) select.classList.add('patio-classe-3');
+    if (grupoOutro) grupoOutro.style.display = select.value === 'OUTRO' ? 'flex' : 'none';
+}
+
 function preencherPrecoPorQualidade() {
-    const qualStr = (document.getElementById('v2-qualidade')?.value || '').toUpperCase().trim();
+    const qualStr = obterClasseRomaneio();
     if (!qualStr) return;
 
     const clienteId = document.getElementById('v2-select-cliente')?.value;
@@ -350,9 +395,9 @@ function preencherPrecoPorQualidade() {
 
 // Atualiza o preview de volume em tempo real no card de adicionar pacotes
 function atualizarVolumePreview() {
-    const esp = parseFloat(document.getElementById('v2-espessura')?.value) || 0;
-    const larg = parseFloat(document.getElementById('v2-largura')?.value) || 0;
-    const comp = parseFloat(document.getElementById('v2-comprimento')?.value) || 0;
+    const esp = parseNumeroBR(document.getElementById('v2-espessura')?.value);
+    const larg = parseNumeroBR(document.getElementById('v2-largura')?.value);
+    const comp = parseNumeroBR(document.getElementById('v2-comprimento')?.value);
     const pecas = parseInt(document.getElementById('v2-quantidade')?.value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes')?.value) || 1;
 
@@ -376,14 +421,15 @@ function calcularPecasAutomatico() {
 
 function adicionarPacote() {
     const prodId = document.getElementById('v2-select-produto').value;
-    const qualidade = document.getElementById('v2-qualidade').value || 'Padrão';
+    const qualidade = obterClasseRomaneio();
+    const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     
-    const esp = parseFloat(document.getElementById('v2-espessura').value) || 0;
-    const larg = parseFloat(document.getElementById('v2-largura').value) || 0;
-    const compV = parseFloat(document.getElementById('v2-comprimento').value) || 0;
-    const compR = parseFloat(document.getElementById('v2-comprimento-real').value) || compV;
+    const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
+    const larg = parseNumeroBR(document.getElementById('v2-largura').value);
+    const compV = parseNumeroBR(document.getElementById('v2-comprimento').value);
+    const compR = parseNumeroBR(document.getElementById('v2-comprimento-real').value) || compV;
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
 
     if (!prodId || pecasPorPacote <= 0) {
@@ -406,6 +452,7 @@ function adicionarPacote() {
         produtoId: prodId,
         produtoNome: prod.tipo,
         qualidade: qualidade.toUpperCase(),
+        especie,
         medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
         esp, larg, compV, compR,
         pecasPorPacote,
@@ -421,7 +468,7 @@ function adicionarPacote() {
     atualizarTotalGeral();
     renderizarTabelaPacotes();
     
-    if (confirm("Deseja adicionar outro pacote com a mesma cubagem (espessura, largura, comprimento), preço e qualidade?\n\n[OK] = Mantém os dados para informar nova quantidade\n[Cancelar] = Limpa todos os campos")) {
+    if (confirm("Deseja adicionar outro pacote com a mesma cubagem (espessura, largura, comprimento), preço e classe?\n\n[OK] = Mantém os dados para informar nova quantidade\n[Cancelar] = Limpa todos os campos")) {
         ['v2-altura', 'v2-camada', 'v2-amarras', 'v2-quantidade'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -440,7 +487,14 @@ function editarPacoteV2(id) {
     pacoteEditandoId = id;
     
     document.getElementById('v2-select-produto').value = p.produtoId || '';
-    document.getElementById('v2-qualidade').value = p.qualidade || '';
+    const classeSalva = p.qualidade || '1a CLASSE';
+    const classePadrao = ['1a CLASSE', '2a CLASSE', '3a CLASSE'].includes(classeSalva) ? classeSalva : 'OUTRO';
+    document.getElementById('v2-qualidade').value = classePadrao;
+    const classeOutro = document.getElementById('v2-classe-outro');
+    if (classeOutro) classeOutro.value = classePadrao === 'OUTRO' ? classeSalva : '';
+    atualizarVisualClasseRomaneio();
+    const especie = document.getElementById('v2-especie');
+    if (especie) especie.value = p.especie || 'EUCALIPTO';
     document.getElementById('v2-preco-m3-item').value = window.formatCurrencyValue(p.precoM3);
     document.getElementById('v2-qtd-pacotes').value = p.qtdPacotes;
     document.getElementById('v2-espessura').value = p.esp;
@@ -463,14 +517,15 @@ function editarPacoteV2(id) {
 function salvarEdicaoPacote() {
     if (!pacoteEditandoId) return;
     const prodId = document.getElementById('v2-select-produto').value;
-    const qualidade = (document.getElementById('v2-qualidade').value || 'Padrão').toUpperCase();
+    const qualidade = obterClasseRomaneio().toUpperCase();
+    const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
-    const esp = parseFloat(document.getElementById('v2-espessura').value) || 0;
-    const larg = parseFloat(document.getElementById('v2-largura').value) || 0;
-    const compV = parseFloat(document.getElementById('v2-comprimento').value) || 0;
-    const compR = parseFloat(document.getElementById('v2-comprimento-real').value) || compV;
+    const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
+    const larg = parseNumeroBR(document.getElementById('v2-largura').value);
+    const compV = parseNumeroBR(document.getElementById('v2-comprimento').value);
+    const compR = parseNumeroBR(document.getElementById('v2-comprimento-real').value) || compV;
 
     const prod = produtosDisponiveis.find(x => x.id === prodId);
 
@@ -489,6 +544,7 @@ function salvarEdicaoPacote() {
             produtoId: prodId,
             produtoNome: prod ? prod.tipo : 'Madeira',
             qualidade,
+            especie,
             medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
             esp, larg, compV, compR,
             pecasPorPacote,
@@ -529,6 +585,7 @@ function atualizarTotalGeral() {
     
     romaneioAtual.financeiro.adicionalMadeira = addMadeira;
     romaneioAtual.financeiro.obsMadeira = document.getElementById('v2-obs-madeira')?.value || '';
+    romaneioAtual.financeiro.baseNF = romaneioAtual.financeiro.baseNF || 'INTEIRA';
     
     romaneioAtual.logistica.adicionalFrete = addFrete;
     romaneioAtual.logistica.obsFrete = document.getElementById('v2-obs-frete')?.value || '';
@@ -540,14 +597,15 @@ function atualizarTotalGeral() {
 
     const taxaStr = (document.getElementById('v2-taxa-nf')?.value || "0").toString().replace(',', '.');
     const taxa = parseFloat(taxaStr) || 0;
-    const imposto = totalMadeiraComAjuste * (taxa / 100);
+    const baseNF = romaneioAtual.financeiro.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste;
+    const imposto = baseNF * (taxa / 100);
     
     romaneioAtual.financeiro.totalGeral = totalMadeiraComAjuste + imposto;
     romaneioAtual.financeiro.taxaNF = taxa;
     romaneioAtual.logistica.valorFrete = valorFreteUnit;
     romaneioAtual.numero = parseInt(document.getElementById('v2-numero-ordem').value) || 0;
     
-    renderizarResumoFinanceiro(totalFrete, totalM3Frete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste);
+    renderizarResumoFinanceiro(totalFrete, totalM3Frete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste, baseNF);
 }
 
 function getCorPorQualidade(qual) {
@@ -581,17 +639,18 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
 
     const taxa = Number(r.financeiro?.taxaNF || 0);
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
-    const imposto = (totalMadeira + adicionalMadeira) * (taxa / 100);
+    const baseNF = r.financeiro?.baseNF === 'MEIA' ? (totalMadeira + adicionalMadeira) / 2 : (totalMadeira + adicionalMadeira);
+    const imposto = baseNF * (taxa / 100);
     const subtotalLiquido = totalMadeira + adicionalMadeira + imposto;
     const valorFrete = Number(r.logistica?.valorFrete || 0);
     const freteBruto = totalM3Frete * valorFrete;
     const freteFinal = freteBruto + Number(r.logistica?.adicionalFrete || 0);
     const totalCarga = Number(r.financeiro?.totalGeral || subtotalLiquido);
-    return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
+    return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
 }
 
 function gerarHtmlDocumentoRomaneio(payload) {
-    const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
+    const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
     const pacotesHtml = `
         <table class="doc-table">
             <thead><tr><th>Classificacao</th><th>Madeira</th><th>Pcts</th><th>Config</th><th>Pcs/Pct</th><th>Total Pecas</th><th>m3 Venda</th><th>V. Unit.</th><th>Total</th></tr></thead>
@@ -608,7 +667,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
         <div class="doc-header"><div><img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong><br>${emitente.cnpj ? `CNPJ: ${emitente.cnpj}<br>` : ''}${(emitente.logradouro || '')} ${(emitente.numero || '')}<br>${emitente.cidade || ''}</div></div><div class="doc-title"><h1>${r.cliente || 'Comprador'} - Carga ${r.numero || r.numeroCarga || '-'}</h1><p><strong>Romaneio de Carga</strong></p><p>Emitido em ${new Date().toLocaleString('pt-BR')}</p></div></div>
         <div class="doc-grid"><div class="doc-card"><h3>Dados do Comprador</h3><p><strong>Cliente:</strong> ${r.cliente || '-'}</p><p><strong>CNPJ/CPF:</strong> ${clienteObj.cnpj || clienteObj.cpf || '-'}</p><p><strong>Cidade:</strong> ${clienteObj.cidade || '-'}</p>${r.formaPagamento ? `<p><strong>Pagamento:</strong> ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</p>` : ''}${r.observacaoCliente ? `<p><strong>Obs. cliente:</strong> ${r.observacaoCliente}</p>` : ''}</div><div class="doc-card"><h3>Dados Logisticos</h3><p><strong>Data carreg.:</strong> ${r.logistica?.dataCarregamento || '-'}</p><p><strong>Data descarreg.:</strong> ${r.logistica?.dataDescarregamento || '-'}</p><p><strong>Motorista:</strong> ${r.logistica?.motorista || '-'}</p><p><strong>Caminhao:</strong> ${r.logistica?.caminhao || '-'}</p><p><strong>Placa:</strong> ${r.logistica?.placa || '-'}</p><p><strong>Transporte:</strong> ${r.logistica?.responsavelFrete || '-'}</p></div></div>
         ${pacotesHtml}
-        <div class="doc-grid" style="margin-top:20px;"><div class="doc-card"><h3>Resumo da Carga</h3><p><strong>Total de pacotes:</strong> ${totalPcts}</p><p><strong>Total de pecas:</strong> ${totalPcs}</p><p><strong>Total m3:</strong> <span class="doc-total">${totalM3Madeira.toFixed(3)} m3</span></p></div><div class="doc-card"><h3>Resumo Financeiro</h3><p><strong>Soma dos produtos:</strong> <span class="doc-money">R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>${Number(r.financeiro?.adicionalMadeira || 0) ? `<p><strong>Ajuste madeira:</strong> R$ ${Number(r.financeiro?.adicionalMadeira || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.financeiro?.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}<p><strong>Impostos / taxa NF (${taxa}%):</strong> R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><p><strong>Subtotal liquido:</strong> <span class="doc-money">R$ ${subtotalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p><strong>Frete base:</strong> ${totalM3Frete.toFixed(3)} m3 x R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>${Number(r.logistica?.adicionalFrete || 0) ? `<p><strong>Ajuste frete:</strong> R$ ${Number(r.logistica?.adicionalFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.logistica?.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}<p><strong>Total frete:</strong> <span style="color:#1d4ed8; font-weight:800;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p style="font-size:20px; margin-top:14px;"><strong>Total da carga:</strong> <span class="doc-money">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p></div></div>
+        <div class="doc-grid" style="margin-top:20px;"><div class="doc-card"><h3>Resumo da Carga</h3><p><strong>Total de pacotes:</strong> ${totalPcts}</p><p><strong>Total de pecas:</strong> ${totalPcs}</p><p><strong>Total m3:</strong> <span class="doc-total">${totalM3Madeira.toFixed(3)} m3</span></p></div><div class="doc-card"><h3>Resumo Financeiro</h3><p><strong>Soma dos produtos:</strong> <span class="doc-money">R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>${Number(r.financeiro?.adicionalMadeira || 0) ? `<p><strong>Ajuste madeira:</strong> R$ ${Number(r.financeiro?.adicionalMadeira || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.financeiro?.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}${r.financeiro?.baseNF === 'MEIA' ? `<p><strong>Base NF meia carga:</strong> R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>` : ''}<p><strong>Impostos / taxa NF (${taxa}%):</strong> R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><p><strong>Subtotal liquido:</strong> <span class="doc-money">R$ ${subtotalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p><strong>Frete base:</strong> ${totalM3Frete.toFixed(3)} m3 x R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>${Number(r.logistica?.adicionalFrete || 0) ? `<p><strong>Ajuste frete:</strong> R$ ${Number(r.logistica?.adicionalFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.logistica?.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}<p><strong>Total frete:</strong> <span style="color:#1d4ed8; font-weight:800;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p style="font-size:20px; margin-top:14px;"><strong>Total da carga:</strong> <span class="doc-money">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p></div></div>
         ${r.observacaoCarga ? `<div class="doc-note"><strong>Observacoes da carga</strong><div style="margin-top:8px; white-space:pre-wrap;">${r.observacaoCarga}</div></div>` : ''}
         <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>`;
 }
@@ -647,16 +706,18 @@ function renderizarTabelaPacotes() {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhum pacote adicionado.</p>';
         return;
     }
-    const numeroMedida = (valor) => {
-        const n = parseFloat(String(valor || '').replace(',', '.').replace(/[^\d.-]/g, ''));
-        return Number.isFinite(n) ? n : 0;
+    const numeroClasseRomaneio = (valor) => {
+        const texto = String(valor || '').toUpperCase();
+        if (texto.includes('1')) return 1;
+        if (texto.includes('2')) return 2;
+        if (texto.includes('3')) return 3;
+        return 99;
     };
     const ordenarPorCubagem = (lista) => [...lista].sort((a, b) => {
-        const ma = String(a.medidas || '').split('/').map(numeroMedida);
-        const mb = String(b.medidas || '').split('/').map(numeroMedida);
-        return (mb[2] || 0) - (ma[2] || 0)
-            || (mb[0] || 0) - (ma[0] || 0)
-            || (mb[1] || 0) - (ma[1] || 0)
+        return numeroClasseRomaneio(a.qualidade) - numeroClasseRomaneio(b.qualidade)
+            || (Number(b.compV) || 0) - (Number(a.compV) || 0)
+            || (Number(b.esp) || 0) - (Number(a.esp) || 0)
+            || (Number(b.larg) || 0) - (Number(a.larg) || 0)
             || (b.pecasPorPacote || 0) - (a.pecasPorPacote || 0);
     });
     const montarMedidaRomaneio = (p, primeiraCubagem, cor) => {
@@ -681,7 +742,8 @@ function renderizarTabelaPacotes() {
         grupos[p.qualidade].subtotalValor += p.valorTotalWood;
     });
     let html = '';
-    for (const qual in grupos) {
+    const qualidadesOrdenadas = Object.keys(grupos).sort((a, b) => numeroClasseRomaneio(a) - numeroClasseRomaneio(b) || a.localeCompare(b));
+    for (const qual of qualidadesOrdenadas) {
         const g = grupos[qual];
         const cor = getCorPorQualidade(qual);
         html += `
@@ -739,7 +801,7 @@ function renderizarTabelaPacotes() {
     container.innerHTML = html;
 }
 
-function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste) {
+function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste, baseNF = totalMadeiraComAjuste) {
     const taxa = romaneioAtual.financeiro.taxaNF;
     const totalComTaxa = totalMadeiraComAjuste + imposto;
 
@@ -774,6 +836,11 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                     <span style="color: var(--text-muted);">Impostos / Taxa NF (${taxa}%):</span>
                     <span style="color: var(--danger);">+ R$ ${imposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
+                ${romaneioAtual.financeiro.baseNF === 'MEIA' ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted);">Base NF meia carga:</span>
+                    <span>R$ ${baseNF.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                </div>` : ''}
                 <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-weight: bold; font-size: 1.1rem;">
                     <span>Subtotal Líquido:</span>
                     <span style="color: var(--accent);">R$ ${totalComTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
@@ -1033,7 +1100,7 @@ window.verPreviaRomaneioV2 = () => {
         <table class="package-table" style="margin-top:20px; color: black;">
             <thead>
                 <tr>
-                    <th>Qualidade</th>
+                    <th>Classe</th>
                     <th>Madeira</th>
                     <th>Pcts</th>
                     <th>Config</th>
@@ -1090,7 +1157,8 @@ window.verPreviaRomaneioV2 = () => {
     };
 
     const taxa = r.financeiro.taxaNF || 0;
-    const imposto = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) * (taxa / 100);
+    const baseNF = r.financeiro?.baseNF === 'MEIA' ? (totalMadeira + (r.financeiro.adicionalMadeira || 0)) / 2 : (totalMadeira + (r.financeiro.adicionalMadeira || 0));
+    const imposto = baseNF * (taxa / 100);
     const subtotalLiquido = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) + imposto;
     const freteBruto = totalM3Frete * (r.logistica.valorFrete || 0);
     const freteFinal = freteBruto + (r.logistica.adicionalFrete || 0);
@@ -1182,6 +1250,9 @@ function limparCamposPacote() {
     });
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.value = '';
+    const classeOutro = document.getElementById('v2-classe-outro');
+    if (classeOutro) classeOutro.value = '';
+    atualizarVisualClasseRomaneio();
     // Resetar preview de volume
     const elUnit = document.getElementById('v2-volume-unit');
     const elTotal = document.getElementById('v2-volume-total');

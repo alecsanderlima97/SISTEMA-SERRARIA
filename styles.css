@@ -369,6 +369,144 @@ input::placeholder {
     animation: fadeIn 0.24s ease-out forwards;
 }
 
+/* Padrao unico para lancamento de pacotes */
+.package-entry-card {
+    border: 1px solid rgba(16, 185, 129, 0.32) !important;
+    border-radius: 10px !important;
+}
+
+.package-entry-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px 0;
+    color: #34d399;
+    font-size: 1.02rem;
+    font-weight: 850;
+}
+
+.package-entry-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)) !important;
+    gap: 10px !important;
+    align-items: end !important;
+}
+
+.package-entry-wide {
+    grid-column: span 2;
+}
+
+.package-entry-calc {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.package-entry-total {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 8px;
+    padding: 9px 10px;
+    min-height: 42px;
+}
+
+.package-entry-total span {
+    display: block;
+    color: #86efac;
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.package-entry-total strong {
+    display: block;
+    color: #4ade80;
+    font-size: 1.1rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.package-entry-grid input,
+.package-entry-grid select {
+    min-height: 42px;
+    background: rgba(15, 23, 42, 0.92) !important;
+    border: 1px solid rgba(148, 163, 184, 0.28) !important;
+    color: #f8fafc !important;
+    caret-color: #22c55e;
+    font-weight: 800;
+}
+
+.package-entry-grid input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+}
+
+.package-entry-calc input {
+    width: 100% !important;
+    min-width: 0;
+    padding: 8px 6px !important;
+    text-align: center;
+}
+
+.package-entry-grid button {
+    min-height: 42px;
+    justify-content: center;
+}
+
+#secao-romaneio-v2 .package-entry-grid {
+    grid-template-columns: repeat(4, minmax(150px, 1fr)) !important;
+}
+
+#secao-romaneio-v2 .package-entry-wide {
+    grid-column: span 2;
+}
+
+@media (max-width: 760px) {
+    .package-entry-wide {
+        grid-column: span 1;
+    }
+
+    #secao-romaneio-v2 .package-entry-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #secao-romaneio-v2 .package-entry-wide {
+        grid-column: span 1;
+    }
+
+    #panelProducaoPatio {
+        padding: 14px !important;
+        margin-left: -4px;
+        margin-right: -4px;
+    }
+
+    #panelProducaoPatio .fluxo-patio-toolbar,
+    #panelProducaoPatio .package-entry-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #panelProducaoPatio button {
+        width: 100%;
+        min-height: 46px;
+    }
+
+    #panelProducaoPatio .btn-pacote-touch {
+        width: 48px !important;
+        height: 48px !important;
+        min-height: 48px !important;
+    }
+
+    #panelProducaoPatio td {
+        padding: 10px 8px;
+        vertical-align: middle;
+    }
+
+    #panelProducaoPatio .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
 
 @keyframes fadeIn {
     from {

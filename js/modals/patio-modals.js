@@ -135,7 +135,7 @@
                 <div class="hide-on-print" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed rgba(230,126,34,0.15);">
                     <h3 style="margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-circle-plus" style="color:#e67e22;"></i> Cadastrar Novo Lote no Pátio</h3>
 
-                    <form id="formAdicionarItemPatio" class="patio-form-grid">
+                    <form id="formAdicionarItemPatio" class="patio-form-grid package-entry-grid">
                         <div class="input-group" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-tree"></i> Tipo de Madeira</label>
                             <select id="patioItemTipo">
@@ -181,13 +181,13 @@
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-calculator"></i> Alt x Cam + Am.</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                            <div class="package-entry-calc">
                                 <input type="number" id="patioItemAltura" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Alt">
                                 <input type="number" id="patioItemCamada" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Larg">
                                 <input type="number" id="patioItemAmarras" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Am">
                             </div>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group package-entry-total" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-layer-group"></i> Peças/Pct</label>
                             <input type="number" id="patioItemPecas" min="1" placeholder="Total" required style="background: rgba(0,0,0,0.1) !important; color: #fff !important; cursor: not-allowed; padding: 8px 6px !important; text-align: center;" readonly>
                         </div>

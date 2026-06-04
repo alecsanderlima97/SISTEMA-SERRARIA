@@ -64,6 +64,14 @@ const SECTION_PERMISSIONS = [
 ];
 
 const SUBSECTION_PERMISSIONS = {
+    'view-dashboard': {
+        label: 'Inicio',
+        items: [
+            { id: 'controle-producao', label: 'Controle de Producao Geral' },
+            { id: 'fluxo-patio', label: 'Fluxo do Patio' },
+            { id: 'indicadores', label: 'Indicadores e graficos' }
+        ]
+    },
     'view-entrada': {
         label: 'Conferencia de Cargas',
         items: [
@@ -885,6 +893,9 @@ const App = {
         }
         if (typeof window.atualizarPermissoesSubprodutos === 'function') {
             window.atualizarPermissoesSubprodutos();
+        }
+        if (typeof window.atualizarPermissoesDashboardPatio === 'function') {
+            window.atualizarPermissoesDashboardPatio();
         }
     },
 

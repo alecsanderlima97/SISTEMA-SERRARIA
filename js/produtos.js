@@ -1,7 +1,5 @@
 import { db, collection, getDocs, doc, deleteDoc } from './firebase-init.js';
 
-// --- Gestão de Produtos / Madeiras ---
-
 const formProduto = document.getElementById('formProduto');
 const listaProdutos = document.getElementById('listaProdutos');
 
@@ -33,6 +31,8 @@ window.switchTabProdutos = function(tabName, isEditing = false) {
                 submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
                 submitBtn.classList.replace('btn-secondary', 'btn-primary');
             }
+            atualizarVisualClasseProduto();
+            atualizarResumoProduto();
         }
     } else {
         tabForm.style.display = 'none';
@@ -44,27 +44,100 @@ window.switchTabProdutos = function(tabName, isEditing = false) {
     }
 };
 
-// Forçar letras maiúsculas em tempo real nos campos de madeiras
-['prodTipo', 'prodNatureza', 'prodQualidade'].forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-        input.addEventListener('input', window.forceUppercaseInput);
+function obterClasseProduto() {
+    const classe = document.getElementById('prodClasse')?.value || '1a CLASSE';
+    if (classe === 'OUTRO') {
+        return (document.getElementById('prodClasseOutro')?.value || 'OUTRO').toUpperCase().trim();
     }
+    return classe;
+}
+
+function atualizarVisualClasseProduto() {
+    const select = document.getElementById('prodClasse');
+    const grupoOutro = document.getElementById('grupoProdClasseOutro');
+    if (!select) return;
+
+    select.classList.remove('patio-classe-1', 'patio-classe-2', 'patio-classe-3');
+    if (select.value.includes('1')) select.classList.add('patio-classe-1');
+    else if (select.value.includes('2')) select.classList.add('patio-classe-2');
+    else if (select.value.includes('3')) select.classList.add('patio-classe-3');
+
+    if (grupoOutro) grupoOutro.style.display = select.value === 'OUTRO' ? 'flex' : 'none';
+}
+
+function calcularResumoProduto() {
+    const esp = parseNumeroBR(document.getElementById('prodEspessura')?.value);
+    const larg = parseNumeroBR(document.getElementById('prodLargura')?.value);
+    const comp = parseNumeroBR(document.getElementById('prodComprimentoVenda')?.value);
+    const alturas = parseInt(document.getElementById('prodAlturas')?.value, 10) || 0;
+    const larguraPacote = parseInt(document.getElementById('prodLarguraPacote')?.value, 10) || 0;
+    const amarras = parseInt(document.getElementById('prodAmarras')?.value, 10) || 0;
+    const pecas = alturas > 0 && larguraPacote > 0 ? (alturas * larguraPacote) + amarras : 0;
+    const volume = (esp / 100) * (larg / 100) * comp * pecas;
+    return { alturas, larguraPacote, amarras, pecas, volume };
+}
+
+function parseNumeroBR(valor) {
+    const n = parseFloat(String(valor || '').replace(',', '.').replace(/[^\d.-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+}
+
+function atualizarResumoProduto() {
+    const resumo = calcularResumoProduto();
+    const totalPecas = document.getElementById('prodTotalPecas');
+    const volumePacote = document.getElementById('prodVolumePacote');
+    if (totalPecas) totalPecas.textContent = `${resumo.pecas} pc`;
+    if (volumePacote) volumePacote.textContent = `${resumo.volume.toFixed(3).replace('.', ',')} m3`;
+}
+
+function numeroClasse(valor) {
+    const texto = String(valor || '').toUpperCase();
+    if (texto.includes('1')) return 1;
+    if (texto.includes('2')) return 2;
+    if (texto.includes('3')) return 3;
+    return 99;
+}
+
+function ordenarMadeiras(lista) {
+    return [...lista].sort((a, b) => {
+        return numeroClasse(a.classe || a.qualidade) - numeroClasse(b.classe || b.qualidade)
+            || (Number(b.comprimentoVenda) || 0) - (Number(a.comprimentoVenda) || 0)
+            || (Number(b.espessura) || 0) - (Number(a.espessura) || 0)
+            || (Number(b.largura) || 0) - (Number(a.largura) || 0)
+            || (Number(b.pecasPorPacote) || 0) - (Number(a.pecasPorPacote) || 0)
+            || String(a.tipo || '').localeCompare(String(b.tipo || ''));
+    });
+}
+
+['prodTipo', 'prodClasseOutro'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('input', window.forceUppercaseInput);
+});
+
+document.getElementById('prodClasse')?.addEventListener('change', atualizarVisualClasseProduto);
+['prodEspessura', 'prodLargura', 'prodComprimentoVenda', 'prodAlturas', 'prodLarguraPacote', 'prodAmarras'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', atualizarResumoProduto);
 });
 
 formProduto.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const resumo = calcularResumoProduto();
     const dadosProd = {
         tipo: document.getElementById('prodTipo').value.toUpperCase().trim(),
         natureza: document.getElementById('prodNatureza').value.toUpperCase().trim(),
-        qualidade: document.getElementById('prodQualidade').value.toUpperCase().trim(),
-        classe: document.getElementById('prodClasse').value,
-        espessura: parseFloat(document.getElementById('prodEspessura').value) || 0,
-        largura: parseFloat(document.getElementById('prodLargura').value) || 0,
-        comprimentoVenda: parseFloat(document.getElementById('prodComprimentoVenda').value) || 0,
-        comprimentoReal: parseFloat(document.getElementById('prodComprimentoReal').value) || 0,
-        preco: window.parseCurrencyValue(document.getElementById('prodPreco').value),
+        qualidade: obterClasseProduto(),
+        classe: obterClasseProduto(),
+        espessura: parseNumeroBR(document.getElementById('prodEspessura').value),
+        largura: parseNumeroBR(document.getElementById('prodLargura').value),
+        comprimentoVenda: parseNumeroBR(document.getElementById('prodComprimentoVenda').value),
+        comprimentoReal: parseNumeroBR(document.getElementById('prodComprimentoReal').value),
+        alturas: resumo.alturas,
+        larguraPacote: resumo.larguraPacote,
+        amarras: resumo.amarras,
+        pecasPorPacote: resumo.pecas,
+        configPct: resumo.alturas > 0 && resumo.larguraPacote > 0 ? `${resumo.alturas}x${resumo.larguraPacote}${resumo.amarras > 0 ? `+${resumo.amarras}` : ''}` : '-',
+        volumePacote: parseFloat(resumo.volume.toFixed(3)),
         atualizadoEm: new Date().toISOString()
     };
 
@@ -74,98 +147,104 @@ formProduto.addEventListener('submit', async function(e) {
     submitBtn.disabled = true;
 
     try {
-        if(produtoEditandoId) {
-            // Atualizar
+        if (produtoEditandoId) {
             await window.FS.updateDoc('produtos', produtoEditandoId, dadosProd);
-            
             produtoEditandoId = null;
             submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Madeira';
             submitBtn.classList.replace('btn-secondary', 'btn-primary');
             alert('Madeira atualizada!');
         } else {
-            // Criar
             dadosProd.criadoEm = new Date().toISOString();
             await window.FS.addDoc('produtos', dadosProd);
             alert('Madeira cadastrada!');
         }
 
         formProduto.reset();
+        atualizarVisualClasseProduto();
+        atualizarResumoProduto();
         await carregarProdutos();
-        
-        // Disparar evento para o combo do romaneio recarregar
         document.dispatchEvent(new Event('produtosUpdated'));
         window.switchTabProdutos('lista');
     } catch (error) {
-        console.error("Erro ao salvar produto/madeira: ", error);
+        console.error('Erro ao salvar produto/madeira: ', error);
         alert('Erro ao salvar. Verifique o console.');
     } finally {
-        if(!produtoEditandoId) submitBtn.innerHTML = textoOriginal;
+        if (!produtoEditandoId) submitBtn.innerHTML = textoOriginal;
         submitBtn.disabled = false;
     }
 });
 
 window.editarProduto = function(id) {
-    let p = produtosAtuais.find(x => x.id === id);
-    if(p) {
-        document.getElementById('prodTipo').value = p.tipo || '';
-        document.getElementById('prodNatureza').value = p.natureza || '';
-        document.getElementById('prodQualidade').value = p.qualidade || '';
-        document.getElementById('prodClasse').value = p.classe || '';
-        document.getElementById('prodEspessura').value = p.espessura || 0;
-        document.getElementById('prodLargura').value = p.largura || 0;
-        document.getElementById('prodComprimentoVenda').value = p.comprimentoVenda || 0;
-        document.getElementById('prodComprimentoReal').value = p.comprimentoReal || 0;
-        document.getElementById('prodPreco').value = window.formatCurrencyValue(p.preco);
+    const p = produtosAtuais.find(x => x.id === id);
+    if (!p) return;
 
-        produtoEditandoId = p.id;
-        
-        let submitBtn = formProduto.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Madeira';
-        submitBtn.classList.replace('btn-primary', 'btn-secondary');
-        
-        window.switchTabProdutos('form', true);
-        window.scrollTo(0, 0);
-    }
-}
+    document.getElementById('prodTipo').value = p.tipo || '';
+    document.getElementById('prodNatureza').value = p.natureza || 'EUCALIPTO';
+
+    const classeSalva = p.classe || p.qualidade || '1a CLASSE';
+    const classePadrao = ['1a CLASSE', '2a CLASSE', '3a CLASSE'].includes(classeSalva) ? classeSalva : 'OUTRO';
+    document.getElementById('prodClasse').value = classePadrao;
+    document.getElementById('prodClasseOutro').value = classePadrao === 'OUTRO' ? classeSalva : '';
+
+    document.getElementById('prodEspessura').value = p.espessura || 0;
+    document.getElementById('prodLargura').value = p.largura || 0;
+    document.getElementById('prodComprimentoVenda').value = p.comprimentoVenda || 0;
+    document.getElementById('prodComprimentoReal').value = p.comprimentoReal || 0;
+    document.getElementById('prodAlturas').value = p.alturas || '';
+    document.getElementById('prodLarguraPacote').value = p.larguraPacote || '';
+    document.getElementById('prodAmarras').value = p.amarras || 0;
+
+    atualizarVisualClasseProduto();
+    atualizarResumoProduto();
+    produtoEditandoId = p.id;
+
+    const submitBtn = formProduto.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Madeira';
+    submitBtn.classList.replace('btn-primary', 'btn-secondary');
+
+    window.switchTabProdutos('form', true);
+    window.scrollTo(0, 0);
+};
 
 window.apagarProduto = async function(id) {
-    if(await window.confirmarExclusaoComSenha('Apagar permanentemente configuracao desta madeira?')) {
+    if (await window.confirmarExclusaoComSenha('Apagar permanentemente configuracao desta madeira?')) {
         try {
             const docRef = doc(db, 'produtos', id);
             await deleteDoc(docRef);
             await carregarProdutos();
             document.dispatchEvent(new Event('produtosUpdated'));
-        } catch(error) {
-            console.error("Erro ao apagar produto: ", error);
-            alert("Erro ao excluir.");
+        } catch (error) {
+            console.error('Erro ao apagar produto: ', error);
+            alert('Erro ao excluir.');
         }
     }
-}
+};
 
 function renderProdutos() {
     listaProdutos.innerHTML = '';
-    
-    if(produtosAtuais.length === 0) {
-        listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>`;
+
+    if (produtosAtuais.length === 0) {
+        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>';
         return;
     }
 
-    produtosAtuais.forEach(p => {
-        const naturezaQualidade = `${p.natureza || '-'} - ${p.qualidade || '-'}`;
-        const precoNum = parseFloat(p.preco) || 0;
-        const precoFormatado = precoNum.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-        const medidas = `${p.espessura} x ${p.largura} x ${p.comprimentoVenda}m`;
+    ordenarMadeiras(produtosAtuais).forEach(p => {
+        const classe = p.classe || p.qualidade || '-';
+        const numeroClasse = String(classe).includes('1') ? 1 : String(classe).includes('2') ? 2 : String(classe).includes('3') ? 3 : 0;
+        const corClasse = numeroClasse === 1 ? '#22c55e' : numeroClasse === 2 ? '#facc15' : numeroClasse === 3 ? '#ef4444' : '#94a3b8';
+        const medidas = `${p.espessura || 0} x ${p.largura || 0} x ${p.comprimentoVenda || 0}m`;
+        const config = p.configPct || (p.alturas && p.larguraPacote ? `${p.alturas}x${p.larguraPacote}${p.amarras > 0 ? `+${p.amarras}` : ''}` : '-');
+        const pecas = p.pecasPorPacote || 0;
+        const volume = Number(p.volumePacote || 0).toFixed(3).replace('.', ',');
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td><strong>${p.tipo || '-'}</strong></td>
             <td>
-                <strong>${p.tipo || '-'}</strong>
+                <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${corClasse}22; color:${corClasse}; font-weight:800; border:1px solid ${corClasse}66;">${classe}</span><br>
+                <small style="color: var(--text-muted)">${p.natureza || '-'}</small>
             </td>
-            <td>
-                ${naturezaQualidade} <br>
-                <small style="color: var(--warning)">${medidas}</small>
-            </td>
-            <td style="color:var(--accent-color); font-weight:bold;">${precoFormatado}</td>
+            <td><strong>${medidas}</strong><br><small style="color: var(--warning)">${config} = ${pecas} pc / ${volume} m3</small></td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                     <button onclick="window.editarProduto('${p.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
@@ -182,26 +261,22 @@ function renderProdutos() {
 }
 
 async function carregarProdutos() {
-    listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>`;
+    listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>';
     try {
         const querySnapshot = await getDocs(produtosCollection);
         produtosAtuais = [];
         querySnapshot.forEach((doc) => {
             produtosAtuais.push({ id: doc.id, ...doc.data() });
         });
-        
+
         renderProdutos();
         document.dispatchEvent(new Event('produtosUpdated'));
-    } catch(error) {
-        console.error("Erro ao buscar produtos: ", error);
-        listaProdutos.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>`;
+    } catch (error) {
+        console.error('Erro ao buscar produtos: ', error);
+        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
     }
 }
 
-// Adicionar listener de máscara de R$ para o preço da madeira
-const prodPrecoInput = document.getElementById('prodPreco');
-if (prodPrecoInput) {
-    prodPrecoInput.addEventListener('input', window.formatCurrencyInput);
-}
-
+atualizarVisualClasseProduto();
+atualizarResumoProduto();
 carregarProdutos();

@@ -75,48 +75,65 @@
                     </div>
 
                     <!-- 2. Adicionar Pacotes (Entrada de Dados) -->
-                    <div class="card-v2" style="margin-bottom: 30px; border: 1px solid var(--accent);">
+                    <div class="card-v2 package-entry-card" style="margin-bottom: 30px;">
                         <span class="card-title" style="color: var(--accent);">Adicionar Pacotes à Carga</span>
-                        <div class="entry-form">
-                            <div class="input-group-v2" style="grid-column: span 2;">
-                                <label>Madeira / Estilo (Cadastrado)</label>
+                        <div class="entry-form package-entry-grid">
+                            <div class="input-group-v2">
+                                <label>Madeira Cadastrada</label>
                                 <select id="v2-select-produto" class="input-v2">
                                     <option value="">Selecione uma madeira...</option>
                                 </select>
                             </div>
                             <div class="input-group-v2">
-                                <label>Qualidade / Natureza</label>
-                                <input type="text" id="v2-qualidade" class="input-v2" placeholder="Ex: 1ª Qualidade">
+                                <label>Classe</label>
+                                <select id="v2-qualidade" class="input-v2 patio-classe-select patio-classe-1">
+                                    <option value="1a CLASSE">1a Classe</option>
+                                    <option value="2a CLASSE">2a Classe</option>
+                                    <option value="3a CLASSE">3a Classe</option>
+                                    <option value="OUTRO">Outro</option>
+                                </select>
+                            </div>
+                            <div class="input-group-v2" id="grupoV2ClasseOutro" style="display:none;">
+                                <label>Nome da classe</label>
+                                <input type="text" id="v2-classe-outro" class="input-v2 text-uppercase-input" placeholder="Ex: EXTRA">
                             </div>
                             <div class="input-group-v2">
-                                <label>Preço m³ (R\$)</label>
-                                <input type="text" id="v2-preco-m3-item" class="input-v2" placeholder="R\$ 0,00">
+                                <label>Especie</label>
+                                <select id="v2-especie" class="input-v2">
+                                    <option value="EUCALIPTO">Eucalipto</option>
+                                    <option value="PINOS">Pinos</option>
+                                    <option value="OUTROS">Outros</option>
+                                </select>
+                            </div>
+                            <div class="input-group-v2">
+                                <label>Preco m3 (R$)</label>
+                                <input type="text" id="v2-preco-m3-item" class="input-v2" placeholder="R$ 0,00">
                             </div>
                             <div class="input-group-v2">
                                 <label>Espessura (cm)</label>
-                                <input type="number" id="v2-espessura" class="input-v2" step="0.1" placeholder="0.0">
+                                <input type="text" id="v2-espessura" class="input-v2" inputmode="decimal" placeholder="0,0">
                             </div>
                             <div class="input-group-v2">
                                 <label>Largura (cm)</label>
-                                <input type="number" id="v2-largura" class="input-v2" step="0.1" placeholder="0.0">
+                                <input type="text" id="v2-largura" class="input-v2" inputmode="decimal" placeholder="0,0">
                             </div>
                             <div class="input-group-v2">
                                 <label>Comp. Venda (m)</label>
-                                <input type="number" id="v2-comprimento" class="input-v2" step="0.01" placeholder="0.00">
+                                <input type="text" id="v2-comprimento" class="input-v2" inputmode="decimal" placeholder="0,00">
                             </div>
                             <div class="input-group-v2">
                                 <label>Comp. Real (Frete)</label>
-                                <input type="number" id="v2-comprimento-real" class="input-v2" step="0.01" placeholder="0.00">
+                                <input type="text" id="v2-comprimento-real" class="input-v2" inputmode="decimal" placeholder="0,00">
                             </div>
 
                             
                             <!-- Calculadora de Peças Interna -->
-                            <div class="input-group-v2" style="background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px;">
+                            <div class="input-group-v2">
                                 <label>Alt x Cam + Am.</label>
-                                <div style="display: flex; gap: 4px;">
-                                    <input type="number" id="v2-altura" class="input-v2" style="width: 50px; padding: 5px;" placeholder="Alt">
-                                    <input type="number" id="v2-camada" class="input-v2" style="width: 50px; padding: 5px;" placeholder="Cam">
-                                    <input type="number" id="v2-amarras" class="input-v2" style="width: 50px; padding: 5px;" placeholder="+">
+                                <div class="package-entry-calc">
+                                    <input type="number" id="v2-altura" class="input-v2" style="padding: 5px; text-align:center;" placeholder="Alt">
+                                    <input type="number" id="v2-camada" class="input-v2" style="padding: 5px; text-align:center;" placeholder="Cam">
+                                    <input type="number" id="v2-amarras" class="input-v2" style="padding: 5px; text-align:center;" placeholder="Am">
                                 </div>
                             </div>
 
@@ -128,9 +145,9 @@
                                 <label>Qtd Pacotes</label>
                                 <input type="number" id="v2-qtd-pacotes" class="input-v2" value="1" min="1">
                             </div>
-                             <div class="input-group-v2" style="grid-column: span 2;">
+                             <div class="input-group-v2 package-entry-wide">
                                 <label style="color: var(--accent); font-weight: 700;"><i class="fa-solid fa-cube" style="margin-right:5px;"></i>Volume do Item (m³) — calculado automaticamente</label>
-                                <div style="display: flex; align-items: center; gap: 12px; background: rgba(0,255,136,0.05); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 16px;">
+                                <div style="display: flex; align-items: center; gap: 12px; background: rgba(0,255,136,0.05); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 16px; flex-wrap:wrap;">
                                     <span style="color: var(--text-muted); font-size: 0.85rem;">Por pacote:</span>
                                     <strong id="v2-volume-unit" style="color: var(--accent); font-size: 1.1rem;">0,000 m³</strong>
                                     <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 20px;">Total (todos os pacotes):</span>
@@ -138,7 +155,7 @@
                                 </div>
                             </div>
 
-                            <div style="display: flex; gap: 10px; align-items: flex-end; grid-column: span 2;">
+                            <div class="package-entry-wide" style="display: flex; gap: 10px; align-items: flex-end;">
                                 <button id="btn-add-pacote-v2" class="btn-v2 btn-primary-v2" style="flex: 1;">
                                     <i class="fa-solid fa-plus"></i> Adicionar Pacote
                                 </button>

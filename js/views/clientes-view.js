@@ -81,6 +81,13 @@
                             <input type="number" step="0.01" id="cliPorcentagemNF" placeholder="Ex: 9.3">
                         </div>
                         <div class="input-group">
+                            <label for="cliBaseNF">Base de calculo da NF</label>
+                            <select id="cliBaseNF">
+                                <option value="INTEIRA">Carga inteira</option>
+                                <option value="MEIA">Meia carga / meia nota</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
                             <label for="cliFormaPagamento">Forma de Pagamento</label>
                             <select id="cliFormaPagamento" onchange="document.getElementById('containerPrazo').style.display = this.value === 'A Prazo' ? 'flex' : 'none'">
                                 <option value="">Selecione...</option>

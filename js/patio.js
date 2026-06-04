@@ -278,10 +278,36 @@ function cardFluxoPatio(label, value) {
     `;
 }
 
+function usuarioPodeAcessarDashboardItem(itemId) {
+    if (!window.App || typeof window.App.canAccessSubsection !== 'function') return true;
+    return window.App.canAccessSubsection('view-dashboard', itemId);
+}
+
+function aplicarPermissoesDashboardPatio() {
+    document.querySelectorAll('[data-dashboard-permission]').forEach(el => {
+        if (el.id === 'panelProducaoPatio') return;
+        const permission = el.getAttribute('data-dashboard-permission');
+        el.style.display = usuarioPodeAcessarDashboardItem(permission) ? '' : 'none';
+    });
+
+    const podeIndicadores = usuarioPodeAcessarDashboardItem('indicadores');
+    document.querySelectorAll('#view-dashboard .kpi-card, #view-dashboard .dashboard-card, #view-dashboard canvas, #view-dashboard [data-dashboard-view]').forEach(el => {
+        el.style.display = podeIndicadores ? '' : 'none';
+    });
+}
+
+window.atualizarPermissoesDashboardPatio = aplicarPermissoesDashboardPatio;
+setTimeout(aplicarPermissoesDashboardPatio, 0);
+
 window.abrirProducaoPatio = async function() {
+    if (!usuarioPodeAcessarDashboardItem('fluxo-patio')) {
+        alert('Seu usuario nao tem permissao para acessar o Fluxo do Patio.');
+        return;
+    }
     const panel = document.getElementById('panelProducaoPatio');
     if (!panel) return;
     panel.style.display = 'block';
+    aplicarPermissoesDashboardPatio();
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await renderizarProducaoPatio();
 };
@@ -409,16 +435,26 @@ async function renderizarProducaoPatio() {
 }
 
 window.alterarPacotesProducaoPatio = async function(id, delta) {
+    if (window.__salvandoFluxoPatio) return;
     if (!producaoPatioRelatorioAtual) return;
     const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
     if (!item) return;
-    const novoPacotes = Math.max(0, (Number(item.pacotes) || 0) + delta);
-    item.pacotes = novoPacotes;
-    item.totalPecas = novoPacotes * (Number(item.pecas) || 0);
-    item.volume = (Number(item.volumeUnidade) || 0) * novoPacotes;
-    producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${delta > 0 ? 'Adicionou' : 'Removeu'} pacote em ${formatCubagemFluxo(item)}`);
-    await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
-    await renderizarProducaoPatio();
+
+    window.__salvandoFluxoPatio = true;
+    try {
+        const novoPacotes = Math.max(0, (Number(item.pacotes) || 0) + delta);
+        item.pacotes = novoPacotes;
+        item.totalPecas = novoPacotes * (Number(item.pecas) || 0);
+        item.volume = (Number(item.volumeUnidade) || 0) * novoPacotes;
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${delta > 0 ? 'Adicionou' : 'Removeu'} pacote em ${formatCubagemFluxo(item)}`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        await renderizarProducaoPatio();
+    } catch (error) {
+        console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
+        alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
+    } finally {
+        window.__salvandoFluxoPatio = false;
+    }
 };
 
 window.salvarSerrandoProducaoPatio = async function() {
@@ -578,7 +614,7 @@ function montarUltimaAlteracaoPatio(acao) {
 
 function botaoPacotePatio(tipo, onClick, title) {
     const isAdd = tipo === 'add';
-    return `<button type="button" onclick="${onClick}" title="${title}" style="width:34px; height:34px; border-radius:8px; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:1rem; color:#fff; background:${isAdd ? '#16a34a' : '#dc2626'}; box-shadow:0 6px 14px rgba(0,0,0,.18);">${isAdd ? '<i class="fa-solid fa-plus"></i>' : '<i class="fa-solid fa-minus"></i>'}</button>`;
+    return `<button type="button" class="btn-pacote-touch" onclick="${onClick}" title="${title}" style="width:44px; height:44px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:1.08rem; color:#fff; background:${isAdd ? '#16a34a' : '#dc2626'}; box-shadow:0 6px 14px rgba(0,0,0,.18); touch-action:manipulation;">${isAdd ? '<i class="fa-solid fa-plus"></i>' : '<i class="fa-solid fa-minus"></i>'}</button>`;
 }
 
 function adicionarItemAoPatio() {

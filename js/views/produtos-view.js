@@ -3,7 +3,7 @@
             <section id="view-produtos" class="view-section" style="display: none;">
                 <div class="main-header">
                     <h1><i class="fa-solid fa-tree-city"></i> Gestão de Madeira</h1>
-                    <p>Cadastre os tipos de madeira e o valor do m³</p>
+                    <p>Cadastre as madeiras, classes e configuracoes de pacote</p>
                 </div>
 
                 <!-- TABS DE MADEIRAS -->
@@ -26,8 +26,8 @@
                             <thead>
                                 <tr>
                                     <th>Descrição / Tipo</th>
-                                    <th>Natureza / Qualidade</th>
-                                    <th>Preço Base (m³)</th>
+                                    <th>Classe / Especie</th>
+                                    <th>Configuracao</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -43,39 +43,63 @@
                     <div class="section-title">
                         <h2><i class="fa-solid fa-plus-circle"></i> Nova Madeira / Estilo</h2>
                     </div>
-                    <form id="formProduto" class="grid-form">
+                    <form id="formProduto" class="package-entry-grid">
                         <div class="input-group">
-                            <label for="prodTipo">Tipo/Nome (ex: Tábua, Caibro)</label>
-                            <input type="text" id="prodTipo" class="text-uppercase-input" required>
+                            <label for="prodTipo">Madeira cadastrada</label>
+                            <input type="text" id="prodTipo" class="text-uppercase-input" placeholder="Ex: TABUA" required>
                         </div>
                         <div class="input-group">
-                            <label for="prodNatureza">Natureza / Madeira</label>
-                            <input type="text" id="prodNatureza" class="text-uppercase-input" placeholder="Ex: Eucalipto, Pinus, etc" required>
+                            <label for="prodClasse">Classe</label>
+                            <select id="prodClasse" class="patio-classe-select patio-classe-1" required>
+                                <option value="1a CLASSE">1a Classe</option>
+                                <option value="2a CLASSE">2a Classe</option>
+                                <option value="3a CLASSE">3a Classe</option>
+                                <option value="OUTRO">Outro</option>
+                            </select>
+                        </div>
+                        <div class="input-group" id="grupoProdClasseOutro" style="display:none;">
+                            <label for="prodClasseOutro">Nome da classe</label>
+                            <input type="text" id="prodClasseOutro" class="text-uppercase-input" placeholder="Ex: EXTRA">
                         </div>
                         <div class="input-group">
-                            <label for="prodQualidade">Qualidade</label>
-                            <input type="text" id="prodQualidade" class="text-uppercase-input" placeholder="Ex: 1ª Qualidade, BCA, etc">
+                            <label for="prodNatureza">Especie</label>
+                            <select id="prodNatureza" required>
+                                <option value="EUCALIPTO">Eucalipto</option>
+                                <option value="PINOS">Pinos</option>
+                                <option value="OUTROS">Outros</option>
+                            </select>
                         </div>
-                        <input type="hidden" id="prodClasse" value="Geral">
                         <div class="input-group">
                             <label for="prodEspessura">Espessura (cm)</label>
-                            <input type="number" id="prodEspessura" step="0.1" required placeholder="Ex: 2.5">
+                            <input type="text" id="prodEspessura" inputmode="decimal" required placeholder="Ex: 2,5">
                         </div>
                         <div class="input-group">
                             <label for="prodLargura">Largura (cm)</label>
-                            <input type="number" id="prodLargura" step="0.1" required placeholder="Ex: 10">
+                            <input type="text" id="prodLargura" inputmode="decimal" required placeholder="Ex: 10">
                         </div>
                         <div class="input-group">
                             <label for="prodComprimentoVenda">Comp. Venda (m)</label>
-                            <input type="number" id="prodComprimentoVenda" step="0.1" required placeholder="Ex: 1.2">
+                            <input type="text" id="prodComprimentoVenda" inputmode="decimal" required placeholder="Ex: 1,35">
                         </div>
                         <div class="input-group">
                             <label for="prodComprimentoReal">Comp. Real/Frete (m)</label>
-                            <input type="number" id="prodComprimentoReal" step="0.1" placeholder="Vazio = igual Venda">
+                            <input type="text" id="prodComprimentoReal" inputmode="decimal" placeholder="Vazio = igual Venda">
                         </div>
                         <div class="input-group">
-                            <label for="prodPreco">Preço do m³ (R\$)</label>
-                            <input type="text" id="prodPreco" required placeholder="R\$ 0,00">
+                            <label>Alt x Larg + Am.</label>
+                            <div class="package-entry-calc">
+                                <input type="number" id="prodAlturas" min="1" placeholder="Alt">
+                                <input type="number" id="prodLarguraPacote" min="1" placeholder="Larg">
+                                <input type="number" id="prodAmarras" min="0" value="0" placeholder="Am">
+                            </div>
+                        </div>
+                        <div class="package-entry-total">
+                            <span>Pecas do pacote</span>
+                            <strong id="prodTotalPecas">0 pc</strong>
+                        </div>
+                        <div class="package-entry-total">
+                            <span>Volume por pacote</span>
+                            <strong id="prodVolumePacote">0,000 m3</strong>
                         </div>
                         <div class="input-group" style="justify-content: flex-end;">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
