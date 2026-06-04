@@ -1,0 +1,227 @@
+/* Camada visual padronizada: campos, labels e legibilidade geral. */
+:root {
+    --ui-field-bg: #101827;
+    --ui-field-bg-soft: #121c2e;
+    --ui-field-border: rgba(96, 125, 159, 0.34);
+    --ui-field-border-focus: rgba(96, 165, 250, 0.8);
+    --ui-label: #aab4c3;
+    --ui-field-text: #f8fafc;
+    --ui-placeholder: #697589;
+}
+
+.view-section,
+.modal-v2,
+.glass-panel,
+.card-v2 {
+    overflow-wrap: anywhere;
+}
+
+.input-group,
+.input-group-v2,
+.form-group,
+.field-group {
+    min-width: 0;
+}
+
+.input-group label,
+.input-group-v2 label,
+.form-group label,
+.field-group label,
+label {
+    color: var(--ui-label);
+    font-size: 0.74rem;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+select,
+textarea,
+.input-v2 {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 38px;
+    background: var(--ui-field-bg) !important;
+    border: 1px solid var(--ui-field-border) !important;
+    border-radius: 8px !important;
+    color: var(--ui-field-text) !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.25;
+    box-shadow: none;
+    text-overflow: ellipsis;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+select:focus,
+textarea:focus,
+.input-v2:focus {
+    outline: none;
+    border-color: var(--ui-field-border-focus) !important;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.16);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--ui-placeholder) !important;
+    opacity: 1;
+    font-weight: 650;
+}
+
+select option {
+    background: #101827;
+    color: #f8fafc;
+}
+
+textarea {
+    min-height: 82px;
+    resize: vertical;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[inputmode="numeric"],
+input[inputmode="decimal"],
+.input-medida,
+.input-curto {
+    font-variant-numeric: tabular-nums;
+}
+
+.package-entry-grid,
+.entry-form,
+.form-grid,
+.grid-form {
+    align-items: end;
+}
+
+.table-container,
+.package-table,
+table {
+    overflow-wrap: normal;
+}
+
+table th,
+table td {
+    vertical-align: middle;
+}
+
+table th {
+    color: var(--ui-label);
+    font-size: 0.72rem;
+    letter-spacing: 0;
+}
+
+table td {
+    color: #e5e7eb;
+}
+
+.modal-content-v2 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.modal-content-v2 select,
+.modal-content-v2 textarea {
+    background: var(--ui-field-bg-soft) !important;
+}
+
+@media (max-width: 760px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select,
+    textarea,
+    .input-v2 {
+        min-height: 42px;
+        font-size: 1rem;
+    }
+
+    .input-group label,
+    .input-group-v2 label,
+    .form-group label,
+    .field-group label,
+    label {
+        font-size: 0.72rem;
+    }
+}
+
+/* Ajustes pontuais sem alterar o layout das telas. */
+#formProducaoPatio[data-aberto="0"] {
+    display: none !important;
+}
+
+#formProducaoPatio[data-aberto="1"] {
+    display: grid !important;
+}
+
+.fluxo-patio-toolbar {
+    grid-template-columns: minmax(180px, 320px) auto auto !important;
+}
+
+#producaoPatioSerrando {
+    max-width: 320px;
+}
+
+.fluxo-patio-toolbar button,
+#formProducaoPatio button,
+#formProduto button[type="submit"] {
+    white-space: nowrap;
+    min-width: max-content;
+}
+
+#formProducaoPatio {
+    gap: 10px;
+}
+
+.patio-status-pulse {
+    animation: patioStatusPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes patioStatusPulse {
+    0%,
+    100% {
+        box-shadow: 0 0 14px rgba(34, 197, 94, 0.18);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+    }
+}
+
+.patio-especie-compacta > div {
+    min-height: 32px !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+.patio-especie-compacta label {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    font-size: 0.72rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+}
+
+.patio-especie-compacta input[type="radio"] {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    accent-color: #38bdf8;
+}
+
+@media (max-width: 760px) {
+    .fluxo-patio-toolbar {
+        grid-template-columns: 1fr !important;
+    }
+
+    #producaoPatioSerrando {
+        max-width: 100%;
+    }
+}

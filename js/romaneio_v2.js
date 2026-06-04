@@ -144,8 +144,10 @@ async function carregarProdutosParaRomaneio() {
         });
         produtosDisponiveis.forEach(p => {
             const opt = document.createElement('option');
+            const classe = formatarClasseMadeira(p.classe || p.qualidade || '-');
+            const especie = p.especie || p.natureza || '-';
             opt.value = p.id;
-            opt.textContent = `${p.tipo || 'Sem Tipo'} (${p.espessura}x${p.largura}x${p.comprimentoVenda}m)`;
+            opt.textContent = `${p.tipo || 'Sem Tipo'} - ${classe} - ${especie} (${p.espessura}x${p.largura}x${p.comprimentoVenda}m)`;
             select.appendChild(opt);
         });
     } catch (e) { console.error("Erro produtos:", e); }
@@ -346,8 +348,10 @@ function selecionarMadeiraCadastrada(e) {
     document.getElementById('v2-largura').value = p.largura;
     document.getElementById('v2-comprimento').value = p.comprimentoVenda;
     document.getElementById('v2-comprimento-real').value = p.comprimentoReal || p.comprimentoVenda;
+    aplicarClasseRomaneio(p.classe || p.qualidade);
     const especieMadeira = document.getElementById('v2-especie');
-    if (especieMadeira && p.especie) especieMadeira.value = p.especie.toUpperCase();
+    const especieProduto = (p.especie || p.natureza || '').toUpperCase();
+    if (especieMadeira && especieProduto) especieMadeira.value = especieProduto;
     
     // Ao selecionar produto, verificar se já tem qualidade preenchida e tentar preencher preço
     preencherPrecoPorQualidade();
@@ -372,6 +376,37 @@ function atualizarVisualClasseRomaneio() {
     else if (select.value.includes('2')) select.classList.add('patio-classe-2');
     else if (select.value.includes('3')) select.classList.add('patio-classe-3');
     if (grupoOutro) grupoOutro.style.display = select.value === 'OUTRO' ? 'flex' : 'none';
+}
+
+function formatarClasseMadeira(valor) {
+    const texto = String(valor || '').toUpperCase();
+    if (texto.includes('1')) return '1° CLASSE';
+    if (texto.includes('2')) return '2° CLASSE';
+    if (texto.includes('3')) return '3° CLASSE';
+    return texto || '-';
+}
+
+function aplicarClasseRomaneio(valor) {
+    const texto = String(valor || '').toUpperCase().trim();
+    const select = document.getElementById('v2-qualidade');
+    const outro = document.getElementById('v2-classe-outro');
+    if (!select || !texto) return;
+
+    if (texto.includes('1')) {
+        select.value = '1a CLASSE';
+        if (outro) outro.value = '';
+    } else if (texto.includes('2')) {
+        select.value = '2a CLASSE';
+        if (outro) outro.value = '';
+    } else if (texto.includes('3')) {
+        select.value = '3a CLASSE';
+        if (outro) outro.value = '';
+    } else {
+        select.value = 'OUTRO';
+        if (outro) outro.value = texto;
+    }
+
+    atualizarVisualClasseRomaneio();
 }
 
 function madeiraManualAtiva() {

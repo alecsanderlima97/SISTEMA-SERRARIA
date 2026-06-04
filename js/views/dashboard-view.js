@@ -30,7 +30,7 @@
                         <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
                         <button type="button" class="btn-secondary" onclick="window.toggleFormProducaoPatio()" style="height:42px;"><i class="fa-solid fa-plus"></i> Nova cubagem</button>
                     </div>
-                    <div id="formProducaoPatio" class="package-entry-grid" style="display:none; margin-bottom:16px;">
+                    <div id="formProducaoPatio" class="package-entry-grid" data-aberto="0" style="display:none; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Classe</label><select id="prodPatioClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
                         <div class="input-group" style="margin:0;"><label>Esp.</label><input type="text" id="prodPatioEsp" inputmode="decimal" placeholder="1,7"></div>
                         <div class="input-group" style="margin:0;"><label>Larg.</label><input type="text" id="prodPatioLarg" inputmode="decimal" placeholder="11,0"></div>

@@ -135,30 +135,32 @@
                                     <p style="font-size: 0.8rem; color:#aaa; margin-bottom: 5px;">Alturas da carroceria: preencha de 1 a 3 pontos por lado.</p>
                                 </div>
 
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 1 (m)</label>
-                                    <input type="text" id="entAltEsq1" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
-                                </div>
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 2 (m)</label>
-                                    <input type="text" id="entAltEsq2" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
-                                </div>
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 3 (m)</label>
-                                    <input type="text" id="entAltEsq3" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
-                                </div>
+                                <div style="grid-column: 1 / -1; display:grid; grid-template-columns: repeat(3, minmax(110px, 1fr)); gap:10px;">
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 1 (m)</label>
+                                        <input type="text" id="entAltEsq1" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 2 (m)</label>
+                                        <input type="text" id="entAltEsq2" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#2cc990; font-size: 0.75rem;">Lado Esq. 3 (m)</label>
+                                        <input type="text" id="entAltEsq3" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
 
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 1 (m)</label>
-                                    <input type="text" id="entAltDir1" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
-                                </div>
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 2 (m)</label>
-                                    <input type="text" id="entAltDir2" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
-                                </div>
-                                <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
-                                    <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 3 (m)</label>
-                                    <input type="text" id="entAltDir3" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 1 (m)</label>
+                                        <input type="text" id="entAltDir1" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 2 (m)</label>
+                                        <input type="text" id="entAltDir2" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
+                                    <div class="input-group" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                                        <label style="color:#3498db; font-size: 0.75rem;">Lado Dir. 3 (m)</label>
+                                        <input type="text" id="entAltDir3" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.9rem;">
+                                    </div>
                                 </div>
 
                                 <!-- Resultado Real-Time -->

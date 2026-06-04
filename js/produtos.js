@@ -98,6 +98,14 @@ function numeroClasse(valor) {
     return 99;
 }
 
+function formatarClasseProduto(valor) {
+    const numero = numeroClasse(valor);
+    if (numero === 1) return '1° CLASSE';
+    if (numero === 2) return '2° CLASSE';
+    if (numero === 3) return '3° CLASSE';
+    return String(valor || '-').toUpperCase();
+}
+
 function ordenarMadeiras(lista) {
     return [...lista].sort((a, b) => {
         return numeroClasse(a.classe || a.qualidade) - numeroClasse(b.classe || b.qualidade)
@@ -123,11 +131,14 @@ formProduto.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const resumo = calcularResumoProduto();
+    const especie = document.getElementById('prodNatureza').value.toUpperCase().trim();
+    const classe = obterClasseProduto();
     const dadosProd = {
         tipo: document.getElementById('prodTipo').value.toUpperCase().trim(),
-        natureza: document.getElementById('prodNatureza').value.toUpperCase().trim(),
-        qualidade: obterClasseProduto(),
-        classe: obterClasseProduto(),
+        natureza: especie,
+        especie,
+        qualidade: classe,
+        classe,
         espessura: parseNumeroBR(document.getElementById('prodEspessura').value),
         largura: parseNumeroBR(document.getElementById('prodLargura').value),
         comprimentoVenda: parseNumeroBR(document.getElementById('prodComprimentoVenda').value),
@@ -179,7 +190,7 @@ window.editarProduto = function(id) {
     if (!p) return;
 
     document.getElementById('prodTipo').value = p.tipo || '';
-    document.getElementById('prodNatureza').value = p.natureza || 'EUCALIPTO';
+    document.getElementById('prodNatureza').value = p.natureza || p.especie || 'EUCALIPTO';
 
     const classeSalva = p.classe || p.qualidade || '1a CLASSE';
     const classePadrao = ['1a CLASSE', '2a CLASSE', '3a CLASSE'].includes(classeSalva) ? classeSalva : 'OUTRO';
@@ -224,7 +235,7 @@ function renderProdutos() {
     listaProdutos.innerHTML = '';
 
     if (produtosAtuais.length === 0) {
-        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>';
+        listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>';
         return;
     }
 
@@ -233,18 +244,15 @@ function renderProdutos() {
         const numeroClasse = String(classe).includes('1') ? 1 : String(classe).includes('2') ? 2 : String(classe).includes('3') ? 3 : 0;
         const corClasse = numeroClasse === 1 ? '#22c55e' : numeroClasse === 2 ? '#facc15' : numeroClasse === 3 ? '#ef4444' : '#94a3b8';
         const medidas = `${p.espessura || 0} x ${p.largura || 0} x ${p.comprimentoVenda || 0}m`;
-        const config = p.configPct || (p.alturas && p.larguraPacote ? `${p.alturas}x${p.larguraPacote}${p.amarras > 0 ? `+${p.amarras}` : ''}` : '-');
-        const pecas = p.pecasPorPacote || 0;
-        const volume = Number(p.volumePacote || 0).toFixed(3).replace('.', ',');
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${p.tipo || '-'}</strong></td>
             <td>
-                <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${corClasse}22; color:${corClasse}; font-weight:800; border:1px solid ${corClasse}66;">${classe}</span><br>
-                <small style="color: var(--text-muted)">${p.natureza || '-'}</small>
+                <span style="display:inline-block; min-width:92px; text-align:center; padding:7px 12px; border-radius:8px; background:${corClasse}26; color:${corClasse} !important; font-weight:900; border:1px solid ${corClasse}88;">${formatarClasseProduto(classe)}</span>
             </td>
-            <td><strong>${medidas}</strong><br><small style="color: var(--warning)">${config} = ${pecas} pc / ${volume} m3</small></td>
+            <td>
+                <strong style="display:block; color:${corClasse} !important; font-size:1.18rem; font-weight:900; letter-spacing:0;">${medidas}</strong>
+            </td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                     <button onclick="window.editarProduto('${p.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
@@ -261,7 +269,7 @@ function renderProdutos() {
 }
 
 async function carregarProdutos() {
-    listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>';
+    listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>';
     try {
         const querySnapshot = await getDocs(produtosCollection);
         produtosAtuais = [];
@@ -273,7 +281,7 @@ async function carregarProdutos() {
         document.dispatchEvent(new Event('produtosUpdated'));
     } catch (error) {
         console.error('Erro ao buscar produtos: ', error);
-        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
+        listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
     }
 }
 

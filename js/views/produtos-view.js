@@ -25,9 +25,8 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Descrição / Tipo</th>
-                                    <th>Classe / Especie</th>
-                                    <th>Configuracao</th>
+                                    <th>Classe</th>
+                                    <th>Medidas</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>

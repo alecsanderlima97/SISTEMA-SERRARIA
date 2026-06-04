@@ -32,6 +32,8 @@
             </div>
 
             <!-- SEÇÃO DE PARÂMETROS GERAIS -->
+            <div id="patioUltimaAlteracao" class="hide-on-print patio-status-pulse" style="display:none; margin:-10px 0 18px 0; padding:14px 16px; border-radius:12px; background:rgba(34,197,94,0.14); border:1px solid rgba(74,222,128,0.55); color:#dcfce7; font-size:.95rem; font-weight:900; box-shadow:0 0 22px rgba(34,197,94,.22);"></div>
+
             <div id="painelEtiquetaAvulsaPatio" class="glass-panel hide-on-print" style="display: none; margin-bottom: 25px; padding: 20px; border-radius: 12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
                     <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
@@ -67,12 +69,12 @@
                 </div>
             </div>
 
-            <div class="glass-panel hide-on-print patio-params-grid" style="margin-bottom: 25px; padding: 20px; border-radius: 12px;">
-                <div class="input-group" style="margin-bottom: 0;">
+            <div class="glass-panel hide-on-print patio-params-grid" style="margin-bottom: 25px; padding: 16px; border-radius: 12px;">
+                <div class="input-group" style="margin-bottom: 0; display:none;">
                     <label><i class="fa-solid fa-calendar-day"></i> Data da Contagem</label>
                     <input type="date" id="patioData" required>
                 </div>
-                <div class="input-group" style="margin-bottom: 0;">
+                <div class="input-group" style="margin-bottom: 0; display:none;">
                     <label><i class="fa-solid fa-cloud-sun"></i> Período / Turno</label>
                     <select id="patioPeriodo">
                         <option value="Manhã (Início do Dia)">Manhã (Início do Dia)</option>
@@ -80,11 +82,11 @@
                         <option value="Contagem Especial">Contagem Especial</option>
                     </select>
                 </div>
-                <div class="input-group" style="margin-bottom: 0;">
+                <div class="input-group" style="margin-bottom: 0; display:none;">
                     <label><i class="fa-solid fa-clock"></i> Horário da Contagem</label>
                     <input type="time" id="patioHorario" required>
                 </div>
-                <div class="input-group" style="margin-bottom: 0;">
+                <div class="input-group" style="margin-bottom: 0; max-width: 520px;">
                     <label><i class="fa-solid fa-tree"></i> Madeira Serrada no Momento *</label>
                     <input type="text" id="patioSerrando" class="text-uppercase-input" placeholder="Ex: TÁBUA DE 1,7 / 8,5 / 1,20" required>
                 </div>
@@ -155,7 +157,7 @@
                                 <option value="3ª CLASSE">3ª Classe</option>
                             </select>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-especie-compacta" style="margin-bottom: 0; max-width: 260px;">
                             <label><i class="fa-solid fa-seedling"></i> Espécie</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 42px;">
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="EUCALIPTO" checked> Eucalipto</label>
@@ -238,7 +240,6 @@
                     <i class="fa-solid fa-floppy-disk"></i> Salvar Lançamento do Pátio
                 </button>
             </div>
-            <div id="patioUltimaAlteracao" class="hide-on-print" style="display:none; margin:-10px 0 20px 0; padding:10px 12px; border-radius:8px; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.35); color:#bfdbfe; font-size:.86rem; font-weight:700;"></div>
 
             <!-- HISTÓRICO DE CONTAGENS -->
             <div class="glass-panel hide-on-print" style="padding: 20px; border-radius: 16px;">

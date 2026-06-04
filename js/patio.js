@@ -28,7 +28,20 @@ function formatDecimalMockup(num, places = 3) {
     return num.toFixed(places).replace('.', ',');
 }
 
+function dataAtualPatio() {
+    const hj = new Date();
+    const yyyy = hj.getFullYear();
+    const mm = String(hj.getMonth() + 1).padStart(2, '0');
+    const dd = String(hj.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
 
+function horaAtualPatio() {
+    const agora = new Date();
+    const hh = String(agora.getHours()).padStart(2, '0');
+    const min = String(agora.getMinutes()).padStart(2, '0');
+    return `${hh}:${min}`;
+}
 
 // Inicializar Eventos Safely (Independente do momento do carregamento do mÃ³dulo ES)
 function inicializarPatioListeners() {
@@ -145,29 +158,16 @@ window.abrirModalPatio = async function() {
     const inputHorario = document.getElementById('patioHorario');
     const selectPeriodo = document.getElementById('patioPeriodo');
 
-    const hj = new Date();
-    const yyyy = hj.getFullYear();
-    const mm = String(hj.getMonth() + 1).padStart(2, '0');
-    const dd = String(hj.getDate()).padStart(2, '0');
-    const dataAtualString = `${yyyy}-${mm}-${dd}`;
+    const dataAtualString = dataAtualPatio();
 
     if (inputData) {
         inputData.value = dataAtualString;
     }
 
     if (inputHorario) {
-        const hh = String(hj.getHours()).padStart(2, '0');
-        const min = String(hj.getMinutes()).padStart(2, '0');
-        inputHorario.value = `${hh}:${min}`;
-        
-        if (selectPeriodo) {
-            if (hj.getHours() < 13) {
-                selectPeriodo.value = 'ManhÃ£ (In?cio do Dia)';
-            } else {
-                selectPeriodo.value = 'Tarde (Fechamento do Pátio)';
-            }
-        }
+        inputHorario.value = horaAtualPatio();
     }
+    if (selectPeriodo) selectPeriodo.value = 'Atualizacao do dia';
 
     // Inicializar itens do pátio
     relatorioPatioEditandoId = null;
@@ -177,6 +177,10 @@ window.abrirModalPatio = async function() {
 
     // Carregar histórico do Firebase e calcular acumulados de hoje
     await carregarHistoricoPatio();
+    const relHoje = historicoPatioAtuais.find(rel => rel.data === dataAtualString);
+    if (relHoje) {
+        carregarRelatorioPatioNoFormulario(relHoje, relHoje.id);
+    }
     atualizarAvisoUltimaAlteracaoPatio();
     await calcularAcumuladosHoje(dataAtualString);
 };
@@ -930,39 +934,13 @@ function atualizarConsolidatedStats() {
     document.getElementById('lblTotalPacotes').innerText = totalPacotes;
     document.getElementById('lblTotalVolume').innerText = formatDecimalMockup(totalVolume);
 
-    // Cards da direita (Acumulados de Hoje)
-    // Se a data de hoje coincidir com a data selecionada no painel, somamos o rascunho com o acumulado salvo do dia
-    const inputData = document.getElementById('patioData');
-    const hj = new Date();
-    const yyyy = hj.getFullYear();
-    const mm = String(hj.getMonth() + 1).padStart(2, '0');
-    const dd = String(hj.getDate()).padStart(2, '0');
-    const hojeStr = `${yyyy}-${mm}-${dd}`;
-
-    if (inputData && inputData.value === hojeStr) {
-        document.getElementById('lblPacotesHoje').innerText = totaisSalvosHoje.pacotes + totalPacotes;
-        document.getElementById('lblVolumeHoje').innerText = formatDecimalMockup(totaisSalvosHoje.volume + totalVolume);
-    } else {
-        document.getElementById('lblPacotesHoje').innerText = totaisSalvosHoje.pacotes;
-        document.getElementById('lblVolumeHoje').innerText = formatDecimalMockup(totaisSalvosHoje.volume);
-    }
+    document.getElementById('lblPacotesHoje').innerText = totalPacotes;
+    document.getElementById('lblVolumeHoje').innerText = formatDecimalMockup(totalVolume);
 }
 
 // Calcular os totais acumulados salvos no dia atual
 async function calcularAcumuladosHoje(hojeStr) {
     totaisSalvosHoje = { pacotes: 0, volume: 0 };
-    try {
-        const querySnapshot = await getDocs(collection(db, 'patio_relatorios'));
-        querySnapshot.forEach((doc) => {
-            const rel = doc.data();
-            if (rel.data === hojeStr) {
-                totaisSalvosHoje.pacotes += rel.totais?.totalPacotes || 0;
-                totaisSalvosHoje.volume += rel.totais?.totalVolume || 0;
-            }
-        });
-    } catch (e) {
-        console.error("Erro ao calcular acumulado do dia:", e);
-    }
     atualizarConsolidatedStats();
 }
 
@@ -988,9 +966,9 @@ async function salvarRelatorioPatio() {
         return;
     }
 
-    const dataVal = document.getElementById('patioData').value;
-    const periodoVal = document.getElementById('patioPeriodo').value;
-    const horarioVal = document.getElementById('patioHorario').value;
+    const dataVal = dataAtualPatio();
+    const periodoVal = 'Atualizacao do dia';
+    const horarioVal = horaAtualPatio();
     const serrandoVal = document.getElementById('patioSerrando').value.toUpperCase().trim();
 
     if (!serrandoVal) {
@@ -1021,7 +999,8 @@ async function salvarRelatorioPatio() {
             totalPacotes: totalPacotes,
             totalPecas: totalPecas
         },
-        atualizadoEm: new Date().toISOString()
+        atualizadoEm: new Date().toISOString(),
+        ultimaAlteracaoPatio: montarUltimaAlteracaoPatio(relatorioPatioEditandoId ? 'Atualizou lista do patio' : 'Criou lista do patio')
     };
 
     if (!relatorioPatioEditandoId) {
@@ -1029,7 +1008,6 @@ async function salvarRelatorioPatio() {
     }
 
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
-    const originalText = btnSalvar.innerHTML;
     btnSalvar.disabled = true;
     btnSalvar.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
@@ -1037,27 +1015,25 @@ async function salvarRelatorioPatio() {
         if (relatorioPatioEditandoId) {
             await updateDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId), relatorio);
             alert(`✅ Contagem do Pátio atualizada com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
-            relatorioPatioEditandoId = null;
         } else {
-            await window.FS.addDoc('patio_relatorios', relatorio);
-            alert(`✅ Contagem do Pátio do período (${periodoVal}) salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
+            relatorioPatioEditandoId = await window.FS.addDoc('patio_relatorios', relatorio);
+            alert(`✅ Contagem do Pátio salva com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         }
 
-        // Resetar rascunho
-        document.getElementById('patioSerrando').value = '';
-        itensPatioTemp = [];
-        renderizarItensPatioTemp();
         atualizarEstadoEdicaoPatio();
 
         // Recarregar histórico e atualizar os acumulados salvos do dia
         await carregarHistoricoPatio();
+        const relAtualizado = historicoPatioAtuais.find(rel => rel.id === relatorioPatioEditandoId);
+        if (relAtualizado) carregarRelatorioPatioNoFormulario(relAtualizado, relAtualizado.id);
+        atualizarAvisoUltimaAlteracaoPatio();
         await calcularAcumuladosHoje(dataVal);
     } catch (error) {
         console.error("Erro ao salvar contagem do pátio:", error);
         alert("❌ Ocorreu um erro ao salvar o relatório no Firebase.");
     } finally {
         btnSalvar.disabled = false;
-        btnSalvar.innerHTML = originalText;
+        atualizarEstadoEdicaoPatio();
     }
 }
 
@@ -1233,25 +1209,29 @@ window.patioDocActions = {
     whatsapp() { if (this.current) window.DocActions.sendWhatsApp({ title: this.current.title, filename: this.current.filename, contentHtml: this.current.contentHtml, message: `Segue a ${this.current.title}.` }); }
 };
 
-window.editarHistoricoPatio = function(id) {
-    const rel = historicoPatioAtuais.find(r => r.id === id);
-    if (!rel) return;
-    if (!confirm("Deseja carregar este lancamento salvo para edicao no Controle de Producao?")) return;
-
+function carregarRelatorioPatioNoFormulario(rel, id) {
     const inputData = document.getElementById('patioData');
     const selectPeriodo = document.getElementById('patioPeriodo');
     const inputHorario = document.getElementById('patioHorario');
     const inputSerrando = document.getElementById('patioSerrando');
 
-    if (inputData) inputData.value = rel.data || '';
-    if (selectPeriodo) selectPeriodo.value = rel.periodo || '';
-    if (inputHorario) inputHorario.value = rel.horario || '';
+    if (inputData) inputData.value = rel.data || dataAtualPatio();
+    if (selectPeriodo) selectPeriodo.value = rel.periodo || 'Atualizacao do dia';
+    if (inputHorario) inputHorario.value = rel.horario || horaAtualPatio();
     if (inputSerrando) inputSerrando.value = rel.serrando || '';
 
     relatorioPatioEditandoId = id;
     itensPatioTemp = Array.isArray(rel.itens) ? rel.itens.map(item => ({ ...item })) : [];
     renderizarItensPatioTemp();
     atualizarEstadoEdicaoPatio();
+}
+
+window.editarHistoricoPatio = function(id) {
+    const rel = historicoPatioAtuais.find(r => r.id === id);
+    if (!rel) return;
+    if (!confirm("Deseja carregar este lancamento salvo para edicao no Controle de Producao?")) return;
+
+    carregarRelatorioPatioNoFormulario(rel, id);
     alert("Lancamento carregado para edicao. Ajuste os itens e salve novamente quando finalizar.");
 };
 
