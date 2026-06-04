@@ -93,6 +93,17 @@ service cloud.firestore {
         && collectionMatchesSections(collection, userDoc().data.permissoes.writeSections);
     }
 
+    function canWriteFluxoPatio(collection) {
+      return collection == 'patio_relatorios'
+        && isApprovedUser()
+        && 'permissoes' in userDoc().data
+        && 'allowedSections' in userDoc().data.permissoes
+        && 'view-dashboard' in userDoc().data.permissoes.allowedSections
+        && 'allowedSubsections' in userDoc().data.permissoes
+        && 'view-dashboard' in userDoc().data.permissoes.allowedSubsections
+        && 'fluxo-patio' in userDoc().data.permissoes.allowedSubsections['view-dashboard'];
+    }
+
     function canDeleteByCustomPermission(collection) {
       return hasCustomPermissionList('deleteSections')
         && collectionMatchesSections(collection, userDoc().data.permissoes.deleteSections);
@@ -150,6 +161,7 @@ service cloud.firestore {
 
     function canWriteCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
+        || canWriteFluxoPatio(collection)
         || canWriteByCustomPermission(collection)
         || (
         isApprovedUser() && (
