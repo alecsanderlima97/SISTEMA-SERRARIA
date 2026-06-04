@@ -157,7 +157,7 @@
                                 <option value="3ª CLASSE">3ª Classe</option>
                             </select>
                         </div>
-                        <div class="input-group patio-especie-compacta" style="margin-bottom: 0; max-width: 260px;">
+                        <div class="input-group patio-especie-compacta" style="margin-bottom: 0; min-width: 230px;">
                             <label><i class="fa-solid fa-seedling"></i> Espécie</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 42px;">
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="EUCALIPTO" checked> Eucalipto</label>

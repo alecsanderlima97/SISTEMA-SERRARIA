@@ -189,9 +189,10 @@ table td {
 
 .patio-especie-compacta > div {
     min-height: 32px !important;
-    gap: 8px !important;
-    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
+    max-width: 230px !important;
 }
 
 .patio-especie-compacta label {
@@ -204,6 +205,7 @@ table td {
     font-size: 0.72rem !important;
     line-height: 1 !important;
     white-space: nowrap !important;
+    flex: 0 0 auto !important;
 }
 
 .patio-especie-compacta input[type="radio"] {
