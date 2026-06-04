@@ -119,6 +119,10 @@ async function carregarProdutosParaRomaneio() {
         const snap = await getDocs(collection(db, "produtos"));
         produtosDisponiveis = [];
         select.innerHTML = '<option value="">Selecione uma madeira...</option>';
+        const optManual = document.createElement('option');
+        optManual.value = '__manual__';
+        optManual.textContent = 'Madeira manual / nao cadastrada';
+        select.appendChild(optManual);
         snap.forEach(doc => {
             const p = { id: doc.id, ...doc.data() };
             produtosDisponiveis.push(p);
@@ -213,7 +217,7 @@ function configurarEventos() {
     });
 
     // Forçar letras maiúsculas em tempo real nos campos de romaneio e observações
-    ['v2-motorista', 'v2-caminhao', 'v2-placa', 'v2-obs-madeira', 'v2-obs-frete'].forEach(id => {
+    ['v2-motorista', 'v2-caminhao', 'v2-placa', 'v2-obs-madeira', 'v2-obs-frete', 'v2-produto-manual'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', window.forceUppercaseInput);
@@ -319,6 +323,22 @@ function selecionarTransportadoraCadastrada(e) {
 }
 
 function selecionarMadeiraCadastrada(e) {
+    const grupoManual = document.getElementById('grupoV2MadeiraManual');
+    const inputManual = document.getElementById('v2-produto-manual');
+    if (e.target.value === '__manual__') {
+        if (grupoManual) grupoManual.style.display = 'flex';
+        ['v2-espessura', 'v2-largura', 'v2-comprimento', 'v2-comprimento-real'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        if (inputManual) inputManual.focus();
+        preencherPrecoPorQualidade();
+        atualizarVolumePreview();
+        return;
+    }
+    if (grupoManual) grupoManual.style.display = 'none';
+    if (inputManual) inputManual.value = '';
+
     const p = produtosDisponiveis.find(x => x.id === e.target.value);
     if (!p) return;
 
@@ -352,6 +372,17 @@ function atualizarVisualClasseRomaneio() {
     else if (select.value.includes('2')) select.classList.add('patio-classe-2');
     else if (select.value.includes('3')) select.classList.add('patio-classe-3');
     if (grupoOutro) grupoOutro.style.display = select.value === 'OUTRO' ? 'flex' : 'none';
+}
+
+function madeiraManualAtiva() {
+    return document.getElementById('v2-select-produto')?.value === '__manual__';
+}
+
+function obterNomeMadeiraRomaneio(prod) {
+    if (madeiraManualAtiva()) {
+        return (document.getElementById('v2-produto-manual')?.value || '').toUpperCase().trim();
+    }
+    return prod?.tipo || '';
 }
 
 function preencherPrecoPorQualidade() {
@@ -421,6 +452,7 @@ function calcularPecasAutomatico() {
 
 function adicionarPacote() {
     const prodId = document.getElementById('v2-select-produto').value;
+    const manual = madeiraManualAtiva();
     const qualidade = obterClasseRomaneio();
     const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
@@ -432,13 +464,14 @@ function adicionarPacote() {
     const compR = parseNumeroBR(document.getElementById('v2-comprimento-real').value) || compV;
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
 
-    if (!prodId || pecasPorPacote <= 0) {
-        alert("Selecione a madeira e informe a quantidade de peças.");
+    const prod = manual ? null : produtosDisponiveis.find(x => x.id === prodId);
+    const nomeMadeira = obterNomeMadeiraRomaneio(prod);
+
+    if ((!prodId || (!manual && !prod) || (manual && !nomeMadeira)) || pecasPorPacote <= 0) {
+        alert("Selecione a madeira cadastrada ou informe a madeira manual, e informe a quantidade de pecas.");
         return;
     }
 
-    const prod = produtosDisponiveis.find(x => x.id === prodId);
-    
     const alt = parseInt(document.getElementById('v2-altura').value) || 0;
     const cam = parseInt(document.getElementById('v2-camada').value) || 0;
     const amarras = parseInt(document.getElementById('v2-amarras').value) || 0;
@@ -449,8 +482,9 @@ function adicionarPacote() {
 
     const novoPacote = {
         id: Date.now(),
-        produtoId: prodId,
-        produtoNome: prod.tipo,
+        produtoId: manual ? null : prodId,
+        produtoManual: manual,
+        produtoNome: nomeMadeira,
         qualidade: qualidade.toUpperCase(),
         especie,
         medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
@@ -486,7 +520,11 @@ function editarPacoteV2(id) {
 
     pacoteEditandoId = id;
     
-    document.getElementById('v2-select-produto').value = p.produtoId || '';
+    document.getElementById('v2-select-produto').value = p.produtoManual || !p.produtoId ? '__manual__' : p.produtoId;
+    const grupoManual = document.getElementById('grupoV2MadeiraManual');
+    const inputManual = document.getElementById('v2-produto-manual');
+    if (grupoManual) grupoManual.style.display = (p.produtoManual || !p.produtoId) ? 'flex' : 'none';
+    if (inputManual) inputManual.value = (p.produtoManual || !p.produtoId) ? (p.produtoNome || '') : '';
     const classeSalva = p.qualidade || '1a CLASSE';
     const classePadrao = ['1a CLASSE', '2a CLASSE', '3a CLASSE'].includes(classeSalva) ? classeSalva : 'OUTRO';
     document.getElementById('v2-qualidade').value = classePadrao;
@@ -517,6 +555,7 @@ function editarPacoteV2(id) {
 function salvarEdicaoPacote() {
     if (!pacoteEditandoId) return;
     const prodId = document.getElementById('v2-select-produto').value;
+    const manual = madeiraManualAtiva();
     const qualidade = obterClasseRomaneio().toUpperCase();
     const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
@@ -527,7 +566,12 @@ function salvarEdicaoPacote() {
     const compV = parseNumeroBR(document.getElementById('v2-comprimento').value);
     const compR = parseNumeroBR(document.getElementById('v2-comprimento-real').value) || compV;
 
-    const prod = produtosDisponiveis.find(x => x.id === prodId);
+    const prod = manual ? null : produtosDisponiveis.find(x => x.id === prodId);
+    const nomeMadeira = obterNomeMadeiraRomaneio(prod);
+    if ((!prodId || (!manual && !prod) || (manual && !nomeMadeira)) || pecasPorPacote <= 0) {
+        alert("Selecione a madeira cadastrada ou informe a madeira manual, e informe a quantidade de pecas.");
+        return;
+    }
 
     const alt = parseInt(document.getElementById('v2-altura').value) || 0;
     const cam = parseInt(document.getElementById('v2-camada').value) || 0;
@@ -541,8 +585,9 @@ function salvarEdicaoPacote() {
     if (index !== -1) {
         romaneioAtual.pacotes[index] = {
             ...romaneioAtual.pacotes[index],
-            produtoId: prodId,
-            produtoNome: prod ? prod.tipo : 'Madeira',
+            produtoId: manual ? null : prodId,
+            produtoManual: manual,
+            produtoNome: nomeMadeira,
             qualidade,
             especie,
             medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
@@ -1250,6 +1295,10 @@ function limparCamposPacote() {
     });
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.value = '';
+    const grupoManual = document.getElementById('grupoV2MadeiraManual');
+    if (grupoManual) grupoManual.style.display = 'none';
+    const inputManual = document.getElementById('v2-produto-manual');
+    if (inputManual) inputManual.value = '';
     const classeOutro = document.getElementById('v2-classe-outro');
     if (classeOutro) classeOutro.value = '';
     atualizarVisualClasseRomaneio();

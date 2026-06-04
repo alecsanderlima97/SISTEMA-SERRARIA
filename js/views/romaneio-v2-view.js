@@ -84,6 +84,10 @@
                                     <option value="">Selecione uma madeira...</option>
                                 </select>
                             </div>
+                            <div class="input-group-v2" id="grupoV2MadeiraManual" style="display:none;">
+                                <label>Nome da madeira</label>
+                                <input type="text" id="v2-produto-manual" class="input-v2 text-uppercase-input" placeholder="Ex: TABUA">
+                            </div>
                             <div class="input-group-v2">
                                 <label>Classe</label>
                                 <select id="v2-qualidade" class="input-v2 patio-classe-select patio-classe-1">

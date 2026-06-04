@@ -99,9 +99,17 @@ service cloud.firestore {
         && 'permissoes' in userDoc().data
         && 'allowedSections' in userDoc().data.permissoes
         && 'view-dashboard' in userDoc().data.permissoes.allowedSections
-        && 'allowedSubsections' in userDoc().data.permissoes
-        && 'view-dashboard' in userDoc().data.permissoes.allowedSubsections
-        && 'fluxo-patio' in userDoc().data.permissoes.allowedSubsections['view-dashboard'];
+        && (
+          (
+            'allowedSubsections' in userDoc().data.permissoes
+            && 'view-dashboard' in userDoc().data.permissoes.allowedSubsections
+            && 'fluxo-patio' in userDoc().data.permissoes.allowedSubsections['view-dashboard']
+          )
+          || (
+            'writeSections' in userDoc().data.permissoes
+            && 'view-dashboard' in userDoc().data.permissoes.writeSections
+          )
+        );
     }
 
     function canDeleteByCustomPermission(collection) {

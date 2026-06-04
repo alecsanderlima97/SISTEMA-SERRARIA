@@ -249,7 +249,7 @@ async function renderizarFluxoPatio() {
             </tr>
         `).join('') : '<tr><td colspan="4" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem itens neste controle.</td></tr>';
 
-        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`)).join('');
+        classes.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Volume ${classe}`, `${formatDecimalMockup(total.volume)} m³ | ${total.pacotes} pacotes`, classe)).join('');
     } catch (error) {
         console.error('Erro ao carregar fluxo do patio:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar fluxo do patio.</td></tr>';
@@ -269,11 +269,13 @@ function calcularTotaisFluxoPatio(itens) {
     }, { pacotes: 0, pecas: 0, volume: 0, porClasse: {} });
 }
 
-function cardFluxoPatio(label, value) {
+function cardFluxoPatio(label, value, classe = null) {
+    const colors = coresClasseFluxo(classe);
+    const valueColor = classe ? colors.color : 'white';
     return `
         <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; min-height: 82px;">
-            <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${label}</div>
-            <div style="font-size: 1.35rem; color: white; font-weight: 900; margin-top: 8px; line-height: 1.2;">${value}</div>
+            <div style="font-size: 0.78rem; color: ${valueColor}; text-transform: uppercase; font-weight: 800;">${label}</div>
+            <div style="font-size: 1.35rem; color: ${valueColor}; font-weight: 900; margin-top: 8px; line-height: 1.2;">${value}</div>
         </div>
     `;
 }
@@ -366,7 +368,7 @@ function atualizarResumoClassesProducaoPatio() {
         return;
     }
     const totais = calcularTotaisFluxoPatio(producaoPatioRelatorioAtual.itens || []);
-    container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m³`)).join('');
+    container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m³`, classe)).join('');
 }
 
 async function salvarRelatorioProducaoPatio(relatorio) {
@@ -415,7 +417,7 @@ async function renderizarProducaoPatio() {
         tbody.innerHTML = atual.itens.length ? atual.itens.map(item => `
             <tr>
                 <td>${badgeClasseFluxo(item.classe)}</td>
-                <td style="font-weight:800; color:white;">
+                <td style="font-weight:800; color:${coresClasseFluxo(item.classe).color};">
                     ${formatCubagemFluxo(item)}
                     <small style="display:block; margin-top:3px; color:#94a3b8; font-size:0.72rem; font-weight:700;">${formatarResumoPacoteProducao(item)}</small>
                 </td>
@@ -526,12 +528,16 @@ function formatarClasseFluxo(classe) {
 
 function badgeClasseFluxo(classe) {
     const label = formatarClasseFluxo(classe);
-    const numero = obterNumeroClasse(classe);
-    let colors = { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
-    if (numero === 1) colors = { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
-    if (numero === 2) colors = { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
-    if (numero === 3) colors = { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    const colors = coresClasseFluxo(classe);
     return `<span style="display:inline-flex; min-width:42px; justify-content:center; padding:5px 10px; border-radius:999px; font-weight:800; background:${colors.bg}; border:1px solid ${colors.border}; color:${colors.color};">${label}</span>`;
+}
+
+function coresClasseFluxo(classe) {
+    const numero = obterNumeroClasse(classe);
+    if (numero === 1) return { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
+    if (numero === 2) return { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (numero === 3) return { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
+    return { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
 }
 
 function formatCubagemFluxo(item) {
