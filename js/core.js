@@ -1,7 +1,7 @@
 import {
     auth, signOut, onAuthStateChanged, db, collection, getDocs,
     doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot,
-    updatePassword
+    updatePassword, limit
 } from './firebase-init.js';
 
 
@@ -192,6 +192,7 @@ const BACKUP_COLLECTIONS = [
     'financeiro_relatorios_mensais',
     'patio_relatorios',
     'agenda',
+    'auditoria_logs',
     'usuarios'
 ];
 
@@ -1320,7 +1321,59 @@ const App = {
             localStorage.setItem('appActiveSection', id);
         }
         this.applyPermissionVisibility();
+        if (id === 'view-configuracoes') {
+            this.carregarAuditoriaSistema();
+        }
         return id;
+    },
+
+    async carregarAuditoriaSistema(force = false) {
+        const tbody = document.getElementById('tbodyAuditoriaSistema');
+        if (!tbody) return;
+        if (tbody.dataset.loaded === 'true' && !force) return;
+
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;"><span class="saw-loader" aria-hidden="true"></span> Carregando alteracoes...</td></tr>`;
+
+        try {
+            const q = query(collection(db, 'auditoria_logs'), orderBy('dataHoraEpoch', 'desc'), limit(25));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                tbody.dataset.loaded = 'true';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;">Nenhuma alteracao registrada ainda.</td></tr>`;
+                return;
+            }
+
+            const badgeColor = {
+                criar: '#22c55e',
+                atualizar: '#38bdf8',
+                excluir: '#f87171'
+            };
+
+            let html = '';
+            snap.forEach(itemDoc => {
+                const log = itemDoc.data();
+                const acao = String(log.acao || '-');
+                const cor = badgeColor[acao] || '#94a3b8';
+                html += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <td>${formatarDataHoraCurta(log.dataHora)}</td>
+                        <td>${log.usuarioEmail || log.usuarioId || '-'}</td>
+                        <td><span style="display:inline-flex; align-items:center; padding:4px 8px; border-radius:8px; color:${cor}; background:rgba(255,255,255,0.05); font-weight:800; text-transform:uppercase; font-size:11px;">${acao}</span></td>
+                        <td>${log.colecao || '-'}</td>
+                        <td style="font-family: monospace; font-size: 12px;">${log.docId || '-'}</td>
+                    </tr>
+                `;
+            });
+            tbody.dataset.loaded = 'true';
+            tbody.innerHTML = html;
+        } catch (error) {
+            console.error('Erro ao carregar auditoria:', error);
+            const msg = error?.code === 'permission-denied'
+                ? 'Sem permissao para visualizar auditoria.'
+                : 'Erro ao carregar auditoria.';
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">${msg}</td></tr>`;
+        }
     },
 
     carregarTabelaUsuarios() {

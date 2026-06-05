@@ -80,6 +80,7 @@ service cloud.firestore {
         || ((collection in ['funcionarios']) && 'view-rh' in sections)
         || ((collection in ['agenda']) && 'view-agenda' in sections)
         || ((collection in ['patio_relatorios']) && 'view-dashboard' in sections)
+        || ((collection in ['auditoria_logs']) && 'view-configuracoes' in sections)
         || ((collection in ['usuarios']) && 'view-configuracoes' in sections);
     }
 
@@ -276,6 +277,12 @@ service cloud.firestore {
     match /backup_snapshot_itens/{document} {
       allow read, delete: if isBackupOperator() && sameEmpresaOnRead();
       allow create, update: if isBackupOperator() && sameEmpresaOnWrite();
+    }
+
+    match /auditoria_logs/{document} {
+      allow read: if isBackupOperator() && sameEmpresaOnRead();
+      allow create: if isApprovedUser() && sameEmpresaOnWrite();
+      allow update, delete: if false;
     }
 
     match /{collection}/{document} {

@@ -203,6 +203,39 @@
                         </div>
                     </div>
 
+                    <div class="glass-panel" id="panelAuditoriaSistema" style="grid-column: span 2;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <i class="fa-solid fa-shield-halved" style="font-size: 24px; color: #38bdf8;"></i>
+                                <h2 style="margin: 0; font-size: 20px;">Ultimas Alteracoes do Sistema</h2>
+                            </div>
+                            <button class="btn-secondary" onclick="window.App?.carregarAuditoriaSistema?.(true)" style="padding: 8px 14px; font-size: 13px;">
+                                <i class="fa-solid fa-rotate"></i> Atualizar
+                            </button>
+                        </div>
+                        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
+                            Registro automatico das principais criacoes, edicoes e exclusoes feitas no sistema.
+                        </p>
+                        <div class="table-container">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Usuario</th>
+                                        <th>Acao</th>
+                                        <th>Colecao</th>
+                                        <th>Registro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyAuditoriaSistema">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: #888;">Carregando alteracoes...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="glass-panel" id="panelConfigUsuarios" style="grid-column: span 2; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                             <div style="display: flex; align-items: center; gap: 12px;">

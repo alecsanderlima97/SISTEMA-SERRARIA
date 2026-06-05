@@ -73,8 +73,15 @@ const CLOUD_SNAPSHOT_COLLECTIONS = [
     'financeiro_relatorios_mensais',
     'patio_relatorios',
     'agenda',
+    'auditoria_logs',
     'usuarios'
 ];
+const AUDIT_COLLECTION = 'auditoria_logs';
+const AUDIT_IGNORED_COLLECTIONS = new Set([
+    AUDIT_COLLECTION,
+    'backup_snapshots',
+    'backup_snapshot_itens'
+]);
 
 function getCurrentUserMeta() {
     return window.AppUserContext || {
@@ -103,6 +110,48 @@ window.AppTenant = {
     getCurrentUserMeta,
     withTenantMeta
 };
+
+function prepararResumoAuditoria(data = {}) {
+    const resumo = {};
+    Object.entries(data || {}).forEach(([key, value]) => {
+        if (key === 'items' || key === 'senha' || key === 'password') return;
+        if (value === undefined) return;
+        if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+            resumo[key] = value;
+            return;
+        }
+        if (Array.isArray(value)) {
+            resumo[key] = `[lista:${value.length}]`;
+            return;
+        }
+        resumo[key] = '[objeto]';
+    });
+    return resumo;
+}
+
+async function registrarAuditoria({ acao, colecao, docId, dados = {}, antes = null } = {}) {
+    if (!colecao || AUDIT_IGNORED_COLLECTIONS.has(colecao)) return;
+
+    const meta = getCurrentUserMeta();
+    const user = auth.currentUser;
+    const agora = new Date().toISOString();
+
+    try {
+        await addDoc(collection(db, AUDIT_COLLECTION), withTenantMeta({
+            acao,
+            colecao,
+            docId: docId || null,
+            usuarioId: meta.uid || user?.uid || null,
+            usuarioEmail: user?.email || null,
+            dataHora: agora,
+            dataHoraEpoch: Date.now(),
+            resumo: prepararResumoAuditoria(dados),
+            antes: antes ? prepararResumoAuditoria(antes) : null
+        }, true));
+    } catch (error) {
+        console.warn('Nao foi possivel registrar auditoria:', error);
+    }
+}
 
 async function limparSnapshotsAntigos(maxSnapshots = 10) {
     const snap = await getDocs(query(collection(db, 'backup_snapshots'), orderBy('criadoEmEpoch', 'desc')));
@@ -198,7 +247,15 @@ window.FS = {
     },
     async setDoc(collName, docId, data) {
         try {
-            await setDoc(doc(db, collName, docId), withTenantMeta(data, !data.criadoEm));
+            const existente = await getDoc(doc(db, collName, docId));
+            await setDoc(doc(db, collName, docId), withTenantMeta(data, !existente.exists()));
+            await registrarAuditoria({
+                acao: existente.exists() ? 'atualizar' : 'criar',
+                colecao: collName,
+                docId,
+                dados: data,
+                antes: existente.exists() ? existente.data() : null
+            });
         } catch (err) {
             console.error(`Erro ao salvar doc ${collName}/${docId}:`, err);
             throw err;
@@ -207,6 +264,7 @@ window.FS = {
     async addDoc(collName, data) {
         try {
             const ref = await addDoc(collection(db, collName), withTenantMeta(data, true));
+            await registrarAuditoria({ acao: 'criar', colecao: collName, docId: ref.id, dados: data });
             return ref.id;
         } catch (err) {
             console.error(`Erro ao adicionar doc em ${collName}:`, err);
@@ -215,7 +273,15 @@ window.FS = {
     },
     async updateDoc(collName, docId, data) {
         try {
+            const existente = await getDoc(doc(db, collName, docId));
             await updateDoc(doc(db, collName, docId), withTenantMeta(data, false));
+            await registrarAuditoria({
+                acao: 'atualizar',
+                colecao: collName,
+                docId,
+                dados: data,
+                antes: existente.exists() ? existente.data() : null
+            });
         } catch (err) {
             console.error(`Erro ao atualizar doc ${collName}/${docId}:`, err);
             throw err;
@@ -248,7 +314,14 @@ window.FS = {
     },
     async deleteDoc(collName, docId) {
         try {
+            const existente = await getDoc(doc(db, collName, docId));
             await deleteDoc(doc(db, collName, docId));
+            await registrarAuditoria({
+                acao: 'excluir',
+                colecao: collName,
+                docId,
+                antes: existente.exists() ? existente.data() : null
+            });
         } catch (err) {
             console.error(`Erro ao excluir doc ${collName}/${docId}:`, err);
             throw err;
