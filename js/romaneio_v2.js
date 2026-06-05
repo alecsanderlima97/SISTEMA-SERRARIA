@@ -33,6 +33,8 @@ let romaneioAtual = {
 let produtosDisponiveis = [];
 let clientesDisponiveis = [];
 let transportadorasDisponiveis = [];
+let patioRelatorioRomaneio = null;
+let patioItensDisponiveis = [];
 let pacoteEditandoId = null;
 
 function parseNumeroBR(valor) {
@@ -70,6 +72,7 @@ function prepararInterface() {
     carregarClientesParaRomaneio();
     carregarProdutosParaRomaneio();
     carregarTransportadorasParaRomaneio();
+    carregarPatioParaRomaneio();
 }
 
 // 2. RE-TENTATIVA APÓS LOGIN (Para garantir acesso ao Firebase)
@@ -79,6 +82,7 @@ onAuthStateChanged(auth, (user) => {
         carregarClientesParaRomaneio();
         carregarProdutosParaRomaneio();
         carregarTransportadorasParaRomaneio();
+        carregarPatioParaRomaneio();
     }
 });
 
@@ -175,6 +179,185 @@ async function carregarTransportadorasParaRomaneio() {
     } catch (e) { console.error("Erro transportes:", e); }
 }
 
+function numeroClasseRomaneio(valor) {
+    const texto = String(valor || '').toUpperCase();
+    if (texto.includes('1')) return 1;
+    if (texto.includes('2')) return 2;
+    if (texto.includes('3')) return 3;
+    return 99;
+}
+
+function chavePatioRomaneio(item) {
+    return [
+        numeroClasseRomaneio(item.classe),
+        Number(item.espessura || 0).toFixed(1),
+        Number(item.largura || 0).toFixed(1),
+        Number(item.comprimento || 0).toFixed(2),
+        String(item.pecasRaw || item.pecas || '')
+    ].join('|');
+}
+
+function obterItemPatioSelecionadoRomaneio() {
+    const select = document.getElementById('v2-select-patio');
+    return patioItensDisponiveis.find(i => i.id === select?.value) || null;
+}
+
+async function carregarPatioParaRomaneio() {
+    const select = document.getElementById('v2-select-patio');
+    if (!select) return;
+    select.innerHTML = '<option value="">Usar madeira cadastrada/manual...</option>';
+    patioRelatorioRomaneio = null;
+    patioItensDisponiveis = [];
+
+    try {
+        let snap;
+        try {
+            snap = await getDocs(query(collection(db, 'patio_relatorios'), orderBy('atualizadoEm', 'desc'), limit(1)));
+        } catch {
+            snap = await getDocs(collection(db, 'patio_relatorios'));
+        }
+        const relatorios = [];
+        snap.forEach(d => relatorios.push({ id: d.id, ...d.data() }));
+        relatorios.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || b.data || 0) - new Date(a.atualizadoEm || a.criadoEm || a.data || 0));
+        patioRelatorioRomaneio = relatorios[0] || null;
+        patioItensDisponiveis = (patioRelatorioRomaneio?.itens || [])
+            .filter(item => Number(item.pacotes || 0) > 0)
+            .sort((a, b) => numeroClasseRomaneio(a.classe) - numeroClasseRomaneio(b.classe)
+                || Number(b.comprimento || 0) - Number(a.comprimento || 0)
+                || Number(b.espessura || 0) - Number(a.espessura || 0)
+                || Number(b.largura || 0) - Number(a.largura || 0)
+                || Number(b.pecas || 0) - Number(a.pecas || 0));
+
+        patioItensDisponiveis.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = `${item.tipo || 'MADEIRA'} - ${item.classe || '-'} - ${Number(item.espessura || 0).toLocaleString('pt-BR')} / ${Number(item.largura || 0).toLocaleString('pt-BR')} / ${Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - saldo ${item.pacotes || 0} pct`;
+            select.appendChild(opt);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar patio para romaneio:', error);
+    }
+}
+
+function selecionarPacotePatioRomaneio() {
+    const select = document.getElementById('v2-select-patio');
+    const item = patioItensDisponiveis.find(i => i.id === select?.value);
+    if (!item) return;
+
+    const produtoSelect = document.getElementById('v2-select-produto');
+    if (produtoSelect) produtoSelect.value = '__manual__';
+    selecionarMadeiraCadastrada({ target: produtoSelect });
+    const set = (id, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.value = valor ?? '';
+    };
+    set('v2-produto-manual', item.tipo || 'MADEIRA DO PATIO');
+    set('v2-qualidade', numeroClasseRomaneio(item.classe) === 2 ? '2a CLASSE' : numeroClasseRomaneio(item.classe) === 3 ? '3a CLASSE' : '1a CLASSE');
+    atualizarVisualClasseRomaneio();
+    preencherPrecoPorQualidade();
+    set('v2-especie', item.especie || 'EUCALIPTO');
+    set('v2-espessura', Number(item.espessura || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 }));
+    set('v2-largura', Number(item.largura || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 }));
+    set('v2-comprimento', Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    set('v2-comprimento-real', Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    set('v2-altura', item.altura || item.alturas || '');
+    set('v2-camada', item.camada || item.larguraPacote || '');
+    set('v2-amarras', item.amarras || '');
+    set('v2-quantidade', item.pecas || '');
+    set('v2-qtd-pacotes', Math.min(1, Number(item.pacotes || 0)) || 1);
+    const qtdInput = document.getElementById('v2-qtd-pacotes');
+    if (qtdInput) qtdInput.max = Number(item.pacotes || 0);
+    atualizarVolumePreview();
+}
+
+function recalcularTotaisPatioItens(itens) {
+    const totais = itens.reduce((acc, item) => {
+        const pacotes = Number(item.pacotes || 0);
+        const pecasPacote = Number(item.pecas || item.pecasRaw || 0);
+        const volumeUnidade = Number(item.volumeUnidade || 0);
+        acc.pacotes += pacotes;
+        acc.pecas += pacotes * pecasPacote;
+        acc.volume += pacotes * volumeUnidade;
+        return acc;
+    }, { pacotes: 0, pecas: 0, volume: 0 });
+    return {
+        pacotes: totais.pacotes,
+        pecas: totais.pecas,
+        volume: Number(totais.volume.toFixed(3))
+    };
+}
+
+async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
+    const vinculados = (pacotes || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId);
+    if (!vinculados.length) return;
+
+    const porRelatorio = new Map();
+    vinculados.forEach(p => {
+        const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
+        porRelatorio.set(chave, (porRelatorio.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
+    });
+
+    const relatoriosAfetados = [...new Set(vinculados.map(p => p.patioRelatorioId))];
+    for (const relatorioId of relatoriosAfetados) {
+        const ref = doc(db, 'patio_relatorios', relatorioId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) continue;
+
+        const dados = snap.data();
+        const itens = Array.isArray(dados.itens) ? [...dados.itens] : [];
+        for (const [chave, qtd] of porRelatorio.entries()) {
+            const [idRelatorio, idItem] = chave.split('|');
+            if (idRelatorio !== relatorioId) continue;
+            const idx = itens.findIndex(item => String(item.id) === String(idItem));
+            if (idx < 0) continue;
+            const atual = Number(itens[idx].pacotes || 0);
+            const novoTotal = atual + (sinal * qtd);
+            if (novoTotal < 0) throw new Error('Saldo insuficiente no patio para finalizar o romaneio.');
+            const volumeUnidade = Number(itens[idx].volumeUnidade || 0);
+            const pecasPacote = Number(itens[idx].pecas || itens[idx].pecasRaw || 0);
+            itens[idx] = {
+                ...itens[idx],
+                pacotes: novoTotal,
+                totalPecas: novoTotal * pecasPacote,
+                volume: Number((novoTotal * volumeUnidade).toFixed(3))
+            };
+        }
+
+        await updateDoc(ref, {
+            itens,
+            totais: recalcularTotaisPatioItens(itens),
+            atualizadoEm: new Date().toISOString()
+        });
+    }
+}
+
+async function validarSaldoPatioRomaneio(pacotes, pacotesEstorno = []) {
+    const vinculados = (pacotes || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId);
+    if (!vinculados.length) return;
+
+    const agrupados = new Map();
+    vinculados.forEach(p => {
+        const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
+        agrupados.set(chave, (agrupados.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
+    });
+    const estornos = new Map();
+    (pacotesEstorno || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId).forEach(p => {
+        const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
+        estornos.set(chave, (estornos.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
+    });
+
+    for (const [chave, qtd] of agrupados.entries()) {
+        const [relatorioId, itemId] = chave.split('|');
+        const snap = await getDoc(doc(db, 'patio_relatorios', relatorioId));
+        if (!snap.exists()) throw new Error('Relatorio do patio nao encontrado.');
+        const item = (snap.data().itens || []).find(i => String(i.id) === String(itemId));
+        const saldoDisponivel = Number(item?.pacotes || 0) + Number(estornos.get(chave) || 0);
+        if (!item || saldoDisponivel < qtd) {
+            throw new Error('Nao ha pacotes suficientes no patio para esta carga.');
+        }
+    }
+}
+
 function configurarEventos() {
     const btnAdd = document.getElementById('btn-add-pacote-v2');
     if (btnAdd) btnAdd.onclick = adicionarPacote;
@@ -197,6 +380,9 @@ function configurarEventos() {
 
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.onchange = selecionarMadeiraCadastrada;
+
+    const selectPatio = document.getElementById('v2-select-patio');
+    if (selectPatio) selectPatio.onchange = selecionarPacotePatioRomaneio;
 
     const selectCli = document.getElementById('v2-select-cliente');
     if (selectCli) selectCli.onchange = selecionarClienteCadastrado;
@@ -513,6 +699,7 @@ function adicionarPacote() {
     const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
+    const itemPatio = obterItemPatioSelecionadoRomaneio();
     
     const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
     const larg = parseNumeroBR(document.getElementById('v2-largura').value);
@@ -629,6 +816,11 @@ function salvarEdicaoPacote() {
         return;
     }
 
+    if (itemPatio && qtdPacotes > Number(itemPatio.pacotes || 0)) {
+        alert(`Saldo insuficiente no patio. Disponivel: ${itemPatio.pacotes || 0} pacote(s).`);
+        return;
+    }
+
     const alt = parseInt(document.getElementById('v2-altura').value) || 0;
     const cam = parseInt(document.getElementById('v2-camada').value) || 0;
     const amarras = parseInt(document.getElementById('v2-amarras').value) || 0;
@@ -651,8 +843,13 @@ function salvarEdicaoPacote() {
             pecasPorPacote,
             alt, cam, amarras, configPct,
             qtdPacotes,
-            precoM3,
-            m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
+        precoM3,
+        origemPatio: !!itemPatio,
+        patioRelatorioId: itemPatio ? patioRelatorioRomaneio?.id : null,
+        patioItemId: itemPatio ? itemPatio.id : null,
+        patioQtdPacotes: itemPatio ? qtdPacotes : 0,
+        patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
+        m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
             m3FreteTotal: parseFloat((m3FreteUnit * qtdPacotes).toFixed(3)),
             valorTotalWood: parseFloat((m3VendaUnit * qtdPacotes * precoM3).toFixed(2))
         };
@@ -1080,7 +1277,9 @@ window.finalizarRomaneioV2 = async () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const antigo = docSnap.data();
+                await validarSaldoPatioRomaneio(romaneioAtual.pacotes, antigo.pacotes || []);
                 if (antigo.pacotes) {
+                    await ajustarPacotesPatioRomaneio(antigo.pacotes, 1);
                     for (const p of antigo.pacotes) {
                         if (p.produtoId) {
                             const pecasAntigas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
@@ -1097,6 +1296,7 @@ window.finalizarRomaneioV2 = async () => {
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -pecasNovas);
                 }
             }
+            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1);
             
             // 3. Atualizar o Firestore
             const dadosNovos = { ...romaneioAtual };
@@ -1112,6 +1312,7 @@ window.finalizarRomaneioV2 = async () => {
             alert(`Carga ${romaneioAtual.numero} atualizada com sucesso no Firebase!`);
         } else {
             // --- Criação de Carga Nova ---
+            await validarSaldoPatioRomaneio(romaneioAtual.pacotes);
             await window.FS.addDoc('romaneios', {
                 ...romaneioAtual,
                 cliente,
@@ -1125,6 +1326,7 @@ window.finalizarRomaneioV2 = async () => {
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -totalPecasVendidas);
                 }
             }
+            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1);
             alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);
         }
         
@@ -1137,6 +1339,7 @@ window.finalizarRomaneioV2 = async () => {
         atualizarTotalGeral();
         renderizarTabelaPacotes();
         limparCamposPacote();
+        carregarPatioParaRomaneio();
         
         // Resetar visual do botão na aba gerar
         const btnFinalizar = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
@@ -1351,6 +1554,10 @@ function limparCamposPacote() {
     });
     const selectProd = document.getElementById('v2-select-produto');
     if (selectProd) selectProd.value = '';
+    const selectPatio = document.getElementById('v2-select-patio');
+    if (selectPatio) selectPatio.value = '';
+    const qtdPacotes = document.getElementById('v2-qtd-pacotes');
+    if (qtdPacotes) qtdPacotes.removeAttribute('max');
     const grupoManual = document.getElementById('grupoV2MadeiraManual');
     if (grupoManual) grupoManual.style.display = 'none';
     const inputManual = document.getElementById('v2-produto-manual');

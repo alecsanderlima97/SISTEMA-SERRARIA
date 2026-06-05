@@ -104,6 +104,13 @@ input[inputmode="decimal"],
     max-width: 96px;
 }
 
+.patio-totais-inline {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    width: max-content;
+}
+
 .patio-campo-pecas input,
 .patio-campo-volume input {
     min-width: 0 !important;

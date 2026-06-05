@@ -598,8 +598,8 @@ function renderizarEntradas() {
             <td style="text-align: center;"><input type="checkbox" class="check-entrada" data-id="${en.id}" ${isChecked} style="transform: scale(1.25); cursor: pointer;"></td>
             <td>${dtStr} <br><small style="color:#aaa;">${en.horario || '-'}</small></td>
             <td>
-                <strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br>
-                <small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br>
+                <strong style="display:block; font-size:1rem; color:#fff; text-transform:uppercase;">${en.empreiteiroNome || en.fornecedor || '-'}</strong>
+                <span style="display:inline-block; margin-top:4px; padding:3px 8px; border-radius:6px; background:rgba(245,158,11,0.18); color:#fbbf24; font-weight:900; text-transform:uppercase;">Mato: ${en.mato || '-'}</span><br>
                 <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small>
                 ${infoAutorHtml}
             </td>
@@ -853,7 +853,8 @@ window.gerarRelatorioConsolidado = function() {
                 <td style="text-align:center;">${index + 1}</td>
                 <td>${dtStr} ${en.horario || ''}</td>
                 <td style="font-weight:bold;">${en.romaneioNum || '-'}</td>
-                <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong></td>
+                <td class="empreiteiro-cell"><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong></td>
+                <td class="mato-cell"><strong>${en.mato || '-'}</strong></td>
                 <td>${en.motorista || '-'}</td>
                 <td style="text-align:center;">
                     <span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span>
@@ -886,6 +887,8 @@ window.gerarRelatorioConsolidado = function() {
         table.records th { background: #f2f2f2; border: 1px solid #ccc; padding: 8px; font-weight: bold; text-align: left; font-size: 11px; text-transform: uppercase; }
         table.records td { border: 1px solid #ccc; padding: 8px; font-size: 11px; }
         table.records tr:nth-child(even) { background: #fafafa; }
+        .empreiteiro-cell strong, .mato-cell strong { display: block; font-size: 13px; color: #111; text-transform: uppercase; line-height: 1.25; }
+        .mato-cell { background: #fff7d6; }
         .total-row { font-weight: bold; background: #eef2f5 !important; font-size: 12px; }
         .signatures { margin-top: 60px; display: flex; justify-content: space-around; }
         .signature-line { text-align: center; width: 250px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
@@ -934,6 +937,7 @@ window.gerarRelatorioConsolidado = function() {
                 <th style="width: 80px;">Data/Hora</th>
                 <th style="width: 80px; text-align:left;">Nº Romaneio</th>
                 <th>Empreiteiro</th>
+                <th>Mato</th>
                 <th>Motorista</th>
                 <th style="width: 145px; text-align:center;">Veículo (Placa/Modelo)</th>
                 <th style="text-align:center;">Dimensões da Carga</th>
@@ -945,7 +949,7 @@ window.gerarRelatorioConsolidado = function() {
         <tbody>
             ${tableRowsHtml}
             <tr class="total-row">
-                <td colspan="7" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
+                <td colspan="8" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
                 <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(2).replace('.', ',')} m³</td>
                 <td></td>
                 <td style="text-align: right; font-size:12px; color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>

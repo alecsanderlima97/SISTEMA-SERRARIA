@@ -191,6 +191,7 @@
                                 <input type="number" id="patioItemAmarras" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Am">
                             </div>
                         </div>
+                        <div class="patio-totais-inline">
                         <div class="input-group package-entry-total patio-campo-pecas" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-layer-group"></i> Peças/Pct</label>
                             <input type="number" id="patioItemPecas" min="1" placeholder="Total" required style="background: rgba(0,0,0,0.1) !important; color: #fff !important; cursor: not-allowed; padding: 8px 6px !important; text-align: center;" readonly>
@@ -198,6 +199,7 @@
                         <div class="input-group package-entry-total patio-campo-volume" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-cube"></i> Vol.</label>
                             <input type="text" id="patioItemVolumePreview" placeholder="0,000" readonly style="background: rgba(0,0,0,0.1) !important; color: #4ade80 !important; cursor: not-allowed; padding: 8px 6px !important; text-align: center; max-width: 86px;">
+                        </div>
                         </div>
                         <div class="btn-add-lote-col" style="margin-bottom: 0;">
                             <button type="submit" class="btn-patio-print" style="padding: 10px; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.2rem; border-radius: 8px; background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;" title="Adicionar Lote">
