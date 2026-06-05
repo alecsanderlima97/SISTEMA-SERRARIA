@@ -99,6 +99,19 @@ input[inputmode="decimal"],
     align-items: end;
 }
 
+.patio-campo-pecas,
+.patio-campo-volume {
+    max-width: 96px;
+}
+
+.patio-campo-pecas input,
+.patio-campo-volume input {
+    min-width: 0 !important;
+    width: 86px !important;
+    font-size: 0.95rem !important;
+    font-weight: 900;
+}
+
 .table-container,
 .package-table,
 table {

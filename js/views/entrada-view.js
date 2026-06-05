@@ -32,7 +32,7 @@
                             <div class="section-title">
                                 <h2><i class="fa-solid fa-users-gear"></i> Cadastro de Empreiteiros</h2>
                             </div>
-                            <form id="formEmpreiteiro" class="grid-form">
+                            <form id="formEmpreiteiro" class="grid-form form-empreiteiro">
                                 <div class="input-group">
                                     <label for="empNome">Nome do Empreiteiro *</label>
                                     <input type="text" id="empNome" class="text-uppercase-input" required placeholder="Ex: José da Silva">
@@ -41,12 +41,12 @@
                                     <label for="empContato">Contato (Telefone/WhatsApp)</label>
                                     <input type="text" id="empContato" placeholder="(00) 00000-0000">
                                 </div>
-                                <div class="input-group" style="grid-column: span 2;">
+                                <div class="input-group emp-matos-group">
                                     <label for="empMato">Matos</label>
-                                    <div style="display: grid; grid-template-columns: minmax(160px, 1fr) 130px auto; gap: 8px;">
-                                        <input type="text" id="empMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita" style="margin-bottom: 0;">
+                                    <div class="emp-matos-row">
+                                        <input type="text" id="empMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                         <input type="text" id="empMatoValor" placeholder="R\$ / m³" style="margin-bottom: 0;">
-                                        <button type="button" id="btnAdicionarMatoEmpreiteiro" class="btn-primary" style="width: auto; padding: 0 14px; white-space: nowrap;"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                                        <button type="button" id="btnAdicionarMatoEmpreiteiro" class="btn-primary"><i class="fa-solid fa-plus"></i> Adicionar</button>
                                     </div>
                                     <div id="empMatosLista" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;"></div>
                                 </div>

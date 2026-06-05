@@ -8,6 +8,7 @@ let totaisSalvosHoje = { pacotes: 0, volume: 0 };
 let relatorioPatioEditandoId = null;
 let etiquetasAvulsasPatio = [];
 let producaoPatioRelatorioAtual = null;
+let resumoRomaneiosPatioCache = null;
 
 // UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
 function parseDecimal(val) {
@@ -114,7 +115,7 @@ function inicializarPatioListeners() {
         selectClasse.addEventListener('change', () => atualizarCorSelectClasse(selectClasse));
     }
 
-    // Calculadora de Peças do Pátio (Alt x Cam + Am)
+    // Calculadora de Peças e volume do Pátio (Alt x Cam + Am)
     const calcInputs = document.querySelectorAll('.calc-patio');
     calcInputs.forEach(input => {
         input.addEventListener('input', () => {
@@ -124,8 +125,27 @@ function inicializarPatioListeners() {
             const total = (alt * cam) + am;
             const patioPecas = document.getElementById('patioItemPecas');
             if (patioPecas) patioPecas.value = total > 0 ? total : '';
+            atualizarPreviewVolumeItemPatio();
         });
     });
+    ['patioItemEsp', 'patioItemLarg', 'patioItemComp', 'patioItemPacotes', 'patioItemPecas'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', atualizarPreviewVolumeItemPatio);
+    });
+}
+
+function atualizarPreviewVolumeItemPatio() {
+    const preview = document.getElementById('patioItemVolumePreview');
+    if (!preview) return;
+    const esp = parseDecimal(document.getElementById('patioItemEsp')?.value || '');
+    const larg = parseDecimal(document.getElementById('patioItemLarg')?.value || '');
+    const comp = parseDecimal(document.getElementById('patioItemComp')?.value || '');
+    const pacotes = parseInt(document.getElementById('patioItemPacotes')?.value, 10) || 0;
+    const pecas = parseInt(document.getElementById('patioItemPecas')?.value, 10) || 0;
+    const volume = esp > 0 && larg > 0 && comp > 0 && pacotes > 0 && pecas > 0
+        ? (esp / 100) * (larg / 100) * comp * pecas * pacotes
+        : 0;
+    preview.value = volume > 0 ? formatDecimalMockup(volume) : '';
 }
 
 function atualizarCorSelectClasse(selectClasse) {
@@ -384,6 +404,40 @@ function atualizarResumoClassesProducaoPatio() {
     container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m3`, classe)).join('');
 }
 
+async function obterResumoRomaneiosPatio() {
+    if (resumoRomaneiosPatioCache) return resumoRomaneiosPatioCache;
+    const resumo = { totalPacotes: 0, porClasse: {} };
+    try {
+        const snap = await getDocs(collection(db, 'romaneios'));
+        snap.forEach(docSnap => {
+            const rom = docSnap.data();
+            (rom.pacotes || []).forEach(p => {
+                const classe = obterNumeroClasse(p.qualidade || p.classe) || 0;
+                const qtd = Number(p.qtdPacotes || p.pacotes || 0);
+                resumo.totalPacotes += qtd;
+                if (!resumo.porClasse[classe]) resumo.porClasse[classe] = 0;
+                resumo.porClasse[classe] += qtd;
+            });
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel carregar resumo de romaneios:', error);
+    }
+    resumoRomaneiosPatioCache = resumo;
+    return resumo;
+}
+
+async function atualizarResumoFluxoPatioCompleto() {
+    const container = document.getElementById('resumoProducaoPatioClasses');
+    if (!container || !producaoPatioRelatorioAtual) return;
+    const totais = calcularTotaisFluxoPatio(producaoPatioRelatorioAtual.itens || []);
+    const cards = [
+        cardFluxoPatio('Total no patio', `${totais.pacotes || 0} pacotes | ${formatDecimalMockup(totais.volume || 0)} m3`),
+        cardFluxoPatio('1a Classe patio', `${totais.porClasse[1]?.pacotes || 0} pacotes | ${formatDecimalMockup(totais.porClasse[1]?.volume || 0)} m3`, '1a CLASSE'),
+        cardFluxoPatio('2a Classe patio', `${totais.porClasse[2]?.pacotes || 0} pacotes | ${formatDecimalMockup(totais.porClasse[2]?.volume || 0)} m3`, '2a CLASSE')
+    ];
+    container.innerHTML = cards.join('');
+}
+
 function atualizarStatusProducaoPatio(relatorio) {
     const status = document.getElementById('producaoPatioUltimaAlteracao');
     if (!status) return;
@@ -417,16 +471,21 @@ async function salvarRelatorioProducaoPatio(relatorio) {
     producaoPatioRelatorioAtual = { id: relatorio.id, ...dados };
 }
 
-async function renderizarProducaoPatio() {
+async function renderizarProducaoPatio(options = {}) {
+    const recarregar = options.recarregar !== false;
     const tbody = document.getElementById('producaoPatioLista');
     const info = document.getElementById('producaoPatioInfo');
     const serrandoInput = document.getElementById('producaoPatioSerrando');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px;"><span class="saw-loader" aria-hidden="true"></span> Carregando producao do patio...</td></tr>';
+    if (recarregar) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px;"><span class="saw-loader" aria-hidden="true"></span> Carregando producao do patio...</td></tr>';
+    }
 
     try {
-        producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
+        if (recarregar || !producaoPatioRelatorioAtual) {
+            producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
+        }
         const atual = producaoPatioRelatorioAtual;
         if (!atual) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
@@ -443,14 +502,24 @@ async function renderizarProducaoPatio() {
         if (info) info.textContent = `Controle atual: ${dataFmt} ${atual.horario || ''} | ${atual.periodo || '-'}`;
         atualizarStatusProducaoPatio(atual);
 
+        let ultimaChaveCubagemFluxo = '';
         tbody.innerHTML = atual.itens.length ? atual.itens.map(item => {
             const corClasse = coresClasseFluxo(item.classe).color;
+            const chaveCubagem = `${obterNumeroClasse(item.classe)}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+            const primeiraCubagem = chaveCubagem !== ultimaChaveCubagemFluxo;
+            ultimaChaveCubagemFluxo = chaveCubagem;
+            const classeHtml = primeiraCubagem
+                ? badgeClasseFluxo(item.classe)
+                : '<span style="color:#334155; font-weight:900;">*</span>';
+            const cubagemHtml = primeiraCubagem
+                ? `<div style="font-weight:900; color:${corClasse} !important;">${formatCubagemFluxo(item)}</div>
+                   <small style="display:block; margin-top:3px; color:#334155; font-size:0.74rem; font-weight:800;">* ${formatarResumoPacoteProducao(item)}</small>`
+                : `<small style="display:block; color:#334155; font-size:0.78rem; font-weight:900;">* ${formatarResumoPacoteProducao(item)}</small>`;
             return `
             <tr class="fluxo-patio-row-areia">
-                <td>${badgeClasseFluxo(item.classe)}</td>
-                <td class="fluxo-patio-cubagem" style="font-weight:900; color:${corClasse} !important;">
-                    ${formatCubagemFluxo(item)}
-                    <small style="display:block; margin-top:3px; color:#94a3b8; font-size:0.72rem; font-weight:700;">${formatarResumoPacoteProducao(item)}</small>
+                <td>${classeHtml}</td>
+                <td class="fluxo-patio-cubagem">
+                    ${cubagemHtml}
                 </td>
                 <td class="fluxo-patio-numero" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
                 <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m3</td>
@@ -466,7 +535,7 @@ async function renderizarProducaoPatio() {
                 </td>
             </tr>
         `}).join('') : '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
-        atualizarResumoClassesProducaoPatio();
+        await atualizarResumoFluxoPatioCompleto();
     } catch (error) {
         console.error('Erro na producao do patio:', error);
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar producao do patio.</td></tr>';
@@ -487,7 +556,7 @@ window.alterarPacotesProducaoPatio = async function(id, delta) {
         item.volume = (Number(item.volumeUnidade) || 0) * novoPacotes;
         producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${delta > 0 ? 'Adicionou' : 'Removeu'} pacote em ${formatCubagemFluxo(item)}`);
         await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
-        await renderizarProducaoPatio();
+        await renderizarProducaoPatio({ recarregar: false });
     } catch (error) {
         console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
         alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
@@ -529,7 +598,7 @@ window.excluirCubagemProducaoPatio = async function(id) {
         producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => i.id !== id);
         producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu cubagem ${formatCubagemFluxo(item)}`);
         await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
-        await renderizarProducaoPatio();
+        await renderizarProducaoPatio({ recarregar: false });
     } catch (error) {
         console.error('Erro ao excluir cubagem do fluxo do patio:', error);
         alert('Nao foi possivel excluir esta cubagem agora.');
@@ -542,7 +611,7 @@ window.salvarSerrandoProducaoPatio = async function() {
     producaoPatioRelatorioAtual.serrando = (input?.value || '').toUpperCase().trim();
     producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Atualizou madeira sendo serrada');
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
-    await renderizarProducaoPatio();
+        await renderizarProducaoPatio({ recarregar: false });
 };
 
 window.imprimirListaProducaoPatio = function() {
@@ -651,7 +720,7 @@ window.adicionarCubagemProducaoPatio = async function() {
     if (pacotesInput) pacotesInput.value = '1';
     atualizarResumoNovaCubagemProducaoPatio();
     setFormProducaoPatioAberto(false);
-    await renderizarProducaoPatio();
+    await renderizarProducaoPatio({ recarregar: false });
 };
 
 function formatarClasseFluxo(classe) {
@@ -818,6 +887,8 @@ function adicionarItemAoPatio() {
     document.getElementById('patioItemPacotes').value = '';
     document.getElementById('patioItemPecas').value = '';
     document.getElementById('patioItemAmarras').value = '';
+    const volumePreview = document.getElementById('patioItemVolumePreview');
+    if (volumePreview) volumePreview.value = '';
     document.getElementById('patioItemPacotes').focus();
 
     renderizarItensPatioTemp();
@@ -894,6 +965,7 @@ window.editarItemPatio = function(id) {
     document.getElementById('patioItemAltura').value = configPacote.alt || '';
     document.getElementById('patioItemCamada').value = configPacote.cam || '';
     document.getElementById('patioItemAmarras').value = configPacote.am || '';
+    atualizarPreviewVolumeItemPatio();
 
     itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
     renderizarItensPatioTemp();
@@ -903,6 +975,9 @@ window.editarItemPatio = function(id) {
 window.imprimirEtiquetaItemPatio = function(id) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
+    item.etiquetado = true;
+    item.etiquetadoEm = new Date().toISOString();
+    renderizarItensPatioTemp();
     imprimirEtiquetasFisicas([item]);
 };
 
@@ -1035,9 +1110,12 @@ function renderizarItensPatioTemp() {
         const classeHtml = primeiraCubagem ? classeBadge : '<span style="color:#e2e8f0; font-weight:900;">↳</span>';
         const corClasseCubagem = coresClasseFluxo(item.classe).color;
         const configTexto = `${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m³`;
+        const etiquetaIcone = item.etiquetado
+            ? '<span title="Etiqueta impressa" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(22,163,74,.14); color:#16a34a; font-size:.72rem; margin-left:6px;"><i class="fa-solid fa-tag"></i></span>'
+            : '';
         const medidasHtml = primeiraCubagem
             ? `
-                <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div>
+                <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}${etiquetaIcone}</div>
                 <div class="patio-lista-config">
                     <span>*</span>
                     <span>${configTexto}</span>
@@ -1045,7 +1123,7 @@ function renderizarItensPatioTemp() {
             : `
                 <div class="patio-lista-config">
                     <span>*</span>
-                    <span>${configTexto}</span>
+                    <span>${configTexto}${etiquetaIcone}</span>
                 </div>`;
 
         html += `
@@ -1114,6 +1192,34 @@ function atualizarConsolidatedStats() {
 
     document.getElementById('lblPacotesHoje').innerText = totalPacotes;
     document.getElementById('lblVolumeHoje').innerText = formatDecimalMockup(totalVolume);
+    atualizarResumoProducaoRomaneios();
+}
+
+async function atualizarResumoProducaoRomaneios() {
+    const box = document.getElementById('resumoPatioRomaneios');
+    if (!box) return;
+    const totaisPatio = calcularTotaisFluxoPatio(itensPatioTemp || []);
+    const vendidos = { totalPacotes: 0, porClasse: { 1: 0, 2: 0 } };
+    const saldoTotal = Math.max(0, (totaisPatio.pacotes || 0) - vendidos.totalPacotes);
+    box.innerHTML = `
+        <div class="patio-kpi-card" style="background:rgba(22,163,74,0.1);">
+            <span class="kpi-label">PATIO 1A</span>
+            <div class="kpi-value">${totaisPatio.porClasse[1]?.pacotes || 0}</div>
+        </div>
+        <div class="patio-kpi-card" style="background:rgba(245,158,11,0.12);">
+            <span class="kpi-label">PATIO 2A</span>
+            <div class="kpi-value">${totaisPatio.porClasse[2]?.pacotes || 0}</div>
+        </div>
+        <div class="patio-kpi-card" style="background:rgba(59,130,246,0.1);">
+            <span class="kpi-label">VENDIDOS ROMANEIO</span>
+            <div class="kpi-value">${vendidos.totalPacotes || 0}</div>
+            <small>1a: ${vendidos.porClasse[1] || 0} | 2a: ${vendidos.porClasse[2] || 0}</small>
+        </div>
+        <div class="patio-kpi-card" style="background:rgba(15,23,42,0.58);">
+            <span class="kpi-label">SALDO ESTIMADO</span>
+            <div class="kpi-value">${saldoTotal}</div>
+        </div>
+    `;
 }
 
 // Calcular os totais acumulados salvos no dia atual

@@ -59,9 +59,36 @@ window.rhDocumentoActions = {
 function inicializarModuloRH() {
     if (!viewRH) return;
 
+    injetarEstiloMobileRH();
     configurarTogglesRH();
     configurarFormulariosRH();
     carregarFuncionarios();
+}
+
+function injetarEstiloMobileRH() {
+    if (document.getElementById('rh-mobile-style')) return;
+    const style = document.createElement('style');
+    style.id = 'rh-mobile-style';
+    style.textContent = `
+        @media (max-width: 760px) {
+            #panelListaRH > div[style*="overflow-x"] { overflow-x: visible !important; }
+            #panelListaRH .package-table { min-width: 0 !important; border-collapse: separate !important; border-spacing: 0 12px !important; }
+            #panelListaRH .package-table thead { display: none !important; }
+            #listaRH tr { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(15,23,42,0.72); }
+            #listaRH td { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; border: 0 !important; padding: 0 !important; }
+            #listaRH td::before { content: attr(data-label); color: var(--text-muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
+            #listaRH td:first-child { grid-template-columns: 1fr; }
+            #listaRH td:first-child::before { display: none; }
+            #listaRH td:last-child { grid-template-columns: 1fr; }
+            #listaRH td:last-child::before { content: "Acoes"; margin-bottom: 2px; }
+            #listaRH td:last-child > div { justify-content: flex-start !important; flex-wrap: wrap !important; }
+            #listaRH .btn-icon { min-width: 42px; min-height: 38px; border-radius: 8px; background: rgba(255,255,255,0.04); }
+            #cardFormRH { max-width: none !important; padding: 16px !important; }
+            #formFuncionario .grid-form { grid-template-columns: 1fr !important; }
+            #formFuncionario .input-group { grid-column: auto !important; }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 // Configurar exibição condicional do formulário de cadastro
@@ -507,7 +534,7 @@ function renderizarFuncionarios(lista) {
 
         return `
             <tr>
-                <td>
+                <td data-label="Funcionário">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div style="width:36px; height:36px; border-radius:50%; background:rgba(0,255,136,0.1); border:1px solid var(--accent-color); display:flex; align-items:center; justify-content:center; color:var(--accent-color); font-weight:bold;">
                             ${(f.nome || 'F').charAt(0)}
@@ -518,20 +545,20 @@ function renderizarFuncionarios(lista) {
                         </div>
                     </div>
                 </td>
-                <td>
+                <td data-label="Função">
                     <strong>${f.funcao || 'NÃO DEFINIDA'}</strong><br>
                     <small style="color:#aaa;">Adm: ${adm}</small>
                 </td>
-                <td>
+                <td data-label="Contato">
                     <span style="font-size:0.85rem;">${f.contato || '-'}</span><br>
                     <small style="color:#888;">CPF: ${f.cpf || '-'}</small>
                 </td>
-                <td>
+                <td data-label="Valores">
                     <span class="rh-lista-valor" data-valor-real="${fSalario}" style="color:#00ff88; font-weight:bold;">${valoresRHOcultos ? 'R$ ******' : fSalario}</span><br>
                     <small style="color:#ef4444;">Vale: <span class="rh-lista-valor" data-valor-real="${fVale}">${valoresRHOcultos ? 'R$ ******' : fVale}</span></small>
                 </td>
-                <td>${feriasInfo}</td>
-                <td>
+                <td data-label="Férias">${feriasInfo}</td>
+                <td data-label="Ações">
                     <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap;">
                         <button onclick="window.abrirModalHolerite('${f.id}')" class="btn-icon" style="color:#0ea5e9; font-size:1.1rem; padding: 4px;" title="Ver Holerite / Ficha">
                             <i class="fa-solid fa-file-invoice-dollar"></i>

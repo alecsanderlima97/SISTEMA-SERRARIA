@@ -11,6 +11,111 @@ let empreiteiroEditandoId = null;
 let matosEmpreiteiroEditando = [];
 let ordenarEmpreiteirosAZ = false;
 
+function injetarEstiloEmpreiteiro() {
+    if (document.getElementById('empreiteiro-layout-style')) return;
+    const style = document.createElement('style');
+    style.id = 'empreiteiro-layout-style';
+    style.textContent = `
+        #formEmpreiteiro.form-empreiteiro {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: end;
+            gap: 14px;
+        }
+        #formEmpreiteiro .emp-matos-group {
+            grid-column: 1 / -1;
+        }
+        #formEmpreiteiro .emp-matos-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(120px, 150px) minmax(132px, auto);
+            gap: 10px;
+            align-items: stretch;
+        }
+        #formEmpreiteiro .emp-matos-row input,
+        #formEmpreiteiro .emp-matos-row button {
+            min-width: 0;
+            height: 42px;
+            margin-bottom: 0 !important;
+        }
+        #formEmpreiteiro #btnAdicionarMatoEmpreiteiro {
+            width: 100%;
+            padding: 0 14px;
+            white-space: nowrap;
+            justify-content: center;
+        }
+        #empMatosLista span {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+        #panelListaEmpreiteiros .table-container {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        #panelListaEmpreiteiros table {
+            width: 100%;
+            table-layout: fixed;
+        }
+        #panelListaEmpreiteiros th:nth-child(1),
+        #panelListaEmpreiteiros td:nth-child(1) { width: 18%; }
+        #panelListaEmpreiteiros th:nth-child(2),
+        #panelListaEmpreiteiros td:nth-child(2) { width: 13%; }
+        #panelListaEmpreiteiros th:nth-child(3),
+        #panelListaEmpreiteiros td:nth-child(3) { width: 39%; }
+        #panelListaEmpreiteiros th:nth-child(4),
+        #panelListaEmpreiteiros td:nth-child(4) { width: 11%; }
+        #panelListaEmpreiteiros th:nth-child(5),
+        #panelListaEmpreiteiros td:nth-child(5) { width: 11%; }
+        #panelListaEmpreiteiros th:nth-child(6),
+        #panelListaEmpreiteiros td:nth-child(6) { width: 8%; }
+        #panelListaEmpreiteiros td {
+            overflow-wrap: anywhere;
+            vertical-align: top;
+        }
+        .empreiteiro-matos-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-width: 100%;
+        }
+        .empreiteiro-mato-chip {
+            display: inline-flex;
+            flex-direction: column;
+            gap: 2px;
+            max-width: 180px;
+            padding: 5px 8px;
+            border-radius: 8px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.22);
+            color: #f8fafc;
+            line-height: 1.2;
+        }
+        .empreiteiro-mato-chip strong {
+            font-size: 0.76rem;
+            overflow-wrap: anywhere;
+        }
+        .empreiteiro-mato-chip small {
+            color: #facc15;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        @media (max-width: 760px) {
+            #formEmpreiteiro.form-empreiteiro,
+            #formEmpreiteiro .emp-matos-row {
+                grid-template-columns: 1fr;
+            }
+            #formEmpreiteiro .input-group {
+                grid-column: 1 / -1 !important;
+            }
+            #panelListaEmpreiteiros .table-container {
+                overflow-x: auto;
+            }
+            #panelListaEmpreiteiros table {
+                min-width: 720px;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function normalizarNomeMato(nome) {
     return (nome || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
@@ -69,6 +174,15 @@ function adicionarMatoEmpreiteiro() {
     renderizarMatosEmpreiteiro();
 }
 
+function formatarMatosListaEmpreiteiro(emp) {
+    const matos = obterMatosEmpreiteiro(emp);
+    if (!matos.length) return '-';
+    return `<div class="empreiteiro-matos-wrap">${matos.map(item => {
+        const valor = Number(item.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        return `<span class="empreiteiro-mato-chip"><strong>${item.nome}</strong><small>${valor}/m3</small></span>`;
+    }).join('')}</div>`;
+}
+
 async function carregarEmpreiteiros() {
     if(listaEmpreiteiros) listaEmpreiteiros.innerHTML = '<tr><td colspan="6" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>';
     
@@ -115,7 +229,7 @@ function renderizarEmpreiteiros() {
         tr.innerHTML = `
             <td><strong>${emp.nome}</strong></td>
             <td>${emp.contato || '-'}</td>
-            <td>${obterMatosEmpreiteiro(emp).map(item => `${item.nome} (${Number(item.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³)`).join(', ') || '-'}</td>
+            <td class="empreiteiro-matos-cell">${formatarMatosListaEmpreiteiro(emp)}</td>
             <td style="color:var(--accent-color); font-weight:bold;">${valorFormatado}</td>
             <td>${emp.pix || '-'}</td>
             <td>
@@ -202,9 +316,18 @@ window.editarEmpreiteiro = function(id) {
     // Garante que o card de cadastro de empreiteiros fique visível ao editar
     const cardCad = document.getElementById('cardFormEmpreiteiro');
     const btnToggle = document.getElementById('btnToggleCadastroEmpreiteiro');
+    const gridLayout = document.getElementById('gridEntradasGeralLayout');
+    const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
     if (cardCad && cardCad.style.display === 'none') {
         cardCad.style.display = 'block';
         if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Cadastro';
+    }
+    if (gridLayout) gridLayout.classList.remove('form-table-grid');
+    if (colEsquerda) {
+        colEsquerda.style.display = 'block';
+        colEsquerda.style.width = '100%';
+        colEsquerda.style.maxWidth = '100%';
+        colEsquerda.style.margin = '0 0 16px 0';
     }
     
     window.scrollTo({top: formEmpreiteiro.offsetTop - 100, behavior: 'smooth'});
@@ -1229,21 +1352,22 @@ window.switchTabEntrada = function(tabName) {
         tabEmpreiteiros.style.color = 'var(--accent-color)';
         tabEmpreiteiros.style.borderBottom = '3px solid var(--accent-color)';
         
-        colEsquerda.style.display = 'block';
-        colEsquerda.style.maxWidth = 'none';
-        colEsquerda.style.margin = '0';
-        cardEmp.style.display = 'block';
+        colEsquerda.style.display = cardEmp.style.display === 'block' ? 'block' : 'none';
+        colEsquerda.style.width = '100%';
+        colEsquerda.style.maxWidth = '100%';
+        colEsquerda.style.margin = '0 0 16px 0';
         
-        colDireita.style.display = 'flex';
+        colDireita.style.display = 'block';
         colDireita.style.width = '100%';
         panelEmp.style.display = 'block';
         
-        gridLayout.classList.add('form-table-grid');
+        gridLayout.classList.remove('form-table-grid');
     }
 };
 
 // Inicialização segura
 function inicializarModuloEntrada() {
+    injetarEstiloEmpreiteiro();
     // Resolver referências dos elementos dinamicamente para garantir que não fiquem nulos
     formEntrada = document.getElementById('formEntrada');
     listaEntradas = document.getElementById('listaEntradas');

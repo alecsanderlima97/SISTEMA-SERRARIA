@@ -39,7 +39,7 @@
                             </div>
                             <div class="input-group">
                                 <label>CPF *</label>
-                                <input type="text" id="rh-cpf" required placeholder="000.000.000-00">
+                                <input type="text" id="rh-cpf" required inputmode="numeric" placeholder="000.000.000-00">
                             </div>
                             <div class="input-group">
                                 <label>RG</label>
@@ -47,7 +47,7 @@
                             </div>
                             <div class="input-group">
                                 <label>Número para Contato *</label>
-                                <input type="text" id="rh-contato" required placeholder="(00) 00000-0000">
+                                <input type="text" id="rh-contato" required inputmode="tel" placeholder="(00) 00000-0000">
                             </div>
                         </div>
 
@@ -66,11 +66,11 @@
                             </div>
                             <div class="input-group">
                                 <label>Salário Base R$ *</label>
-                                <input type="text" id="rh-salario" required placeholder="R$ 0,00">
+                                <input type="text" id="rh-salario" required inputmode="decimal" placeholder="R$ 0,00">
                             </div>
                             <div class="input-group">
                                 <label>Valor do Vale Mensal R$</label>
-                                <input type="text" id="rh-vale" placeholder="R$ 0,00">
+                                <input type="text" id="rh-vale" inputmode="decimal" placeholder="R$ 0,00">
                             </div>
                             <div class="input-group">
                                 <label>Forma de Pagamento *</label>
@@ -90,11 +90,11 @@
                             </div>
                             <div class="input-group">
                                 <label>Valor H. Extra Normal R$ *</label>
-                                <input type="text" id="rh-valor-he-normal" required placeholder="R$ 0,00">
+                                <input type="text" id="rh-valor-he-normal" required inputmode="decimal" placeholder="R$ 0,00">
                             </div>
                             <div class="input-group">
                                 <label>Valor H. Extra Sáb/Dom/Fer R$ *</label>
-                                <input type="text" id="rh-valor-he-especial" required placeholder="R$ 0,00">
+                                <input type="text" id="rh-valor-he-especial" required inputmode="decimal" placeholder="R$ 0,00">
                             </div>
                         </div>
 
@@ -105,7 +105,7 @@
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="input-group">
                                 <label>Férias Usufruídas (Dias)</label>
-                                <input type="number" id="rh-ferias-dias" min="0" max="60" value="0">
+                                <input type="number" id="rh-ferias-dias" inputmode="numeric" min="0" max="60" value="0">
                             </div>
                             <div class="input-group">
                                 <label>Início do Período de Férias</label>
