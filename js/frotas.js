@@ -667,30 +667,6 @@ window.resolverRelatosFrota = async function(veiculoId) {
     renderizarFrota();
 };
 
-window.imprimirRelatorioGeralFrota = function(veiculoId) {
-    const v = frota.find(item => item.id === veiculoId);
-    if (!v) return;
-    const abs = abastecimentos.filter(a => a.veiculoId === veiculoId).sort((a, b) => new Date(b.data) - new Date(a.data));
-    const mans = manutencoes.filter(m => m.veiculoId === veiculoId).sort((a, b) => new Date(b.data) - new Date(a.data));
-    const relatos = relatosFrota.filter(r => r.veiculoId === veiculoId).sort((a, b) => new Date(b.criadoEm || b.data) - new Date(a.criadoEm || a.data));
-    const totalAbastecimento = abs.reduce((acc, a) => acc + Number(a.total || 0), 0);
-    const totalManutencao = mans.reduce((acc, m) => acc + Number(m.totalPecas || 0), 0);
-    const statusInfo = getStatusFrotaInfo(v.statusOperacional || 'OK');
-    const linhasAbs = abs.length ? abs.map(a => '<tr><td>' + formatarDataFrota(a.data) + '</td><td>' + tipoAbastecimentoLabel(a.tipo) + '</td><td>' + (a.origem || '-') + '</td><td>' + (a.requisicao || '-') + '</td><td>' + Number(a.qtd || 0).toFixed(2) + ' L</td><td>' + formatarMoedaFrota(a.preco) + '</td><td>' + formatarMoedaFrota(a.total) + '</td><td>' + (a.horimetro || '-') + '</td></tr>').join('') : '<tr><td colspan="8">Nenhum abastecimento registrado.</td></tr>';
-    const linhasMan = mans.length ? mans.map(m => { const pecas = (m.pecas || []).map(p => p.qtd + 'x ' + p.nome + ' (' + formatarMoedaFrota(p.subtotal) + ')').join('<br>') || '-'; return '<tr><td>' + formatarDataFrota(m.data) + '</td><td>' + (m.tipo || '-') + '</td><td>' + (m.horimetro || '-') + '</td><td>' + pecas + '</td><td>' + (m.observacao || '-') + '</td><td>' + formatarMoedaFrota(m.totalPecas) + '</td></tr>'; }).join('') : '<tr><td colspan="6">Nenhuma manutencao registrada.</td></tr>';
-    const linhasRelatos = relatos.length ? relatos.map(r => '<tr><td>' + formatarDataFrota(r.data) + ' ' + (r.hora || '') + '</td><td>' + (r.status || 'ABERTO') + '</td><td>' + r.relato + '</td></tr>').join('') : '<tr><td colspan="3">Nenhum relato registrado.</td></tr>';
-    const html = '<html><head><title>Relatorio Geral - ' + v.placa + '</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#222;font-size:12px}h1{margin:0;font-size:20px}.muted{color:#666}.header{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.box{border:1px solid #ccc;padding:8px}.status{display:inline-flex;align-items:center;gap:6px;font-weight:bold}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}h2{font-size:13px;background:#eee;border:1px solid #ccc;padding:7px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #ccc;padding:6px;text-align:left;vertical-align:top}th{background:#f3f3f3}.total{font-weight:bold;background:#f8fafc}@media print{body{margin:12px}th,h2{background:#ddd!important;-webkit-print-color-adjust:exact}}</style></head><body>' +
-        '<div class="header"><div><h1>Relatorio Geral da Maquina</h1><div class="muted">Controle de frotas, abastecimentos, manutencoes e relatos</div></div><div><strong>Emissao:</strong> ' + new Date().toLocaleString('pt-BR') + '</div></div>' +
-        '<div class="grid"><div class="box"><strong>Modelo</strong><br>' + v.modelo + '</div><div class="box"><strong>Codigo</strong><br>' + garantirCodigoFrota(v) + '</div><div class="box"><strong>Placa/Prefixo</strong><br>' + v.placa + '</div><div class="box"><strong>Status</strong><br><span class="status"><span class="dot" style="background:' + statusInfo.color + '"></span>' + statusInfo.label + '</span></div><div class="box"><strong>Setor</strong><br>' + v.grupo + '</div><div class="box"><strong>Ano</strong><br>' + v.ano + '</div><div class="box"><strong>Total Abastecimentos</strong><br>' + formatarMoedaFrota(totalAbastecimento) + '</div><div class="box"><strong>Total Pecas/Manutencao</strong><br>' + formatarMoedaFrota(totalManutencao) + '</div></div>' +
-        '<h2>Abastecimentos e Gastos com Combustivel</h2><table><thead><tr><th>Data</th><th>Tipo</th><th>Origem</th><th>Requisicao</th><th>Qtd</th><th>Unitario</th><th>Total</th><th>Horimetro/KM</th></tr></thead><tbody>' + linhasAbs + '</tbody></table>' +
-        '<h2>Manutencoes, Lubrificantes e Pecas</h2><table><thead><tr><th>Data</th><th>Tipo</th><th>Horimetro/KM</th><th>Pecas/Insumos</th><th>Observacao</th><th>Total</th></tr></thead><tbody>' + linhasMan + '</tbody></table>' +
-        '<h2>Relatos dos Operadores</h2><table><thead><tr><th>Data/Hora</th><th>Status</th><th>Relato</th></tr></thead><tbody>' + linhasRelatos + '</tbody></table>' +
-        '<table style="margin-top:18px"><tr class="total"><td>Total Geral Registrado</td><td style="text-align:right">' + formatarMoedaFrota(totalAbastecimento + totalManutencao) + '</td></tr></table><script>window.onload=function(){window.print();}</script></body></html>';
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-};
-
 window.frotaDocActions = {
     current: null,
     setRelatorioGeral(veiculoId) {
@@ -716,6 +692,11 @@ window.frotaDocActions = {
     print() { if (this.current) window.DocActions.printHtml(this.current); },
     pdf() { if (this.current) window.DocActions.downloadPdf(this.current); },
     whatsapp() { if (this.current) window.DocActions.sendWhatsApp({ title: this.current.title, filename: this.current.filename, contentHtml: this.current.contentHtml, message: `Segue o ${this.current.title}.` }); }
+};
+
+window.imprimirRelatorioGeralFrota = function(veiculoId) {
+    window.frotaDocActions.setRelatorioGeral(veiculoId);
+    window.frotaDocActions.print();
 };
 
 window.baixarPdfRelatorioGeralFrota = function(veiculoId) {

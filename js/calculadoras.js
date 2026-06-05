@@ -646,6 +646,28 @@ function executarAcaoDocumentoSubproduto(acao) {
     }
 }
 
+function criarBotoesAcoesSubproduto(id) {
+    return `
+        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px;" onclick="window.editarVendaSubproduto('${id}')">
+                <i class="fa-solid fa-pen"></i> Editar
+            </button>
+            <button type="button" class="btn-danger" style="padding:7px 10px; font-size:12px;" onclick="window.excluirVendaSubproduto('${id}')">
+                <i class="fa-solid fa-trash"></i> Excluir
+            </button>
+            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px;" onclick="window.imprimirVendaSubproduto('${id}')">
+                <i class="fa-solid fa-print"></i> Imprimir
+            </button>
+            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:#86efac; border-color:rgba(134,239,172,0.35);" onclick="window.pdfVendaSubproduto('${id}')">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+            </button>
+            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:#4ade80; border-color:rgba(74,222,128,0.35);" onclick="window.whatsappVendaSubproduto('${id}')">
+                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+            </button>
+        </div>
+    `;
+}
+
 async function carregarLancamentosSubprodutos() {
     const lista = document.getElementById('listaLancamentosSubprodutos');
     if (!lista) return;
@@ -672,15 +694,7 @@ async function carregarLancamentosSubprodutos() {
                     <td style="padding:10px 8px; font-weight:700;">${venda.cliente || '-'}</td>
                     <td style="padding:10px 8px;">${venda.tipo || '-'}</td>
                     <td style="padding:10px 8px; text-align:right; color:var(--accent-color); font-weight:700;">${total}</td>
-                    <td style="padding:10px 8px; text-align:right; white-space:nowrap;">
-                        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-                            <button type="button" class="btn-icon" style="color:var(--primary-color); font-size:1.05rem; padding:4px;" onclick="window.editarVendaSubproduto('${venda.id}')" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                            <button type="button" class="btn-icon" style="color:var(--danger-color); font-size:1.05rem; padding:4px;" onclick="window.excluirVendaSubproduto('${venda.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-                            <button type="button" class="btn-icon" style="color:#3498db; font-size:1.05rem; padding:4px;" onclick="window.imprimirVendaSubproduto('${venda.id}')" title="Imprimir"><i class="fa-solid fa-print"></i></button>
-                            <button type="button" class="btn-icon" style="color:#16a34a; font-size:1.05rem; padding:4px;" onclick="window.pdfVendaSubproduto('${venda.id}')" title="Baixar PDF"><i class="fa-solid fa-file-pdf"></i></button>
-                            <button type="button" class="btn-icon" style="color:#22c55e; font-size:1.05rem; padding:4px;" onclick="window.whatsappVendaSubproduto('${venda.id}')" title="Enviar WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
-                        </div>
-                    </td>
+                    <td style="padding:10px 8px; text-align:right;">${criarBotoesAcoesSubproduto(venda.id)}</td>
                 </tr>
             `;
         }).join('');

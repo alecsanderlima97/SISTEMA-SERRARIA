@@ -43,11 +43,11 @@
                         <div class="input-group" style="margin:0;"><label>Amarras</label><input type="number" id="prodPatioAmarras" min="0" value="0"></div>
                         <div class="package-entry-total">
                             <span>Pecas do pacote</span>
-                            <strong id="prodPatioTotalPecas">0 pç</strong>
+                            <strong id="prodPatioTotalPecas">0 pcs</strong>
                         </div>
                         <div class="package-entry-total">
                             <span>Volume total</span>
-                            <strong id="prodPatioTotalVolume">0,000 m³</strong>
+                            <strong id="prodPatioTotalVolume">0,000 m3</strong>
                         </div>
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>

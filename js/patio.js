@@ -359,8 +359,8 @@ function atualizarResumoNovaCubagemProducaoPatio() {
     const totalVolume = document.getElementById('prodPatioTotalVolume');
     if (!totalPecas && !totalVolume) return;
     const resumo = calcularNovaCubagemProducaoPatio();
-    if (totalPecas) totalPecas.textContent = `${resumo.pecas || 0} pç`;
-    if (totalVolume) totalVolume.textContent = `${formatDecimalMockup(resumo.volume || 0)} m³`;
+    if (totalPecas) totalPecas.textContent = `${resumo.pecas || 0} pcs`;
+    if (totalVolume) totalVolume.textContent = `${formatDecimalMockup(resumo.volume || 0)} m3`;
 }
 
 function instalarListenersProducaoPatio() {
@@ -381,7 +381,7 @@ function atualizarResumoClassesProducaoPatio() {
         return;
     }
     const totais = calcularTotaisFluxoPatio(producaoPatioRelatorioAtual.itens || []);
-    container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m³`, classe)).join('');
+    container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m3`, classe)).join('');
 }
 
 function atualizarStatusProducaoPatio(relatorio) {
@@ -453,7 +453,7 @@ async function renderizarProducaoPatio() {
                     <small style="display:block; margin-top:3px; color:#94a3b8; font-size:0.72rem; font-weight:700;">${formatarResumoPacoteProducao(item)}</small>
                 </td>
                 <td class="fluxo-patio-numero" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
-                <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m³</td>
+                <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m3</td>
                 <td style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1)`, 'Adicionar')}
