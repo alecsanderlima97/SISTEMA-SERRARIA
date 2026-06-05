@@ -22,6 +22,7 @@
                         <div>
                             <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Patio</h2>
                             <p id="producaoPatioInfo" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Atualizacao operacional do fluxo do patio.</p>
+                            <div id="producaoPatioUltimaAlteracao" class="fluxo-patio-status" style="display:none;"></div>
                         </div>
                         <button type="button" class="btn-secondary" onclick="window.fecharProducaoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
                     </div>

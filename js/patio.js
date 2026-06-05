@@ -384,6 +384,20 @@ function atualizarResumoClassesProducaoPatio() {
     container.innerHTML = Object.entries(totais.porClasse).map(([classe, total]) => cardFluxoPatio(`Classe ${classe}`, `${total.pacotes} pacotes | ${formatDecimalMockup(total.volume)} m³`, classe)).join('');
 }
 
+function atualizarStatusProducaoPatio(relatorio) {
+    const status = document.getElementById('producaoPatioUltimaAlteracao');
+    if (!status) return;
+    const ultimo = relatorio?.ultimaAlteracaoPatio;
+    if (!ultimo) {
+        status.style.display = 'none';
+        status.textContent = '';
+        return;
+    }
+    const quando = ultimo.dataHora ? new Date(ultimo.dataHora).toLocaleString('pt-BR') : '';
+    status.style.display = 'inline-flex';
+    status.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ${ultimo.acao || 'Atualizacao'} por ${ultimo.usuario || 'Usuario'}${quando ? ` em ${quando}` : ''}`;
+}
+
 async function salvarRelatorioProducaoPatio(relatorio) {
     const itens = ordenarItensPatio(Array.isArray(relatorio.itens) ? relatorio.itens : []);
     const totais = calcularTotaisFluxoPatio(itens);
@@ -417,6 +431,7 @@ async function renderizarProducaoPatio() {
         if (!atual) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
             if (info) info.textContent = 'Faca a primeira contagem no Controle de Producao.';
+            atualizarStatusProducaoPatio(null);
             return;
         }
 
@@ -426,6 +441,7 @@ async function renderizarProducaoPatio() {
         if (serrandoInput) serrandoInput.value = atual.serrando || '';
         const dataFmt = atual.data ? new Date(`${atual.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
         if (info) info.textContent = `Controle atual: ${dataFmt} ${atual.horario || ''} | ${atual.periodo || '-'}`;
+        atualizarStatusProducaoPatio(atual);
 
         tbody.innerHTML = atual.itens.length ? atual.itens.map(item => {
             const corClasse = coresClasseFluxo(item.classe).color;
@@ -441,6 +457,12 @@ async function renderizarProducaoPatio() {
                 <td style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1)`, 'Adicionar')}
+                    <button type="button" class="btn-fluxo-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')" title="Editar cubagem">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button type="button" class="btn-fluxo-excluir" onclick="window.excluirCubagemProducaoPatio('${item.id}')" title="Excluir cubagem">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </td>
             </tr>
         `}).join('') : '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
@@ -471,6 +493,46 @@ window.alterarPacotesProducaoPatio = async function(id, delta) {
         alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
     } finally {
         window.__salvandoFluxoPatio = false;
+    }
+};
+
+window.editarCubagemProducaoPatio = function(id) {
+    if (!producaoPatioRelatorioAtual) return;
+    const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
+    if (!item) return;
+
+    const config = parseConfigPacote(item.pecasRaw);
+    document.getElementById('prodPatioClasse').value = item.classe || '1a CLASSE';
+    document.getElementById('prodPatioEsp').value = formatDecimal(item.espessura, 1);
+    document.getElementById('prodPatioLarg').value = formatDecimal(item.largura, 1);
+    document.getElementById('prodPatioComp').value = formatDecimal(item.comprimento, 2);
+    document.getElementById('prodPatioPacotes').value = item.pacotes || 1;
+    document.getElementById('prodPatioAlturas').value = config.alt || '';
+    document.getElementById('prodPatioLarguraPacote').value = config.cam || '';
+    document.getElementById('prodPatioAmarras').value = config.am || 0;
+
+    producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => i.id !== id);
+    setFormProducaoPatioAberto(true);
+    atualizarResumoNovaCubagemProducaoPatio();
+    document.getElementById('prodPatioEsp')?.focus();
+};
+
+window.excluirCubagemProducaoPatio = async function(id) {
+    if (!producaoPatioRelatorioAtual) return;
+    const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
+    if (!item) return;
+
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir a cubagem ${formatCubagemFluxo(item)} do Fluxo do Patio?`);
+    if (!autorizado) return;
+
+    try {
+        producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => i.id !== id);
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu cubagem ${formatCubagemFluxo(item)}`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        await renderizarProducaoPatio();
+    } catch (error) {
+        console.error('Erro ao excluir cubagem do fluxo do patio:', error);
+        alert('Nao foi possivel excluir esta cubagem agora.');
     }
 };
 
