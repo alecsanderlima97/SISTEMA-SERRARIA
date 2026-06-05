@@ -29,6 +29,7 @@
                         <div class="input-group" style="margin:0;"><label>Madeira sendo serrada</label><input type="text" id="producaoPatioSerrando" class="text-uppercase-input" placeholder="Ex: 1,7/11,0/1,20"></div>
                         <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
                         <button type="button" class="btn-secondary" onclick="window.toggleFormProducaoPatio()" style="height:42px;"><i class="fa-solid fa-plus"></i> Nova cubagem</button>
+                        <button type="button" class="btn-secondary" onclick="window.imprimirListaProducaoPatio()" style="height:42px;"><i class="fa-solid fa-print"></i> Imprimir</button>
                     </div>
                     <div id="formProducaoPatio" class="package-entry-grid" data-aberto="0" style="display:none; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Classe</label><select id="prodPatioClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
@@ -52,7 +53,7 @@
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th><th style="text-align:center;">Acoes</th></tr></thead>
+                            <thead class="fluxo-patio-head"><tr><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th><th>Acoes</th></tr></thead>
                             <tbody id="producaoPatioLista"><tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
                         </table>
                     </div>

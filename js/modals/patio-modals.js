@@ -19,7 +19,7 @@
                     </button>
 
                     <button type="button" id="btnImprimirEtiquetas" class="btn-patio-print">
-                        <i class="fa-solid fa-print"></i> Imprimir Etiquetas
+                        <i class="fa-solid fa-print"></i> Imprimir Lista
                     </button>
 
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
@@ -138,7 +138,7 @@
                     <h3 style="margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-circle-plus" style="color:#e67e22;"></i> Cadastrar Novo Lote no Pátio</h3>
 
                     <form id="formAdicionarItemPatio" class="patio-form-grid package-entry-grid">
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-tipo" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-tree"></i> Tipo de Madeira</label>
                             <select id="patioItemTipo">
                                 <option value="TÁBUA">TÁBUA</option>
@@ -149,7 +149,7 @@
                                 <option value="OUTROS">OUTROS</option>
                             </select>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-classe" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-award"></i> Qualidade / Classe</label>
                             <select id="patioItemClasse" class="patio-classe-select patio-classe-1">
                                 <option value="1ª CLASSE">1ª Classe</option>
@@ -157,7 +157,7 @@
                                 <option value="3ª CLASSE">3ª Classe</option>
                             </select>
                         </div>
-                        <div class="input-group patio-especie-compacta" style="margin-bottom: 0; min-width: 230px;">
+                        <div class="input-group patio-especie-compacta" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-seedling"></i> Espécie</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 42px;">
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="EUCALIPTO" checked> Eucalipto</label>
@@ -165,23 +165,23 @@
                                 <label style="display:flex; align-items:center; gap:5px; margin:0; font-size:0.8rem; color:#fff;"><input type="radio" name="patioItemEspecie" value="OUTROS"> Outros</label>
                             </div>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-medida" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-ruler-horizontal"></i> Espessura (cm)</label>
                             <input type="text" id="patioItemEsp" placeholder="Ex: 1,8" required>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-medida" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-ruler-combined"></i> Largura (cm)</label>
                             <input type="text" id="patioItemLarg" placeholder="Ex: 7,0" required>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-medida" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-ruler"></i> Comprimento (m)</label>
                             <input type="text" id="patioItemComp" placeholder="Ex: 2,40" required>
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-pacotes" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-box"></i> Qtd Pacotes</label>
                             <input type="number" id="patioItemPacotes" min="1" placeholder="Qtd" required style="padding: 8px 6px !important; text-align: center;">
                         </div>
-                        <div class="input-group" style="margin-bottom: 0;">
+                        <div class="input-group patio-campo-formacao" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-calculator"></i> Alt x Cam + Am.</label>
                             <div class="package-entry-calc">
                                 <input type="number" id="patioItemAltura" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Alt">
@@ -189,7 +189,7 @@
                                 <input type="number" id="patioItemAmarras" class="calc-patio" style="width: 100%; padding: 8px 6px !important; text-align: center;" placeholder="Am">
                             </div>
                         </div>
-                        <div class="input-group package-entry-total" style="margin-bottom: 0;">
+                        <div class="input-group package-entry-total patio-campo-pecas" style="margin-bottom: 0;">
                             <label><i class="fa-solid fa-layer-group"></i> Peças/Pct</label>
                             <input type="number" id="patioItemPecas" min="1" placeholder="Total" required style="background: rgba(0,0,0,0.1) !important; color: #fff !important; cursor: not-allowed; padding: 8px 6px !important; text-align: center;" readonly>
                         </div>
@@ -213,7 +213,7 @@
                     </div>
 
                     <div class="table-container" style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <table class="patio-lista-areia" style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 1.5px solid #543725;">
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">CLASSE</th>

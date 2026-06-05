@@ -243,7 +243,7 @@ function renderProdutos() {
         const classe = p.classe || p.qualidade || '-';
         const numeroClasse = String(classe).includes('1') ? 1 : String(classe).includes('2') ? 2 : String(classe).includes('3') ? 3 : 0;
         const corClasse = numeroClasse === 1 ? '#22c55e' : numeroClasse === 2 ? '#facc15' : numeroClasse === 3 ? '#ef4444' : '#94a3b8';
-        const medidas = `${p.espessura || 0} x ${p.largura || 0} x ${p.comprimentoVenda || 0}m`;
+        const medidas = `${p.espessura || 0} / ${p.largura || 0} / ${p.comprimentoVenda || 0}m`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `

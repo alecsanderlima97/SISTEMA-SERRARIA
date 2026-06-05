@@ -154,7 +154,7 @@ table td {
 }
 
 .fluxo-patio-toolbar {
-    grid-template-columns: minmax(180px, 320px) auto auto !important;
+    grid-template-columns: minmax(180px, 320px) auto auto auto !important;
 }
 
 #producaoPatioSerrando {
@@ -188,11 +188,12 @@ table td {
 }
 
 .patio-especie-compacta > div {
-    min-height: 32px !important;
-    gap: 7px !important;
-    flex-wrap: wrap !important;
+    min-height: 38px !important;
+    gap: 9px !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
-    max-width: 230px !important;
+    max-width: none !important;
+    overflow: hidden;
 }
 
 .patio-especie-compacta label {
@@ -202,7 +203,7 @@ table td {
     display: inline-flex !important;
     align-items: center !important;
     gap: 4px !important;
-    font-size: 0.72rem !important;
+    font-size: 0.74rem !important;
     line-height: 1 !important;
     white-space: nowrap !important;
     flex: 0 0 auto !important;
@@ -218,6 +219,173 @@ table td {
     accent-color: #38bdf8;
 }
 
+#formAdicionarItemPatio {
+    display: grid !important;
+    grid-template-columns: 120px 120px 250px repeat(4, minmax(104px, 1fr)) !important;
+    gap: 12px 9px !important;
+    align-items: end !important;
+}
+
+#formAdicionarItemPatio .patio-especie-compacta {
+    min-width: 250px !important;
+}
+
+#formAdicionarItemPatio .patio-campo-formacao {
+    grid-column: 1 / span 2;
+}
+
+#formAdicionarItemPatio .package-entry-calc {
+    display: grid !important;
+    grid-template-columns: repeat(3, 64px) !important;
+    gap: 8px !important;
+    min-width: 208px !important;
+}
+
+#formAdicionarItemPatio .package-entry-calc input {
+    min-width: 64px !important;
+    height: 40px !important;
+    font-size: 0.92rem !important;
+}
+
+#formAdicionarItemPatio .package-entry-total {
+    min-width: 118px !important;
+}
+
+#formAdicionarItemPatio .btn-add-lote-col {
+    min-width: 118px !important;
+}
+
+#producaoPatioLista .fluxo-patio-row-areia {
+    background: #f1dfbd !important;
+    border-bottom: 2px solid #d1b57f !important;
+}
+
+#producaoPatioLista .fluxo-patio-row-areia:hover {
+    background: #f1dfbd !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+#producaoPatioLista .fluxo-patio-row-areia td {
+    color: #1f2933 !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+#producaoPatioLista .fluxo-patio-cubagem {
+    font-size: 1.08rem !important;
+}
+
+#producaoPatioLista .fluxo-patio-cubagem small {
+    color: #4b5563 !important;
+    font-size: 0.82rem !important;
+}
+
+#producaoPatioLista .fluxo-patio-numero {
+    font-size: 1.22rem !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+}
+
+.fluxo-patio-head th {
+    background: #d9bd8f !important;
+    color: #1f2933 !important;
+    font-size: 0.88rem !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+}
+
+.patio-lista-areia thead th {
+    background: #d9bd8f !important;
+    color: #1f2933 !important;
+    font-size: 0.88rem !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+    border-bottom: 2px solid #b8945b !important;
+}
+
+.patio-lista-areia .patio-lista-row {
+    background: #f1dfbd !important;
+    border-bottom: 2px solid #d1b57f !important;
+}
+
+.patio-lista-areia .patio-lista-row:hover {
+    background: #f1dfbd !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+.patio-lista-areia .patio-lista-row td {
+    color: #1f2933 !important;
+    padding: 12px 10px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.patio-lista-cubagem {
+    font-size: 1.08rem !important;
+    font-weight: 900 !important;
+}
+
+.patio-lista-config {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    align-items: center;
+    column-gap: 6px;
+    margin-top: 4px;
+    color: #4b5563 !important;
+    font-size: 0.82rem !important;
+    font-weight: 800 !important;
+}
+
+.patio-lista-numero {
+    font-size: 1.22rem !important;
+    line-height: 1.1 !important;
+    font-weight: 900 !important;
+}
+
+.patio-lista-volume {
+    color: #047857 !important;
+}
+
+.patio-lista-areia small {
+    color: #4b5563 !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+}
+
+.patio-lista-areia .patio-tag-2a {
+    background: #fff1c2 !important;
+    border: 1px solid #f59e0b !important;
+    color: #d97706 !important;
+    font-weight: 900 !important;
+}
+
+#v2-select-produto,
+#v2-select-produto option {
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+#v2-select-produto option {
+    padding: 8px 10px;
+}
+
+@media (max-width: 1100px) {
+    #formAdicionarItemPatio {
+        grid-template-columns: repeat(4, minmax(120px, 1fr)) !important;
+    }
+
+    #formAdicionarItemPatio .patio-especie-compacta,
+    #formAdicionarItemPatio .patio-campo-formacao {
+        grid-column: span 2;
+    }
+}
+
 @media (max-width: 760px) {
     .fluxo-patio-toolbar {
         grid-template-columns: 1fr !important;
@@ -225,5 +393,14 @@ table td {
 
     #producaoPatioSerrando {
         max-width: 100%;
+    }
+
+    #formAdicionarItemPatio {
+        grid-template-columns: 1fr !important;
+    }
+
+    #formAdicionarItemPatio .patio-especie-compacta,
+    #formAdicionarItemPatio .patio-campo-formacao {
+        grid-column: auto;
     }
 }

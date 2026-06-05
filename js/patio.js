@@ -77,7 +77,7 @@ function inicializarPatioListeners() {
     }
 
     if (btnImprimirEtiquetas) {
-        btnImprimirEtiquetas.addEventListener('click', imprimirEtiquetasFisicas);
+        btnImprimirEtiquetas.addEventListener('click', imprimirListaDetalhadaPatio);
     }
 
     if (btnEtiquetasAvulsas) {
@@ -427,21 +427,23 @@ async function renderizarProducaoPatio() {
         const dataFmt = atual.data ? new Date(`${atual.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
         if (info) info.textContent = `Controle atual: ${dataFmt} ${atual.horario || ''} | ${atual.periodo || '-'}`;
 
-        tbody.innerHTML = atual.itens.length ? atual.itens.map(item => `
-            <tr>
+        tbody.innerHTML = atual.itens.length ? atual.itens.map(item => {
+            const corClasse = coresClasseFluxo(item.classe).color;
+            return `
+            <tr class="fluxo-patio-row-areia">
                 <td>${badgeClasseFluxo(item.classe)}</td>
-                <td style="font-weight:800; color:${coresClasseFluxo(item.classe).color};">
+                <td class="fluxo-patio-cubagem" style="font-weight:900; color:${corClasse} !important;">
                     ${formatCubagemFluxo(item)}
                     <small style="display:block; margin-top:3px; color:#94a3b8; font-size:0.72rem; font-weight:700;">${formatarResumoPacoteProducao(item)}</small>
                 </td>
-                <td style="font-weight:900; color:#60a5fa;">${item.pacotes || 0}</td>
-                <td style="font-weight:900; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
+                <td class="fluxo-patio-numero" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
+                <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m³</td>
                 <td style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1)`, 'Adicionar')}
                 </td>
             </tr>
-        `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
+        `}).join('') : '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
         atualizarResumoClassesProducaoPatio();
     } catch (error) {
         console.error('Erro na producao do patio:', error);
@@ -479,6 +481,61 @@ window.salvarSerrandoProducaoPatio = async function() {
     producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Atualizou madeira sendo serrada');
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
     await renderizarProducaoPatio();
+};
+
+window.imprimirListaProducaoPatio = function() {
+    const atual = producaoPatioRelatorioAtual;
+    if (!atual || !Array.isArray(atual.itens) || atual.itens.length === 0) {
+        alert('Nao ha itens no fluxo do patio para imprimir.');
+        return;
+    }
+
+    const linhas = ordenarItensPatio(atual.itens).map(item => {
+        const cores = coresClasseFluxo(item.classe);
+        const classeNum = obterNumeroClasse(item.classe) || 0;
+        return `
+            <tr class="classe-${classeNum}">
+                <td><span>${formatarClasseFluxo(item.classe)}</span></td>
+                <td class="cubagem">${formatCubagemFluxo(item)}<small>${formatarResumoPacoteProducao(item)}</small></td>
+                <td>${item.pacotes || 0}</td>
+                <td>${formatDecimalMockup(item.volume || 0)} m3</td>
+            </tr>
+        `;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Libere pop-ups para imprimir a lista.');
+        return;
+    }
+    win.document.write(`
+        <html><head><title>Fluxo do Patio</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 18px; color: #1f2933; }
+            h1 { margin: 0 0 4px; font-size: 22px; }
+            p { margin: 0 0 14px; color: #4b5563; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; background: #f3e2c4; }
+            th { background: #d9bd8f; color: #1f2933; font-size: 15px; text-align: center; padding: 10px; }
+            td { border-bottom: 1px solid #cdb486; padding: 10px; text-align: center; font-size: 17px; font-weight: 800; }
+            td:nth-child(2) { text-align: center; }
+            td span { display:inline-block; min-width:42px; padding:5px 10px; border-radius:999px; font-weight:900; }
+            .classe-1 span { background:rgba(22,163,74,.14); border:1px solid rgba(22,163,74,.38); color:#15803d; }
+            .classe-1 .cubagem { color:#15803d; }
+            .classe-2 span { background:rgba(245,158,11,.18); border:1px solid rgba(217,119,6,.42); color:#b45309; }
+            .classe-2 .cubagem { color:#b45309; }
+            .classe-3 span { background:rgba(239,68,68,.16); border:1px solid rgba(239,68,68,.45); color:#f87171; }
+            .classe-3 .cubagem { color:#f87171; }
+            small { display: block; color: #4b5563; font-size: 12px; margin-top: 3px; font-weight: 700; }
+            @media print { body { padding: 0; } }
+        </style></head><body>
+            <h1>Fluxo do Patio</h1>
+            <p>${atual.serrando ? `Madeira serrando: ${atual.serrando}` : 'Lista resumida de cubagens do patio'}</p>
+            <table><thead><tr><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th></tr></thead><tbody>${linhas}</tbody></table>
+        </body></html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
 };
 
 window.adicionarCubagemProducaoPatio = async function() {
@@ -548,14 +605,14 @@ function badgeClasseFluxo(classe) {
 
 function coresClasseFluxo(classe) {
     const numero = obterNumeroClasse(classe);
-    if (numero === 1) return { bg: 'rgba(34,197,94,0.16)', border: 'rgba(34,197,94,0.45)', color: '#4ade80' };
-    if (numero === 2) return { bg: 'rgba(234,179,8,0.16)', border: 'rgba(234,179,8,0.45)', color: '#facc15' };
+    if (numero === 1) return { bg: 'rgba(22,163,74,0.14)', border: 'rgba(22,163,74,0.38)', color: '#15803d' };
+    if (numero === 2) return { bg: 'rgba(245,158,11,0.22)', border: 'rgba(217,119,6,0.55)', color: '#d97706' };
     if (numero === 3) return { bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.45)', color: '#f87171' };
     return { bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.35)', color: '#cbd5e1' };
 }
 
 function formatCubagemFluxo(item) {
-    return `${formatDecimal(item.espessura, 1)} x ${formatDecimal(item.largura, 1)} x ${formatDecimal(item.comprimento, 2)}m`;
+    return `${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}m`;
 }
 
 function formatarConfiguracaoPacote(item) {
@@ -787,6 +844,65 @@ window.imprimirEtiquetaItemPatio = function(id) {
     imprimirEtiquetasFisicas([item]);
 };
 
+function imprimirListaDetalhadaPatio(relatorio = null) {
+    const listaBase = relatorio ? (Array.isArray(relatorio.itens) ? relatorio.itens : []) : itensPatioTemp;
+    if (!Array.isArray(listaBase) || listaBase.length === 0) {
+        alert('Nao ha itens na lista do patio para imprimir.');
+        return;
+    }
+
+    const serrando = relatorio ? (relatorio.serrando || '') : (document.getElementById('patioSerrando')?.value || '');
+
+    const linhas = ordenarItensPatio(listaBase).map(item => {
+        const classeNum = obterNumeroClasse(item.classe) || 0;
+        return `
+            <tr class="classe-${classeNum}">
+                <td><span>${formatarClasseFluxo(item.classe)}</span></td>
+                <td class="medidas"><div class="cubagem">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div><small>* ${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m3</small></td>
+                <td>${item.pacotes || 0}</td>
+                <td>${item.totalPecas || 0}<small>pçs</small></td>
+                <td class="volume">${formatDecimalMockup(item.volume || 0)}<small>(${formatDecimalMockup(item.volumeUnidade || 0)}/un)</small></td>
+            </tr>
+        `;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Libere pop-ups para imprimir a lista.');
+        return;
+    }
+    win.document.write(`
+        <html><head><title>Controle de Producao Geral</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 12px; color: #0f172a; }
+            h1 { margin: 0 0 4px; font-size: 20px; }
+            p { margin: 0 0 10px; color: #4b5563; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; background: #f1dfbd; }
+            th { background: #d9bd8f; color: #0f172a; font-size: 13px; text-align: center; padding: 8px; text-transform: uppercase; }
+            td { border-bottom: 1.5px solid #8a8170; padding: 9px 8px; text-align: center; font-size: 17px; font-weight: 900; }
+            td span { display:inline-block; min-width:28px; padding:5px 8px; border-radius:4px; font-weight:900; }
+            .medidas { text-align: center; }
+            .cubagem { font-size: 18px; font-weight: 900; }
+            .classe-1 span { background:rgba(22,163,74,.14); border:1px solid rgba(22,163,74,.38); color:#15803d; }
+            .classe-1 .cubagem { color:#15803d; }
+            .classe-2 span { background:#fff1c2; border:1px solid #f59e0b; color:#d97706; }
+            .classe-2 .cubagem { color:#d97706; }
+            .classe-3 span { background:rgba(239,68,68,.16); border:1px solid rgba(239,68,68,.45); color:#f87171; }
+            .classe-3 .cubagem { color:#f87171; }
+            .volume { color:#047857; }
+            small { display: block; color: #0f172a; font-size: 11px; margin-top: 2px; font-weight: 700; }
+            @media print { body { padding: 0; } }
+        </style></head><body>
+            <h1>Controle de Producao Geral</h1>
+            <p>${serrando ? `Madeira serrando: ${serrando.toUpperCase()}` : 'Lista detalhada da contagem do patio'}</p>
+            <table><thead><tr><th>Classe</th><th>Medidas</th><th>Pacotes</th><th>Total Pçs</th><th>Volume (m³)</th></tr></thead><tbody>${linhas}</tbody></table>
+        </body></html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+}
+
 function parseConfigPacote(raw) {
     const match = (raw || '').toString().match(/^(\d+)x(\d+)(?:\+(\d+))?$/);
     return match ? { alt: match[1], cam: match[2], am: match[3] || '' } : {};
@@ -855,49 +971,49 @@ function renderizarItensPatioTemp() {
         const primeiraCubagem = chaveCubagem !== ultimaChaveCubagem;
         ultimaChaveCubagem = chaveCubagem;
         const classeHtml = primeiraCubagem ? classeBadge : '<span style="color:#e2e8f0; font-weight:900;">↳</span>';
-        const corClasseCubagem = numeroClasse === 1 ? '#4ade80' : numeroClasse === 2 ? '#facc15' : '#f87171';
+        const corClasseCubagem = coresClasseFluxo(item.classe).color;
         const configTexto = `${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m³`;
         const medidasHtml = primeiraCubagem
             ? `
-                <div style="font-weight:900; color:${corClasseCubagem}; font-size:1.05rem;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div>
-                <div style="display:grid; grid-template-columns:22px 1fr; align-items:center; column-gap:8px; margin-top:5px; color:#f8fafc; font-size:0.84rem; font-weight:900;">
-                    <span style="text-align:center; color:#f8fafc;">*</span>
+                <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div>
+                <div class="patio-lista-config">
+                    <span>*</span>
                     <span>${configTexto}</span>
                 </div>`
             : `
-                <div style="display:grid; grid-template-columns:22px 1fr; align-items:center; column-gap:8px; color:#f8fafc; font-size:0.84rem; font-weight:900;">
-                    <span style="text-align:center; color:#f8fafc;">*</span>
+                <div class="patio-lista-config">
+                    <span>*</span>
                     <span>${configTexto}</span>
                 </div>`;
 
         html += `
-            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.95rem; vertical-align: middle;">
+            <tr class="patio-lista-row">
                 <!-- CLASSE -->
-                <td style="padding: 14px 10px; text-align: left;">
+                <td>
                     ${classeHtml}
                 </td>
                 <!-- MEDIDAS + CONFIGURACAO DO PACOTE -->
-                <td style="padding: 14px 10px; color: #0f172a; font-weight: bold; font-size: 0.92rem;">
+                <td>
                     ${medidasHtml}
                 </td>
                 <!-- PACOTES -->
-                <td style="padding: 14px 10px; text-align: center;">
-                    <div style="font-size: 1.15rem; font-weight: 900; color: #f8fafc;">${item.pacotes}</div>
+                <td>
+                    <div class="patio-lista-numero">${item.pacotes}</div>
                 </td>
                 <!-- TOTAL PECAS -->
-                <td style="padding: 14px 10px; color: #f8fafc; text-align: center;">
-                    <div style="font-weight: 900; color: #f8fafc;">${item.totalPecas || 0}</div>
-                    <small style="color:#cbd5e1; font-size:0.72rem; font-weight:700;">pçs</small>
+                <td>
+                    <div class="patio-lista-numero">${item.totalPecas || 0}</div>
+                    <small>pçs</small>
                 </td>
                 <!-- VOLUME TOTAL -->
-                <td style="padding: 14px 10px; text-align: right;">
-                    <div style="font-weight: 800; color: #16a34a; font-size: 1.05rem;">
-                        <span style="color:#bbf7d0;">${formatDecimalMockup(item.volume)}</span>
+                <td>
+                    <div class="patio-lista-numero patio-lista-volume">
+                        <span>${formatDecimalMockup(item.volume)}</span>
                     </div>
-                    <small style="color: #cbd5e1; font-size: 0.72rem;">(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
+                    <small>(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
                 </td>
                 <!-- AÃ‡Ã•ES (Mockup buttons) -->
-                <td class="hide-on-print" style="padding: 14px 10px; text-align: center;">
+                <td class="hide-on-print">
                     <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                         ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
                         ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
@@ -1147,14 +1263,14 @@ window.imprimirHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
     window.patioDocActions.set(rel);
-    gerarLayoutImpressaoPatio(rel);
+    imprimirListaDetalhadaPatio(rel);
 };
 
 window.visualizarHistoricoPatio = function(id) {
     const rel = historicoPatioAtuais.find(r => r.id === id);
     if (!rel) return;
     window.patioDocActions.set(rel);
-    gerarLayoutImpressaoPatio(rel);
+    imprimirListaDetalhadaPatio(rel);
 };
 
 window.baixarPdfHistoricoPatio = function(id) {
@@ -1179,7 +1295,7 @@ window.patioDocActions = {
         const resumo = new Map();
         itens.forEach(i => {
             const classificacao = i.classe || i.classificacao || 'Sem classificacao';
-            const cubagem = `${formatDecimal(i.espessura, 1)} x ${formatDecimal(i.largura, 1)} x ${formatDecimal(i.comprimento, 2)}`;
+            const cubagem = `${formatDecimal(i.espessura, 1)} / ${formatDecimal(i.largura, 1)} / ${formatDecimal(i.comprimento, 2)}`;
             const chave = `${classificacao}|${cubagem}`;
             const atual = resumo.get(chave) || { classificacao, cubagem, pacotes: 0, volume: 0 };
             atual.pacotes += Number(i.pacotes || 0);
@@ -1718,9 +1834,9 @@ function gerarLayoutImpressaoPatio(rel) {
             border-bottom: 2px solid #3b82f6;
         }
         .class-header-2 {
-            background-color: #fffbeb;
-            color: #92400e;
-            border-bottom: 2px solid #d97706;
+            background-color: #fff4d6;
+            color: #b45309;
+            border-bottom: 2px solid #f59e0b;
         }
         .class-header-3 {
             background-color: #fef2f2;
@@ -1774,6 +1890,18 @@ function gerarLayoutImpressaoPatio(rel) {
             white-space: nowrap;
             font-size: 20px;
             padding-right: 2px;
+        }
+        .classe-row-1 .classe-col,
+        .classe-row-1 .cubagem-col {
+            color: #15803d;
+        }
+        .classe-row-2 .classe-col,
+        .classe-row-2 .cubagem-col {
+            color: #b45309;
+        }
+        .classe-row-3 .classe-col,
+        .classe-row-3 .cubagem-col {
+            color: #b91c1c;
         }
         .config-col {
             font-size: 16px;
@@ -1830,7 +1958,7 @@ function gerarLayoutImpressaoPatio(rel) {
             body { padding: 0; }
             .consolidated-card { background: #0f172a !important; color: white !important; -webkit-print-color-adjust: exact; }
             .class-header-1 { background-color: #eff6ff !important; color: #1e40af !important; -webkit-print-color-adjust: exact; }
-            .class-header-2 { background-color: #fffbeb !important; color: #92400e !important; -webkit-print-color-adjust: exact; }
+            .class-header-2 { background-color: #fff4d6 !important; color: #b45309 !important; -webkit-print-color-adjust: exact; }
             .class-header-3 { background-color: #fef2f2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; }
             .class-header-sem { background-color: #f1f5f9 !important; color: #334155 !important; -webkit-print-color-adjust: exact; }
             tr, .class-section { page-break-inside: avoid; }
@@ -1859,12 +1987,13 @@ function gerarLayoutImpressaoPatio(rel) {
     // Construir tabelas por classe
     function gerarTabelaClasse(itens, classeName, headerClass, totalClasse) {
         if (itens.length === 0) return '';
+        const rowClass = headerClass === 'class-header-1' ? 'classe-row-1' : headerClass === 'class-header-2' ? 'classe-row-2' : headerClass === 'class-header-3' ? 'classe-row-3' : '';
         
         let rowsHtml = '';
         itens.forEach(i => {
             const classeTexto = classeName;
             rowsHtml += `
-                <tr>
+                <tr class="${rowClass}">
                     <td class="classe-col">${classeTexto}</td>
                     <td class="cubagem-col">${formatDecimal(i.espessura, 1)}/${formatDecimal(i.largura, 1)}/${formatDecimal(i.comprimento, 2)}</td>
                     <td class="vol-col">${formatDecimalMockup(i.volume)} m3</td>

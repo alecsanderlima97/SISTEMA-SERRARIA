@@ -139,6 +139,7 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-vale').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.vale || 0) : `R$ ${(func.vale || 0).toFixed(2)}`;
         document.getElementById('rh-forma-pagamento').value = func.formaPagamento || 'PIX';
         document.getElementById('rh-dados-bancarios').value = func.dadosBancarios || '';
+        document.getElementById('rh-observacao').value = func.observacao || '';
         document.getElementById('rh-valor-he-normal').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.valorHeNormal || 0) : `R$ ${(func.valorHeNormal || 0).toFixed(2)}`;
         document.getElementById('rh-valor-he-especial').value = window.formatCurrencyValue ? window.formatCurrencyValue(func.valorHeEspecial || 0) : `R$ ${(func.valorHeEspecial || 0).toFixed(2)}`;
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
@@ -234,7 +235,7 @@ function configurarFormulariosRH() {
     });
 
     // Forçar caixa alta no Nome Completo, Função e Dados Bancários
-    ['rh-nome', 'rh-funcao', 'rh-dados-bancarios', 'he-observacao'].forEach(id => {
+    ['rh-nome', 'rh-funcao', 'rh-dados-bancarios', 'rh-observacao', 'he-observacao'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.forceUppercaseInput) {
             el.addEventListener('input', window.forceUppercaseInput);
@@ -490,8 +491,6 @@ function renderizarFuncionarios(lista) {
         const adm = f.admissao ? new Date(f.admissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
         const heTotal = f.horasExtras ? f.horasExtras.reduce((acc, h) => acc + (parseFloat(h.horas) || 0), 0) : 0;
         const faltasTotal = f.faltas ? f.faltas.length : 0;
-        const temAtestado = normalizarAnexosRH(f, 'atestado').length > 0;
-        const temCat = normalizarAnexosRH(f, 'cat').length > 0;
         
         const fSalario = f.salario ? f.salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
         const fVale = f.vale ? f.vale.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
@@ -542,12 +541,6 @@ function renderizarFuncionarios(lista) {
                         </button>
                         <button onclick="window.abrirModalFaltas('${f.id}')" class="btn-icon" style="color:#f43f5e; font-size:1.1rem; padding: 4px;" title="Controle de Faltas (${faltasTotal})">
                             <i class="fa-solid fa-user-slash"></i> <span style="font-size: 0.8rem; font-weight:bold;">${faltasTotal}</span>
-                        </button>
-                        <button onclick="window.abrirAnexoRH('${f.id}', 'atestado')" class="btn-icon" style="color:${temAtestado ? '#22c55e' : '#94a3b8'}; font-size:1.1rem; padding: 4px;" title="${temAtestado ? 'Abrir atestado' : 'Sem atestado cadastrado'}">
-                            <i class="fa-solid fa-file-medical"></i>
-                        </button>
-                        <button onclick="window.abrirAnexoRH('${f.id}', 'cat')" class="btn-icon" style="color:${temCat ? '#f59e0b' : '#94a3b8'}; font-size:1.1rem; padding: 4px;" title="${temCat ? 'Abrir CAT' : 'Sem CAT cadastrado'}">
-                            <i class="fa-solid fa-kit-medical"></i>
                         </button>
                         <button onclick="window.iniciarEditarRH('${f.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Funcionário">
                             <i class="fa-solid fa-user-pen"></i>
@@ -621,6 +614,7 @@ async function salvarFuncionario() {
     
     const formaPagamento = document.getElementById('rh-forma-pagamento').value;
     const dadosBancarios = document.getElementById('rh-dados-bancarios').value.toUpperCase().trim();
+    const observacao = document.getElementById('rh-observacao')?.value.toUpperCase().trim() || '';
     const feriasDias = parseInt(document.getElementById('rh-ferias-dias').value) || 0;
     const feriasInicio = document.getElementById('rh-ferias-inicio').value;
     const feriasFim = document.getElementById('rh-ferias-fim').value;
@@ -643,7 +637,7 @@ async function salvarFuncionario() {
             vale: parseFloat(vale) || 0,
             valorHeNormal: parseFloat(valorHeNormal) || 0,
             valorHeEspecial: parseFloat(valorHeEspecial) || 0,
-            formaPagamento, dadosBancarios, feriasDias, feriasInicio, feriasFim,
+            formaPagamento, dadosBancarios, observacao, feriasDias, feriasInicio, feriasFim,
             atestados: anexosAtestadoAtual,
             cats: anexosCatAtual,
             atestado: anexosAtestadoAtual[0] || null,

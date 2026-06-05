@@ -84,6 +84,10 @@
                                 <label>Chave PIX ou Dados Bancários para Pagamento</label>
                                 <input type="text" id="rh-dados-bancarios" placeholder="Ex: Chave PIX (Celular/CPF) ou Banco/Ag/Cc">
                             </div>
+                            <div class="input-group" style="grid-column: 1 / -1;">
+                                <label>Observação do Funcionário</label>
+                                <textarea id="rh-observacao" class="text-uppercase-input" rows="3" placeholder="Ex: INFORMAÇÕES IMPORTANTES, COMBINADOS, RESTRIÇÕES OU OBSERVAÇÕES INTERNAS"></textarea>
+                            </div>
                             <div class="input-group">
                                 <label>Valor H. Extra Normal R$ *</label>
                                 <input type="text" id="rh-valor-he-normal" required placeholder="R$ 0,00">

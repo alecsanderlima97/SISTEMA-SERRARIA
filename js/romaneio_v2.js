@@ -1,4 +1,4 @@
-import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js';
+﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js';
 
 console.log("Romaneio V2: Script carregado");
 
@@ -145,9 +145,13 @@ async function carregarProdutosParaRomaneio() {
         produtosDisponiveis.forEach(p => {
             const opt = document.createElement('option');
             const classe = formatarClasseMadeira(p.classe || p.qualidade || '-');
-            const especie = p.especie || p.natureza || '-';
+            const cores = coresClasseMadeira(p.classe || p.qualidade);
+            const medidas = formatarMedidasMadeiraOption(p);
             opt.value = p.id;
-            opt.textContent = `${p.tipo || 'Sem Tipo'} - ${classe} - ${especie} (${p.espessura}x${p.largura}x${p.comprimentoVenda}m)`;
+            opt.textContent = `${String(p.tipo || 'Sem Tipo').toUpperCase()} - ${classe} - ${medidas}`;
+            opt.style.color = cores.color;
+            opt.style.backgroundColor = cores.bg;
+            opt.style.fontWeight = '800';
             select.appendChild(opt);
         });
     } catch (e) { console.error("Erro produtos:", e); }
@@ -386,6 +390,23 @@ function formatarClasseMadeira(valor) {
     return texto || '-';
 }
 
+function coresClasseMadeira(valor) {
+    const texto = String(valor || '').toUpperCase();
+    if (texto.includes('1')) return { color: '#16a34a', bg: '#ecfdf3' };
+    if (texto.includes('2')) return { color: '#d97706', bg: '#fff7db' };
+    if (texto.includes('3')) return { color: '#dc2626', bg: '#fff1f2' };
+    return { color: '#e5e7eb', bg: '#111827' };
+}
+
+function formatarNumeroMadeiraOption(valor, casas = 1) {
+    const numero = Number(valor) || 0;
+    return numero.toFixed(casas).replace('.', ',');
+}
+
+function formatarMedidasMadeiraOption(p) {
+    return `${formatarNumeroMadeiraOption(p.espessura, 1)}/${formatarNumeroMadeiraOption(p.largura, 1)}/${formatarNumeroMadeiraOption(p.comprimentoVenda, 2)}`;
+}
+
 function aplicarClasseRomaneio(valor) {
     const texto = String(valor || '').toUpperCase().trim();
     const select = document.getElementById('v2-qualidade');
@@ -522,7 +543,7 @@ function adicionarPacote() {
         produtoNome: nomeMadeira,
         qualidade: qualidade.toUpperCase(),
         especie,
-        medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
+        medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
         esp, larg, compV, compR,
         pecasPorPacote,
         alt, cam, amarras, configPct,
@@ -625,7 +646,7 @@ function salvarEdicaoPacote() {
             produtoNome: nomeMadeira,
             qualidade,
             especie,
-            medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} x ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
+            medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
             esp, larg, compV, compR,
             pecasPorPacote,
             alt, cam, amarras, configPct,
