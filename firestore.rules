@@ -118,6 +118,14 @@ service cloud.firestore {
         );
     }
 
+    function canWriteFrotas(collection) {
+      return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']
+        && isApprovedUser()
+        && 'permissoes' in userDoc().data
+        && 'allowedSections' in userDoc().data.permissoes
+        && 'view-frotas' in userDoc().data.permissoes.allowedSections;
+    }
+
     function canDeleteByCustomPermission(collection) {
       return hasCustomPermissionList('deleteSections')
         && collectionMatchesSections(collection, userDoc().data.permissoes.deleteSections);
@@ -176,6 +184,7 @@ service cloud.firestore {
     function canWriteCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
         || canWriteFluxoPatio(collection)
+        || canWriteFrotas(collection)
         || canWriteByCustomPermission(collection)
         || (
         isApprovedUser() && (
