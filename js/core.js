@@ -164,6 +164,11 @@ function isAdminBootstrapEmail(email = '') {
     return ADMIN_BOOTSTRAP_EMAILS.includes(String(email || '').toLowerCase());
 }
 
+function isCurrentUserAdminManager(appRef) {
+    return normalizeRole(appRef?.userRole) === 'gerente'
+        || isAdminBootstrapEmail(auth.currentUser?.email || appRef?.userData?.email || '');
+}
+
 function getRoleDisplayName(role) {
     const key = normalizeRole(role);
     return ROLE_NAMES[key] || ROLE_NAMES[role] || role || 'Acesso Pendente';
@@ -1241,7 +1246,7 @@ const App = {
                         
                         // Se for gerente, renderiza e libera o painel de administração de usuários nas configurações
                         const panel = document.getElementById('panelConfigUsuarios');
-                        if (normalizeRole(this.userRole) === 'gerente') {
+                        if (isCurrentUserAdminManager(this)) {
                             if (panel) {
                                 panel.style.display = 'block';
                                 this.carregarTabelaUsuarios();
@@ -1363,6 +1368,11 @@ const App = {
         this.applyPermissionVisibility();
         if (id === 'view-configuracoes') {
             this.carregarAuditoriaSistema();
+            if (isCurrentUserAdminManager(this)) {
+                const panel = document.getElementById('panelConfigUsuarios');
+                if (panel) panel.style.display = 'block';
+                this.carregarTabelaUsuarios();
+            }
         }
         return id;
     },

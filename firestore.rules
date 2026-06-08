@@ -301,6 +301,7 @@ service cloud.firestore {
     match /usuarios/{userId} {
       allow create: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserCreate(userId);
       allow read: if signedIn() && (userId == request.auth.uid || isAdmin() || isBootstrapAdmin());
+      allow list: if isAdmin() || isBootstrapAdmin();
       allow update: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserUpdate(userId);
       allow delete: if isAdmin() || isBootstrapAdmin();
     }
