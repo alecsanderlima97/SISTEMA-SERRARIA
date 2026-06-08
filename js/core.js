@@ -8,7 +8,7 @@ import {
 console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
-const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com'];
+const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
 
 const ROLE_PERMISSIONS = {
     'gerente': {
