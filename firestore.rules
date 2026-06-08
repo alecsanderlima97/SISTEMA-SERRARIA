@@ -119,7 +119,7 @@ service cloud.firestore {
     }
 
     function canWriteFrotas(collection) {
-      return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']
+      return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'estoque', 'estoque_movimentacoes', 'financeiro_lancamentos']
         && isApprovedUser()
         && 'permissoes' in userDoc().data
         && 'allowedSections' in userDoc().data.permissoes
