@@ -30,6 +30,24 @@ styleTag.innerHTML = `
 .btn-tab-estoque.active {
     text-shadow: 0 0 10px rgba(107, 142, 35, 0.4);
 }
+#corpoTabelaEstoque tr {
+    font-size: 0.78rem !important;
+}
+#corpoTabelaEstoque td {
+    padding: 7px 6px !important;
+    line-height: 1.15 !important;
+}
+#corpoTabelaEstoque td:nth-child(2) {
+    font-size: 0.8rem !important;
+}
+#corpoTabelaEstoque span {
+    font-size: 0.64rem !important;
+    padding: 3px 6px !important;
+}
+#corpoTabelaEstoque .btn-action-card {
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+}
 `;
 document.head.appendChild(styleTag);
 
