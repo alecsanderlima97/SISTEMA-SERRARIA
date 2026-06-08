@@ -79,7 +79,7 @@ service cloud.firestore {
         || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais']) && 'view-financeiro' in sections)
         || ((collection in ['funcionarios']) && 'view-rh' in sections)
         || ((collection in ['agenda']) && 'view-agenda' in sections)
-        || ((collection in ['patio_relatorios']) && 'view-dashboard' in sections)
+        || ((collection in ['patio_relatorios']) && ('view-dashboard' in sections || 'view-romaneio-v2' in sections))
         || ((collection in ['auditoria_logs']) && 'view-configuracoes' in sections)
         || ((collection in ['usuarios']) && 'view-configuracoes' in sections);
     }
@@ -113,7 +113,7 @@ service cloud.firestore {
           || (
             'permissoes' in userDoc().data
             && 'writeSections' in userDoc().data.permissoes
-            && 'view-dashboard' in userDoc().data.permissoes.writeSections
+            && ('view-dashboard' in userDoc().data.permissoes.writeSections || 'view-romaneio-v2' in userDoc().data.permissoes.writeSections)
           )
         );
     }
