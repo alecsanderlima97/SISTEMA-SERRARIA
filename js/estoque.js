@@ -1,4 +1,4 @@
-import { auth, reautenticarUsuarioAtual } from './firebase-init.js';
+import { auth, db, doc, setDoc, reautenticarUsuarioAtual } from './firebase-init.js';
 
 // --- CONTROLE DE ESTOQUE SAAS PREMIUM & INTEGRADO ---
 // Sincronizado com os módulos de Frotas (Manutenção de Peças e Insumos)
@@ -586,14 +586,25 @@ window.registrarMovimentacaoEstoque = async function({
     movimentacoesEstoque = [nova, ...movimentacoesEstoque.filter(m => m.id !== nova.id)];
     // Persist to Firestore
     try {
-        if (window.FS) await window.FS.setDoc('estoque_movimentacoes', nova.id, nova);
+        if (db) {
+            const meta = window.AppTenant?.withTenantMeta
+                ? window.AppTenant.withTenantMeta(nova, true)
+                : nova;
+            await setDoc(doc(db, 'estoque_movimentacoes', nova.id), meta);
+        } else if (window.FS) {
+            await window.FS.setDoc('estoque_movimentacoes', nova.id, nova);
+        }
         // Update local cache
         window.renderizarMovimentacoesEstoque();
         document.dispatchEvent(new CustomEvent('estoqueUpdated', { detail: nova }));
         console.log(`[Almoxarifado] Movimento gravado no Firestore: ${nova.id}`);
     } catch (err) {
         console.error('Erro ao gravar movimento no Firestore', err);
-        alert('Não foi possível registrar a movimentação. Veja o console para detalhes.');
+        const msg = err?.code === 'permission-denied'
+            ? 'Sem permissao para gravar movimentacao de estoque na nuvem. Verifique se voce entrou com o usuario administrador correto.'
+            : `Nao foi possivel registrar a movimentacao na nuvem: ${err?.message || 'erro desconhecido'}`;
+        alert(msg);
+        throw err;
     }
 };
 
