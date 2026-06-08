@@ -118,7 +118,7 @@ service cloud.firestore {
         );
     }
 
-    function canWriteFrotas(collection) {
+    function canAccessFrotasData(collection) {
       return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'estoque', 'estoque_movimentacoes', 'financeiro_lancamentos']
         && isApprovedUser()
         && 'permissoes' in userDoc().data
@@ -133,6 +133,7 @@ service cloud.firestore {
 
     function canReadCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
+        || canAccessFrotasData(collection)
         || canReadByCustomPermission(collection)
         || (
         isApprovedUser() && (
@@ -184,7 +185,7 @@ service cloud.firestore {
     function canWriteCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
         || canWriteFluxoPatio(collection)
-        || canWriteFrotas(collection)
+        || canAccessFrotasData(collection)
         || canWriteByCustomPermission(collection)
         || (
         isApprovedUser() && (
