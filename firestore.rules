@@ -21,7 +21,7 @@ service cloud.firestore {
 
     function isBootstrapAdmin() {
       return signedIn()
-        && request.auth.token.email in ['limaalecsander@gmail.com'];
+        && request.auth.token.email in ['limaalecsander@gmail.com', 'escritoriovanmarte@hotmail.com'];
     }
 
     function isBackupOperator() {
