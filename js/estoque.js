@@ -49,8 +49,20 @@ const PADROES_ESTOQUE = [
 // Memória cache local para sincronização
 let itensEstoque = [];
 let movimentacoesEstoque = [];
+let estoqueRenderTimer = null;
 let filtroBuscaEstoque = '';
 let categoriaAtiva = 'TODAS';
+
+function agendarRenderEstoque(delay = 60) {
+    clearTimeout(estoqueRenderTimer);
+    estoqueRenderTimer = setTimeout(() => {
+        itensEstoque = obterEstoque();
+        renderizarEstoque();
+        window.renderSimuladores();
+        window.renderizarMovimentacoesEstoque();
+        renderResumoEstoque();
+    }, delay);
+}
 
 function obterEstoque() {
     if (itensEstoque && itensEstoque.length > 0) return itensEstoque.filter(item => item.ativo !== false);
@@ -662,9 +674,7 @@ window.registrarSaidaEstoqueFrota = async function({
         observacao
     });
 
-    renderizarEstoque();
-    window.renderSimuladores();
-    window.renderizarMovimentacoesEstoque();
+    agendarRenderEstoque();
     document.dispatchEvent(new CustomEvent('estoqueUpdated', { detail: { itemId: item.id, itemNome: item.nome } }));
 
     return item;
@@ -1001,6 +1011,10 @@ window.renderizarMovimentacoesEstoque = function() {
         );
     }
 
+    if (!query && tipoFiltro === 'TODOS') {
+        movs = movs.slice(0, 80);
+    }
+
     if (movs.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -1058,17 +1072,10 @@ document.addEventListener('click', (e) => {
 
     const targetId = link.getAttribute('data-target');
     if (targetId === 'view-estoque') {
-        renderizarEstoque();
-        window.renderSimuladores();
-        window.renderizarMovimentacoesEstoque();
-        renderResumoEstoque();
+        agendarRenderEstoque();
     }
 });
 
 document.addEventListener('estoqueUpdated', () => {
-    itensEstoque = obterEstoque();
-    renderizarEstoque();
-    window.renderSimuladores();
-    window.renderizarMovimentacoesEstoque();
-    renderResumoEstoque();
+    agendarRenderEstoque();
 });
