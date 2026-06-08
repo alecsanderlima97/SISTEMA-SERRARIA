@@ -102,7 +102,7 @@ service cloud.firestore {
           || (
             'permissoes' in userDoc().data
             && 'allowedSections' in userDoc().data.permissoes
-            && 'view-dashboard' in userDoc().data.permissoes.allowedSections
+            && ('view-dashboard' in userDoc().data.permissoes.allowedSections || 'view-romaneio-v2' in userDoc().data.permissoes.allowedSections)
           )
           || (
             'permissoes' in userDoc().data
@@ -287,7 +287,7 @@ service cloud.firestore {
 
     match /{collection}/{document} {
       allow read: if canReadCollection(collection)
-        && sameEmpresaOnRead()
+        && (sameEmpresaOnRead() || collection == 'patio_relatorios')
         && collection in [
           'clientes',
           'clientes_subprodutos',
