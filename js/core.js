@@ -8,6 +8,7 @@ import {
 console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
+const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com'];
 
 const ROLE_PERMISSIONS = {
     'gerente': {
@@ -130,6 +131,37 @@ function getEffectivePermissions(userData = {}) {
         deleteSections: defaults.readOnly ? [] : (normalizeRole(userData.cargo) === 'gerente' ? (defaults.allowedSections || []) : []),
         readOnly: !!defaults.readOnly
     });
+}
+
+function getAdminBootstrapPayload(user) {
+    const defaults = getDefaultRolePermissions('gerente');
+    const allowedSections = defaults.allowedSections || [];
+    const allowedSubsections = {};
+    Object.entries(SUBSECTION_PERMISSIONS).forEach(([sectionId, group]) => {
+        allowedSubsections[sectionId] = (group.items || []).map(item => item.id);
+    });
+    return {
+        nome: 'ESCRITORIO VANMARTE',
+        email: user.email,
+        uid: user.uid,
+        cargo: 'Gerente Geral',
+        cargoNormalizado: 'gerente',
+        empresaId: DEFAULT_EMPRESA_ID,
+        permissoes: {
+            allowedSections,
+            allowedSubsections,
+            writeSections: [...allowedSections],
+            deleteSections: [...allowedSections],
+            readOnly: false
+        },
+        aprovadoAutomaticamente: true,
+        criadoEm: new Date().toISOString(),
+        atualizadoEm: new Date().toISOString()
+    };
+}
+
+function isAdminBootstrapEmail(email = '') {
+    return ADMIN_BOOTSTRAP_EMAILS.includes(String(email || '').toLowerCase());
 }
 
 function getRoleDisplayName(role) {
@@ -1101,6 +1133,8 @@ const App = {
                             if (preDoc.id !== user.uid) {
                                 await deleteDoc(doc(db, 'usuarios', preDoc.id));
                             }
+                        } else if (isAdminBootstrapEmail(user.email)) {
+                            await setDoc(userRef, getAdminBootstrapPayload(user));
                         } else {
                             await setDoc(userRef, {
                                 nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
@@ -1122,6 +1156,12 @@ const App = {
                         }
                         
                         const userData = snapshot.data();
+                        if (isAdminBootstrapEmail(user.email) && normalizeRole(userData.cargo) === 'PENDENTE') {
+                            setDoc(userRef, getAdminBootstrapPayload(user), { merge: true }).catch(error => {
+                                console.error('Falha ao promover administrador do escritorio:', error);
+                            });
+                            return;
+                        }
                         const novoCargo = userData.cargo || 'PENDENTE';
                         const novoNome = userData.nome || user.email.split('@')[0].toUpperCase();
                         const novasPermissoes = getEffectivePermissions(userData);
