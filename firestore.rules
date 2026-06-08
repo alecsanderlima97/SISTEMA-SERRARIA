@@ -157,7 +157,7 @@ service cloud.firestore {
 
     function canReadCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
-        || (isApprovedUser() && isOperationalCollection(collection))
+        || (signedIn() && isOperationalCollection(collection))
         || canAccessFrotasData(collection)
         || canReadByCustomPermission(collection)
         || (
@@ -209,7 +209,7 @@ service cloud.firestore {
 
     function canWriteCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
-        || (isApprovedUser() && isOperationalCollection(collection))
+        || (signedIn() && isOperationalCollection(collection))
         || canWriteFluxoPatio(collection)
         || canAccessFrotasData(collection)
         || canWriteByCustomPermission(collection)
