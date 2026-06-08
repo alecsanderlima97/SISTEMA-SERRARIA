@@ -324,7 +324,7 @@ service cloud.firestore {
 
     match /{collection}/{document} {
       allow read: if canReadCollection(collection)
-        && (sameEmpresaOnRead() || collection == 'patio_relatorios')
+        && (sameEmpresaOnRead() || collection == 'patio_relatorios' || (signedIn() && isOperationalCollection(collection)))
         && collection in [
           'clientes',
           'clientes_subprodutos',
@@ -348,7 +348,7 @@ service cloud.firestore {
         ];
 
       allow create, update: if canWriteCollection(collection)
-        && (sameEmpresaOnWrite() || collection == 'patio_relatorios')
+        && (sameEmpresaOnWrite() || collection == 'patio_relatorios' || (signedIn() && isOperationalCollection(collection)))
         && collection in [
           'clientes',
           'clientes_subprodutos',
