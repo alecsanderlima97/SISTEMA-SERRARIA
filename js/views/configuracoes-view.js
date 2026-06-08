@@ -203,7 +203,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel" id="panelAuditoriaSistema" style="grid-column: span 2;">
+                    <div class="glass-panel" id="panelAuditoriaSistema" data-subsection-permission="view-configuracoes:auditoria" style="grid-column: span 2;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <i class="fa-solid fa-shield-halved" style="font-size: 24px; color: #38bdf8;"></i>
@@ -216,7 +216,7 @@
                         <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
                             Registro automatico das principais criacoes, edicoes e exclusoes feitas no sistema.
                         </p>
-                        <div class="table-container">
+                        <div class="table-container" style="max-height: 360px; overflow-y: auto;">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr>
@@ -236,7 +236,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel" id="panelConfigUsuarios" style="grid-column: span 2; display: none;">
+                    <div class="glass-panel" id="panelConfigUsuarios" data-subsection-permission="view-configuracoes:usuarios" style="grid-column: span 2; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <i class="fa-solid fa-users-gear" style="font-size: 24px; color: var(--accent-color);"></i>
@@ -262,7 +262,7 @@
                             </div>
                         </div>
 
-                        <div class="table-container">
+                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr>

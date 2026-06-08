@@ -90,6 +90,13 @@ const SUBSECTION_PERMISSIONS = {
             { id: 'lista-clientes', label: 'Gerenciar clientes' },
             { id: 'lancamentos', label: 'Ultimos lancamentos' }
         ]
+    },
+    'view-configuracoes': {
+        label: 'Configuracoes',
+        items: [
+            { id: 'auditoria', label: 'Ultimas alteracoes do sistema' },
+            { id: 'usuarios', label: 'Controle de usuarios e permissoes' }
+        ]
     }
 };
 
@@ -926,6 +933,12 @@ const App = {
                 }
             });
         });
+        document.querySelectorAll('[data-subsection-permission]').forEach(el => {
+            const [sectionId, subId] = String(el.getAttribute('data-subsection-permission') || '').split(':');
+            if (sectionId && subId) {
+                el.style.display = this.canAccessSubsection(sectionId, subId) ? '' : 'none';
+            }
+        });
         if (typeof window.atualizarPermissoesEntrada === 'function') {
             window.atualizarPermissoesEntrada();
         }
@@ -1246,7 +1259,7 @@ const App = {
                         
                         // Se for gerente, renderiza e libera o painel de administração de usuários nas configurações
                         const panel = document.getElementById('panelConfigUsuarios');
-                        if (isCurrentUserAdminManager(this)) {
+                        if (isCurrentUserAdminManager(this) && this.canAccessSubsection('view-configuracoes', 'usuarios')) {
                             if (panel) {
                                 panel.style.display = 'block';
                                 this.carregarTabelaUsuarios();
@@ -1370,8 +1383,10 @@ const App = {
             this.carregarAuditoriaSistema();
             if (isCurrentUserAdminManager(this)) {
                 const panel = document.getElementById('panelConfigUsuarios');
-                if (panel) panel.style.display = 'block';
-                this.carregarTabelaUsuarios();
+                if (this.canAccessSubsection('view-configuracoes', 'usuarios')) {
+                    if (panel) panel.style.display = 'block';
+                    this.carregarTabelaUsuarios();
+                }
             }
         }
         return id;
