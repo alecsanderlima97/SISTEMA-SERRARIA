@@ -129,16 +129,16 @@
                         </div>
 
                         <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9rem;">
                                 <thead>
                                     <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
-                                        <th style="padding: 10px 8px;">CATEGORIA</th>
-                                        <th style="padding: 10px 8px;">NOME DO ITEM</th>
+                                        <th style="padding: 10px 8px; text-align: center;">CATEGORIA</th>
+                                        <th style="padding: 10px 8px; text-align: center;">NOME DO ITEM</th>
                                         <th style="padding: 10px 8px; text-align: center;">STATUS</th>
                                         <th style="padding: 10px 8px; text-align: center;">SALDO ATUAL</th>
                                         <th style="padding: 10px 8px; text-align: center;">MÍNIMO ALERTA</th>
-                                        <th style="padding: 10px 8px; text-align: right;">VALOR DE COMPRA UN.</th>
-                                        <th style="padding: 10px 8px; text-align: right;">VALOR TOTAL</th>
+                                        <th style="padding: 10px 8px; text-align: center;">VALOR DE COMPRA UN.</th>
+                                        <th style="padding: 10px 8px; text-align: center;">VALOR TOTAL</th>
                                         <th style="padding: 10px 8px; text-align: center;">AÇÕES</th>
                                     </tr>
                                 </thead>
@@ -249,7 +249,7 @@
                         </div>
 
                         <div class="table-container" style="max-height: 450px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9rem;">
                                 <thead>
                                     <tr style="border-bottom: 1.5px solid var(--panel-border); color: var(--text-muted);">
                                         <th style="padding: 10px 8px;">DATA / HORA</th>
@@ -341,3 +341,4 @@
             </div>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();
+

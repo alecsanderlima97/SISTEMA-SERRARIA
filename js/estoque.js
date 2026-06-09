@@ -31,22 +31,33 @@ styleTag.innerHTML = `
     text-shadow: 0 0 10px rgba(107, 142, 35, 0.4);
 }
 #corpoTabelaEstoque tr {
-    font-size: 0.78rem !important;
+    font-size: 0.86rem !important;
 }
 #corpoTabelaEstoque td {
-    padding: 7px 6px !important;
-    line-height: 1.15 !important;
+    padding: 11px 8px !important;
+    line-height: 1.25 !important;
 }
+#corpoTabelaEstoque td:nth-child(1) { width: 10%; }
 #corpoTabelaEstoque td:nth-child(2) {
-    font-size: 0.8rem !important;
+    width: 26%;
+    min-width: 220px;
+    font-size: 0.88rem !important;
 }
-#corpoTabelaEstoque span {
-    font-size: 0.64rem !important;
-    padding: 3px 6px !important;
+#corpoTabelaEstoque td:nth-child(3) { width: 12%; }
+#corpoTabelaEstoque td:nth-child(4),
+#corpoTabelaEstoque td:nth-child(5),
+#corpoTabelaEstoque td:nth-child(6),
+#corpoTabelaEstoque td:nth-child(7) { width: 10%; }
+#corpoTabelaEstoque td:nth-child(8) {
+    width: 12%;
+    min-width: 180px;
+}
+#corpoTabelaEstoque td:nth-child(8) > div {
+    flex-wrap: nowrap !important;
+    align-items: center;
 }
 #corpoTabelaEstoque .btn-action-card {
-    padding: 4px 7px !important;
-    font-size: 0.72rem !important;
+    white-space: nowrap;
 }
 `;
 document.head.appendChild(styleTag);
@@ -333,7 +344,7 @@ function renderizarEstoque() {
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: white;">R$ ${item.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle;">
-                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 7px; justify-content: center; flex-wrap: nowrap; align-items: center;">
                         <button type="button" class="btn-action-card" onclick="window.abrirSaidaRapida('${item.id}')" title="Registrar Entrada/Saída" style="padding: 5px 9px; color: #f59e0b; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); font-size: 0.78rem;"><i class="fa-solid fa-right-left"></i> Entrada/Saída</button>
                         <button type="button" class="btn-action-card" onclick="window.editarItemEstoque('${item.id}')" title="Editar item" style="padding: 5px 9px;"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button type="button" class="btn-action-card" onclick="window.excluirItemEstoque('${item.id}')" title="Remover item" style="padding: 5px 9px; color: #f87171;"><i class="fa-solid fa-trash"></i></button>
