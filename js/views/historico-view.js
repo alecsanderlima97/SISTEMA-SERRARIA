@@ -19,7 +19,10 @@
                                 <option value="subprodutos">Subprodutos (Cavaco/Pó)</option>
                             </select>
                         </div>
+                        <div class="input-group" style="width: 160px; margin-bottom: 0;"><label>Data inicial</label><input type="date" id="histRelDataInicio" style="height:48px;"></div>
+                        <div class="input-group" style="width: 160px; margin-bottom: 0;"><label>Data final</label><input type="date" id="histRelDataFim" style="height:48px;"></div>
                         <button onclick="renderizarHistorico()" class="btn-primary" style="margin-top: 25px; height: 48px;"><i class="fa-solid fa-sync"></i> Atualizar</button>
+                        <button onclick="window.gerarRelatorioHistoricoMensal && window.gerarRelatorioHistoricoMensal()" class="btn-primary" style="margin-top: 25px; height: 48px; background:#16a34a;"><i class="fa-solid fa-print"></i> Relatorio do Periodo</button>
                     </div>
                 </div>
 

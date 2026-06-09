@@ -380,6 +380,57 @@ window.verDetalhesRomaneio = async (id) => {
     }
 }
 
+window.gerarRelatorioHistoricoMensal = function() {
+    const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
+    const inicio = document.getElementById('histRelDataInicio')?.value || '';
+    const fim = document.getElementById('histRelDataFim')?.value || '';
+    const termo = (filtroCliente ? filtroCliente.value : '').toLowerCase();
+    const periodo = `${inicio ? new Date(inicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${fim ? new Date(fim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`;
+
+    if (tipoAtivo === 'subprodutos') {
+        const itens = subprodutosCache.filter(r => {
+            const dataOk = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+            const clienteOk = !termo || (r.cliente || '').toLowerCase().includes(termo);
+            return dataOk && clienteOk;
+        });
+        if (!itens.length) return alert('Nenhuma venda de subproduto encontrada no periodo.');
+        const total = itens.reduce((acc, r) => acc + Number(r.total || 0), 0);
+        const linhas = itens.map(r => `<tr><td>${r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td><td>${r.romaneio || '-'}</td><td>${r.cliente || '-'}</td><td>${r.tipo || '-'}</td><td style="text-align:right;">${Number(r.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.unidade || 'm3'}</td><td style="text-align:right;">R$ ${Number(r.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('');
+        return window.DocActions.printHtml({ title: `Relatorio Subprodutos - ${periodo}`, contentHtml: `<div class="doc-title"><h1>Relatorio de Subprodutos</h1><p>${periodo}</p></div><table class="doc-table"><thead><tr><th>Data</th><th>Rom.</th><th>Cliente</th><th>Material</th><th>Qtd</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table><h2 style="text-align:right;">TOTAL: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>` });
+    }
+
+    const itens = romaneiosCache.filter(r => {
+        const data = r.logistica?.dataCarregamento || r.data || '';
+        const dataOk = (!inicio || data >= inicio) && (!fim || data <= fim);
+        const clienteOk = !termo || (r.cliente || '').toLowerCase().includes(termo);
+        return dataOk && clienteOk;
+    });
+    if (!itens.length) return alert('Nenhuma venda de madeira serrada encontrada no periodo.');
+    const resumo = {};
+    let totalVolume = 0;
+    let totalValor = 0;
+    itens.forEach(r => {
+        const volume = (r.pacotes || []).reduce((acc, p) => acc + Number(p.m3VendaTotal || 0), 0);
+        const valor = Number(r.financeiro?.totalGeral || r.valorFinal || 0);
+        totalVolume += volume;
+        totalValor += valor;
+        (r.pacotes || []).forEach(p => {
+            const key = p.qualidade || 'SEM CLASSE';
+            if (!resumo[key]) resumo[key] = { volume: 0, valor: 0, pacotes: 0 };
+            resumo[key].volume += Number(p.m3VendaTotal || 0);
+            resumo[key].valor += Number(p.valorTotalWood || 0);
+            resumo[key].pacotes += Number(p.qtdPacotes || 0);
+        });
+    });
+    const linhas = itens.map(r => {
+        const volume = (r.pacotes || []).reduce((acc, p) => acc + Number(p.m3VendaTotal || 0), 0);
+        const valor = Number(r.financeiro?.totalGeral || r.valorFinal || 0);
+        return `<tr><td>${formatarDataHistorico(r.logistica?.dataCarregamento || r.data || r.dataCriacao)}</td><td><strong>${r.numero || r.numeroCarga || '-'}</strong></td><td>${r.cliente || '-'}</td><td style="text-align:right;">${volume.toFixed(3)} m3</td><td style="text-align:right;">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+    }).join('');
+    const resumoHtml = Object.entries(resumo).map(([classe, r]) => `<tr><td>${classe}</td><td style="text-align:center;">${r.pacotes}</td><td style="text-align:right;">${r.volume.toFixed(3)} m3</td><td style="text-align:right;">R$ ${r.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('');
+    window.DocActions.printHtml({ title: `Relatorio Madeira Serrada - ${periodo}`, contentHtml: `<div class="doc-title"><h1>Relatorio de Madeira Serrada</h1><p>${periodo}</p></div><h3>Resumo por classe</h3><table class="doc-table"><thead><tr><th>Classe</th><th>Pacotes</th><th>Volume</th><th>Valor Madeira</th></tr></thead><tbody>${resumoHtml}</tbody></table><h3>Cargas</h3><table class="doc-table"><thead><tr><th>Data</th><th>Romaneio</th><th>Cliente</th><th>Volume</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table><h2 style="text-align:right;">${itens.length} viagem(ns) | ${totalVolume.toFixed(3)} m3 | R$ ${totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>` });
+};
+
 window.fecharModalDetalhes = () => {
     document.getElementById('modalDetalhesRomaneio').style.display = 'none';
 };

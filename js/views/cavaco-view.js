@@ -173,7 +173,11 @@
                                     <div class="input-group"><label>Romaneio do Cliente</label><input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987"></div>
                                     <div class="input-group"><label>Motorista do Caminhao</label><input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista"></div>
                                     <div class="input-group"><label>Caminhao do Cliente</label><select id="calcCavCaminhaoSelecionado" style="width: 100%;"><option value="">Selecionar caminhao cadastrado</option></select></div>
-                                    <div class="input-group span-2"><label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="calcCavCarregamentoParticular" style="width:auto; margin:0;"> Carregamento particular</label></div>
+                                    <div class="input-group span-2" style="background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.45); border-radius:10px; padding:12px;">
+                                        <label style="display:flex; align-items:center; gap:12px; color:#fbbf24; font-weight:900; font-size:1rem;">
+                                            <input type="checkbox" id="calcCavCarregamentoParticular" style="width:22px; height:22px; margin:0; accent-color:#f59e0b;"> Carregamento particular
+                                        </label>
+                                    </div>
                                     <div class="input-group"><label>Modelo Caminhao</label><input type="text" id="calcCavCaminhao" class="text-uppercase-input" placeholder="Modelo do caminhao"></div>
                                     <div class="input-group"><label>Placa Caminhao</label><input type="text" id="calcCavPlacaCaminhao" class="text-uppercase-input" placeholder="ABC-1234"></div>
                                     <div class="input-group span-2"><label>Placa Carreta / Reboque</label><input type="text" id="calcCavPlacaCarreta" class="text-uppercase-input" placeholder="XYZ-9876"></div>
@@ -189,7 +193,7 @@
                                     <div class="input-group"><label>Cupim Adic.</label><input type="text" id="calcCavCupimAdicional" inputmode="decimal" placeholder="m3"></div>
                                 </div>
                                 <div class="sub-recibo-grid">
-                                    <div class="input-group"><label>Tipo de Subproduto</label><select id="calcCavTipo"><option value="Cavaco / Maravalha">Cavaco / Maravalha</option><option value="Po de Serra">Po de Serra</option><option value="Casca">Casca</option><option value="Lenha">LENHA DE REFUGO</option></select></div>
+                                    <div class="input-group"><label style="color:#fbbf24; font-weight:900;">Tipo de Subproduto *</label><select id="calcCavTipo" required style="border-color:#f59e0b; background:rgba(245,158,11,0.12);"><option value="">SELECIONE O MATERIAL...</option><option value="Cavaco / Maravalha">Cavaco / Maravalha</option><option value="Po de Serra">Po de Serra</option><option value="Casca">Casca</option><option value="Lenha">LENHA DE REFUGO</option></select></div>
                                     <div class="input-group"><label>Unidade de Medida</label><select id="calcCavUnidade"><option value="m3">Metros Cubicos (m3)</option><option value="Tonelada">Toneladas (ton)</option><option value="Carga">Carga / Caminhao</option><option value="Saco">Saco</option></select></div>
                                     <div class="input-group"><label>Quantidade (m3 / un)</label><input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00"></div>
                                     <div class="input-group"><label>Valor Unitario R$ / m3 *</label><input type="text" id="calcCavValor" placeholder="R$ 0,00"></div>
@@ -209,13 +213,23 @@
                         <div class="section-title">
                             <h2><i class="fa-solid fa-clock-rotate-left"></i> Ultimos Lancamentos</h2>
                         </div>
+                        <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
+                            <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data inicial</label><input type="date" id="subRelDataInicio" style="padding:8px;"></div>
+                            <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data final</label><input type="date" id="subRelDataFim" style="padding:8px;"></div>
+                            <button type="button" class="btn-primary" onclick="window.gerarRelatorioFechamentoSubprodutos && window.gerarRelatorioFechamentoSubprodutos()" style="padding:10px 14px;"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Fechamento</button>
+                        </div>
                         <div style="max-height: 430px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                                 <thead>
                                     <tr style="background: rgba(0,0,0,0.2); color: var(--text-muted);">
+                                        <th style="padding: 10px; text-align: center;"><input type="checkbox" id="checkAllSubLancamentos" onchange="window.toggleSelecionarSubprodutosRelatorio && window.toggleSelecionarSubprodutosRelatorio(this.checked)"></th>
+                                        <th style="padding: 10px; text-align: left;">Rom.</th>
                                         <th style="padding: 10px; text-align: left;">Data</th>
                                         <th style="padding: 10px; text-align: left;">Cliente</th>
                                         <th style="padding: 10px; text-align: left;">Produto</th>
+                                        <th style="padding: 10px; text-align: right;">Metragem</th>
+                                        <th style="padding: 10px; text-align: right;">Valor Un.</th>
+                                        <th style="padding: 10px; text-align: left;">Placa</th>
                                         <th style="padding: 10px; text-align: right;">Total</th>
                                         <th style="padding: 10px; text-align: right;">Acoes</th>
                                     </tr>

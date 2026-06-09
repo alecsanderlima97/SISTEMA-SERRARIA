@@ -187,6 +187,14 @@ function numeroClasseRomaneio(valor) {
     return 99;
 }
 
+function coresClassePatioRomaneio(valor) {
+    const classe = numeroClasseRomaneio(valor);
+    if (classe === 1) return { color: '#16a34a', bg: '#dcfce7' };
+    if (classe === 2) return { color: '#b45309', bg: '#fef3c7' };
+    if (classe === 3) return { color: '#dc2626', bg: '#fee2e2' };
+    return { color: '#334155', bg: '#f8fafc' };
+}
+
 function chavePatioRomaneio(item) {
     return [
         numeroClasseRomaneio(item.classe),
@@ -230,8 +238,12 @@ async function carregarPatioParaRomaneio() {
 
         patioItensDisponiveis.forEach(item => {
             const opt = document.createElement('option');
+            const cores = coresClassePatioRomaneio(item.classe);
             opt.value = item.id;
-            opt.textContent = `${item.tipo || 'MADEIRA'} - ${item.classe || '-'} - ${Number(item.espessura || 0).toLocaleString('pt-BR')} / ${Number(item.largura || 0).toLocaleString('pt-BR')} / ${Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - saldo ${item.pacotes || 0} pct`;
+            opt.textContent = `${item.classe || '-'} - ${item.tipo || 'MADEIRA'} - ${Number(item.espessura || 0).toLocaleString('pt-BR')} / ${Number(item.largura || 0).toLocaleString('pt-BR')} / ${Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ${item.pacotes || 0} pct`;
+            opt.style.color = cores.color;
+            opt.style.backgroundColor = cores.bg;
+            opt.style.fontWeight = '800';
             select.appendChild(opt);
         });
     } catch (error) {

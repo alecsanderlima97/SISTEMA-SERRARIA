@@ -68,6 +68,7 @@ let vendasSubprodutosCache = [];
 let clienteSubprodutoEditandoId = null;
 let vendaSubprodutoEditandoId = null;
 let ultimoDocumentoSubproduto = null;
+let subprodutosSelecionadosRelatorio = new Set();
 let caminhoesSubprodutoForm = [];
 
 function hojeIsoSubproduto() {
@@ -681,18 +682,25 @@ async function carregarLancamentosSubprodutos() {
 
         const ultimos = vendasSubprodutosCache.slice(0, 20);
         if (!ultimos.length) {
-            lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
+            lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
             return;
         }
 
         lista.innerHTML = ultimos.map(venda => {
             const data = venda.data ? new Date(`${venda.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
             const total = Number(venda.total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const qtd = Number(venda.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const valorUnit = Number(venda.valorUnitario || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             return `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:10px 8px; text-align:center;"><input type="checkbox" class="check-sub-relatorio" data-id="${venda.id}" ${subprodutosSelecionadosRelatorio.has(venda.id) ? 'checked' : ''} onchange="window.toggleSubprodutoRelatorio && window.toggleSubprodutoRelatorio('${venda.id}', this.checked)"></td>
+                    <td style="padding:10px 8px; font-weight:800;">${venda.romaneio || '-'}</td>
                     <td style="padding:10px 8px;">${data}</td>
                     <td style="padding:10px 8px; font-weight:700;">${venda.cliente || '-'}</td>
                     <td style="padding:10px 8px;">${venda.tipo || '-'}</td>
+                    <td style="padding:10px 8px; text-align:right;">${qtd} ${venda.unidade || 'm3'}</td>
+                    <td style="padding:10px 8px; text-align:right;">${valorUnit}</td>
+                    <td style="padding:10px 8px;">${venda.placaCaminhao || '-'}</td>
                     <td style="padding:10px 8px; text-align:right; color:var(--accent-color); font-weight:700;">${total}</td>
                     <td style="padding:10px 8px; text-align:right;">${criarBotoesAcoesSubproduto(venda.id)}</td>
                 </tr>
@@ -700,9 +708,72 @@ async function carregarLancamentosSubprodutos() {
         }).join('');
     } catch (e) {
         console.error('Erro ao carregar vendas de subprodutos:', e);
-        lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center;">Erro ao carregar lancamentos.</td></tr>';
+        lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Erro ao carregar lancamentos.</td></tr>';
     }
 }
+
+window.toggleSubprodutoRelatorio = function(id, checked) {
+    if (checked) subprodutosSelecionadosRelatorio.add(id);
+    else subprodutosSelecionadosRelatorio.delete(id);
+};
+
+window.toggleSelecionarSubprodutosRelatorio = function(checked) {
+    document.querySelectorAll('.check-sub-relatorio').forEach(input => {
+        input.checked = checked;
+        const id = input.dataset.id;
+        if (checked) subprodutosSelecionadosRelatorio.add(id);
+        else subprodutosSelecionadosRelatorio.delete(id);
+    });
+};
+
+window.gerarRelatorioFechamentoSubprodutos = function() {
+    const inicio = document.getElementById('subRelDataInicio')?.value || '';
+    const fim = document.getElementById('subRelDataFim')?.value || '';
+    let itens = vendasSubprodutosCache.filter(v => {
+        const selecionado = subprodutosSelecionadosRelatorio.size === 0 || subprodutosSelecionadosRelatorio.has(v.id);
+        const dataOk = (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
+        return selecionado && dataOk;
+    });
+    if (!itens.length) {
+        alert('Selecione cargas ou informe um periodo com lancamentos.');
+        return;
+    }
+    itens = itens.sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
+    const resumo = {};
+    itens.forEach(v => {
+        const key = v.tipo || 'SEM MATERIAL';
+        if (!resumo[key]) resumo[key] = { qtd: 0, total: 0, viagens: 0, unidade: v.unidade || 'm3' };
+        resumo[key].qtd += Number(v.quantidade || 0);
+        resumo[key].total += Number(v.total || 0);
+        resumo[key].viagens += 1;
+    });
+    const linhas = itens.map(v => `
+        <tr>
+            <td>${v.data ? new Date(v.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+            <td><strong>${v.romaneio || '-'}</strong></td>
+            <td>${v.cliente || '-'}</td>
+            <td>${v.tipo || '-'}</td>
+            <td>${v.placaCaminhao || '-'}</td>
+            <td style="text-align:right;">${Number(v.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${v.unidade || 'm3'}</td>
+            <td style="text-align:right;">R$ ${Number(v.valorUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            <td style="text-align:right; font-weight:800;">R$ ${Number(v.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        </tr>
+    `).join('');
+    const resumoHtml = Object.entries(resumo).map(([tipo, r]) => `
+        <tr><td>${tipo}</td><td style="text-align:center;">${r.viagens}</td><td style="text-align:right;">${r.qtd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.unidade}</td><td style="text-align:right;">R$ ${r.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
+    `).join('');
+    const totalGeral = itens.reduce((acc, v) => acc + Number(v.total || 0), 0);
+    const periodo = `${inicio ? new Date(inicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${fim ? new Date(fim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`;
+    const html = `
+        <div class="doc-header"><div><img src="logo.png" class="doc-logo" onerror="this.style.display='none'"><p>Fechamento de Subprodutos</p></div><div class="doc-title"><h1>Fechamento de Subprodutos</h1><p>Periodo: ${periodo}</p></div></div>
+        <h3>Resumo</h3>
+        <table class="doc-table"><thead><tr><th>Material</th><th>Viagens</th><th>Quantidade</th><th>Total</th></tr></thead><tbody>${resumoHtml}</tbody></table>
+        <h3>Carregamentos</h3>
+        <table class="doc-table"><thead><tr><th>Data</th><th>Rom.</th><th>Cliente</th><th>Material</th><th>Placa</th><th>Qtd</th><th>Valor Un.</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table>
+        <h2 style="text-align:right;">TOTAL GERAL: R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+    `;
+    window.DocActions.printHtml({ title: `Fechamento Subprodutos - ${periodo}`, contentHtml: html });
+};
 
 if (btnCalcCavaco) {
     btnCalcCavaco.addEventListener('click', async function () {
@@ -729,6 +800,12 @@ if (btnCalcCavaco) {
         const larg = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavLarg').value) : (parseFloat(document.getElementById('calcCavLarg').value) || 0);
         const comp = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavComp').value) : (parseFloat(document.getElementById('calcCavComp').value) || 0);
         const cupimAdicional = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('calcCavCupimAdicional')?.value) : (parseFloat(document.getElementById('calcCavCupimAdicional')?.value) || 0);
+
+        if (!tipo) {
+            alert("Selecione o tipo de subproduto antes de salvar.");
+            document.getElementById('calcCavTipo')?.focus();
+            return;
+        }
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
