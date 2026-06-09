@@ -321,18 +321,18 @@ function renderizarEstoque() {
         
         return `
             <tr style="border-bottom: 1px solid var(--panel-border); transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
-                <td style="padding: 12px 8px;"><span style="font-size: 0.72rem; font-weight: bold; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: var(--accent-color);">${item.categoria}</span></td>
-                <td style="padding: 12px 8px; font-weight: 600; color: white;">${item.nome}</td>
-                <td style="padding: 12px 8px; text-align: center;">${statusBadge}</td>
-                <td style="padding: 12px 8px; text-align: center; font-weight: bold; color: white;">
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle;"><span style="font-size: 0.72rem; font-weight: bold; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: var(--accent-color); white-space: nowrap;">${item.categoria}</span></td>
+                <td style="padding: 12px 10px; font-weight: 700; color: white; text-align: center; vertical-align: middle; line-height: 1.25;">${item.nome}</td>
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle;">${statusBadge}</td>
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: white;">
                     ${item.quantidade.toFixed(1)} ${unidade}
                 </td>
-                <td style="padding: 12px 8px; text-align: center; color: var(--text-muted);">
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">
                     ${limite.toFixed(0)} ${unidade}
                 </td>
-                <td style="padding: 12px 8px; text-align: right; color: white;">R$ ${item.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="padding: 12px 8px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="padding: 12px 8px; text-align: center;">
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: white;">R$ ${item.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle;">
                     <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
                         <button type="button" class="btn-action-card" onclick="window.abrirSaidaRapida('${item.id}')" title="Registrar Entrada/Saída" style="padding: 5px 9px; color: #f59e0b; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); font-size: 0.78rem;"><i class="fa-solid fa-right-left"></i> Entrada/Saída</button>
                         <button type="button" class="btn-action-card" onclick="window.editarItemEstoque('${item.id}')" title="Editar item" style="padding: 5px 9px;"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1055,23 +1055,23 @@ window.renderizarMovimentacoesEstoque = function() {
         
         return `
             <tr style="border-bottom: 1px solid var(--panel-border); font-size: 0.85rem; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
-                <td style="padding: 10px 8px; white-space: nowrap; color: var(--text-muted); font-size: 0.78rem;">${mov.dataHora}</td>
-                <td style="padding: 10px 8px; text-align: center;">${tipoBadge}</td>
-                <td style="padding: 10px 8px; font-weight: 600; color: white;">
+                <td style="padding: 10px 8px; white-space: nowrap; color: var(--text-muted); font-size: 0.78rem; text-align: center; vertical-align: middle;">${mov.dataHora}</td>
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">${tipoBadge}</td>
+                <td style="padding: 10px 10px; font-weight: 700; color: white; text-align: center; vertical-align: middle; line-height: 1.25;">
                     ${mov.itemNome}<br>
                     <span style="font-size: 0.7rem; color: var(--accent-color); font-weight: bold; text-transform: uppercase;">${mov.categoria}</span>
                 </td>
-                <td style="padding: 10px 8px; text-align: center; font-weight: bold; color: white;">
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: white;">
                     ${mov.quantidade.toFixed(1)} ${unidade}
                 </td>
-                <td style="padding: 10px 8px; text-align: right; color: var(--text-muted);">R$ ${mov.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="padding: 10px 8px; text-align: right; font-weight: bold; color: var(--accent-color);">R$ ${totalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td style="padding: 10px 8px; color: #60a5fa; font-weight: 500;">
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">R$ ${mov.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${totalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 10px 8px; color: #60a5fa; font-weight: 500; text-align: center; vertical-align: middle; line-height: 1.25;">
                     ${mov.frotaPlaca ? `<i class="fa-solid fa-truck-pickup" style="font-size: 0.75rem;"></i> ${mov.frotaPlaca}` : mov.destino || 'Uso Geral'}
                     ${mov.retiradoPor ? `<br><span style="font-size: 0.72rem; color: #a78bfa;"><i class="fa-solid fa-user"></i> ${mov.retiradoPor}</span>` : ''}
                 </td>
-                <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${mov.observacao}">${mov.observacao}</td>
-                <td style="padding: 10px 8px; text-align: center;">
+                <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; vertical-align: middle;" title="${mov.observacao}">${mov.observacao}</td>
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
                     <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
                         <button type="button" class="btn-action-card" onclick="window.excluirMovimentacaoEstoque('${mov.id}')" title="Estornar lancamento" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-rotate-left"></i> Estornar</button>
                         <button type="button" class="btn-action-card" onclick="window.apagarMovimentacaoEstoque('${mov.id}')" title="Excluir lancamento com senha" style="padding: 6px 10px; color: #fb7185;"><i class="fa-solid fa-trash-can"></i> Excluir</button>
