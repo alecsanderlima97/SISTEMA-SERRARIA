@@ -198,11 +198,45 @@ function coresClassePatioRomaneio(valor) {
 function chavePatioRomaneio(item) {
     return [
         numeroClasseRomaneio(item.classe),
+        String(item.tipo || '').toUpperCase(),
         Number(item.espessura || 0).toFixed(1),
         Number(item.largura || 0).toFixed(1),
         Number(item.comprimento || 0).toFixed(2),
-        String(item.pecasRaw || item.pecas || '')
     ].join('|');
+}
+
+function agruparItensPatioRomaneio(itens) {
+    const grupos = new Map();
+    (itens || []).forEach(item => {
+        const pacotes = Number(item.pacotes || 0);
+        if (pacotes <= 0) return;
+        const chave = chavePatioRomaneio(item);
+        if (!grupos.has(chave)) {
+            grupos.set(chave, {
+                ...item,
+                id: chave,
+                patioItemIds: [],
+                pacotes: 0,
+                totalPecas: 0,
+                volume: 0
+            });
+        }
+        const grupo = grupos.get(chave);
+        grupo.patioItemIds.push(item.id);
+        grupo.pacotes += pacotes;
+        grupo.totalPecas += Number(item.totalPecas || (Number(item.pecas || 0) * pacotes) || 0);
+        grupo.volume += Number(item.volume || (Number(item.volumeUnidade || 0) * pacotes) || 0);
+        if (Number(item.pecas || 0) > Number(grupo.pecas || 0)) {
+            grupo.pecas = item.pecas;
+            grupo.pecasRaw = item.pecasRaw || item.pecas;
+            grupo.altura = item.altura;
+            grupo.alturas = item.alturas;
+            grupo.camada = item.camada;
+            grupo.larguraPacote = item.larguraPacote;
+            grupo.amarras = item.amarras;
+        }
+    });
+    return Array.from(grupos.values());
 }
 
 function obterItemPatioSelecionadoRomaneio() {
@@ -228,12 +262,12 @@ async function carregarPatioParaRomaneio() {
         snap.forEach(d => relatorios.push({ id: d.id, ...d.data() }));
         relatorios.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || b.data || 0) - new Date(a.atualizadoEm || a.criadoEm || a.data || 0));
         patioRelatorioRomaneio = relatorios[0] || null;
-        patioItensDisponiveis = (patioRelatorioRomaneio?.itens || [])
-            .filter(item => Number(item.pacotes || 0) > 0)
+        patioItensDisponiveis = agruparItensPatioRomaneio(patioRelatorioRomaneio?.itens || [])
             .sort((a, b) => numeroClasseRomaneio(a.classe) - numeroClasseRomaneio(b.classe)
                 || Number(b.comprimento || 0) - Number(a.comprimento || 0)
                 || Number(b.espessura || 0) - Number(a.espessura || 0)
                 || Number(b.largura || 0) - Number(a.largura || 0)
+                || String(a.tipo || '').localeCompare(String(b.tipo || ''), 'pt-BR')
                 || Number(b.pecas || 0) - Number(a.pecas || 0));
 
         patioItensDisponiveis.forEach(item => {
@@ -306,7 +340,10 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
     const porRelatorio = new Map();
     vinculados.forEach(p => {
         const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
-        porRelatorio.set(chave, (porRelatorio.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
+        const atual = porRelatorio.get(chave) || { qtd: 0, itemIds: [] };
+        atual.qtd += Number(p.patioQtdPacotes || p.qtdPacotes || 0);
+        atual.itemIds = p.patioItemIds?.length ? p.patioItemIds : [p.patioItemId];
+        porRelatorio.set(chave, atual);
     });
 
     const relatoriosAfetados = [...new Set(vinculados.map(p => p.patioRelatorioId))];
@@ -317,22 +354,30 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
 
         const dados = snap.data();
         const itens = Array.isArray(dados.itens) ? [...dados.itens] : [];
-        for (const [chave, qtd] of porRelatorio.entries()) {
+        for (const [chave, info] of porRelatorio.entries()) {
             const [idRelatorio, idItem] = chave.split('|');
             if (idRelatorio !== relatorioId) continue;
-            const idx = itens.findIndex(item => String(item.id) === String(idItem));
-            if (idx < 0) continue;
-            const atual = Number(itens[idx].pacotes || 0);
-            const novoTotal = atual + (sinal * qtd);
-            if (novoTotal < 0) throw new Error('Saldo insuficiente no patio para finalizar o romaneio.');
-            const volumeUnidade = Number(itens[idx].volumeUnidade || 0);
-            const pecasPacote = Number(itens[idx].pecas || itens[idx].pecasRaw || 0);
-            itens[idx] = {
-                ...itens[idx],
-                pacotes: novoTotal,
-                totalPecas: novoTotal * pecasPacote,
-                volume: Number((novoTotal * volumeUnidade).toFixed(3))
-            };
+            let restante = Number(info.qtd || 0);
+            const idsParaBaixa = info.itemIds?.length ? info.itemIds : [idItem];
+            for (const realId of idsParaBaixa) {
+                if (restante <= 0) break;
+                const idx = itens.findIndex(item => String(item.id) === String(realId));
+                if (idx < 0) continue;
+                const atual = Number(itens[idx].pacotes || 0);
+                const delta = sinal < 0 ? Math.min(atual, restante) : restante;
+                const novoTotal = atual + (sinal < 0 ? -delta : delta);
+                if (novoTotal < 0) throw new Error('Saldo insuficiente no patio para finalizar o romaneio.');
+                const volumeUnidade = Number(itens[idx].volumeUnidade || 0);
+                const pecasPacote = Number(itens[idx].pecas || itens[idx].pecasRaw || 0);
+                itens[idx] = {
+                    ...itens[idx],
+                    pacotes: novoTotal,
+                    totalPecas: novoTotal * pecasPacote,
+                    volume: Number((novoTotal * volumeUnidade).toFixed(3))
+                };
+                restante -= delta;
+            }
+            if (restante > 0 && sinal < 0) throw new Error('Saldo insuficiente no patio para finalizar o romaneio.');
         }
 
         await updateDoc(ref, {
@@ -350,7 +395,10 @@ async function validarSaldoPatioRomaneio(pacotes, pacotesEstorno = []) {
     const agrupados = new Map();
     vinculados.forEach(p => {
         const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
-        agrupados.set(chave, (agrupados.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
+        const atual = agrupados.get(chave) || { qtd: 0, itemIds: [] };
+        atual.qtd += Number(p.patioQtdPacotes || p.qtdPacotes || 0);
+        atual.itemIds = p.patioItemIds?.length ? p.patioItemIds : [p.patioItemId];
+        agrupados.set(chave, atual);
     });
     const estornos = new Map();
     (pacotesEstorno || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId).forEach(p => {
@@ -358,13 +406,17 @@ async function validarSaldoPatioRomaneio(pacotes, pacotesEstorno = []) {
         estornos.set(chave, (estornos.get(chave) || 0) + Number(p.patioQtdPacotes || p.qtdPacotes || 0));
     });
 
-    for (const [chave, qtd] of agrupados.entries()) {
+    for (const [chave, info] of agrupados.entries()) {
         const [relatorioId, itemId] = chave.split('|');
         const snap = await getDoc(doc(db, 'patio_relatorios', relatorioId));
         if (!snap.exists()) throw new Error('Relatorio do patio nao encontrado.');
-        const item = (snap.data().itens || []).find(i => String(i.id) === String(itemId));
-        const saldoDisponivel = Number(item?.pacotes || 0) + Number(estornos.get(chave) || 0);
-        if (!item || saldoDisponivel < qtd) {
+        const itens = snap.data().itens || [];
+        const ids = info.itemIds?.length ? info.itemIds : [itemId];
+        const saldoAtual = itens
+            .filter(i => ids.includes(i.id))
+            .reduce((acc, i) => acc + Number(i.pacotes || 0), 0);
+        const saldoDisponivel = saldoAtual + Number(estornos.get(chave) || 0);
+        if (saldoDisponivel < Number(info.qtd || 0)) {
             throw new Error('Nao ha pacotes suficientes no patio para esta carga.');
         }
     }
@@ -859,6 +911,7 @@ function salvarEdicaoPacote() {
         origemPatio: !!itemPatio,
         patioRelatorioId: itemPatio ? patioRelatorioRomaneio?.id : null,
         patioItemId: itemPatio ? itemPatio.id : null,
+        patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
         patioQtdPacotes: itemPatio ? qtdPacotes : 0,
         patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
         m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
