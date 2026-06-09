@@ -462,6 +462,28 @@ function formatDecimal2Input(e) {
     e.target.value = value;
 }
 
+function descargaTemAdicional(horario) {
+    if (!horario || !/^\d{2}:\d{2}$/.test(horario)) return false;
+    const [hh, mm] = horario.split(':').map(Number);
+    const minutos = (hh * 60) + mm;
+    return (minutos >= 690 && minutos <= 780) || minutos >= 1035;
+}
+
+function atualizarValorDescargaPorHorario() {
+    const temAdicional = descargaTemAdicional(entHorario?.value || '');
+    const valor = temAdicional ? 1.12 : 0;
+    if (entValorDescarga) {
+        entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    }
+    const aviso = document.getElementById('entAvisoDescargaHorario');
+    if (aviso) {
+        aviso.style.color = temAdicional ? '#4ade80' : '#f59e0b';
+        aviso.textContent = temAdicional
+            ? 'Adicional de descarregamento liberado para este horario.'
+            : 'Sem adicional neste horario. Paga somente das 11:30 as 13:00 e apos 17:15.';
+    }
+}
+
 function calcularVolumeAtual() {
     const c = parseDecimalValue(entComp?.value) || 0;
     const l = parseDecimalValue(entLarg?.value) || 0;
@@ -495,10 +517,14 @@ function calcularVolumeAtual() {
     if (resFinanceiro) resFinanceiro.textContent = totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoFinanceira) infoFinanceira.textContent = `Baseado em ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m³`;
 
+    atualizarValorDescargaPorHorario();
     const valorDescargaM3 = window.parseCurrencyValue ? window.parseCurrencyValue(entValorDescarga?.value || '0') : 0;
     const totalDescarga = volume * valorDescargaM3;
     if (resDescarga) resDescarga.textContent = totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-    if (infoDescarga) infoDescarga.textContent = `Baseado em ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m³`;
+    if (infoDescarga) {
+        const regra = valorDescargaM3 > 0 ? 'periodo com adicional' : 'periodo sem adicional';
+        infoDescarga.textContent = `Baseado em ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m3 (${regra})`;
+    }
 
     aplicarVisibilidadeFinanceiraEntrada();
     return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
@@ -1431,6 +1457,10 @@ function inicializarModuloEntrada() {
         entValorDescarga.addEventListener('input', window.formatCurrencyInput);
         entValorDescarga.addEventListener('input', calcularVolumeAtual);
     }
+    if(entHorario) {
+        entHorario.addEventListener('input', calcularVolumeAtual);
+        entHorario.addEventListener('change', calcularVolumeAtual);
+    }
 
     // Eventos de Busca e Filtro de Entradas
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
@@ -1561,3 +1591,4 @@ if (document.readyState === 'loading') {
 } else {
     inicializarModuloEntrada();
 }
+
