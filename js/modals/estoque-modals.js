@@ -46,8 +46,8 @@
                     <input type="number" id="movQtd" step="0.01" min="0.01" placeholder="Ex: 1" required style="width: 100%; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 10px; font-size: 0.85rem;">
                 </div>
                 <div style="margin-bottom: 0;">
-                    <label for="movUnitario" style="font-size: 0.8rem; margin-bottom: 4px; display: block; color: #ccc;">Valor Unit. (R\$) *</label>
-                    <input type="text" id="movUnitario" placeholder="R\$ 0,00" required oninput="window.formatCurrencyInput(event)" style="width: 100%; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 10px; font-size: 0.85rem;">
+                    <label for="movUnitario" style="font-size: 0.8rem; margin-bottom: 4px; display: block; color: #ccc;">Valor Unit. (R\$) opcional</label>
+                    <input type="text" id="movUnitario" placeholder="R\$ 0,00" oninput="window.formatCurrencyInput(event)" style="width: 100%; border-radius: 6px; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05); color: white; padding: 8px 10px; font-size: 0.85rem;">
                 </div>
                 <div id="containerMovFrota" style="grid-column: span 3; display: none; margin-bottom: 0;">
                     <label for="movFrotaId" style="font-size: 0.8rem; margin-bottom: 4px; display: block; color: #ccc;"><i class="fa-solid fa-truck-pickup"></i> Veículo / Máquina (se consumo de frota)</label>

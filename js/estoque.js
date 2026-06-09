@@ -946,7 +946,7 @@ function salvarNovaMovimentacaoManual(e) {
     const destino = document.getElementById('movDestino').value.trim() || (tipo === 'ENTRADA' ? 'REPOSIÇÃO ESTOQUE' : 'CONSUMO OPERACIONAL');
     const observacao = document.getElementById('movObs').value.trim() || 'Lançamento manual de movimentação';
 
-    if (!itemId || quantidade <= 0 || unitario <= 0) {
+    if (!itemId || quantidade <= 0 || unitario < 0) {
         alert("Preencha todos os campos obrigatórios corretamente.");
         return;
     }
