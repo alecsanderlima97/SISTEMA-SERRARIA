@@ -22,6 +22,14 @@
                         <i class="fa-solid fa-print"></i> Imprimir Lista
                     </button>
 
+                    <button type="button" id="btnImprimirEtiquetasFisicas" class="btn-patio-print" style="background:#15803d !important;">
+                        <i class="fa-solid fa-tags"></i> Imprimir Etiquetas
+                    </button>
+
+                    <button type="button" id="btnResumoProducaoPatio" class="btn-patio-print" style="background:#0f766e !important;">
+                        <i class="fa-solid fa-chart-column"></i> Resumo
+                    </button>
+
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
                         <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
                     </button>
@@ -133,6 +141,7 @@
 
             <!-- SEÇÃO DE LANÇAMENTO E TABELA -->
             <div id="resumoPatioRomaneios" class="patio-kpi-grid hide-on-print" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin:-8px 0 22px 0;"></div>
+            <div id="painelResumoProducaoPatio" class="glass-panel hide-on-print" style="display:none; margin:-8px 0 22px; padding:18px;"></div>
 
             <div class="glass-panel" style="margin-bottom: 25px; padding: 25px;">
                 <!-- FORMULÁRIO DE LANÇAMENTO -->

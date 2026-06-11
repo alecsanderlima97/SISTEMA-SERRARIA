@@ -154,6 +154,7 @@
                              <div class="input-group-v2">
                                 <label>Qtd Pacotes</label>
                                 <input type="number" id="v2-qtd-pacotes" class="input-v2" value="1" min="1">
+                                <small id="v2-saldo-patio" style="display:none; margin-top:4px; color:#5eead4; font-weight:800;"></small>
                             </div>
                              <div class="input-group-v2 package-entry-wide">
                                 <label style="color: var(--accent); font-weight: 700;"><i class="fa-solid fa-cube" style="margin-right:5px;"></i>Volume do Item (m³) — calculado automaticamente</label>

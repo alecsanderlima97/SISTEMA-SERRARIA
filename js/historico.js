@@ -6,9 +6,65 @@ const filtroTipo = document.getElementById('filtroHistoricoTipo');
 
 let romaneiosCache = [];
 let subprodutosCache = [];
+let historicoSelecionados = new Set();
 let acaoPendente = null; // 'editar' ou 'excluir'
 let cargaPendenteId = null;
 let tipoPendente = 'madeira'; // 'madeira' ou 'subprodutos'
+
+function numeroHistorico(item) {
+    const texto = String(item.numero || item.numeroCarga || item.romaneio || item.romaneioCliente || '');
+    const numero = Number((texto.match(/\d+/g) || []).join(''));
+    return Number.isFinite(numero) ? numero : Number.MAX_SAFE_INTEGER;
+}
+
+function normalizarTipoSubprodutoHistorico(tipo) {
+    const texto = String(tipo || '').trim();
+    const chave = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    return chave === 'PO DE SERRA' ? 'Po de Serra' : texto;
+}
+
+function dataHistoricoIso(item, tipo) {
+    return tipo === 'subprodutos'
+        ? String(item.data || item.criadoEm || '')
+        : String(item.logistica?.dataCarregamento || item.data || item.dataCriacao || item.criadoEm || '');
+}
+
+function ordenarHistoricoRelatorio(a, b, tipo) {
+    const data = dataHistoricoIso(a, tipo).localeCompare(dataHistoricoIso(b, tipo));
+    return data || numeroHistorico(a) - numeroHistorico(b);
+}
+
+function atualizarContadorHistorico() {
+    const el = document.getElementById('histRelContador');
+    if (el) el.textContent = `${historicoSelecionados.size} selecionado(s)`;
+}
+
+function preencherProdutosHistorico(tipo) {
+    const select = document.getElementById('filtroHistoricoProduto');
+    if (!select) return;
+    const atual = select.value;
+    const produtos = tipo === 'subprodutos'
+        ? subprodutosCache.map(item => item.tipo)
+        : romaneiosCache.flatMap(item => (item.pacotes || []).map(p => p.produtoNome || p.tipoMadeira));
+    const unicos = [...new Set(produtos.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    select.innerHTML = '<option value="">Todos os produtos</option>' + unicos.map(item => `<option value="${item}">${item}</option>`).join('');
+    select.value = unicos.includes(atual) ? atual : '';
+}
+
+window.toggleHistoricoRelatorio = function(id, checked) {
+    if (checked) historicoSelecionados.add(id);
+    else historicoSelecionados.delete(id);
+    atualizarContadorHistorico();
+};
+
+window.toggleTodosHistoricoRelatorio = function(checked) {
+    document.querySelectorAll('.check-historico-relatorio').forEach(input => {
+        input.checked = checked;
+        if (checked) historicoSelecionados.add(input.dataset.id);
+        else historicoSelecionados.delete(input.dataset.id);
+    });
+    atualizarContadorHistorico();
+};
 
 function gerarHtmlDocumentoSubproduto(r) {
     return `
@@ -100,13 +156,16 @@ async function renderizarHistorico() {
             const snap = await getDocs(collection(db, 'vendas_subprodutos'));
             subprodutosCache = [];
             snap.forEach((doc) => {
-                subprodutosCache.push({ id: doc.id, ...doc.data() });
+                const venda = { id: doc.id, ...doc.data() };
+                venda.tipo = normalizarTipoSubprodutoHistorico(venda.tipo);
+                subprodutosCache.push(venda);
             });
 
             // Ordenar mais recentes primeiro
             subprodutosCache.sort((a, b) => new Date(b.data || b.criadoEm || b.id) - new Date(a.data || a.criadoEm || a.id));
         }
 
+        preencherProdutosHistorico(tipoAtivo);
         aplicarFiltro();
     } catch (error) {
         console.error("Erro histórico:", error);
@@ -142,14 +201,26 @@ function atualizarCabecalhoHistorico(tipoAtivo) {
 function aplicarFiltro() {
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
     const termo = (filtroCliente ? filtroCliente.value : '').toLowerCase();
+    const produto = document.getElementById('filtroHistoricoProduto')?.value || '';
+    const inicio = document.getElementById('histRelDataInicio')?.value || '';
+    const fim = document.getElementById('histRelDataFim')?.value || '';
+
+    const header = listaHistorico?.closest('table')?.querySelector('thead tr');
+    if (header && !header.querySelector('.check-todos-historico')) {
+        header.insertAdjacentHTML('afterbegin', '<th><input class="check-todos-historico" type="checkbox" onchange="window.toggleTodosHistoricoRelatorio(this.checked)"></th>');
+    }
     
     if (!listaHistorico) return;
     listaHistorico.innerHTML = '';
     
     if (tipoAtivo === 'madeira') {
-        const filtrados = romaneiosCache.filter(r => 
-            (r.cliente || '').toLowerCase().includes(termo)
-        );
+        const filtrados = romaneiosCache.filter(r => {
+            const texto = `${r.cliente || ''} ${r.numero || ''} ${r.numeroCarga || ''}`.toLowerCase();
+            const data = dataHistoricoIso(r, 'madeira').slice(0, 10);
+            const produtos = (r.pacotes || []).map(p => p.produtoNome || p.tipoMadeira || '').join(' ');
+            return (!termo || texto.includes(termo)) && (!produto || produtos.includes(produto))
+                && (!inicio || data >= inicio) && (!fim || data <= fim);
+        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'madeira'));
 
         if(filtrados.length === 0) {
             listaHistorico.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum romaneio de madeira encontrado.</td></tr>`;
@@ -178,6 +249,7 @@ function aplicarFiltro() {
             }
 
             tr.innerHTML = `
+                <td style="text-align:center;"><input type="checkbox" class="check-historico-relatorio" data-id="${r.id}" ${historicoSelecionados.has(r.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.toggleHistoricoRelatorio('${r.id}', this.checked)"></td>
                 <td><strong>${numero}</strong></td>
                 <td>${data}</td>
                 <td>${cliente}</td>
@@ -200,9 +272,11 @@ function aplicarFiltro() {
             listaHistorico.appendChild(tr);
         });
     } else {
-        const filtrados = subprodutosCache.filter(r => 
-            (r.cliente || '').toLowerCase().includes(termo)
-        );
+        const filtrados = subprodutosCache.filter(r => {
+            const texto = `${r.cliente || ''} ${r.romaneio || ''} ${r.romaneioCliente || ''}`.toLowerCase();
+            return (!termo || texto.includes(termo)) && (!produto || r.tipo === produto)
+                && (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'subprodutos'));
 
         if(filtrados.length === 0) {
             listaHistorico.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma venda de subproduto encontrada.</td></tr>`;
@@ -227,6 +301,7 @@ function aplicarFiltro() {
             `;
 
             tr.innerHTML = `
+                <td style="text-align:center;"><input type="checkbox" class="check-historico-relatorio" data-id="${r.id}" ${historicoSelecionados.has(r.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.toggleHistoricoRelatorio('${r.id}', this.checked)"></td>
                 <td><strong>${numero}</strong></td>
                 <td>${dataStr}</td>
                 <td>${cliente} <br><small style="color:#aaa;">(${tipoSub})</small></td>
@@ -247,6 +322,7 @@ function aplicarFiltro() {
             listaHistorico.appendChild(tr);
         });
     }
+    atualizarContadorHistorico();
 }
 
 window.verDetalhesRomaneio = async (id) => {
@@ -378,6 +454,7 @@ window.verDetalhesRomaneio = async (id) => {
         window.definirDocumentoRomaneioAtual(r, { cidade: r.cidade || '', contato: r.telefone || '' });
         window.modalDetalhesActions = window.romaneioDocActions;
     }
+    atualizarContadorHistorico();
 }
 
 window.gerarRelatorioHistoricoMensal = function() {
@@ -385,14 +462,16 @@ window.gerarRelatorioHistoricoMensal = function() {
     const inicio = document.getElementById('histRelDataInicio')?.value || '';
     const fim = document.getElementById('histRelDataFim')?.value || '';
     const termo = (filtroCliente ? filtroCliente.value : '').toLowerCase();
+    const produto = document.getElementById('filtroHistoricoProduto')?.value || '';
     const periodo = `${inicio ? new Date(inicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${fim ? new Date(fim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`;
 
     if (tipoAtivo === 'subprodutos') {
         const itens = subprodutosCache.filter(r => {
+            const selecionado = historicoSelecionados.size === 0 || historicoSelecionados.has(r.id);
             const dataOk = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-            const clienteOk = !termo || (r.cliente || '').toLowerCase().includes(termo);
-            return dataOk && clienteOk;
-        });
+            const texto = `${r.cliente || ''} ${r.romaneio || ''} ${r.romaneioCliente || ''}`.toLowerCase();
+            return selecionado && dataOk && (!termo || texto.includes(termo)) && (!produto || r.tipo === produto);
+        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'subprodutos'));
         if (!itens.length) return alert('Nenhuma venda de subproduto encontrada no periodo.');
         const total = itens.reduce((acc, r) => acc + Number(r.total || 0), 0);
         const linhas = itens.map(r => `<tr><td>${r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td><td>${r.romaneio || '-'}</td><td>${r.cliente || '-'}</td><td>${r.tipo || '-'}</td><td style="text-align:right;">${Number(r.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.unidade || 'm3'}</td><td style="text-align:right;">R$ ${Number(r.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('');
@@ -400,11 +479,13 @@ window.gerarRelatorioHistoricoMensal = function() {
     }
 
     const itens = romaneiosCache.filter(r => {
+        const selecionado = historicoSelecionados.size === 0 || historicoSelecionados.has(r.id);
         const data = r.logistica?.dataCarregamento || r.data || '';
         const dataOk = (!inicio || data >= inicio) && (!fim || data <= fim);
-        const clienteOk = !termo || (r.cliente || '').toLowerCase().includes(termo);
-        return dataOk && clienteOk;
-    });
+        const texto = `${r.cliente || ''} ${r.numero || ''} ${r.numeroCarga || ''}`.toLowerCase();
+        const produtos = (r.pacotes || []).map(p => p.produtoNome || p.tipoMadeira || '').join(' ');
+        return selecionado && dataOk && (!termo || texto.includes(termo)) && (!produto || produtos.includes(produto));
+    }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'madeira'));
     if (!itens.length) return alert('Nenhuma venda de madeira serrada encontrada no periodo.');
     const resumo = {};
     let totalVolume = 0;
@@ -547,9 +628,17 @@ function inicializarModuloHistorico() {
     }
     
     if(filtroTipo) {
-        filtroTipo.removeEventListener('change', renderizarHistorico);
-        filtroTipo.addEventListener('change', renderizarHistorico);
+        filtroTipo.onchange = () => {
+            historicoSelecionados.clear();
+            atualizarContadorHistorico();
+            renderizarHistorico();
+        };
     }
+
+    ['filtroHistoricoProduto', 'histRelDataInicio', 'histRelDataFim'].forEach(id => {
+        const campo = document.getElementById(id);
+        if (campo) campo.onchange = aplicarFiltro;
+    });
     
     // Vinculação do clique de confirmação de segurança
     const btnConfirmarSeguranca = document.getElementById('btnConfirmarSeguranca');

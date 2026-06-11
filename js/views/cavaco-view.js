@@ -214,8 +214,11 @@
                             <h2><i class="fa-solid fa-clock-rotate-left"></i> Ultimos Lancamentos</h2>
                         </div>
                         <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
+                            <div style="flex:1; min-width:210px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Buscar cliente ou romaneio</label><input type="search" id="subRelBusca" placeholder="Nome ou numero do romaneio" style="padding:8px; width:100%;"></div>
+                            <div style="min-width:180px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Produto</label><select id="subRelProduto" style="padding:8px; width:100%;"><option value="">Todos os produtos</option></select></div>
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data inicial</label><input type="date" id="subRelDataInicio" style="padding:8px;"></div>
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data final</label><input type="date" id="subRelDataFim" style="padding:8px;"></div>
+                            <div id="subRelContador" style="min-width:145px; padding:9px 12px; border:1px solid rgba(45,212,191,.35); border-radius:7px; color:#5eead4; font-weight:800; text-align:center;">0 selecionados</div>
                             <button type="button" class="btn-primary" onclick="window.gerarRelatorioFechamentoSubprodutos && window.gerarRelatorioFechamentoSubprodutos()" style="padding:10px 14px;"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Fechamento</button>
                         </div>
                         <div style="max-height: 430px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">

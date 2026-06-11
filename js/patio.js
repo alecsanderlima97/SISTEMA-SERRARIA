@@ -51,12 +51,14 @@ function inicializarPatioListeners() {
     const btnZerar = document.getElementById('btnZerarEtiquetas');
     const btnLimparTudo = document.getElementById('btnLimparTudoPatio');
     const btnImprimirEtiquetas = document.getElementById('btnImprimirEtiquetas');
+    const btnImprimirEtiquetasFisicas = document.getElementById('btnImprimirEtiquetasFisicas');
     const btnEtiquetasAvulsas = document.getElementById('btnEtiquetasAvulsasPatio');
     const btnFecharEtiquetaAvulsa = document.getElementById('btnFecharEtiquetaAvulsaPatio');
     const btnAdicionarEtiquetaAvulsa = document.getElementById('btnAdicionarEtiquetaAvulsaPatio');
     const btnImprimirEtiquetaAvulsa = document.getElementById('btnImprimirEtiquetaAvulsaPatio');
     const btnLimparEtiquetaAvulsa = document.getElementById('btnLimparEtiquetaAvulsaPatio');
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
+    const btnResumo = document.getElementById('btnResumoProducaoPatio');
 
     if (btnAbrir) {
         btnAbrir.addEventListener('click', abrirModalPatio);
@@ -79,6 +81,15 @@ function inicializarPatioListeners() {
 
     if (btnImprimirEtiquetas) {
         btnImprimirEtiquetas.addEventListener('click', imprimirListaDetalhadaPatio);
+    }
+    if (btnImprimirEtiquetasFisicas) {
+        btnImprimirEtiquetasFisicas.addEventListener('click', () => {
+            const relatorioAtual = historicoPatioAtuais.find(item => item.id === relatorioPatioEditandoId)
+                || historicoPatioAtuais.find(item => item.data === dataAtualPatio())
+                || historicoPatioAtuais[0];
+            const itens = itensPatioTemp.length ? itensPatioTemp : (relatorioAtual?.itens || []);
+            imprimirEtiquetasFisicas(itens);
+        });
     }
 
     if (btnEtiquetasAvulsas) {
@@ -108,6 +119,8 @@ function inicializarPatioListeners() {
     if (btnSalvar) {
         btnSalvar.addEventListener('click', salvarRelatorioPatio);
     }
+
+    if (btnResumo) btnResumo.addEventListener('click', mostrarResumoProducaoPatio);
 
     const selectClasse = document.getElementById('patioItemClasse');
     if (selectClasse) {
@@ -982,13 +995,20 @@ window.imprimirEtiquetaItemPatio = function(id) {
 };
 
 function imprimirListaDetalhadaPatio(relatorio = null) {
-    const listaBase = relatorio ? (Array.isArray(relatorio.itens) ? relatorio.itens : []) : itensPatioTemp;
+    const relatorioAtual = relatorio
+        || historicoPatioAtuais.find(item => item.id === relatorioPatioEditandoId)
+        || historicoPatioAtuais.find(item => item.data === dataAtualPatio())
+        || historicoPatioAtuais[0]
+        || null;
+    const listaBase = Array.isArray(itensPatioTemp) && itensPatioTemp.length
+        ? itensPatioTemp
+        : (Array.isArray(relatorioAtual?.itens) ? relatorioAtual.itens : []);
     if (!Array.isArray(listaBase) || listaBase.length === 0) {
         alert('Nao ha itens na lista do patio para imprimir.');
         return;
     }
 
-    const serrando = relatorio ? (relatorio.serrando || '') : (document.getElementById('patioSerrando')?.value || '');
+    const serrando = document.getElementById('patioSerrando')?.value || relatorioAtual?.serrando || '';
 
     const linhas = ordenarItensPatio(listaBase).map(item => {
         const classeNum = obterNumeroClasse(item.classe) || 0;
@@ -1113,18 +1133,20 @@ function renderizarItensPatioTemp() {
         const etiquetaIcone = item.etiquetado
             ? '<span title="Etiqueta impressa" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(22,163,74,.14); color:#16a34a; font-size:.72rem; margin-left:6px;"><i class="fa-solid fa-tag"></i></span>'
             : '';
+        const ultimoUso = item.ultimoUsoRomaneio;
+        const usoRomaneioHtml = ultimoUso ? `<div style="margin-top:4px; color:#0f766e; font-size:.72rem; font-weight:800;"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>` : '';
         const medidasHtml = primeiraCubagem
             ? `
                 <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}${etiquetaIcone}</div>
                 <div class="patio-lista-config">
                     <span>*</span>
                     <span>${configTexto}</span>
-                </div>`
+                </div>${usoRomaneioHtml}`
             : `
                 <div class="patio-lista-config">
                     <span>*</span>
                     <span>${configTexto}${etiquetaIcone}</span>
-                </div>`;
+                </div>${usoRomaneioHtml}`;
 
         html += `
             <tr class="patio-lista-row">
@@ -1153,8 +1175,8 @@ function renderizarItensPatioTemp() {
                     <small>(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
                 </td>
                 <!-- AÃ‡Ã•ES (Mockup buttons) -->
-                <td class="hide-on-print">
-                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                <td class="hide-on-print" style="min-width:225px;">
+                    <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
                         ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
                         ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
                         <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar Lote">
@@ -1199,7 +1221,22 @@ async function atualizarResumoProducaoRomaneios() {
     const box = document.getElementById('resumoPatioRomaneios');
     if (!box) return;
     const totaisPatio = calcularTotaisFluxoPatio(itensPatioTemp || []);
-    const vendidos = { totalPacotes: 0, porClasse: { 1: 0, 2: 0 } };
+    const vendidos = { totalPacotes: 0, totalVolume: 0, porClasse: { 1: 0, 2: 0, 3: 0 } };
+    try {
+        const snap = await getDocs(collection(db, 'romaneios'));
+        snap.forEach(docSnap => {
+            const romaneio = docSnap.data();
+            (romaneio.pacotes || []).filter(p => p.origemPatio).forEach(p => {
+                const qtd = Number(p.patioQtdPacotes || p.qtdPacotes || 0);
+                const classe = obterNumeroClasse(p.qualidade || p.classe) || 0;
+                vendidos.totalPacotes += qtd;
+                vendidos.totalVolume += Number(p.m3VendaTotal || p.volumeTotal || 0);
+                vendidos.porClasse[classe] = (vendidos.porClasse[classe] || 0) + qtd;
+            });
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel calcular pacotes vendidos do patio:', error);
+    }
     const saldoTotal = Math.max(0, (totaisPatio.pacotes || 0) - vendidos.totalPacotes);
     box.innerHTML = `
         <div class="patio-kpi-card" style="background:rgba(22,163,74,0.1);">
@@ -1213,13 +1250,86 @@ async function atualizarResumoProducaoRomaneios() {
         <div class="patio-kpi-card" style="background:rgba(59,130,246,0.1);">
             <span class="kpi-label">VENDIDOS ROMANEIO</span>
             <div class="kpi-value">${vendidos.totalPacotes || 0}</div>
-            <small>1a: ${vendidos.porClasse[1] || 0} | 2a: ${vendidos.porClasse[2] || 0}</small>
+            <small>1a: ${vendidos.porClasse[1] || 0} | 2a: ${vendidos.porClasse[2] || 0} | ${formatDecimalMockup(vendidos.totalVolume)} m3</small>
         </div>
         <div class="patio-kpi-card" style="background:rgba(15,23,42,0.58);">
             <span class="kpi-label">SALDO ESTIMADO</span>
             <div class="kpi-value">${saldoTotal}</div>
         </div>
     `;
+}
+
+function chaveResumoPatio(item) {
+    return `${obterNumeroClasse(item.classe) || 0}|${Number(item.espessura || 0).toFixed(1)}|${Number(item.largura || 0).toFixed(1)}|${Number(item.comprimento || 0).toFixed(2)}`;
+}
+
+function acumularResumoPatio(mapa, item, sinal = 1) {
+    const chave = chaveResumoPatio(item);
+    const atual = mapa.get(chave) || {
+        classe: obterNumeroClasse(item.classe) || 0,
+        espessura: Number(item.espessura || 0), largura: Number(item.largura || 0), comprimento: Number(item.comprimento || 0),
+        inicialPacotes: 0, atualPacotes: 0, vendidosPacotes: 0, inicialVolume: 0, atualVolume: 0, vendidosVolume: 0
+    };
+    atual.atualPacotes += sinal * Number(item.pacotes || 0);
+    atual.atualVolume += sinal * Number(item.volume || 0);
+    mapa.set(chave, atual);
+}
+
+async function mostrarResumoProducaoPatio() {
+    const painel = document.getElementById('painelResumoProducaoPatio');
+    if (!painel) return;
+    if (painel.style.display !== 'none') {
+        painel.style.display = 'none';
+        return;
+    }
+    painel.style.display = 'block';
+    painel.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Calculando resumo do dia...';
+    const rel = historicoPatioAtuais.find(r => r.id === relatorioPatioEditandoId)
+        || historicoPatioAtuais.find(r => r.data === dataAtualPatio()) || historicoPatioAtuais[0];
+    if (!rel) {
+        painel.innerHTML = 'Salve a primeira contagem do patio para gerar o resumo.';
+        return;
+    }
+    const mapa = new Map();
+    const inicial = Array.isArray(rel.estoqueInicialDia) ? rel.estoqueInicialDia : (rel.itens || []);
+    const atual = itensPatioTemp.length ? itensPatioTemp : (rel.itens || []);
+    inicial.forEach(item => {
+        acumularResumoPatio(mapa, item, 0);
+        const linha = mapa.get(chaveResumoPatio(item));
+        linha.inicialPacotes += Number(item.pacotes || 0);
+        linha.inicialVolume += Number(item.volume || 0);
+    });
+    atual.forEach(item => acumularResumoPatio(mapa, item));
+    try {
+        const snap = await getDocs(collection(db, 'romaneios'));
+        snap.forEach(docSnap => {
+            const rom = docSnap.data();
+            const data = rom.logistica?.dataCarregamento || rom.data || '';
+            if (data !== rel.data) return;
+            (rom.pacotes || []).filter(p => p.origemPatio).forEach(p => {
+                const item = {
+                    classe: p.qualidade || p.classe,
+                    espessura: p.espessura ?? p.esp,
+                    largura: p.largura ?? p.larg,
+                    comprimento: p.comprimento ?? p.compV,
+                    pacotes: Number(p.patioQtdPacotes || p.qtdPacotes || 0),
+                    volume: Number(p.m3VendaTotal || 0)
+                };
+                acumularResumoPatio(mapa, item, 0);
+                const linha = mapa.get(chaveResumoPatio(item));
+                linha.vendidosPacotes += item.pacotes;
+                linha.vendidosVolume += item.volume;
+            });
+        });
+    } catch (error) {
+        console.warn('Erro ao calcular resumo diario do patio:', error);
+    }
+    const linhas = [...mapa.values()].sort((a, b) => a.classe - b.classe || b.comprimento - a.comprimento || b.espessura - a.espessura).map(item => {
+        const produzidosPacotes = Math.max(0, item.atualPacotes + item.vendidosPacotes - item.inicialPacotes);
+        const produzidoVolume = Math.max(0, item.atualVolume + item.vendidosVolume - item.inicialVolume);
+        return `<tr><td>${item.classe}a</td><td>${formatDecimal(item.espessura,1)} / ${formatDecimal(item.largura,1)} / ${formatDecimal(item.comprimento,2)}</td><td>${item.inicialPacotes}</td><td>${item.vendidosPacotes}</td><td>${item.atualPacotes}</td><td>${produzidosPacotes}</td><td>${formatDecimalMockup(produzidoVolume)} m3</td></tr>`;
+    }).join('');
+    painel.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><h3 style="margin:0;">Resumo da Producao - ${new Date(rel.data + 'T12:00:00').toLocaleDateString('pt-BR')}</h3><button type="button" class="btn-icon" onclick="document.getElementById('painelResumoProducaoPatio').style.display='none'" title="Fechar"><i class="fa-solid fa-xmark"></i></button></div><div style="overflow-x:auto;"><table style="width:100%; text-align:center;"><thead><tr><th>Classe</th><th>Cubagem</th><th>Inicio</th><th>Vendido</th><th>Saldo</th><th>Produzido</th><th>Volume produzido</th></tr></thead><tbody>${linhas || '<tr><td colspan="7">Sem movimentacoes.</td></tr>'}</tbody></table></div>`;
 }
 
 // Calcular os totais acumulados salvos no dia atual
@@ -1286,6 +1396,11 @@ async function salvarRelatorioPatio() {
         atualizadoEm: new Date().toISOString(),
         ultimaAlteracaoPatio: montarUltimaAlteracaoPatio(relatorioPatioEditandoId ? 'Atualizou lista do patio' : 'Criou lista do patio')
     };
+
+    const relatorioExistente = historicoPatioAtuais.find(item => item.id === relatorioPatioEditandoId);
+    relatorio.estoqueInicialDia = Array.isArray(relatorioExistente?.estoqueInicialDia)
+        ? relatorioExistente.estoqueInicialDia
+        : itensOrdenados.map(item => ({ ...item }));
 
     if (!relatorioPatioEditandoId) {
         relatorio.criadoEm = new Date().toISOString();

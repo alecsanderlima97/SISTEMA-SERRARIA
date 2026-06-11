@@ -71,6 +71,43 @@ let ultimoDocumentoSubproduto = null;
 let subprodutosSelecionadosRelatorio = new Set();
 let caminhoesSubprodutoForm = [];
 
+function numeroRomaneioSubproduto(venda) {
+    const texto = String(venda?.romaneio || venda?.romaneioCliente || '');
+    const numero = Number((texto.match(/\d+/g) || []).join(''));
+    return Number.isFinite(numero) ? numero : Number.MAX_SAFE_INTEGER;
+}
+
+function normalizarTipoSubproduto(tipo) {
+    const texto = String(tipo || '').trim();
+    const chave = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (chave === 'PO DE SERRA') return 'Po de Serra';
+    return texto;
+}
+
+function ordenarSubprodutosRelatorio(a, b) {
+    const data = String(a.data || '').localeCompare(String(b.data || ''));
+    if (data) return data;
+    const numero = numeroRomaneioSubproduto(a) - numeroRomaneioSubproduto(b);
+    return numero || String(a.romaneio || '').localeCompare(String(b.romaneio || ''), 'pt-BR', { numeric: true });
+}
+
+function atualizarContadorSubprodutos() {
+    const el = document.getElementById('subRelContador');
+    if (el) el.textContent = `${subprodutosSelecionadosRelatorio.size} selecionado(s)`;
+}
+
+function filtrarLancamentosSubprodutos() {
+    const busca = (document.getElementById('subRelBusca')?.value || '').trim().toLowerCase();
+    const produto = normalizarTipoSubproduto(document.getElementById('subRelProduto')?.value || '');
+    const inicio = document.getElementById('subRelDataInicio')?.value || '';
+    const fim = document.getElementById('subRelDataFim')?.value || '';
+    return vendasSubprodutosCache.filter(v => {
+        const texto = `${v.cliente || ''} ${v.romaneio || ''} ${v.romaneioCliente || ''}`.toLowerCase();
+        return (!busca || texto.includes(busca)) && (!produto || normalizarTipoSubproduto(v.tipo) === produto)
+            && (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
+    }).sort(ordenarSubprodutosRelatorio);
+}
+
 function hojeIsoSubproduto() {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
@@ -677,12 +714,33 @@ async function carregarLancamentosSubprodutos() {
     try {
         const snap = await getDocs(collection(db, 'vendas_subprodutos'));
         vendasSubprodutosCache = [];
-        snap.forEach(d => vendasSubprodutosCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => {
+            const venda = { id: d.id, ...d.data() };
+            venda.tipo = normalizarTipoSubproduto(venda.tipo);
+            vendasSubprodutosCache.push(venda);
+        });
         vendasSubprodutosCache.sort((a, b) => new Date(b.criadoEm || b.data || 0) - new Date(a.criadoEm || a.data || 0));
+        const produtoSelect = document.getElementById('subRelProduto');
+        if (produtoSelect) {
+            const atual = produtoSelect.value;
+            const produtos = [...new Set(vendasSubprodutosCache.map(v => v.tipo).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            produtoSelect.innerHTML = '<option value="">Todos os produtos</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+            produtoSelect.value = produtos.includes(atual) ? atual : '';
+        }
+        renderizarLancamentosSubprodutos();
+    } catch (e) {
+        console.error('Erro ao carregar vendas de subprodutos:', e);
+        lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Erro ao carregar lancamentos.</td></tr>';
+    }
+}
 
-        const ultimos = vendasSubprodutosCache.slice(0, 20);
+function renderizarLancamentosSubprodutos() {
+    const lista = document.getElementById('listaLancamentosSubprodutos');
+    if (!lista) return;
+    const ultimos = filtrarLancamentosSubprodutos();
         if (!ultimos.length) {
             lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
+            atualizarContadorSubprodutos();
             return;
         }
 
@@ -693,7 +751,7 @@ async function carregarLancamentosSubprodutos() {
             const valorUnit = Number(venda.valorUnitario || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             return `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:10px 8px; text-align:center;"><input type="checkbox" class="check-sub-relatorio" data-id="${venda.id}" ${subprodutosSelecionadosRelatorio.has(venda.id) ? 'checked' : ''} onchange="window.toggleSubprodutoRelatorio && window.toggleSubprodutoRelatorio('${venda.id}', this.checked)"></td>
+                    <td style="padding:10px 8px; text-align:center;"><input type="checkbox" class="check-sub-relatorio" data-id="${venda.id}" ${subprodutosSelecionadosRelatorio.has(venda.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.toggleSubprodutoRelatorio && window.toggleSubprodutoRelatorio('${venda.id}', this.checked)"></td>
                     <td style="padding:10px 8px; font-weight:800;">${venda.romaneio || '-'}</td>
                     <td style="padding:10px 8px;">${data}</td>
                     <td style="padding:10px 8px; font-weight:700;">${venda.cliente || '-'}</td>
@@ -706,15 +764,13 @@ async function carregarLancamentosSubprodutos() {
                 </tr>
             `;
         }).join('');
-    } catch (e) {
-        console.error('Erro ao carregar vendas de subprodutos:', e);
-        lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Erro ao carregar lancamentos.</td></tr>';
-    }
+    atualizarContadorSubprodutos();
 }
 
 window.toggleSubprodutoRelatorio = function(id, checked) {
     if (checked) subprodutosSelecionadosRelatorio.add(id);
     else subprodutosSelecionadosRelatorio.delete(id);
+    atualizarContadorSubprodutos();
 };
 
 window.toggleSelecionarSubprodutosRelatorio = function(checked) {
@@ -724,21 +780,20 @@ window.toggleSelecionarSubprodutosRelatorio = function(checked) {
         if (checked) subprodutosSelecionadosRelatorio.add(id);
         else subprodutosSelecionadosRelatorio.delete(id);
     });
+    atualizarContadorSubprodutos();
 };
 
 window.gerarRelatorioFechamentoSubprodutos = function() {
     const inicio = document.getElementById('subRelDataInicio')?.value || '';
     const fim = document.getElementById('subRelDataFim')?.value || '';
-    let itens = vendasSubprodutosCache.filter(v => {
-        const selecionado = subprodutosSelecionadosRelatorio.size === 0 || subprodutosSelecionadosRelatorio.has(v.id);
-        const dataOk = (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
-        return selecionado && dataOk;
-    });
+    let itens = filtrarLancamentosSubprodutos().filter(v =>
+        subprodutosSelecionadosRelatorio.size === 0 || subprodutosSelecionadosRelatorio.has(v.id)
+    );
     if (!itens.length) {
         alert('Selecione cargas ou informe um periodo com lancamentos.');
         return;
     }
-    itens = itens.sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
+    itens = itens.sort(ordenarSubprodutosRelatorio);
     const resumo = {};
     itens.forEach(v => {
         const key = v.tipo || 'SEM MATERIAL';
@@ -763,9 +818,15 @@ window.gerarRelatorioFechamentoSubprodutos = function() {
         <tr><td>${tipo}</td><td style="text-align:center;">${r.viagens}</td><td style="text-align:right;">${r.qtd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.unidade}</td><td style="text-align:right;">R$ ${r.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
     `).join('');
     const totalGeral = itens.reduce((acc, v) => acc + Number(v.total || 0), 0);
+    const quantidadeGeral = itens.reduce((acc, v) => acc + Number(v.quantidade || 0), 0);
     const periodo = `${inicio ? new Date(inicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${fim ? new Date(fim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`;
     const html = `
-        <div class="doc-header"><div><img src="logo.png" class="doc-logo" onerror="this.style.display='none'"><p>Fechamento de Subprodutos</p></div><div class="doc-title"><h1>Fechamento de Subprodutos</h1><p>Periodo: ${periodo}</p></div></div>
+        <div class="doc-header"><div><img src="logo.png" class="doc-logo" onerror="this.style.display='none'"><p>Serraria Vanmarte</p></div><div class="doc-title"><h1>Fechamento de Subprodutos</h1><p>${periodo}</p></div></div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 18px;">
+            <div style="padding:12px; border:1px solid #cbd5e1; border-radius:6px;"><small>CARREGAMENTOS</small><strong style="display:block; font-size:20px;">${itens.length}</strong></div>
+            <div style="padding:12px; border:1px solid #cbd5e1; border-radius:6px;"><small>QUANTIDADE TOTAL</small><strong style="display:block; font-size:20px;">${quantidadeGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>
+            <div style="padding:12px; border:1px solid #cbd5e1; border-radius:6px;"><small>VALOR TOTAL</small><strong style="display:block; font-size:20px;">R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>
+        </div>
         <h3>Resumo</h3>
         <table class="doc-table"><thead><tr><th>Material</th><th>Viagens</th><th>Quantidade</th><th>Total</th></tr></thead><tbody>${resumoHtml}</tbody></table>
         <h3>Carregamentos</h3>
@@ -834,7 +895,7 @@ if (btnCalcCavaco) {
                 placaCaminhao: placaCaminhao.toUpperCase().trim(),
                 placaCarreta: placaCarreta.toUpperCase().trim(),
                 medidas: { alt, larg, comp, cupimAdicional },
-                tipo: tipo,
+                tipo: normalizarTipoSubproduto(tipo),
                 unidade: unidade,
                 quantidade: qtd,
                 valorUnitario: valorUni,
@@ -961,6 +1022,10 @@ window.excluirVendaSubproduto = async (id) => {
 // Iniciar os clientes de subprodutos na carga do script
 carregarClientesSubprodutos();
 carregarLancamentosSubprodutos();
+['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim'].forEach(id => {
+    const campo = document.getElementById(id);
+    if (campo) campo.addEventListener(id === 'subRelBusca' ? 'input' : 'change', renderizarLancamentosSubprodutos);
+});
 garantirDataVendaSubproduto();
 
 // 4. Cálculo de Fardo Completo

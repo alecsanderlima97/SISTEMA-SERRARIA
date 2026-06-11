@@ -35,6 +35,7 @@ let clientesDisponiveis = [];
 let transportadorasDisponiveis = [];
 let patioRelatorioRomaneio = null;
 let patioItensDisponiveis = [];
+let patioCarregamentoSequencia = 0;
 let pacoteEditandoId = null;
 
 function parseNumeroBR(valor) {
@@ -195,13 +196,33 @@ function coresClassePatioRomaneio(valor) {
     return { color: '#334155', bg: '#f8fafc' };
 }
 
+function detalhesConfiguracaoPatioRomaneio(item) {
+    const raw = String(item.pecasRaw || item.configPct || '').trim().replace(/\s/g, '');
+    const match = raw.match(/^(\d+)x(\d+)(?:\+(\d+))?$/i);
+    const altura = Number(item.altura ?? item.alturas ?? item.alt ?? match?.[1] ?? 0);
+    const camada = Number(item.camada ?? item.larguraPacote ?? item.cam ?? match?.[2] ?? 0);
+    const amarras = Number(item.amarras ?? item.am ?? match?.[3] ?? 0);
+    const pecas = Number(item.pecas ?? item.pecasPorPacote ?? ((altura * camada) + amarras) ?? 0);
+    return { altura, camada, amarras, pecas };
+}
+
+function nomeMadeiraPatioRomaneio(tipo) {
+    const nome = String(tipo || '').trim().toUpperCase();
+    return !nome || nome === 'MADEIRA' || nome === 'MADEIRA DO PATIO' ? 'TÁBUA' : nome;
+}
+
 function chavePatioRomaneio(item) {
+    const { altura: alt, camada: cam, amarras, pecas } = detalhesConfiguracaoPatioRomaneio(item);
     return [
         numeroClasseRomaneio(item.classe),
-        String(item.tipo || '').toUpperCase(),
+        nomeMadeiraPatioRomaneio(item.tipo),
         Number(item.espessura || 0).toFixed(1),
         Number(item.largura || 0).toFixed(1),
         Number(item.comprimento || 0).toFixed(2),
+        alt,
+        cam,
+        amarras,
+        pecas,
     ].join('|');
 }
 
@@ -212,9 +233,15 @@ function agruparItensPatioRomaneio(itens) {
         if (pacotes <= 0) return;
         const chave = chavePatioRomaneio(item);
         if (!grupos.has(chave)) {
+            const { altura, camada, amarras, pecas } = detalhesConfiguracaoPatioRomaneio(item);
             grupos.set(chave, {
                 ...item,
                 id: chave,
+                tipo: nomeMadeiraPatioRomaneio(item.tipo),
+                altura,
+                camada,
+                amarras,
+                pecas,
                 patioItemIds: [],
                 pacotes: 0,
                 totalPecas: 0,
@@ -226,15 +253,6 @@ function agruparItensPatioRomaneio(itens) {
         grupo.pacotes += pacotes;
         grupo.totalPecas += Number(item.totalPecas || (Number(item.pecas || 0) * pacotes) || 0);
         grupo.volume += Number(item.volume || (Number(item.volumeUnidade || 0) * pacotes) || 0);
-        if (Number(item.pecas || 0) > Number(grupo.pecas || 0)) {
-            grupo.pecas = item.pecas;
-            grupo.pecasRaw = item.pecasRaw || item.pecas;
-            grupo.altura = item.altura;
-            grupo.alturas = item.alturas;
-            grupo.camada = item.camada;
-            grupo.larguraPacote = item.larguraPacote;
-            grupo.amarras = item.amarras;
-        }
     });
     return Array.from(grupos.values());
 }
@@ -247,6 +265,7 @@ function obterItemPatioSelecionadoRomaneio() {
 async function carregarPatioParaRomaneio() {
     const select = document.getElementById('v2-select-patio');
     if (!select) return;
+    const sequencia = ++patioCarregamentoSequencia;
     select.innerHTML = '<option value="">Usar madeira cadastrada/manual...</option>';
     patioRelatorioRomaneio = null;
     patioItensDisponiveis = [];
@@ -260,6 +279,7 @@ async function carregarPatioParaRomaneio() {
         }
         const relatorios = [];
         snap.forEach(d => relatorios.push({ id: d.id, ...d.data() }));
+        if (sequencia !== patioCarregamentoSequencia) return;
         relatorios.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || b.data || 0) - new Date(a.atualizadoEm || a.criadoEm || a.data || 0));
         patioRelatorioRomaneio = relatorios[0] || null;
         patioItensDisponiveis = agruparItensPatioRomaneio(patioRelatorioRomaneio?.itens || [])
@@ -270,16 +290,21 @@ async function carregarPatioParaRomaneio() {
                 || String(a.tipo || '').localeCompare(String(b.tipo || ''), 'pt-BR')
                 || Number(b.pecas || 0) - Number(a.pecas || 0));
 
+        const fragmento = document.createDocumentFragment();
         patioItensDisponiveis.forEach(item => {
             const opt = document.createElement('option');
             const cores = coresClassePatioRomaneio(item.classe);
             opt.value = item.id;
-            opt.textContent = `${item.classe || '-'} - ${item.tipo || 'MADEIRA'} - ${Number(item.espessura || 0).toLocaleString('pt-BR')} / ${Number(item.largura || 0).toLocaleString('pt-BR')} / ${Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ${item.pacotes || 0} pct`;
+            const configuracao = `(${Number(item.altura || 0)}x${Number(item.camada || 0)})${Number(item.amarras || 0) > 0 ? `+${Number(item.amarras)}` : ''} = ${Number(item.pecas || 0)} pç`;
+            opt.textContent = `${item.classe || '-'} - ${item.tipo || 'MADEIRA'} - ${Number(item.espessura || 0).toLocaleString('pt-BR')} / ${Number(item.largura || 0).toLocaleString('pt-BR')} / ${Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ${configuracao} - ${item.pacotes || 0} pct`;
             opt.style.color = cores.color;
             opt.style.backgroundColor = cores.bg;
-            opt.style.fontWeight = '800';
-            select.appendChild(opt);
+            opt.style.fontWeight = '500';
+            fragmento.appendChild(opt);
         });
+        if (sequencia !== patioCarregamentoSequencia) return;
+        select.innerHTML = '<option value="">Usar madeira cadastrada/manual...</option>';
+        select.appendChild(fragmento);
     } catch (error) {
         console.error('Erro ao carregar patio para romaneio:', error);
     }
@@ -306,13 +331,18 @@ function selecionarPacotePatioRomaneio() {
     set('v2-largura', Number(item.largura || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 }));
     set('v2-comprimento', Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     set('v2-comprimento-real', Number(item.comprimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    set('v2-altura', item.altura || item.alturas || '');
-    set('v2-camada', item.camada || item.larguraPacote || '');
-    set('v2-amarras', item.amarras || '');
-    set('v2-quantidade', item.pecas || '');
+    set('v2-altura', item.altura ?? item.alturas ?? item.alt ?? '');
+    set('v2-camada', item.camada ?? item.larguraPacote ?? item.cam ?? '');
+    set('v2-amarras', item.amarras ?? item.am ?? '');
+    set('v2-quantidade', item.pecas ?? item.pecasRaw ?? item.pecasPorPacote ?? '');
     set('v2-qtd-pacotes', Math.min(1, Number(item.pacotes || 0)) || 1);
     const qtdInput = document.getElementById('v2-qtd-pacotes');
     if (qtdInput) qtdInput.max = Number(item.pacotes || 0);
+    const saldoInfo = document.getElementById('v2-saldo-patio');
+    if (saldoInfo) {
+        saldoInfo.style.display = 'block';
+        saldoInfo.textContent = `Saldo no patio: ${Number(item.pacotes || 0)} pacote(s).`;
+    }
     atualizarVolumePreview();
 }
 
@@ -333,7 +363,7 @@ function recalcularTotaisPatioItens(itens) {
     };
 }
 
-async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
+async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
     const vinculados = (pacotes || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId);
     if (!vinculados.length) return;
 
@@ -373,7 +403,22 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
                     ...itens[idx],
                     pacotes: novoTotal,
                     totalPecas: novoTotal * pecasPacote,
-                    volume: Number((novoTotal * volumeUnidade).toFixed(3))
+                    volume: Number((novoTotal * volumeUnidade).toFixed(3)),
+                    movimentacoesPatio: sinal < 0 ? [
+                        ...(Array.isArray(itens[idx].movimentacoesPatio) ? itens[idx].movimentacoesPatio : []),
+                        {
+                            tipo: 'SAIDA_ROMANEIO',
+                            romaneio: contexto.numero || '-',
+                            cliente: contexto.cliente || '-',
+                            pacotes: delta,
+                            saldo: novoTotal,
+                            dataHora: new Date().toISOString()
+                        }
+                    ].slice(-20) : (itens[idx].movimentacoesPatio || []),
+                    ultimoUsoRomaneio: sinal < 0 ? {
+                        romaneio: contexto.numero || '-', cliente: contexto.cliente || '-', pacotes: delta,
+                        saldo: novoTotal, dataHora: new Date().toISOString()
+                    } : itens[idx].ultimoUsoRomaneio
                 };
                 restante -= delta;
             }
@@ -383,7 +428,12 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal) {
         await updateDoc(ref, {
             itens,
             totais: recalcularTotaisPatioItens(itens),
-            atualizadoEm: new Date().toISOString()
+            atualizadoEm: new Date().toISOString(),
+            ultimaAlteracaoPatio: sinal < 0 ? {
+                acao: `Baixa de pacotes no romaneio ${contexto.numero || '-'}`,
+                usuario: contexto.cliente || 'Romaneio',
+                dataHora: new Date().toISOString()
+            } : dados.ultimaAlteracaoPatio
         });
     }
 }
@@ -764,6 +814,17 @@ function adicionarPacote() {
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     const itemPatio = obterItemPatioSelecionadoRomaneio();
+
+    if (itemPatio) {
+        const jaReservados = romaneioAtual.pacotes
+            .filter(p => p.origemPatio && p.patioRelatorioId === patioRelatorioRomaneio?.id && p.patioCubagemKey === chavePatioRomaneio(itemPatio))
+            .reduce((total, p) => total + Number(p.patioQtdPacotes || p.qtdPacotes || 0), 0);
+        const saldoDisponivel = Number(itemPatio.pacotes || 0) - jaReservados;
+        if (qtdPacotes > saldoDisponivel) {
+            alert(`Quantidade acima do saldo do patio. Disponivel para este romaneio: ${Math.max(0, saldoDisponivel)} pacote(s).`);
+            return;
+        }
+    }
     
     const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
     const larg = parseNumeroBR(document.getElementById('v2-largura').value);
@@ -800,6 +861,12 @@ function adicionarPacote() {
         alt, cam, amarras, configPct,
         qtdPacotes,
         precoM3,
+        origemPatio: !!itemPatio,
+        patioRelatorioId: itemPatio ? patioRelatorioRomaneio?.id : null,
+        patioItemId: itemPatio ? itemPatio.id : null,
+        patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
+        patioQtdPacotes: itemPatio ? qtdPacotes : 0,
+        patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
         m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
         m3FreteTotal: parseFloat((m3FreteUnit * qtdPacotes).toFixed(3)),
         valorTotalWood: parseFloat((m3VendaUnit * qtdPacotes * precoM3).toFixed(2))
@@ -867,6 +934,9 @@ function salvarEdicaoPacote() {
     const especie = document.getElementById('v2-especie')?.value || '';
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
+    const pacoteOriginal = romaneioAtual.pacotes.find(x => x.id === pacoteEditandoId);
+    const itemPatio = obterItemPatioSelecionadoRomaneio()
+        || (pacoteOriginal?.origemPatio ? patioItensDisponiveis.find(item => chavePatioRomaneio(item) === pacoteOriginal.patioCubagemKey) : null);
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
     const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
     const larg = parseNumeroBR(document.getElementById('v2-largura').value);
@@ -880,9 +950,15 @@ function salvarEdicaoPacote() {
         return;
     }
 
-    if (itemPatio && qtdPacotes > Number(itemPatio.pacotes || 0)) {
-        alert(`Saldo insuficiente no patio. Disponivel: ${itemPatio.pacotes || 0} pacote(s).`);
-        return;
+    if (itemPatio) {
+        const outrosReservados = romaneioAtual.pacotes
+            .filter(p => p.id !== pacoteEditandoId && p.origemPatio && p.patioCubagemKey === chavePatioRomaneio(itemPatio))
+            .reduce((total, p) => total + Number(p.patioQtdPacotes || p.qtdPacotes || 0), 0);
+        const disponivel = Number(itemPatio.pacotes || 0) - outrosReservados;
+        if (qtdPacotes > disponivel) {
+            alert(`Saldo insuficiente no patio. Disponivel para este item: ${Math.max(0, disponivel)} pacote(s).`);
+            return;
+        }
     }
 
     const alt = parseInt(document.getElementById('v2-altura').value) || 0;
@@ -1028,9 +1104,13 @@ function gerarHtmlDocumentoRomaneio(payload) {
         </table>`;
     return `
         <div class="doc-header"><div><img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong><br>${emitente.cnpj ? `CNPJ: ${emitente.cnpj}<br>` : ''}${(emitente.logradouro || '')} ${(emitente.numero || '')}<br>${emitente.cidade || ''}</div></div><div class="doc-title"><h1>${r.cliente || 'Comprador'} - Carga ${r.numero || r.numeroCarga || '-'}</h1><p><strong>Romaneio de Carga</strong></p><p>Emitido em ${new Date().toLocaleString('pt-BR')}</p></div></div>
-        <div class="doc-grid"><div class="doc-card"><h3>Dados do Comprador</h3><p><strong>Cliente:</strong> ${r.cliente || '-'}</p><p><strong>CNPJ/CPF:</strong> ${clienteObj.cnpj || clienteObj.cpf || '-'}</p><p><strong>Cidade:</strong> ${clienteObj.cidade || '-'}</p>${r.formaPagamento ? `<p><strong>Pagamento:</strong> ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</p>` : ''}${r.observacaoCliente ? `<p><strong>Obs. cliente:</strong> ${r.observacaoCliente}</p>` : ''}</div><div class="doc-card"><h3>Dados Logisticos</h3><p><strong>Data carreg.:</strong> ${r.logistica?.dataCarregamento || '-'}</p><p><strong>Data descarreg.:</strong> ${r.logistica?.dataDescarregamento || '-'}</p><p><strong>Motorista:</strong> ${r.logistica?.motorista || '-'}</p><p><strong>Caminhao:</strong> ${r.logistica?.caminhao || '-'}</p><p><strong>Placa:</strong> ${r.logistica?.placa || '-'}</p><p><strong>Transporte:</strong> ${r.logistica?.responsavelFrete || '-'}</p></div></div>
+        <div style="display:grid; grid-template-columns:1.15fr .85fr; gap:8px; margin-bottom:10px; font-size:12px;">
+            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:9px 11px;"><strong style="color:#0f766e;">COMPRADOR</strong><div style="margin-top:5px;"><b>${r.cliente || '-'}</b> | ${clienteObj.cnpj || clienteObj.cpf || '-'} | ${clienteObj.cidade || '-'}</div>${r.formaPagamento ? `<div>Pagamento: ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</div>` : ''}${r.observacaoCliente ? `<div>Obs.: ${r.observacaoCliente}</div>` : ''}</div>
+            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:9px 11px;"><strong style="color:#1d4ed8;">LOGISTICA</strong><div style="margin-top:5px;">Carreg.: ${r.logistica?.dataCarregamento || '-'} | Descarreg.: ${r.logistica?.dataDescarregamento || '-'}</div><div>${r.logistica?.motorista || '-'} | ${r.logistica?.caminhao || '-'} | ${r.logistica?.placa || '-'}</div><div>Transporte: ${r.logistica?.responsavelFrete || '-'}</div></div>
+        </div>
         ${pacotesHtml}
-        <div class="doc-grid" style="margin-top:20px;"><div class="doc-card"><h3>Resumo da Carga</h3><p><strong>Total de pacotes:</strong> ${totalPcts}</p><p><strong>Total de pecas:</strong> ${totalPcs}</p><p><strong>Total m3:</strong> <span class="doc-total">${totalM3Madeira.toFixed(3)} m3</span></p></div><div class="doc-card"><h3>Resumo Financeiro</h3><p><strong>Soma dos produtos:</strong> <span class="doc-money">R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>${Number(r.financeiro?.adicionalMadeira || 0) ? `<p><strong>Ajuste madeira:</strong> R$ ${Number(r.financeiro?.adicionalMadeira || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.financeiro?.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}${r.financeiro?.baseNF === 'MEIA' ? `<p><strong>Base NF meia carga:</strong> R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>` : ''}<p><strong>Impostos / taxa NF (${taxa}%):</strong> R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><p><strong>Subtotal liquido:</strong> <span class="doc-money">R$ ${subtotalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p><strong>Frete base:</strong> ${totalM3Frete.toFixed(3)} m3 x R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>${Number(r.logistica?.adicionalFrete || 0) ? `<p><strong>Ajuste frete:</strong> R$ ${Number(r.logistica?.adicionalFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.logistica?.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}<p><strong>Total frete:</strong> <span style="color:#1d4ed8; font-weight:800;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p><p style="font-size:20px; margin-top:14px;"><strong>Total da carga:</strong> <span class="doc-money">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p></div></div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;"><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PACOTES</small><strong style="display:block; font-size:22px;">${totalPcts}</strong></div><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PECAS</small><strong style="display:block; font-size:22px;">${totalPcs}</strong></div><div style="padding:11px; border-radius:6px; background:#ecfdf5; text-align:center;"><small>VOLUME</small><strong style="display:block; font-size:22px; color:#047857;">${totalM3Madeira.toFixed(3)} m3</strong></div></div>
+        <div style="margin-top:8px; border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; font-size:12px;"><strong style="color:#0f172a;">RESUMO FINANCEIRO</strong><div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:7px;"><div>Madeira<br><b>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Taxa NF (${taxa}%)<br><b>R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Frete<br><b style="color:#1d4ed8;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Total da carga<br><b style="color:#047857; font-size:16px;">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div></div>${r.financeiro?.baseNF === 'MEIA' ? `<div style="margin-top:6px;">Base NF meia carga: R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>` : ''}</div>
         ${r.observacaoCarga ? `<div class="doc-note"><strong>Observacoes da carga</strong><div style="margin-top:8px; white-space:pre-wrap;">${r.observacaoCarga}</div></div>` : ''}
         <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>`;
 }
@@ -1361,7 +1441,7 @@ window.finalizarRomaneioV2 = async () => {
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -pecasNovas);
                 }
             }
-            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1);
+            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
             
             // 3. Atualizar o Firestore
             const dadosNovos = { ...romaneioAtual };
@@ -1391,7 +1471,7 @@ window.finalizarRomaneioV2 = async () => {
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -totalPecasVendidas);
                 }
             }
-            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1);
+            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
             alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);
         }
         
@@ -1623,6 +1703,11 @@ function limparCamposPacote() {
     if (selectPatio) selectPatio.value = '';
     const qtdPacotes = document.getElementById('v2-qtd-pacotes');
     if (qtdPacotes) qtdPacotes.removeAttribute('max');
+    const saldoPatio = document.getElementById('v2-saldo-patio');
+    if (saldoPatio) {
+        saldoPatio.style.display = 'none';
+        saldoPatio.textContent = '';
+    }
     const grupoManual = document.getElementById('grupoV2MadeiraManual');
     if (grupoManual) grupoManual.style.display = 'none';
     const inputManual = document.getElementById('v2-produto-manual');
