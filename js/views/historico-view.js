@@ -25,6 +25,7 @@
                         </div>
                         <div class="input-group" style="width: 160px; margin-bottom: 0;"><label>Data inicial</label><input type="date" id="histRelDataInicio" style="height:48px;"></div>
                         <div class="input-group" style="width: 160px; margin-bottom: 0;"><label>Data final</label><input type="date" id="histRelDataFim" style="height:48px;"></div>
+                        <div class="input-group" style="width: 160px; margin-bottom: 0;"><label><i class="fa-solid fa-arrow-down-wide-short"></i> Ordem</label><select id="filtroHistoricoOrdem" style="height:48px;"><option value="recentes">Mais recentes</option><option value="antigos">Mais antigos</option></select></div>
                         <button onclick="renderizarHistorico()" class="btn-primary" style="margin-top: 25px; height: 48px;"><i class="fa-solid fa-sync"></i> Atualizar</button>
                         <button onclick="window.gerarRelatorioHistoricoMensal && window.gerarRelatorioHistoricoMensal()" class="btn-primary" style="margin-top: 25px; height: 48px; background:#16a34a;"><i class="fa-solid fa-print"></i> Relatorio do Periodo</button>
                         <div id="histRelContador" style="margin-top:25px; height:48px; min-width:145px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(45,212,191,.35); border-radius:8px; color:#5eead4; font-weight:800;">0 selecionados</div>

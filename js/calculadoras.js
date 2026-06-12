@@ -91,6 +91,11 @@ function ordenarSubprodutosRelatorio(a, b) {
     return numero || String(a.romaneio || '').localeCompare(String(b.romaneio || ''), 'pt-BR', { numeric: true });
 }
 
+function ordenarSubprodutosConformeFiltro(a, b) {
+    const resultado = ordenarSubprodutosRelatorio(a, b);
+    return (document.getElementById('subRelOrdem')?.value || 'recentes') === 'recentes' ? -resultado : resultado;
+}
+
 function atualizarContadorSubprodutos() {
     const el = document.getElementById('subRelContador');
     if (el) el.textContent = `${subprodutosSelecionadosRelatorio.size} selecionado(s)`;
@@ -105,7 +110,7 @@ function filtrarLancamentosSubprodutos() {
         const texto = `${v.cliente || ''} ${v.romaneio || ''} ${v.romaneioCliente || ''}`.toLowerCase();
         return (!busca || texto.includes(busca)) && (!produto || normalizarTipoSubproduto(v.tipo) === produto)
             && (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
-    }).sort(ordenarSubprodutosRelatorio);
+    }).sort(ordenarSubprodutosConformeFiltro);
 }
 
 function hojeIsoSubproduto() {
@@ -531,6 +536,7 @@ function atualizarPrecoAcordadoCavacoPo(cli) {
             valInput.value = window.formatCurrencyValue(valor);
         }
     }
+    atualizarTotalReciboSubproduto();
 }
 
 // Ouvintes de alteração automática de preços ao trocar o tipo de produto
@@ -555,7 +561,21 @@ function calcularCubagemCaminhaoTempoReal() {
             qtdInput.value = String(Math.round(vol));
         }
     }
+    atualizarTotalReciboSubproduto();
 }
+
+function atualizarTotalReciboSubproduto() {
+    const quantidadeTexto = String(document.getElementById('calcCavQtd')?.value || '').trim();
+    const valorTexto = String(document.getElementById('calcCavValor')?.value || '').trim();
+    const quantidade = window.parseDecimalValue ? window.parseDecimalValue(quantidadeTexto) : 0;
+    const valorUnitario = window.parseCurrencyValue ? window.parseCurrencyValue(valorTexto) : 0;
+    const preview = document.getElementById('calcCavTotalPreview');
+    if (preview) {
+        const total = Number.isFinite(quantidade * valorUnitario) ? quantidade * valorUnitario : 0;
+        preview.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+}
+window.atualizarTotalReciboSubproduto = atualizarTotalReciboSubproduto;
 
 const btnAdicionarCaminhaoSub = document.getElementById('btnAdicionarCaminhaoSub');
 if (btnAdicionarCaminhaoSub) {
@@ -650,6 +670,10 @@ function gerarHtmlReciboSubproduto(venda) {
                 <td class="doc-money">R$ ${Number(venda.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
             </tr></tbody>
         </table>
+        <div style="margin-top:16px; padding:14px 18px; border:2px solid #0f766e; border-radius:7px; background:#f0fdfa; text-align:right;">
+            <span style="display:block; color:#475569; font-size:12px; font-weight:700;">VALOR TOTAL DO RECIBO</span>
+            <strong style="display:block; color:#0f766e; font-size:26px; margin-top:3px;">R$ ${Number(venda.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+        </div>
         <div class="doc-signatures"><div>Responsavel / Conferente</div><div>Cliente / Motorista</div></div>
     `;
 }
@@ -738,6 +762,7 @@ function renderizarLancamentosSubprodutos() {
     const lista = document.getElementById('listaLancamentosSubprodutos');
     if (!lista) return;
     const ultimos = filtrarLancamentosSubprodutos();
+        atualizarResumoCarregamentosHoje();
         if (!ultimos.length) {
             lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
             atualizarContadorSubprodutos();
@@ -767,6 +792,21 @@ function renderizarLancamentosSubprodutos() {
     atualizarContadorSubprodutos();
 }
 
+function atualizarResumoCarregamentosHoje() {
+    const painel = document.getElementById('resumoCarregamentosHoje');
+    if (!painel) return;
+    const hoje = hojeIsoSubproduto();
+    const vendasHoje = vendasSubprodutosCache.filter(venda => venda.data === hoje);
+    const metros = vendasHoje.reduce((total, venda) => total + Number(venda.quantidade || 0), 0);
+    const valor = vendasHoje.reduce((total, venda) => total + Number(venda.total || 0), 0);
+    const qtdEl = document.getElementById('resumoCarregamentosHojeQtd');
+    const valorEl = document.getElementById('resumoCarregamentosHojeValor');
+    const viagensEl = document.getElementById('resumoCarregamentosHojeViagens');
+    if (qtdEl) qtdEl.textContent = `${metros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m³`;
+    if (valorEl) valorEl.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    if (viagensEl) viagensEl.textContent = `${vendasHoje.length} carregamento${vendasHoje.length === 1 ? '' : 's'}`;
+}
+
 window.toggleSubprodutoRelatorio = function(id, checked) {
     if (checked) subprodutosSelecionadosRelatorio.add(id);
     else subprodutosSelecionadosRelatorio.delete(id);
@@ -793,7 +833,7 @@ window.gerarRelatorioFechamentoSubprodutos = function() {
         alert('Selecione cargas ou informe um periodo com lancamentos.');
         return;
     }
-    itens = itens.sort(ordenarSubprodutosRelatorio);
+    itens = itens.sort(ordenarSubprodutosConformeFiltro);
     const resumo = {};
     itens.forEach(v => {
         const key = v.tipo || 'SEM MATERIAL';
@@ -1022,7 +1062,7 @@ window.excluirVendaSubproduto = async (id) => {
 // Iniciar os clientes de subprodutos na carga do script
 carregarClientesSubprodutos();
 carregarLancamentosSubprodutos();
-['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim'].forEach(id => {
+['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim', 'subRelOrdem'].forEach(id => {
     const campo = document.getElementById(id);
     if (campo) campo.addEventListener(id === 'subRelBusca' ? 'input' : 'change', renderizarLancamentosSubprodutos);
 });
@@ -1091,8 +1131,14 @@ inputsFinanceirosCalc.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         input.addEventListener('input', window.formatCurrencyInput);
+        if (id === 'calcCavValor') {
+            input.addEventListener('input', () => requestAnimationFrame(atualizarTotalReciboSubproduto));
+            input.addEventListener('change', atualizarTotalReciboSubproduto);
+        }
     }
 });
+document.getElementById('calcCavQtd')?.addEventListener('change', atualizarTotalReciboSubproduto);
+atualizarTotalReciboSubproduto();
 window.switchTabSubprodutos = function(tabName) {
     const tabRecibo = document.getElementById('panelEmissaoCavaco');
     const tabClientes = document.getElementById('panelCadastroClientesSub');

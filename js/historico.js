@@ -34,6 +34,11 @@ function ordenarHistoricoRelatorio(a, b, tipo) {
     return data || numeroHistorico(a) - numeroHistorico(b);
 }
 
+function ordenarHistoricoConformeFiltro(a, b, tipo) {
+    const resultado = ordenarHistoricoRelatorio(a, b, tipo);
+    return (document.getElementById('filtroHistoricoOrdem')?.value || 'recentes') === 'recentes' ? -resultado : resultado;
+}
+
 function atualizarContadorHistorico() {
     const el = document.getElementById('histRelContador');
     if (el) el.textContent = `${historicoSelecionados.size} selecionado(s)`;
@@ -220,7 +225,7 @@ function aplicarFiltro() {
             const produtos = (r.pacotes || []).map(p => p.produtoNome || p.tipoMadeira || '').join(' ');
             return (!termo || texto.includes(termo)) && (!produto || produtos.includes(produto))
                 && (!inicio || data >= inicio) && (!fim || data <= fim);
-        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'madeira'));
+        }).sort((a, b) => ordenarHistoricoConformeFiltro(a, b, 'madeira'));
 
         if(filtrados.length === 0) {
             listaHistorico.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nenhum romaneio de madeira encontrado.</td></tr>`;
@@ -276,7 +281,7 @@ function aplicarFiltro() {
             const texto = `${r.cliente || ''} ${r.romaneio || ''} ${r.romaneioCliente || ''}`.toLowerCase();
             return (!termo || texto.includes(termo)) && (!produto || r.tipo === produto)
                 && (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'subprodutos'));
+        }).sort((a, b) => ordenarHistoricoConformeFiltro(a, b, 'subprodutos'));
 
         if(filtrados.length === 0) {
             listaHistorico.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma venda de subproduto encontrada.</td></tr>`;
@@ -471,7 +476,7 @@ window.gerarRelatorioHistoricoMensal = function() {
             const dataOk = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
             const texto = `${r.cliente || ''} ${r.romaneio || ''} ${r.romaneioCliente || ''}`.toLowerCase();
             return selecionado && dataOk && (!termo || texto.includes(termo)) && (!produto || r.tipo === produto);
-        }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'subprodutos'));
+        }).sort((a, b) => ordenarHistoricoConformeFiltro(a, b, 'subprodutos'));
         if (!itens.length) return alert('Nenhuma venda de subproduto encontrada no periodo.');
         const total = itens.reduce((acc, r) => acc + Number(r.total || 0), 0);
         const linhas = itens.map(r => `<tr><td>${r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td><td>${r.romaneio || '-'}</td><td>${r.cliente || '-'}</td><td>${r.tipo || '-'}</td><td style="text-align:right;">${Number(r.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${r.unidade || 'm3'}</td><td style="text-align:right;">R$ ${Number(r.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`).join('');
@@ -485,7 +490,7 @@ window.gerarRelatorioHistoricoMensal = function() {
         const texto = `${r.cliente || ''} ${r.numero || ''} ${r.numeroCarga || ''}`.toLowerCase();
         const produtos = (r.pacotes || []).map(p => p.produtoNome || p.tipoMadeira || '').join(' ');
         return selecionado && dataOk && (!termo || texto.includes(termo)) && (!produto || produtos.includes(produto));
-    }).sort((a, b) => ordenarHistoricoRelatorio(a, b, 'madeira'));
+    }).sort((a, b) => ordenarHistoricoConformeFiltro(a, b, 'madeira'));
     if (!itens.length) return alert('Nenhuma venda de madeira serrada encontrada no periodo.');
     const resumo = {};
     let totalVolume = 0;
@@ -635,7 +640,7 @@ function inicializarModuloHistorico() {
         };
     }
 
-    ['filtroHistoricoProduto', 'histRelDataInicio', 'histRelDataFim'].forEach(id => {
+    ['filtroHistoricoProduto', 'histRelDataInicio', 'histRelDataFim', 'filtroHistoricoOrdem'].forEach(id => {
         const campo = document.getElementById(id);
         if (campo) campo.onchange = aplicarFiltro;
     });

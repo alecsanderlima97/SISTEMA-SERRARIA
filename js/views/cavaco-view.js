@@ -195,8 +195,14 @@
                                 <div class="sub-recibo-grid">
                                     <div class="input-group"><label style="color:#fbbf24; font-weight:900;">Tipo de Subproduto *</label><select id="calcCavTipo" required style="border-color:#f59e0b; background:rgba(245,158,11,0.12);"><option value="">SELECIONE O MATERIAL...</option><option value="Cavaco / Maravalha">Cavaco / Maravalha</option><option value="Po de Serra">Po de Serra</option><option value="Casca">Casca</option><option value="Lenha">LENHA DE REFUGO</option></select></div>
                                     <div class="input-group"><label>Unidade de Medida</label><select id="calcCavUnidade"><option value="m3">Metros Cubicos (m3)</option><option value="Tonelada">Toneladas (ton)</option><option value="Carga">Carga / Caminhao</option><option value="Saco">Saco</option></select></div>
-                                    <div class="input-group"><label>Quantidade (m3 / un)</label><input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00"></div>
-                                    <div class="input-group"><label>Valor Unitario R$ / m3 *</label><input type="text" id="calcCavValor" placeholder="R$ 0,00"></div>
+                                    <div class="input-group"><label>Quantidade (m3 / un)</label><input type="text" id="calcCavQtd" inputmode="decimal" placeholder="Ex: 15,00" oninput="window.atualizarTotalReciboSubproduto?.()"></div>
+                                    <div class="input-group"><label>Valor Unitario R$ / m3 *</label><input type="text" id="calcCavValor" placeholder="R$ 0,00" oninput="requestAnimationFrame(() => window.atualizarTotalReciboSubproduto?.())"></div>
+                                </div>
+                                <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+                                    <div style="min-width:260px; padding:12px 16px; border:1px solid rgba(45,212,191,.5); border-radius:8px; background:rgba(13,148,136,.12); text-align:right;">
+                                        <small style="display:block; color:var(--text-muted); font-weight:700;">VALOR TOTAL DO RECIBO</small>
+                                        <strong id="calcCavTotalPreview" style="display:block; margin-top:3px; color:#5eead4; font-size:1.45rem;">R$ 0,00</strong>
+                                    </div>
                                 </div>
                             </div>
 
@@ -213,11 +219,17 @@
                         <div class="section-title">
                             <h2><i class="fa-solid fa-clock-rotate-left"></i> Ultimos Lancamentos</h2>
                         </div>
+                        <div id="resumoCarregamentosHoje" role="status" style="display:grid; grid-template-columns:auto 1fr 1fr; align-items:center; gap:16px; margin-bottom:12px; padding:13px 16px; border:1px solid rgba(245,158,11,.55); border-left:5px solid #f59e0b; border-radius:8px; background:rgba(245,158,11,.11);">
+                            <div style="color:#fbbf24; font-size:22px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div><small style="display:block; color:var(--text-muted); font-weight:700;">CARREGADO HOJE</small><strong id="resumoCarregamentosHojeQtd" style="display:block; margin-top:3px; font-size:1.2rem; color:#f8fafc;">0,00 m³</strong><span id="resumoCarregamentosHojeViagens" style="font-size:11px; color:var(--text-muted);">0 carregamentos</span></div>
+                            <div style="text-align:right;"><small style="display:block; color:var(--text-muted); font-weight:700;">VALOR DO DIA</small><strong id="resumoCarregamentosHojeValor" style="display:block; margin-top:3px; font-size:1.2rem; color:#4ade80;">R$ 0,00</strong></div>
+                        </div>
                         <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
                             <div style="flex:1; min-width:210px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Buscar cliente ou romaneio</label><input type="search" id="subRelBusca" placeholder="Nome ou numero do romaneio" style="padding:8px; width:100%;"></div>
                             <div style="min-width:180px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Produto</label><select id="subRelProduto" style="padding:8px; width:100%;"><option value="">Todos os produtos</option></select></div>
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data inicial</label><input type="date" id="subRelDataInicio" style="padding:8px;"></div>
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data final</label><input type="date" id="subRelDataFim" style="padding:8px;"></div>
+                            <div style="min-width:150px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Ordem</label><select id="subRelOrdem" style="padding:8px; width:100%;"><option value="recentes">Mais recentes</option><option value="antigos">Mais antigos</option></select></div>
                             <div id="subRelContador" style="min-width:145px; padding:9px 12px; border:1px solid rgba(45,212,191,.35); border-radius:7px; color:#5eead4; font-weight:800; text-align:center;">0 selecionados</div>
                             <button type="button" class="btn-primary" onclick="window.gerarRelatorioFechamentoSubprodutos && window.gerarRelatorioFechamentoSubprodutos()" style="padding:10px 14px;"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Fechamento</button>
                         </div>
