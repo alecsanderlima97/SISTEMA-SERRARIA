@@ -463,24 +463,19 @@ function formatDecimal2Input(e) {
 }
 
 function descargaTemAdicional(horario) {
-    if (!horario || !/^\d{2}:\d{2}$/.test(horario)) return false;
-    const [hh, mm] = horario.split(':').map(Number);
-    const minutos = (hh * 60) + mm;
-    return (minutos >= 690 && minutos <= 780) || minutos >= 1035;
+    return true;
 }
 
 function atualizarValorDescargaPorHorario() {
     const temAdicional = descargaTemAdicional(entHorario?.value || '');
-    const valor = temAdicional ? 1.12 : 0;
+    const valor = 1.12;
     if (entValorDescarga) {
         entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
     }
     const aviso = document.getElementById('entAvisoDescargaHorario');
     if (aviso) {
         aviso.style.color = temAdicional ? '#4ade80' : '#f59e0b';
-        aviso.textContent = temAdicional
-            ? 'Adicional de descarregamento liberado para este horario.'
-            : 'Sem adicional neste horario. Paga somente das 11:30 as 13:00 e apos 17:15.';
+        aviso.textContent = 'Adicional de descarregamento liberado em qualquer horario.';
     }
 }
 
