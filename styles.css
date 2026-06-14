@@ -58,15 +58,11 @@ body {
     background-image: linear-gradient(rgba(10, 15, 28, 0.92), rgba(10, 15, 28, 0.97)), url('bg-floresta.png');
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    background-attachment: scroll;
 }
 
 .blob {
-    position: absolute;
-    filter: blur(80px);
-    opacity: 0.4;
-    border-radius: 50%;
-    animation: float 20s infinite ease-in-out alternate;
+    display: none;
 }
 
 .blob-1 {
@@ -146,8 +142,8 @@ body {
 /* Glass Panels */
 .glass-panel {
     background: var(--panel-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-lg);
     padding: 2rem;
@@ -156,7 +152,7 @@ body {
 }
 
 .glass-panel:hover {
-    transform: translateY(-2px);
+    transform: none;
     border-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -264,8 +260,8 @@ input::placeholder {
 .sidebar {
     width: 260px;
     background: rgba(22, 43, 28, 0.95); /* Verde musgo escuro */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
@@ -529,7 +525,7 @@ input::placeholder {
     background-image: linear-gradient(rgba(10, 15, 28, 0.85), rgba(10, 15, 28, 0.94)), url('bg-floresta.png');
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    background-attachment: scroll;
 }
 
 .login-container {
@@ -1553,8 +1549,8 @@ tfoot td {
     letter-spacing: 0.8px !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .btn-action-card i {

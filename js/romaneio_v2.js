@@ -69,21 +69,24 @@ function prepararInterface() {
 
     configurarEventos();
     
-    // Tentar carregar dados uma primeira vez
-    carregarClientesParaRomaneio();
-    carregarProdutosParaRomaneio();
-    carregarTransportadorasParaRomaneio();
-    carregarPatioParaRomaneio();
 }
+
+function carregarDadosRomaneio() {
+    return Promise.all([
+        carregarClientesParaRomaneio(),
+        carregarProdutosParaRomaneio(),
+        carregarTransportadorasParaRomaneio(),
+        carregarPatioParaRomaneio()
+    ]);
+}
+
+const romaneioSectionLoader = window.SectionLoader?.register('view-romaneio-v2', carregarDadosRomaneio);
 
 // 2. RE-TENTATIVA APÓS LOGIN (Para garantir acesso ao Firebase)
 onAuthStateChanged(auth, (user) => {
-    if (user) {
+    if (user && document.getElementById('view-romaneio-v2')?.classList.contains('active-section')) {
         console.log("Romaneio V2: Usuário autenticado, atualizando listas...");
-        carregarClientesParaRomaneio();
-        carregarProdutosParaRomaneio();
-        carregarTransportadorasParaRomaneio();
-        carregarPatioParaRomaneio();
+        romaneioSectionLoader?.load(true);
     }
 });
 

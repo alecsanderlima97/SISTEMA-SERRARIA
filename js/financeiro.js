@@ -567,5 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('financeiroComprovante')?.addEventListener('change', event => lerArquivoFinanceiro(event.target.files[0], 'comprovante'));
     window.limparFinanceiroForm();
     renderFinanceiro();
-    carregarFinanceiroNuvem();
 });
+
+window.SectionLoader?.register('view-financeiro', carregarFinanceiroNuvem);

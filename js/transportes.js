@@ -193,4 +193,4 @@ window.renderTransportes = renderTransportes;
 // Inicializar
 document.getElementById('filtroTransportesBusca')?.addEventListener('input', renderTransportes);
 document.getElementById('ordenarTransportes')?.addEventListener('change', renderTransportes);
-carregarTransportes();
+window.SectionLoader?.register('view-transportes', carregarTransportes);

@@ -9,6 +9,52 @@ let relatorioPatioEditandoId = null;
 let etiquetasAvulsasPatio = [];
 let producaoPatioRelatorioAtual = null;
 let resumoRomaneiosPatioCache = null;
+let patioRelatoriosCacheEm = 0;
+let patioRelatoriosPromise = null;
+let romaneiosPatioCache = [];
+let romaneiosPatioCacheEm = 0;
+let romaneiosPatioPromise = null;
+const CACHE_PATIO_MS = 30000;
+
+async function carregarRelatoriosPatioCache(force = false) {
+    if (!force && historicoPatioAtuais.length && Date.now() - patioRelatoriosCacheEm < CACHE_PATIO_MS) {
+        return historicoPatioAtuais;
+    }
+    if (patioRelatoriosPromise) return patioRelatoriosPromise;
+    patioRelatoriosPromise = getDocs(collection(db, 'patio_relatorios')).then(querySnapshot => {
+        const relatorios = [];
+        querySnapshot.forEach(docSnap => relatorios.push({ id: docSnap.id, ...docSnap.data() }));
+        relatorios.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || `${b.data}T${b.horario || '00:00'}`) - new Date(a.atualizadoEm || a.criadoEm || `${a.data}T${a.horario || '00:00'}`));
+        historicoPatioAtuais = relatorios;
+        patioRelatoriosCacheEm = Date.now();
+        return relatorios;
+    }).finally(() => {
+        patioRelatoriosPromise = null;
+    });
+    return patioRelatoriosPromise;
+}
+
+async function carregarRomaneiosPatioCache(force = false) {
+    if (!force && romaneiosPatioCacheEm && Date.now() - romaneiosPatioCacheEm < CACHE_PATIO_MS) {
+        return romaneiosPatioCache;
+    }
+    if (romaneiosPatioPromise) return romaneiosPatioPromise;
+    romaneiosPatioPromise = getDocs(collection(db, 'romaneios')).then(snap => {
+        const lista = [];
+        snap.forEach(docSnap => lista.push({ id: docSnap.id, ...docSnap.data() }));
+        romaneiosPatioCache = lista;
+        romaneiosPatioCacheEm = Date.now();
+        return lista;
+    }).finally(() => {
+        romaneiosPatioPromise = null;
+    });
+    return romaneiosPatioPromise;
+}
+
+document.addEventListener('historicoUpdated', () => {
+    romaneiosPatioCacheEm = 0;
+    resumoRomaneiosPatioCache = null;
+});
 
 // UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
 function parseDecimal(val) {
@@ -240,10 +286,7 @@ window.fecharFluxoPatio = function() {
 };
 
 async function carregarRelatorioPatioAtual() {
-    const querySnapshot = await getDocs(collection(db, 'patio_relatorios'));
-    const relatorios = [];
-    querySnapshot.forEach(docSnap => relatorios.push({ id: docSnap.id, ...docSnap.data() }));
-    relatorios.sort((a, b) => new Date(b.criadoEm || `${b.data}T${b.horario || '00:00'}`) - new Date(a.criadoEm || `${a.data}T${a.horario || '00:00'}`));
+    const relatorios = await carregarRelatoriosPatioCache();
     return relatorios[0] || null;
 }
 
@@ -421,9 +464,8 @@ async function obterResumoRomaneiosPatio() {
     if (resumoRomaneiosPatioCache) return resumoRomaneiosPatioCache;
     const resumo = { totalPacotes: 0, porClasse: {} };
     try {
-        const snap = await getDocs(collection(db, 'romaneios'));
-        snap.forEach(docSnap => {
-            const rom = docSnap.data();
+        const romaneios = await carregarRomaneiosPatioCache();
+        romaneios.forEach(rom => {
             (rom.pacotes || []).forEach(p => {
                 const classe = obterNumeroClasse(p.qualidade || p.classe) || 0;
                 const qtd = Number(p.qtdPacotes || p.pacotes || 0);
@@ -482,6 +524,7 @@ async function salvarRelatorioProducaoPatio(relatorio) {
     delete dados.id;
     await updateDoc(doc(db, 'patio_relatorios', relatorio.id), dados);
     producaoPatioRelatorioAtual = { id: relatorio.id, ...dados };
+    patioRelatoriosCacheEm = 0;
 }
 
 async function renderizarProducaoPatio(options = {}) {
@@ -1223,9 +1266,8 @@ async function atualizarResumoProducaoRomaneios() {
     const totaisPatio = calcularTotaisFluxoPatio(itensPatioTemp || []);
     const vendidos = { totalPacotes: 0, totalVolume: 0, porClasse: { 1: 0, 2: 0, 3: 0 } };
     try {
-        const snap = await getDocs(collection(db, 'romaneios'));
-        snap.forEach(docSnap => {
-            const romaneio = docSnap.data();
+        const romaneios = await carregarRomaneiosPatioCache();
+        romaneios.forEach(romaneio => {
             (romaneio.pacotes || []).filter(p => p.origemPatio).forEach(p => {
                 const qtd = Number(p.patioQtdPacotes || p.qtdPacotes || 0);
                 const classe = obterNumeroClasse(p.qualidade || p.classe) || 0;
@@ -1301,9 +1343,8 @@ async function mostrarResumoProducaoPatio() {
     });
     atual.forEach(item => acumularResumoPatio(mapa, item));
     try {
-        const snap = await getDocs(collection(db, 'romaneios'));
-        snap.forEach(docSnap => {
-            const rom = docSnap.data();
+        const romaneios = await carregarRomaneiosPatioCache();
+        romaneios.forEach(rom => {
             const data = rom.logistica?.dataCarregamento || rom.data || '';
             if (data !== rel.data) return;
             (rom.pacotes || []).filter(p => p.origemPatio).forEach(p => {
@@ -1422,7 +1463,7 @@ async function salvarRelatorioPatio() {
         atualizarEstadoEdicaoPatio();
 
         // Recarregar histórico e atualizar os acumulados salvos do dia
-        await carregarHistoricoPatio();
+        await carregarHistoricoPatio(true);
         const relAtualizado = historicoPatioAtuais.find(rel => rel.id === relatorioPatioEditandoId);
         if (relAtualizado) carregarRelatorioPatioNoFormulario(relAtualizado, relAtualizado.id);
         atualizarAvisoUltimaAlteracaoPatio();
@@ -1437,25 +1478,14 @@ async function salvarRelatorioPatio() {
 }
 
 // Carregar Histórico do Firebase
-async function carregarHistoricoPatio() {
+async function carregarHistoricoPatio(force = false) {
     const tbody = document.getElementById('listaHistoricoPatio');
     if (!tbody) return;
 
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;"><span class="saw-loader" aria-hidden="true"></span> Carregando contagens...</td></tr>';
 
     try {
-        const querySnapshot = await getDocs(collection(db, 'patio_relatorios'));
-        historicoPatioAtuais = [];
-        querySnapshot.forEach((doc) => {
-            historicoPatioAtuais.push({ id: doc.id, ...doc.data() });
-        });
-
-        // Ordenar decrescente
-        historicoPatioAtuais.sort((a, b) => {
-            const dateA = new Date(`${a.data}T${a.horario || '00:00'}`);
-            const dateB = new Date(`${b.data}T${b.horario || '00:00'}`);
-            return dateB - dateA;
-        });
+        await carregarRelatoriosPatioCache(force);
 
         if (historicoPatioAtuais.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diÃ¡ria registrada ainda.</td></tr>';
@@ -1530,7 +1560,7 @@ window.deletarHistoricoPatio = async function(id) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
             alert("✅ Relatório de pátio excluÃ­do com sucesso!");
-            await carregarHistoricoPatio();
+            await carregarHistoricoPatio(true);
             
             const dataVal = document.getElementById('patioData').value;
             await calcularAcumuladosHoje(dataVal);

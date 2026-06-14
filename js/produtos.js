@@ -287,4 +287,4 @@ async function carregarProdutos() {
 
 atualizarVisualClasseProduto();
 atualizarResumoProduto();
-carregarProdutos();
+window.SectionLoader?.register('view-produtos', carregarProdutos);

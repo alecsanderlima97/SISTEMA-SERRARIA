@@ -327,7 +327,6 @@ function inicializarModuloClientes() {
         }
     });
 
-    carregarClientes();
 }
 
 window.switchTabClientes = function(tabName, isEditing = false) {
@@ -371,3 +370,5 @@ if (document.readyState === 'loading') {
 } else {
     inicializarModuloClientes();
 }
+
+window.SectionLoader?.register('view-clientes', carregarClientes);

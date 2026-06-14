@@ -184,8 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarEventosFrotas();
     renderizarFrota();
     atualizarKPIsFrota();
-    carregarDadosFrotaNuvem();
 });
+
+window.SectionLoader?.register('view-frotas', carregarDadosFrotaNuvem);
 
 async function carregarDadosFrotaNuvem() {
     frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, DEFAULT_FROTA);

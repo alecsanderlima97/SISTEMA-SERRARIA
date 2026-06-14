@@ -7,20 +7,19 @@ let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios
 const formatBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatM3 = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} m³`;
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDashboard);
-} else {
-    initDashboard();
-}
-
-document.addEventListener('historicoUpdated', initDashboard);
+const dashboardLoader = window.SectionLoader?.register('view-dashboard', initDashboard);
+document.addEventListener('historicoUpdated', () => {
+    dashboardLoader?.invalidate();
+    if (document.getElementById('view-dashboard')?.classList.contains('active-section')) {
+        dashboardLoader?.load(true);
+    }
+});
 
 async function initDashboard() {
     try {
-        const [snapRomaneios, snapClientes, snapProdutos, snapEntradas, snapSubprodutos, snapFuncionarios, snapEstoque, snapFinanceiro, snapRelatoriosFinanceiros] = await Promise.all([
+        const [snapRomaneios, snapClientes, snapEntradas, snapSubprodutos, snapFuncionarios, snapEstoque, snapFinanceiro, snapRelatoriosFinanceiros] = await Promise.all([
             getDocs(collection(db, 'romaneios')),
             getDocs(collection(db, 'clientes')),
-            getDocs(collection(db, 'produtos')),
             getDocs(collection(db, 'entradas')),
             getDocs(collection(db, 'vendas_subprodutos')),
             getDocs(collection(db, 'funcionarios')),

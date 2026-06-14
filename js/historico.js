@@ -730,7 +730,6 @@ function inicializarModuloHistorico() {
         };
     }
     
-    renderizarHistorico();
 }
 
 // Executar de forma segura
@@ -741,4 +740,10 @@ if (document.readyState === 'loading') {
 }
 
 window.renderizarHistorico = renderizarHistorico;
-document.addEventListener('historicoUpdated', renderizarHistorico);
+const historicoLoader = window.SectionLoader?.register('view-historico', renderizarHistorico);
+document.addEventListener('historicoUpdated', () => {
+    historicoLoader?.invalidate();
+    if (document.getElementById('view-historico')?.classList.contains('active-section')) {
+        historicoLoader?.load(true);
+    }
+});

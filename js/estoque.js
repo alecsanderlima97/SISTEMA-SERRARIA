@@ -150,10 +150,12 @@ async function carregarDadosDoFirestore() {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    carregarDadosDoFirestore();
     inicializarEventosEstoque();
     window.switchTabEstoque('resumo');
+    agendarRenderEstoque(0);
 });
+
+window.SectionLoader?.register('view-estoque', carregarDadosDoFirestore);
 
 // Registrar eventos
 function inicializarEventosEstoque() {

@@ -34,12 +34,14 @@ function setupCalendarEvents() {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        initCalendar();
         setupCalendarEvents();
+        renderCalendar();
+        renderEvents();
     });
 } else {
-    initCalendar();
     setupCalendarEvents();
+    renderCalendar();
+    renderEvents();
 }
 
 async function initCalendar() {
@@ -47,6 +49,8 @@ async function initCalendar() {
     renderCalendar();
     renderEvents();
 }
+
+window.SectionLoader?.register('view-agenda', initCalendar);
 
 async function carregarEventosFirestore() {
     try {

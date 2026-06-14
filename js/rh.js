@@ -62,7 +62,6 @@ function inicializarModuloRH() {
     injetarEstiloMobileRH();
     configurarTogglesRH();
     configurarFormulariosRH();
-    carregarFuncionarios();
 }
 
 function injetarEstiloMobileRH() {
@@ -1634,3 +1633,4 @@ window.removerFalta = window.removerFalta;
 window.aplicarPresetHE = window.aplicarPresetHE;
 window.abrirRelatorioMensalHE = window.abrirRelatorioMensalHE;
 window.fecharModalRelatorioHE = window.fecharModalRelatorioHE;
+window.SectionLoader?.register('view-rh', carregarFuncionarios);

@@ -1059,9 +1059,10 @@ window.excluirVendaSubproduto = async (id) => {
     }
 };
 
-// Iniciar os clientes de subprodutos na carga do script
-carregarClientesSubprodutos();
-carregarLancamentosSubprodutos();
+window.SectionLoader?.register('view-cavaco', () => Promise.all([
+    carregarClientesSubprodutos(),
+    carregarLancamentosSubprodutos()
+]));
 ['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim', 'subRelOrdem'].forEach(id => {
     const campo = document.getElementById(id);
     if (campo) campo.addEventListener(id === 'subRelBusca' ? 'input' : 'change', renderizarLancamentosSubprodutos);

@@ -1577,8 +1577,6 @@ function inicializarModuloEntrada() {
 
     window.switchTabEntrada('registro');
 
-    carregarEmpreiteiros();
-    carregarEntradas();
 }
 
 if (document.readyState === 'loading') {
@@ -1586,4 +1584,9 @@ if (document.readyState === 'loading') {
 } else {
     inicializarModuloEntrada();
 }
+
+window.SectionLoader?.register('view-entrada', () => Promise.all([
+    carregarEmpreiteiros(),
+    carregarEntradas()
+]));
 

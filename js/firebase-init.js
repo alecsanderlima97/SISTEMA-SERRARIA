@@ -170,7 +170,7 @@ async function limparSnapshotsAntigos(maxSnapshots = 10) {
 
 async function gerarSnapshotNuvem({ motivo = 'automatico', collections = CLOUD_SNAPSHOT_COLLECTIONS, force = false } = {}) {
     const meta = getCurrentUserMeta();
-    const intervalMs = 1000 * 60 * 60 * 6;
+    const intervalMs = 1000 * 60 * 60 * 24;
     const cacheKey = `orquestrasis_last_cloud_snapshot_at_${meta.empresaId || DEFAULT_EMPRESA_ID}`;
     const ultimo = Number(localStorage.getItem(cacheKey) || 0);
     const agora = Date.now();

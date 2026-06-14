@@ -645,7 +645,11 @@ const App = {
     deepLinkFrotaAplicado: false,
     presenceIntervalId: null,
     presenceListenersReady: false,
+    presenceLastUpdateAt: 0,
     headerClockIntervalId: null,
+    outlookStatusCarregado: false,
+    cloudSnapshotAgendado: false,
+    emitenteCarregamentoAgendado: false,
 
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
@@ -656,7 +660,6 @@ const App = {
         this.loadProfilePic();
         tratarRetornoOutlook();
         this.iniciarRelogioCabecalho();
-        this.verificarIntegracaoOutlook();
         inicializarMascarasPerfil();
         atualizarResumoBackup();
         
@@ -694,7 +697,7 @@ const App = {
         if (this.headerClockIntervalId) {
             clearInterval(this.headerClockIntervalId);
         }
-        this.headerClockIntervalId = window.setInterval(render, 1000);
+        this.headerClockIntervalId = window.setInterval(render, 30000);
     },
 
     async verificarIntegracaoOutlook() {
@@ -825,6 +828,7 @@ const App = {
 
     async atualizarMinhaPresenca(online = true, registrarAcesso = false) {
         if (!this.user?.uid) return;
+        this.presenceLastUpdateAt = Date.now();
         try {
             const agora = new Date().toISOString();
             const payload = {
@@ -856,8 +860,8 @@ const App = {
         if (this.presenceListenersReady) return;
         this.presenceListenersReady = true;
 
-        const marcarAtividade = () => {
-            if (document.visibilityState === 'visible') {
+        const marcarAtividade = (force = false) => {
+            if (document.visibilityState === 'visible' && (force || Date.now() - this.presenceLastUpdateAt >= 30000)) {
                 this.atualizarMinhaPresenca(true, false);
             }
         };
@@ -866,10 +870,10 @@ const App = {
             if (document.visibilityState === 'hidden') {
                 this.atualizarMinhaPresenca(false, false);
             } else {
-                marcarAtividade();
+                marcarAtividade(true);
             }
         });
-        window.addEventListener('focus', marcarAtividade);
+        window.addEventListener('focus', () => marcarAtividade(true));
         window.addEventListener('click', marcarAtividade, true);
         window.addEventListener('keydown', marcarAtividade, true);
         window.addEventListener('pagehide', () => {
@@ -1219,10 +1223,14 @@ const App = {
                         inicializarMascarasPerfil();
                         atualizarResumoBackup();
                         this.applyPermissionVisibility();
-                        if (canRunCloudSnapshotForRole(novoCargo) && window.FS?.gerarSnapshotNuvem) {
-                            window.FS.gerarSnapshotNuvem({ motivo: 'login' }).catch(error => {
-                                console.error('Falha ao gerar snapshot automatico:', error);
-                            });
+                        if (canRunCloudSnapshotForRole(novoCargo) && window.FS?.gerarSnapshotNuvem && !this.cloudSnapshotAgendado) {
+                            this.cloudSnapshotAgendado = true;
+                            window.setTimeout(() => {
+                                if (!this.user?.uid) return;
+                                window.FS.gerarSnapshotNuvem({ motivo: 'login' }).catch(error => {
+                                    console.error('Falha ao gerar snapshot automatico:', error);
+                                });
+                            }, 60000);
                         }
                         
                         // Direcionar telas de acordo com a permissão atômica atualizada
@@ -1260,10 +1268,7 @@ const App = {
                         // Se for gerente, renderiza e libera o painel de administração de usuários nas configurações
                         const panel = document.getElementById('panelConfigUsuarios');
                         if (isCurrentUserAdminManager(this) && this.canAccessSubsection('view-configuracoes', 'usuarios')) {
-                            if (panel) {
-                                panel.style.display = 'block';
-                                this.carregarTabelaUsuarios();
-                            }
+                            if (panel) panel.style.display = 'block';
                         } else {
                             if (panel) panel.style.display = 'none';
                         }
@@ -1276,7 +1281,12 @@ const App = {
                     console.error("Core [Auth Exception]: Erro ao carregar perfil do Firestore:", err);
                 }
                 
-                carregarDadosSerrariaEmitente();
+                if (!this.emitenteCarregamentoAgendado) {
+                    this.emitenteCarregamentoAgendado = true;
+                    window.setTimeout(() => {
+                        if (this.user?.uid) carregarDadosSerrariaEmitente();
+                    }, 20000);
+                }
                 this.iniciarPresencaUsuario();
                 
             } else {
@@ -1379,8 +1389,16 @@ const App = {
             localStorage.setItem('appActiveSection', id);
         }
         this.applyPermissionVisibility();
+        if (id !== 'view-configuracoes' && this.usuariosUnsubscribe) {
+            this.usuariosUnsubscribe();
+            this.usuariosUnsubscribe = null;
+        }
         if (id === 'view-configuracoes') {
             this.carregarAuditoriaSistema();
+            if (!this.outlookStatusCarregado) {
+                this.outlookStatusCarregado = true;
+                this.verificarIntegracaoOutlook();
+            }
             if (isCurrentUserAdminManager(this)) {
                 const panel = document.getElementById('panelConfigUsuarios');
                 if (this.canAccessSubsection('view-configuracoes', 'usuarios')) {
@@ -1389,6 +1407,7 @@ const App = {
                 }
             }
         }
+        document.dispatchEvent(new CustomEvent('app:section-change', { detail: { id } }));
         return id;
     },
 
