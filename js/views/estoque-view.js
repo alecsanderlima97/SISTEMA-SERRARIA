@@ -318,8 +318,22 @@
                         </div>
 
                         <div class="input-group" style="grid-column: span 1.5;">
-                            <label for="estQtd">Quantidade Atual</label>
+                            <label for="estQtd" id="estQtdLabel">Quantidade Atual</label>
                             <input type="number" id="estQtd" step="0.01" required placeholder="Ex: 10">
+                        </div>
+
+                        <div id="grupoEstoqueLubrificante" style="grid-column: span 3; display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px; background: rgba(34, 197, 94, 0.06);">
+                            <div class="input-group">
+                                <label for="estQtdGaloes">Quantidade de Galões</label>
+                                <input type="number" id="estQtdGaloes" min="0" step="1" inputmode="numeric" placeholder="Ex: 5">
+                            </div>
+                            <div class="input-group">
+                                <label for="estLitrosGalao">Litros por Galão</label>
+                                <input type="number" id="estLitrosGalao" min="0.01" step="0.01" inputmode="decimal" value="20">
+                            </div>
+                            <div style="grid-column: 1 / -1; color: #4ade80; font-weight: 700; font-size: 0.86rem;">
+                                Total calculado: <span id="estTotalLitrosLub">0,00 L</span>
+                            </div>
                         </div>
 
                         <div class="input-group" style="grid-column: span 1.5;">

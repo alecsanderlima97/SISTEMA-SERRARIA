@@ -179,6 +179,10 @@ function inicializarEventosEstoque() {
     if (buscaMovimentacao) buscaMovimentacao.addEventListener('input', window.renderizarMovimentacoesEstoque);
     const filtroMovTipo = document.getElementById('filtroMovTipo');
     if (filtroMovTipo) filtroMovTipo.addEventListener('change', window.renderizarMovimentacoesEstoque);
+
+    document.getElementById('estCategoria')?.addEventListener('change', atualizarCamposLubrificanteEstoque);
+    document.getElementById('estQtdGaloes')?.addEventListener('input', atualizarTotalLubrificanteEstoque);
+    document.getElementById('estLitrosGalao')?.addEventListener('input', atualizarTotalLubrificanteEstoque);
 }
 
 
@@ -331,6 +335,17 @@ function renderizarEstoque() {
         }
         
         const unidade = item.categoria === 'DIESEL' || item.categoria === 'LUBRIFICANTES' ? 'L' : 'Un';
+        const litrosPorGalao = Number(item.litrosPorGalao || 20);
+        const cadastroEmLitros = item.quantidadeGaloes !== undefined && item.quantidadeGaloes !== null;
+        const quantidadeGaloes = cadastroEmLitros
+            ? Number(item.quantidadeGaloes || 0)
+            : Number(item.quantidade || 0);
+        const totalLitrosLubrificante = cadastroEmLitros
+            ? Number(item.quantidade || 0)
+            : quantidadeGaloes * litrosPorGalao;
+        const quantidadeHtml = item.categoria === 'LUBRIFICANTES'
+            ? `${quantidadeGaloes.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} galão(ões)<small style="display:block; margin-top:3px; color:var(--text-muted); font-weight:500;">${litrosPorGalao.toLocaleString('pt-BR')} L cada · Total ${totalLitrosLubrificante.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L</small>`
+            : `${item.quantidade.toFixed(1)} ${unidade}`;
         
         return `
             <tr style="border-bottom: 1px solid var(--panel-border); transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
@@ -338,7 +353,7 @@ function renderizarEstoque() {
                 <td style="padding: 12px 10px; font-weight: 700; color: white; text-align: center; vertical-align: middle; line-height: 1.25;">${item.nome}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle;">${statusBadge}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: white;">
-                    ${item.quantidade.toFixed(1)} ${unidade}
+                    ${quantidadeHtml}
                 </td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">
                     ${limite.toFixed(0)} ${unidade}
@@ -369,16 +384,42 @@ window.filtrarEstoque = function() {
 };
 
 // --- MODAIS CRUD ITEM ---
+function atualizarTotalLubrificanteEstoque() {
+    const galoes = Number(document.getElementById('estQtdGaloes')?.value || 0);
+    const litrosPorGalao = Number(document.getElementById('estLitrosGalao')?.value || 20);
+    const totalLitros = galoes * litrosPorGalao;
+    const campoQuantidade = document.getElementById('estQtd');
+    const resumo = document.getElementById('estTotalLitrosLub');
+
+    if (campoQuantidade) campoQuantidade.value = totalLitros.toFixed(2);
+    if (resumo) resumo.textContent = `${totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`;
+}
+
+function atualizarCamposLubrificanteEstoque() {
+    const isLubrificante = document.getElementById('estCategoria')?.value === 'LUBRIFICANTES';
+    const grupo = document.getElementById('grupoEstoqueLubrificante');
+    const campoQuantidade = document.getElementById('estQtd');
+    const labelQuantidade = document.getElementById('estQtdLabel');
+
+    if (grupo) grupo.style.display = isLubrificante ? 'grid' : 'none';
+    if (campoQuantidade) campoQuantidade.readOnly = isLubrificante;
+    if (labelQuantidade) labelQuantidade.textContent = isLubrificante ? 'Total em Litros' : 'Quantidade Atual';
+    if (isLubrificante) atualizarTotalLubrificanteEstoque();
+}
+
 window.abrirModalNovoItemEstoque = function() {
     document.getElementById('estoqueItemId').value = '';
     document.getElementById('estNome').value = '';
     document.getElementById('estCategoria').value = 'PEÇAS';
     document.getElementById('estQtd').value = '';
+    document.getElementById('estQtdGaloes').value = '';
+    document.getElementById('estLitrosGalao').value = '20';
     document.getElementById('estUnitario').value = '';
     document.getElementById('estAlerta').value = '';
     document.getElementById('tituloModalEstoque').innerHTML = '<i class="fa-solid fa-box"></i> Novo Item de Estoque';
 
     document.getElementById('modalNovoItemEstoque').style.display = 'flex';
+    atualizarCamposLubrificanteEstoque();
 };
 
 window.fecharModalNovoItemEstoque = function() {
@@ -392,25 +433,39 @@ window.editarItemEstoque = function(id) {
     document.getElementById('estoqueItemId').value = item.id;
     document.getElementById('estNome').value = item.nome;
     document.getElementById('estCategoria').value = item.categoria;
-    document.getElementById('estQtd').value = item.quantidade;
+    const litrosPorGalao = Number(item.litrosPorGalao || 20);
+    const cadastroEmLitros = item.quantidadeGaloes !== undefined && item.quantidadeGaloes !== null;
+    const quantidadeGaloes = cadastroEmLitros ? Number(item.quantidadeGaloes || 0) : Number(item.quantidade || 0);
+    document.getElementById('estQtd').value = item.categoria === 'LUBRIFICANTES'
+        ? quantidadeGaloes * litrosPorGalao
+        : item.quantidade;
+    document.getElementById('estLitrosGalao').value = litrosPorGalao;
+    document.getElementById('estQtdGaloes').value = item.categoria === 'LUBRIFICANTES'
+        ? quantidadeGaloes.toFixed(2)
+        : '';
     document.getElementById('estUnitario').value = window.formatCurrencyValue(item.unitario);
     document.getElementById('estAlerta').value = item.limite_alerta !== undefined && item.limite_alerta !== null ? item.limite_alerta : '';
     
     document.getElementById('tituloModalEstoque').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Item: ${item.nome}`;
 
     document.getElementById('modalNovoItemEstoque').style.display = 'flex';
+    atualizarCamposLubrificanteEstoque();
 };
 
 async function salvarItemEstoque() {
     const id = document.getElementById('estoqueItemId').value;
     const nome = document.getElementById('estNome').value.trim().toUpperCase();
     const categoria = document.getElementById('estCategoria').value;
-    const quantidade = parseFloat(document.getElementById('estQtd').value) || 0;
+    const quantidadeGaloes = categoria === 'LUBRIFICANTES' ? Number(document.getElementById('estQtdGaloes').value || 0) : null;
+    const litrosPorGalao = categoria === 'LUBRIFICANTES' ? Number(document.getElementById('estLitrosGalao').value || 20) : null;
+    const quantidade = categoria === 'LUBRIFICANTES'
+        ? quantidadeGaloes * litrosPorGalao
+        : (parseFloat(document.getElementById('estQtd').value) || 0);
     const unitario = window.parseCurrencyValue(document.getElementById('estUnitario').value) || 0;
     const alertVal = document.getElementById('estAlerta').value.trim();
     const limite_alerta = alertVal !== "" ? parseFloat(alertVal) : null;
 
-    if (!nome || quantidade < 0 || unitario < 0) {
+    if (!nome || quantidade < 0 || unitario < 0 || (categoria === 'LUBRIFICANTES' && litrosPorGalao <= 0)) {
         alert("Preencha todos os campos obrigatórios corretamente.");
         return;
     }
@@ -426,6 +481,7 @@ async function salvarItemEstoque() {
             nome,
             categoria,
             quantidade,
+            ...(categoria === 'LUBRIFICANTES' ? { quantidadeGaloes, litrosPorGalao } : {}),
             unitario,
             limite_alerta,
             criadoEm: id ? (itensEstoque.find(i => i.id === id)?.criadoEm || new Date().toISOString()) : new Date().toISOString(),
@@ -555,12 +611,16 @@ window.renderSimuladores = function() {
         }
 
         container.innerHTML = lubs.map(lub => {
-            const totalLitros = calcularSaldoPorMovimentacoes(lub);
-            const baldes = Math.floor(totalLitros / 20);
-            const litrosResto = (totalLitros % 20).toFixed(1);
+            const capacidadeGalao = Number(lub.litrosPorGalao || 20);
+            const cadastroEmLitros = lub.quantidadeGaloes !== undefined && lub.quantidadeGaloes !== null;
+            const totalLitros = cadastroEmLitros
+                ? calcularSaldoPorMovimentacoes(lub)
+                : calcularSaldoPorMovimentacoes(lub) * capacidadeGalao;
+            const galoes = Math.floor(totalLitros / capacidadeGalao);
+            const litrosResto = (totalLitros % capacidadeGalao).toFixed(1);
             
             // Sub-balde partial level
-            const remainingBaldePercent = ((totalLitros % 20) / 20) * 100;
+            const remainingBaldePercent = ((totalLitros % capacidadeGalao) / capacidadeGalao) * 100;
             const limite = lub.limite_alerta || 40;
             const isLow = totalLitros <= limite;
             const colorCircle = isLow ? '#ef4444' : 'var(--accent-color)';
@@ -578,7 +638,7 @@ window.renderSimuladores = function() {
                         <h4 style="margin: 0 0 4px 0; color: white; font-size: 0.95rem; font-weight: bold; text-transform: uppercase;">${lub.nome}</h4>
                         <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; gap: 15px; flex-wrap: wrap;">
                             <span>Volume: <strong style="color: white;">${totalLitros.toFixed(1)} L</strong></span>
-                            <span>Contém: <strong style="color: var(--accent-color);">${baldes} Balde(s) (20L)</strong> + <strong style="color: var(--accent-color);">${litrosResto} L</strong></span>
+                            <span>Contém: <strong style="color: var(--accent-color);">${galoes} galão(ões) de ${capacidadeGalao.toLocaleString('pt-BR')} L</strong> + <strong style="color: var(--accent-color);">${litrosResto} L</strong></span>
                         </div>
                         ${isLow ? `<span style="font-size: 0.72rem; color: #f87171; font-weight: bold; display: block; margin-top: 5px;"><i class="fa-solid fa-triangle-exclamation"></i> ABAIXO DO MÍNIMO DE ALERTA (${limite}L)</span>` : ''}
                     </div>
