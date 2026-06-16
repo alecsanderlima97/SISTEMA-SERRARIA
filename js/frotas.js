@@ -472,9 +472,43 @@ window.filtrarFrota = function(grupo) {
 };
 
 // --- RENDERIZAR GRID DE CARD DE VEÍCULOS ---
+function garantirEstilosCardsFrota() {
+    if (document.getElementById('frota-card-mobile-style')) return;
+    const style = document.createElement('style');
+    style.id = 'frota-card-mobile-style';
+    style.textContent = `
+        .frota-card-operacao { padding:18px !important; border-radius:14px !important; }
+        .frota-card-operacao:hover { transform: scale(1.01) !important; }
+        .frota-card-titulo { font-size:1rem !important; line-height:1.25 !important; }
+        .frota-card-info { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 10px; font-size:.84rem !important; line-height:1.25 !important; }
+        .frota-card-info span, .frota-card-info strong { min-width:0; overflow-wrap:anywhere; }
+        .frota-card-documento { grid-column:1 / -1; }
+        .frota-card-footer { display:grid !important; grid-template-columns:1fr; gap:10px; align-items:center; }
+        .frota-card-actions { display:grid !important; grid-template-columns:repeat(4,minmax(42px,1fr)); gap:9px !important; width:100%; }
+        .frota-card-admin-actions { display:grid !important; grid-template-columns:repeat(2,minmax(42px,1fr)); gap:9px !important; width:100%; max-width:150px; justify-self:center; }
+        .frota-action-btn,
+        .frota-card-actions .btn-icon,
+        .frota-card-admin-actions .btn-icon { min-width:42px; min-height:42px; border-radius:10px !important; background:rgba(255,255,255,.055) !important; border:1px solid rgba(255,255,255,.09) !important; display:inline-flex !important; align-items:center; justify-content:center; padding:0 !important; font-size:1.05rem !important; }
+        @media (max-width:720px) {
+            #gridVeiculosFrota { grid-template-columns:1fr !important; gap:14px !important; }
+            .frota-card-operacao { padding:14px !important; }
+            .frota-card-operacao:hover { transform:none !important; }
+            .frota-card-foto { height:124px !important; margin-bottom:10px !important; }
+            .frota-card-info { grid-template-columns:1fr; font-size:.9rem !important; }
+            .frota-card-actions { grid-template-columns:repeat(4,minmax(44px,1fr)); }
+            .frota-card-admin-actions { grid-template-columns:repeat(2,minmax(44px,1fr)); max-width:none; }
+            .frota-action-btn,
+            .frota-card-actions .btn-icon,
+            .frota-card-admin-actions .btn-icon { min-height:44px; font-size:1.08rem !important; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function renderizarFrota() {
     const grid = document.getElementById('gridVeiculosFrota');
     if (!grid) return;
+    garantirEstilosCardsFrota();
 
     let atualizouCodigos = false;
     frota.forEach(v => {
@@ -540,16 +574,16 @@ function renderizarFrota() {
             ? `<button class="btn-action-card" onclick="window.visualizarDocumento('${v.id}')" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); color: #60a5fa;"><i class="fa-solid fa-file-pdf"></i> Doc Anexo</button>`
             : `<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Sem Documento</span>`;
         const fotoHtml = v.foto
-            ? `<div style="height: 150px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.22); position: relative;">
+            ? `<div class="frota-card-foto" style="height: 150px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.22); position: relative;">
                     <img src="${v.foto}" alt="${v.modelo}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;">
                     ${v.fotoTipo === 'ilustrativa' ? '<span style="position:absolute; right:8px; bottom:8px; font-size:0.65rem; font-weight:800; color:#fbbf24; background:rgba(0,0,0,0.68); border:1px solid rgba(251,191,36,0.35); border-radius:999px; padding:3px 7px;">ILUSTRATIVA</span>' : ''}
                 </div>`
-            : `<div style="height: 150px; border-radius: 12px; margin-bottom: 14px; border: 1px dashed var(--panel-border); background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 2rem;">
+            : `<div class="frota-card-foto" style="height: 150px; border-radius: 12px; margin-bottom: 14px; border: 1px dashed var(--panel-border); background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 2rem; position: relative;">
                     ${iconHtml}
                 </div>`;
 
         return `
-            <div class="glass-panel" data-frota-codigo="${codigo}" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div class="glass-panel frota-card-operacao" data-frota-codigo="${codigo}" style="padding: 20px; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div>
                     ${fotoHtml}
                     ${avisoProblemaHtml}
@@ -567,19 +601,19 @@ function renderizarFrota() {
                     </div>
 
                     <!-- Dados Principal -->
-                    <h3 style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px; color: white;">${v.modelo}</h3>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px;">
+                    <h3 class="frota-card-titulo" style="margin: 0 0 10px 0; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px; color: white;">${v.modelo}</h3>
+                    <div class="frota-card-info" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px;">
                         <span>CÓDIGO: <strong style="color: var(--accent-color);">${codigo}</strong></span><br>
                         <span>PLACA / PREFIXO: <strong style="color: white;">${v.placa}</strong></span><br>
                         <span>ANO FABRICAÇÃO: <strong style="color: white;">${v.ano}</strong></span><br>
                         <span>RELATOS PENDENTES: <strong style="color: ${relatosPendentes ? '#f59e0b' : '#22c55e'};">${relatosPendentes}</strong></span><br>
-                        <span style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">DOCUMENTO: ${docLinkHtml}</span>
+                        <span class="frota-card-documento" style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">DOCUMENTO: ${docLinkHtml}</span>
                     </div>
                 </div>
 
                 <!-- Ações Rápidas de Frota -->
-                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; gap: 8px;">
+                <div class="frota-card-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="frota-card-actions" style="display: flex; gap: 8px;">
                         <button onclick="window.abrirModalAbastecimento('${v.id}', 'DIESEL')" class="btn-icon" style="color:#ef4444; font-size:1.1rem; padding: 4px;" title="Lançar Diesel">
                             <i class="fa-solid fa-gas-pump"></i>
                         </button>
@@ -605,7 +639,7 @@ function renderizarFrota() {
                             <i class="fa-brands fa-whatsapp"></i>
                         </button>
                     </div>
-                    <div style="display: flex; gap: 8px;">
+                    <div class="frota-card-admin-actions" style="display: flex; gap: 8px;">
                         <button onclick="window.editarVeiculo('${v.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Editar Dados do Veículo">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>

@@ -30,6 +30,10 @@
                         <i class="fa-solid fa-chart-column"></i> Resumo
                     </button>
 
+                    <button type="button" id="btnImportarFluxoPatio" class="btn-patio-print" style="background:#2563eb !important;">
+                        <i class="fa-solid fa-file-import"></i> Importar Fluxo
+                    </button>
+
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
                         <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
                     </button>

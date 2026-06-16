@@ -14,6 +14,7 @@ let patioRelatoriosPromise = null;
 let romaneiosPatioCache = [];
 let romaneiosPatioCacheEm = 0;
 let romaneiosPatioPromise = null;
+let resumoProducaoPatioIndice = 0;
 const CACHE_PATIO_MS = 30000;
 
 async function carregarRelatoriosPatioCache(force = false) {
@@ -105,6 +106,7 @@ function inicializarPatioListeners() {
     const btnLimparEtiquetaAvulsa = document.getElementById('btnLimparEtiquetaAvulsaPatio');
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
     const btnResumo = document.getElementById('btnResumoProducaoPatio');
+    const btnImportarFluxo = document.getElementById('btnImportarFluxoPatio');
 
     if (btnAbrir) {
         btnAbrir.addEventListener('click', abrirModalPatio);
@@ -167,6 +169,7 @@ function inicializarPatioListeners() {
     }
 
     if (btnResumo) btnResumo.addEventListener('click', mostrarResumoProducaoPatio);
+    if (btnImportarFluxo) btnImportarFluxo.addEventListener('click', importarFluxoPatioParaControleProducao);
 
     const selectClasse = document.getElementById('patioItemClasse');
     if (selectClasse) {
@@ -1260,6 +1263,31 @@ function atualizarConsolidatedStats() {
     atualizarResumoProducaoRomaneios();
 }
 
+async function importarFluxoPatioParaControleProducao() {
+    const rel = await carregarRelatorioPatioAtual();
+    if (!rel || !Array.isArray(rel.itens) || rel.itens.length === 0) {
+        alert('Nenhum fluxo do patio encontrado para importar.');
+        return;
+    }
+
+    if (itensPatioTemp.length > 0 && !confirm('Ja existe uma lista no Controle de Producao. Deseja substituir pela lista do Fluxo do Patio?')) {
+        return;
+    }
+
+    const hoje = dataAtualPatio();
+    itensPatioTemp = ordenarItensPatio(rel.itens.map(item => ({
+        ...item,
+        id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+        dataRaw: hoje,
+        dataFormatted: new Date(`${hoje}T12:00:00`).toLocaleDateString('pt-BR')
+    })));
+
+    const serrandoInput = document.getElementById('patioSerrando');
+    if (serrandoInput && rel.serrando) serrandoInput.value = rel.serrando;
+    renderizarItensPatioTemp();
+    alert(`Fluxo do Patio importado com sucesso. ${itensPatioTemp.length} item(ns) foram carregados no Controle de Producao.`);
+}
+
 async function atualizarResumoProducaoRomaneios() {
     const box = document.getElementById('resumoPatioRomaneios');
     if (!box) return;
@@ -1317,6 +1345,17 @@ function acumularResumoPatio(mapa, item, sinal = 1) {
     mapa.set(chave, atual);
 }
 
+function obterRelatoriosResumoProducao() {
+    return [...historicoPatioAtuais].sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || b.data || 0) - new Date(a.atualizadoEm || a.criadoEm || a.data || 0));
+}
+
+window.navegarResumoProducaoPatio = async function(delta) {
+    const relatorios = obterRelatoriosResumoProducao();
+    if (!relatorios.length) return;
+    resumoProducaoPatioIndice = Math.max(0, Math.min(relatorios.length - 1, resumoProducaoPatioIndice + delta));
+    await renderizarResumoProducaoPatioPorIndice(resumoProducaoPatioIndice);
+};
+
 async function mostrarResumoProducaoPatio() {
     const painel = document.getElementById('painelResumoProducaoPatio');
     if (!painel) return;
@@ -1325,9 +1364,18 @@ async function mostrarResumoProducaoPatio() {
         return;
     }
     painel.style.display = 'block';
+    const relatorios = obterRelatoriosResumoProducao();
+    const indiceAtual = relatorios.findIndex(r => r.id === relatorioPatioEditandoId || r.data === dataAtualPatio());
+    resumoProducaoPatioIndice = indiceAtual >= 0 ? indiceAtual : 0;
+    await renderizarResumoProducaoPatioPorIndice(resumoProducaoPatioIndice);
+}
+
+async function renderizarResumoProducaoPatioPorIndice(indice = 0) {
+    const painel = document.getElementById('painelResumoProducaoPatio');
+    if (!painel) return;
     painel.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Calculando resumo do dia...';
-    const rel = historicoPatioAtuais.find(r => r.id === relatorioPatioEditandoId)
-        || historicoPatioAtuais.find(r => r.data === dataAtualPatio()) || historicoPatioAtuais[0];
+    const relatorios = obterRelatoriosResumoProducao();
+    const rel = relatorios[indice];
     if (!rel) {
         painel.innerHTML = 'Salve a primeira contagem do patio para gerar o resumo.';
         return;
@@ -1370,7 +1418,19 @@ async function mostrarResumoProducaoPatio() {
         const produzidoVolume = Math.max(0, item.atualVolume + item.vendidosVolume - item.inicialVolume);
         return `<tr><td>${item.classe}a</td><td>${formatDecimal(item.espessura,1)} / ${formatDecimal(item.largura,1)} / ${formatDecimal(item.comprimento,2)}</td><td>${item.inicialPacotes}</td><td>${item.vendidosPacotes}</td><td>${item.atualPacotes}</td><td>${produzidosPacotes}</td><td>${formatDecimalMockup(produzidoVolume)} m3</td></tr>`;
     }).join('');
-    painel.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><h3 style="margin:0;">Resumo da Producao - ${new Date(rel.data + 'T12:00:00').toLocaleDateString('pt-BR')}</h3><button type="button" class="btn-icon" onclick="document.getElementById('painelResumoProducaoPatio').style.display='none'" title="Fechar"><i class="fa-solid fa-xmark"></i></button></div><div style="overflow-x:auto;"><table style="width:100%; text-align:center;"><thead><tr><th>Classe</th><th>Cubagem</th><th>Inicio</th><th>Vendido</th><th>Saldo</th><th>Produzido</th><th>Volume produzido</th></tr></thead><tbody>${linhas || '<tr><td colspan="7">Sem movimentacoes.</td></tr>'}</tbody></table></div>`;
+    const dataResumo = rel.data ? new Date(`${rel.data}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data';
+    painel.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="btn-icon" onclick="window.navegarResumoProducaoPatio(1)" ${indice >= relatorios.length - 1 ? 'disabled' : ''} title="Dia anterior" style="width:38px; height:38px; border-radius:10px;"><i class="fa-solid fa-chevron-left"></i></button>
+                <h3 style="margin:0; min-width:210px; text-align:center;">Resumo da Producao - ${dataResumo}</h3>
+                <button type="button" class="btn-icon" onclick="window.navegarResumoProducaoPatio(-1)" ${indice <= 0 ? 'disabled' : ''} title="Dia mais recente" style="width:38px; height:38px; border-radius:10px;"><i class="fa-solid fa-chevron-right"></i></button>
+                <small style="color:var(--text-muted); font-weight:800;">${indice + 1} de ${relatorios.length}</small>
+            </div>
+            <button type="button" class="btn-icon" onclick="document.getElementById('painelResumoProducaoPatio').style.display='none'" title="Fechar" style="width:38px; height:38px; border-radius:10px;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="overflow-x:auto;"><table style="width:100%; text-align:center;"><thead><tr><th>Classe</th><th>Cubagem</th><th>Inicio</th><th>Vendido</th><th>Saldo</th><th>Produzido</th><th>Volume produzido</th></tr></thead><tbody>${linhas || '<tr><td colspan="7">Sem movimentacoes.</td></tr>'}</tbody></table></div>
+    `;
 }
 
 // Calcular os totais acumulados salvos no dia atual
