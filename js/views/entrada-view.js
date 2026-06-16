@@ -127,7 +127,7 @@
                                 </div>
                                 <div class="input-group" style="grid-column: span 2;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
-                                    <input type="text" id="entValorDescarga" placeholder="R\$ 0,00" value="R\$ 0,00" readonly>
+                                    <input type="text" id="entValorDescarga" placeholder="R\$ 0,00" value="R\$ 0,00">
                                     <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Adicional de R$ 1,12/m³ liberado em qualquer horario.</small>
                                 </div>
 

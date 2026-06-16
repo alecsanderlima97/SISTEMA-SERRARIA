@@ -468,14 +468,10 @@ function descargaTemAdicional(horario) {
 
 function atualizarValorDescargaPorHorario() {
     const temAdicional = descargaTemAdicional(entHorario?.value || '');
-    const valor = 1.12;
-    if (entValorDescarga) {
-        entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
-    }
     const aviso = document.getElementById('entAvisoDescargaHorario');
     if (aviso) {
         aviso.style.color = temAdicional ? '#4ade80' : '#f59e0b';
-        aviso.textContent = 'Adicional de descarregamento liberado em qualquer horario.';
+        aviso.textContent = 'Valor sugerido: R$ 1,12/m³. Você pode alterar quando necessário.';
     }
 }
 

@@ -69,6 +69,7 @@ const CLOUD_SNAPSHOT_COLLECTIONS = [
     'frotas',
     'frota_abastecimentos',
     'frota_manutencoes',
+    'frota_relatos',
     'financeiro_lancamentos',
     'financeiro_relatorios_mensais',
     'patio_relatorios',

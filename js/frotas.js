@@ -16,7 +16,8 @@ const KEYS = {
 const FROTA_COLLECTIONS = {
     FROTA: 'frotas',
     ABASTECIMENTOS: 'frota_abastecimentos',
-    MANUTENCOES: 'frota_manutencoes'
+    MANUTENCOES: 'frota_manutencoes',
+    RELATOS: 'frota_relatos'
 };
 
 const FINANCEIRO_FROTAS_KEY = 'orquestra_financeiro_lancamentos';
@@ -192,7 +193,7 @@ async function carregarDadosFrotaNuvem() {
     frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, DEFAULT_FROTA);
     abastecimentos = await carregarColecaoFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, KEYS.ABASTECIMENTOS, []);
     manutencoes = await carregarColecaoFrota(FROTA_COLLECTIONS.MANUTENCOES, KEYS.MANUTENCOES, []);
-    relatosFrota = obterBanco(KEYS.RELATOS, []);
+    relatosFrota = await carregarColecaoFrota(FROTA_COLLECTIONS.RELATOS, KEYS.RELATOS, []);
     renderizarFrota();
     atualizarKPIsFrota();
 }
@@ -636,6 +637,7 @@ window.registrarRelatoFrota = async function(veiculoId) {
     const novo = { id: 'rel_' + Date.now(), veiculoId, data: new Date().toISOString().split('T')[0], hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), relato: relato.trim().toUpperCase(), status: 'ABERTO', criadoEm: new Date().toISOString() };
     relatosFrota.unshift(novo);
     salvarBanco(KEYS.RELATOS, relatosFrota);
+    await salvarDocFrota(FROTA_COLLECTIONS.RELATOS, novo);
     if ((v.statusOperacional || 'OK') === 'OK') {
         v.statusOperacional = 'AGUARDANDO';
         v.atualizadoEm = new Date().toISOString();
@@ -660,6 +662,9 @@ window.resolverRelatosFrota = async function(veiculoId) {
         return r;
     });
     salvarBanco(KEYS.RELATOS, relatosFrota);
+    await Promise.all(relatosFrota
+        .filter(r => r.veiculoId === veiculoId && r.status === 'RESOLVIDO')
+        .map(r => salvarDocFrota(FROTA_COLLECTIONS.RELATOS, r)));
 
     v.statusOperacional = 'OK';
     v.atualizadoEm = new Date().toISOString();
