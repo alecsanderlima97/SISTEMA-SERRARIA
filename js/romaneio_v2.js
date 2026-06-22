@@ -43,6 +43,16 @@ function parseNumeroBR(valor) {
     return Number.isFinite(n) ? n : 0;
 }
 
+function arredondarParaBaixo(valor, casas = 2) {
+    const numero = Number(valor) || 0;
+    const fator = Math.pow(10, casas);
+    return Math.floor((numero + Number.EPSILON) * fator) / fator;
+}
+
+function formatarM3Baixo(valor) {
+    return arredondarParaBaixo(valor, 3).toFixed(3);
+}
+
 // 1. INICIALIZAÇÃO IMEDIATA (Para data e eventos)
 function prepararInterface() {
     console.log("Romaneio V2: Preparando interface...");
@@ -362,7 +372,7 @@ function recalcularTotaisPatioItens(itens) {
     return {
         pacotes: totais.pacotes,
         pecas: totais.pecas,
-        volume: Number(totais.volume.toFixed(3))
+        volume: arredondarParaBaixo(totais.volume, 3)
     };
 }
 
@@ -406,7 +416,7 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
                     ...itens[idx],
                     pacotes: novoTotal,
                     totalPecas: novoTotal * pecasPacote,
-                    volume: Number((novoTotal * volumeUnidade).toFixed(3)),
+                    volume: arredondarParaBaixo(novoTotal * volumeUnidade, 3),
                     movimentacoesPatio: sinal < 0 ? [
                         ...(Array.isArray(itens[idx].movimentacoesPatio) ? itens[idx].movimentacoesPatio : []),
                         {
@@ -797,8 +807,8 @@ function atualizarVolumePreview() {
     const elUnit = document.getElementById('v2-volume-unit');
     const elTotal = document.getElementById('v2-volume-total');
 
-    if (elUnit) elUnit.textContent = m3Unit.toFixed(3) + ' m³';
-    if (elTotal) elTotal.textContent = m3Total.toFixed(3) + ' m³';
+    if (elUnit) elUnit.textContent = formatarM3Baixo(m3Unit) + ' m³';
+    if (elTotal) elTotal.textContent = formatarM3Baixo(m3Total) + ' m³';
 }
 
 function calcularPecasAutomatico() {
@@ -870,9 +880,9 @@ function adicionarPacote() {
         patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
         patioQtdPacotes: itemPatio ? qtdPacotes : 0,
         patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
-        m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
-        m3FreteTotal: parseFloat((m3FreteUnit * qtdPacotes).toFixed(3)),
-        valorTotalWood: parseFloat((m3VendaUnit * qtdPacotes * precoM3).toFixed(2))
+        m3VendaTotal: arredondarParaBaixo(m3VendaUnit * qtdPacotes, 3),
+        m3FreteTotal: arredondarParaBaixo(m3FreteUnit * qtdPacotes, 3),
+        valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
     };
 
     romaneioAtual.pacotes.push(novoPacote);
@@ -993,9 +1003,9 @@ function salvarEdicaoPacote() {
         patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
         patioQtdPacotes: itemPatio ? qtdPacotes : 0,
         patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
-        m3VendaTotal: parseFloat((m3VendaUnit * qtdPacotes).toFixed(3)),
-            m3FreteTotal: parseFloat((m3FreteUnit * qtdPacotes).toFixed(3)),
-            valorTotalWood: parseFloat((m3VendaUnit * qtdPacotes * precoM3).toFixed(2))
+        m3VendaTotal: arredondarParaBaixo(m3VendaUnit * qtdPacotes, 3),
+            m3FreteTotal: arredondarParaBaixo(m3FreteUnit * qtdPacotes, 3),
+            valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
         };
     }
     pacoteEditandoId = null;
@@ -1020,7 +1030,7 @@ function atualizarTotalGeral() {
     });
 
     const valorFreteUnit = window.parseCurrencyValue(document.getElementById('v2-valor-frete').value) || 0;
-    let totalFrete = totalM3Frete * valorFreteUnit;
+    let totalFrete = arredondarParaBaixo(totalM3Frete * valorFreteUnit, 2);
     
     const addMadeira = window.parseCurrencyValue(document.getElementById('v2-adicional-madeira')?.value) || 0;
     const addFrete = window.parseCurrencyValue(document.getElementById('v2-adicional-frete')?.value) || 0;
@@ -1034,15 +1044,15 @@ function atualizarTotalGeral() {
 
     romaneioAtual.observacaoCarga = document.getElementById('v2-obs-carga')?.value || '';
 
-    totalFrete += addFrete;
-    const totalMadeiraComAjuste = totalMadeira + addMadeira;
+    totalFrete = arredondarParaBaixo(totalFrete + addFrete, 2);
+    const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + addMadeira, 2);
 
     const taxaStr = (document.getElementById('v2-taxa-nf')?.value || "0").toString().replace(',', '.');
     const taxa = parseFloat(taxaStr) || 0;
-    const baseNF = romaneioAtual.financeiro.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste;
-    const imposto = baseNF * (taxa / 100);
+    const baseNF = arredondarParaBaixo(romaneioAtual.financeiro.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
     
-    romaneioAtual.financeiro.totalGeral = totalMadeiraComAjuste + imposto;
+    romaneioAtual.financeiro.totalGeral = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
     romaneioAtual.financeiro.taxaNF = taxa;
     romaneioAtual.logistica.valorFrete = valorFreteUnit;
     romaneioAtual.numero = parseInt(document.getElementById('v2-numero-ordem').value) || 0;
@@ -1081,12 +1091,13 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
 
     const taxa = Number(r.financeiro?.taxaNF || 0);
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
-    const baseNF = r.financeiro?.baseNF === 'MEIA' ? (totalMadeira + adicionalMadeira) / 2 : (totalMadeira + adicionalMadeira);
-    const imposto = baseNF * (taxa / 100);
-    const subtotalLiquido = totalMadeira + adicionalMadeira + imposto;
+    const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + adicionalMadeira, 2);
+    const baseNF = arredondarParaBaixo(r.financeiro?.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
+    const subtotalLiquido = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
     const valorFrete = Number(r.logistica?.valorFrete || 0);
-    const freteBruto = totalM3Frete * valorFrete;
-    const freteFinal = freteBruto + Number(r.logistica?.adicionalFrete || 0);
+    const freteBruto = arredondarParaBaixo(totalM3Frete * valorFrete, 2);
+    const freteFinal = arredondarParaBaixo(freteBruto + Number(r.logistica?.adicionalFrete || 0), 2);
     const totalCarga = Number(r.financeiro?.totalGeral || subtotalLiquido);
     return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
 }
@@ -1101,7 +1112,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
                     const cor = getCorPorQualidade(p.qualidade || 'PADRAO');
                     const totalPecas = Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
                     const valorUnit = totalPecas ? (Number(p.valorTotalWood || 0) / totalPecas) : 0;
-                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${p.medidas || '-'}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${Number(p.m3VendaTotal || 0).toFixed(3)}</td><td>R$ ${valorUnit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${Number(p.valorTotalWood || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${p.medidas || '-'}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${formatarM3Baixo(p.m3VendaTotal || 0)}</td><td>R$ ${arredondarParaBaixo(valorUnit, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${arredondarParaBaixo(p.valorTotalWood || 0, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
                 }).join('')}
             </tbody>
         </table>`;
@@ -1112,7 +1123,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
             <div style="border:1px solid #cbd5e1; border-radius:6px; padding:9px 11px;"><strong style="color:#1d4ed8;">LOGISTICA</strong><div style="margin-top:5px;">Carreg.: ${r.logistica?.dataCarregamento || '-'} | Descarreg.: ${r.logistica?.dataDescarregamento || '-'}</div><div>${r.logistica?.motorista || '-'} | ${r.logistica?.caminhao || '-'} | ${r.logistica?.placa || '-'}</div><div>Transporte: ${r.logistica?.responsavelFrete || '-'}</div></div>
         </div>
         ${pacotesHtml}
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;"><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PACOTES</small><strong style="display:block; font-size:22px;">${totalPcts}</strong></div><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PECAS</small><strong style="display:block; font-size:22px;">${totalPcs}</strong></div><div style="padding:11px; border-radius:6px; background:#ecfdf5; text-align:center;"><small>VOLUME</small><strong style="display:block; font-size:22px; color:#047857;">${totalM3Madeira.toFixed(3)} m3</strong></div></div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;"><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PACOTES</small><strong style="display:block; font-size:22px;">${totalPcts}</strong></div><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PECAS</small><strong style="display:block; font-size:22px;">${totalPcs}</strong></div><div style="padding:11px; border-radius:6px; background:#ecfdf5; text-align:center;"><small>VOLUME</small><strong style="display:block; font-size:22px; color:#047857;">${formatarM3Baixo(totalM3Madeira)} m3</strong></div></div>
         <div style="margin-top:8px; border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; font-size:12px;"><strong style="color:#0f172a;">RESUMO FINANCEIRO</strong><div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:7px;"><div>Madeira<br><b>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Taxa NF (${taxa}%)<br><b>R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Frete<br><b style="color:#1d4ed8;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div><div>Total da carga<br><b style="color:#047857; font-size:16px;">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div></div>${r.financeiro?.baseNF === 'MEIA' ? `<div style="margin-top:6px;">Base NF meia carga: R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>` : ''}</div>
         ${r.observacaoCarga ? `<div class="doc-note"><strong>Observacoes da carga</strong><div style="margin-top:8px; white-space:pre-wrap;">${r.observacaoCarga}</div></div>` : ''}
         <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>`;
@@ -1197,7 +1208,7 @@ function renderizarTabelaPacotes() {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <span style="font-weight: 800; color: ${cor}; font-size: 1.1rem;">${qual}</span>
                     <span style="background: ${cor}22; padding: 6px 15px; border-radius: 20px; font-size: 0.9rem; color: ${cor}; border: 1px solid ${cor}44;">
-                        Total do Grupo: <strong>${g.subtotalM3.toFixed(3)} m³</strong> | R$ ${g.subtotalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                        Total do Grupo: <strong>${formatarM3Baixo(g.subtotalM3)} m³</strong> | R$ ${arredondarParaBaixo(g.subtotalValor, 2).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                     </span>
                 </div>
                 <div style="overflow-x: auto;">
@@ -1226,10 +1237,10 @@ function renderizarTabelaPacotes() {
                                             <td>${primeiraCubagem ? `<strong>${p.produtoNome}</strong><br>` : ''}${montarMedidaRomaneio(p, primeiraCubagem, cor)}</td>
                                             <td>${p.qtdPacotes}</td>
                                             <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
-                                            <td>${p.m3VendaTotal.toFixed(3)}</td>
-                                            <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td>${formatarM3Baixo(p.m3VendaTotal)}</td>
+                                            <td>R$ ${arredondarParaBaixo(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes), 2).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                             <td>R$ ${p.precoM3.toLocaleString('pt-BR')}</td>
-                                            <td><strong>R$ ${p.valorTotalWood.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+                                            <td><strong>R$ ${arredondarParaBaixo(p.valorTotalWood, 2).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
                                             <td class="hide-on-print">
                                                 <button onclick="editarPacoteV2(${p.id})" class="btn-icon text-warning" style="margin-right:10px;"><i class="fa-solid fa-pencil"></i></button>
                                                 <button onclick="removerPacoteV2(${p.id})" class="btn-icon text-danger"><i class="fa-solid fa-trash"></i></button>
@@ -1249,7 +1260,7 @@ function renderizarTabelaPacotes() {
 
 function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste, baseNF = totalMadeiraComAjuste) {
     const taxa = romaneioAtual.financeiro.taxaNF;
-    const totalComTaxa = totalMadeiraComAjuste + imposto;
+    const totalComTaxa = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
 
     const obsMadHtml = romaneioAtual.financeiro.obsMadeira ? ` <small style="color:var(--text-muted);">(${romaneioAtual.financeiro.obsMadeira})</small>` : '';
     const obsFreteHtml = romaneioAtual.logistica.obsFrete ? ` <br><span style="margin-left: 25px; color:var(--text-muted);">Ajuste: R$ ${romaneioAtual.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${romaneioAtual.logistica.obsFrete})</span>` : (romaneioAtual.logistica.adicionalFrete ? ` <br><span style="margin-left: 25px; color:var(--text-muted);">Ajuste: R$ ${romaneioAtual.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>` : '');
@@ -1293,7 +1304,7 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                 </div>
                 <div style="margin-top: 20px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; font-size: 0.9rem;">
                     <i class="fa-solid fa-truck" style="margin-right: 8px; color: var(--warning);"></i>
-                    <strong>Frete Estimado:</strong> ${volFrete.toFixed(3)} m³ × R$ ${romaneioAtual.logistica.valorFrete} ${obsFreteHtml} = 
+                    <strong>Frete Estimado:</strong> ${formatarM3Baixo(volFrete)} m³ × R$ ${romaneioAtual.logistica.valorFrete} ${obsFreteHtml} = 
                     <span style="float: right; font-weight: bold;">R$ ${valFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
             </div>
@@ -1572,9 +1583,9 @@ window.verPreviaRomaneioV2 = () => {
                         <td><small>${p.configPct}</small></td>
                         <td>${p.pecasPorPacote}</td>
                         <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
-                        <td>${p.m3VendaTotal.toFixed(3)}</td>
-                        <td>R$ ${(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes)).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td>R$ ${p.valorTotalWood.toLocaleString('pt-BR')}</td>
+                        <td>${formatarM3Baixo(p.m3VendaTotal)}</td>
+                        <td>R$ ${arredondarParaBaixo(p.valorTotalWood / (p.pecasPorPacote * p.qtdPacotes), 2).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>R$ ${arredondarParaBaixo(p.valorTotalWood, 2).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -1609,11 +1620,12 @@ window.verPreviaRomaneioV2 = () => {
     };
 
     const taxa = r.financeiro.taxaNF || 0;
-    const baseNF = r.financeiro?.baseNF === 'MEIA' ? (totalMadeira + (r.financeiro.adicionalMadeira || 0)) / 2 : (totalMadeira + (r.financeiro.adicionalMadeira || 0));
-    const imposto = baseNF * (taxa / 100);
-    const subtotalLiquido = (totalMadeira + (r.financeiro.adicionalMadeira || 0)) + imposto;
-    const freteBruto = totalM3Frete * (r.logistica.valorFrete || 0);
-    const freteFinal = freteBruto + (r.logistica.adicionalFrete || 0);
+    const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + (r.financeiro.adicionalMadeira || 0), 2);
+    const baseNF = arredondarParaBaixo(r.financeiro?.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
+    const subtotalLiquido = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
+    const freteBruto = arredondarParaBaixo(totalM3Frete * (r.logistica.valorFrete || 0), 2);
+    const freteFinal = arredondarParaBaixo(freteBruto + (r.logistica.adicionalFrete || 0), 2);
 
     conteudo.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
@@ -1650,7 +1662,7 @@ window.verPreviaRomaneioV2 = () => {
                 <p style="margin: 0; font-size: 1rem;"><strong>Total de Pacotes:</strong> ${totalPcts} pcts</p>
                 <p style="margin: 5px 0; font-size: 1rem;"><strong>Total de Peças:</strong> ${totalPcs} pçs</p>
                 <p style="margin: 10px 0 0 0; font-size: 1.4rem; font-weight: 900; color: #111; text-transform: uppercase; border-top: 1px solid #ccc; padding-top: 10px;">
-                    M³ TOTAL: <span style="float:right;">${totalM3Madeira.toFixed(3)} m³</span>
+                    M³ TOTAL: <span style="float:right;">${formatarM3Baixo(totalM3Madeira)} m³</span>
                 </p>
             </div>
 
@@ -1662,7 +1674,7 @@ window.verPreviaRomaneioV2 = () => {
                 <p style="margin: 10px 0 5px 0; font-size: 1.1rem; font-weight: bold; border-top: 1px solid #ccc; padding-top: 5px;">Subtotal Líquido: R$ ${subtotalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                 
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 0.9rem;">
-                    <p style="margin: 0 0 5px 0;">Estimativa Frete Base: ${totalM3Frete.toFixed(3)} m³ × R$ ${r.logistica.valorFrete}/m³ = R$ ${freteBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    <p style="margin: 0 0 5px 0;">Estimativa Frete Base: ${formatarM3Baixo(totalM3Frete)} m³ × R$ ${r.logistica.valorFrete}/m³ = R$ ${freteBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     ${r.logistica.adicionalFrete ? `<p style="margin: 0 0 5px 0;">Ajuste Frete: R$ ${r.logistica.adicionalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.logistica.obsFrete ? `(${r.logistica.obsFrete})` : ''}</p>` : ''}
                     <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 1.1rem; color: #111;">Custo Total Frete: R$ ${freteFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                 </div>
