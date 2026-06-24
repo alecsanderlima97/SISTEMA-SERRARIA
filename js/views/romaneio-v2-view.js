@@ -86,9 +86,19 @@
                             </div>
                             <div class="input-group-v2">
                                 <label>Puxar do Patio</label>
-                                <select id="v2-select-patio" class="input-v2">
+                                <select id="v2-select-patio" class="input-v2" style="display:none;">
                                     <option value="">Usar madeira cadastrada/manual...</option>
                                 </select>
+                                <button type="button" id="btn-v2-abrir-patio" class="btn-v2 btn-secondary-v2" style="margin-top:8px; width:100%; padding:8px 10px;">
+                                    <i class="fa-solid fa-boxes-stacked"></i> Abrir lista do patio
+                                </button>
+                            </div>
+                            <div id="v2-patio-lista-panel" class="package-entry-wide" style="display:none; grid-column:1 / -1; width:100%; border:1px solid rgba(0,255,136,.22); border-radius:10px; padding:12px; background:rgba(15,23,42,.48);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+                                    <strong style="color:var(--accent); text-transform:uppercase; letter-spacing:.04em;">Pacotes disponiveis no patio</strong>
+                                    <button type="button" id="btn-v2-fechar-patio" class="btn-v2" style="padding:6px 10px; background:rgba(255,255,255,.08); color:#fff;">Fechar</button>
+                                </div>
+                                <div id="v2-patio-lista" style="display:grid; gap:8px; max-height:430px; overflow:auto; padding-right:4px;"></div>
                             </div>
                             <div class="input-group-v2" id="grupoV2MadeiraManual" style="display:none;">
                                 <label>Nome da madeira</label>
