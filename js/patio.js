@@ -15,6 +15,7 @@ let romaneiosPatioCache = [];
 let romaneiosPatioCacheEm = 0;
 let romaneiosPatioPromise = null;
 let resumoProducaoPatioIndice = 0;
+let itensPatioSelecionados = new Set();
 const CACHE_PATIO_MS = 30000;
 
 async function carregarRelatoriosPatioCache(force = false) {
@@ -136,7 +137,14 @@ function inicializarPatioListeners() {
                 || historicoPatioAtuais.find(item => item.data === dataAtualPatio())
                 || historicoPatioAtuais[0];
             const itens = itensPatioTemp.length ? itensPatioTemp : (relatorioAtual?.itens || []);
-            imprimirEtiquetasFisicas(itens);
+            const selecionados = obterItensPatioSelecionadosObrigatorio(itens, 'Selecione os pacotes que deseja imprimir como etiqueta.');
+            if (!selecionados.length) return;
+            selecionados.forEach(item => {
+                item.etiquetado = true;
+                item.etiquetadoEm = new Date().toISOString();
+            });
+            renderizarItensPatioTemp();
+            imprimirEtiquetasFisicas(selecionados);
         });
     }
 
@@ -1040,28 +1048,171 @@ window.imprimirEtiquetaItemPatio = function(id) {
     imprimirEtiquetasFisicas([item]);
 };
 
+function obterIdsPatioSelecionados() {
+    return [...itensPatioSelecionados].filter(id => itensPatioTemp.some(item => item.id === id));
+}
+
+function obterItensPatioSelecionadosObrigatorio(lista, mensagem) {
+    const ids = obterIdsPatioSelecionados();
+    if (!ids.length) {
+        alert(mensagem || 'Selecione ao menos um item para imprimir.');
+        return [];
+    }
+    return lista.filter(item => ids.includes(item.id));
+}
+
+function atualizarResumoSelecaoPatio() {
+    const label = document.getElementById('patioSelecaoResumo');
+    const ids = obterIdsPatioSelecionados();
+    if (label) {
+        label.textContent = ids.length
+            ? `${ids.length} item(ns) selecionado(s)`
+            : 'Nenhum item selecionado';
+    }
+}
+
+window.toggleSelecionarItemPatio = function(id, checked) {
+    if (checked) itensPatioSelecionados.add(id);
+    else itensPatioSelecionados.delete(id);
+    atualizarResumoSelecaoPatio();
+};
+
+window.selecionarTodosItensPatio = function(checked) {
+    if (checked) itensPatioTemp.forEach(item => itensPatioSelecionados.add(item.id));
+    else itensPatioSelecionados.clear();
+    renderizarItensPatioTemp();
+};
+
+function montarResumoImpressaoPatio(lista) {
+    const grupos = new Map();
+    lista.forEach(item => {
+        const classeNum = obterNumeroClasse(item.classe) || 0;
+        const cubagem = `${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}`;
+        const chave = `${classeNum}|${cubagem}`;
+        if (!grupos.has(chave)) {
+            grupos.set(chave, {
+                classe: item.classe,
+                classeNum,
+                cubagem,
+                pacotes: 0,
+                pecas: 0,
+                volume: 0
+            });
+        }
+        const grupo = grupos.get(chave);
+        grupo.pacotes += Number(item.pacotes) || 0;
+        grupo.pecas += Number(item.totalPecas) || 0;
+        grupo.volume += Number(item.volume) || 0;
+    });
+
+    const gruposOrdenados = ordenarItensPatio([...grupos.values()].map(grupo => ({
+        classe: grupo.classe,
+        espessura: Number(String(grupo.cubagem).split(' / ')[0].replace(',', '.')) || 0,
+        largura: Number(String(grupo.cubagem).split(' / ')[1].replace(',', '.')) || 0,
+        comprimento: Number(String(grupo.cubagem).split(' / ')[2].replace(',', '.')) || 0,
+        pacotes: grupo.pacotes,
+        totalPecas: grupo.pecas,
+        volume: grupo.volume
+    })));
+
+    return gruposOrdenados.map(item => {
+        const classeNum = obterNumeroClasse(item.classe) || 0;
+        return `
+            <tr class="classe-${classeNum}">
+                <td><span>${formatarClasseFluxo(item.classe)}</span></td>
+                <td class="medidas"><div class="cubagem">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div></td>
+                <td>${item.pacotes || 0}</td>
+                <td>${item.totalPecas || 0}<small>pçs</small></td>
+                <td class="volume">${formatDecimalMockup(item.volume || 0)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function montarResumoGeralPatio(lista) {
+    const porClasse = new Map();
+    const geral = { pacotes: 0, pecas: 0, volume: 0 };
+
+    lista.forEach(item => {
+        const classeNum = obterNumeroClasse(item.classe) || 0;
+        const classeLabel = formatarClasseFluxo(item.classe);
+
+        if (!porClasse.has(classeNum)) {
+            porClasse.set(classeNum, { classe: classeLabel, pacotes: 0, pecas: 0, volume: 0 });
+        }
+        const totalClasse = porClasse.get(classeNum);
+        totalClasse.pacotes += Number(item.pacotes) || 0;
+        totalClasse.pecas += Number(item.totalPecas) || 0;
+        totalClasse.volume += Number(item.volume) || 0;
+        geral.pacotes += Number(item.pacotes) || 0;
+        geral.pecas += Number(item.totalPecas) || 0;
+        geral.volume += Number(item.volume) || 0;
+    });
+
+    const cardGeral = `
+        <div class="total-card total-card-geral">
+            <strong>Total Geral</strong>
+            <span>${geral.pacotes} pacote(s)</span>
+            <small>${geral.pecas} pçs | ${formatDecimalMockup(geral.volume)} m³</small>
+        </div>
+    `;
+
+    const cardsClasse = [...porClasse.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([classeNum, item]) => `
+            <div class="total-card classe-${classeNum}">
+                <strong>${item.classe} Classe</strong>
+                <span>${item.pacotes} pacote(s)</span>
+                <small>${item.pecas} pçs | ${formatDecimalMockup(item.volume)} m³</small>
+            </div>
+        `).join('');
+
+    return `
+        <div class="resumo-final">
+            <h2>Resumo Geral</h2>
+            <div class="total-cards">${cardGeral}${cardsClasse}</div>
+        </div>
+    `;
+}
+
 function imprimirListaDetalhadaPatio(relatorio = null) {
     const relatorioAtual = relatorio
         || historicoPatioAtuais.find(item => item.id === relatorioPatioEditandoId)
         || historicoPatioAtuais.find(item => item.data === dataAtualPatio())
         || historicoPatioAtuais[0]
         || null;
-    const listaBase = Array.isArray(itensPatioTemp) && itensPatioTemp.length
+    const listaBaseOriginal = Array.isArray(itensPatioTemp) && itensPatioTemp.length
         ? itensPatioTemp
         : (Array.isArray(relatorioAtual?.itens) ? relatorioAtual.itens : []);
+    const listaBase = relatorio
+        ? listaBaseOriginal
+        : obterItensPatioSelecionadosObrigatorio(listaBaseOriginal, 'Selecione os itens que deseja imprimir na lista.');
+    if (!relatorio && listaBase.length === 0 && listaBaseOriginal.length > 0) return;
     if (!Array.isArray(listaBase) || listaBase.length === 0) {
         alert('Nao ha itens na lista do patio para imprimir.');
         return;
     }
 
     const serrando = document.getElementById('patioSerrando')?.value || relatorioAtual?.serrando || '';
+    const resumoLinhas = montarResumoImpressaoPatio(listaBase);
+    const resumoGeral = montarResumoGeralPatio(listaBase);
 
+    let chaveDetalhadaAnterior = '';
     const linhas = ordenarItensPatio(listaBase).map(item => {
         const classeNum = obterNumeroClasse(item.classe) || 0;
+        const chaveDetalhada = `${classeNum}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        const primeiraLinhaGrupo = chaveDetalhada !== chaveDetalhadaAnterior;
+        chaveDetalhadaAnterior = chaveDetalhada;
+        const classeCelula = primeiraLinhaGrupo
+            ? `<span>${formatarClasseFluxo(item.classe)}</span>`
+            : '<span class="grupo-repetido">*</span>';
+        const medidaPrincipal = primeiraLinhaGrupo
+            ? `<div class="cubagem">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div>`
+            : '';
         return `
             <tr class="classe-${classeNum}">
-                <td><span>${formatarClasseFluxo(item.classe)}</span></td>
-                <td class="medidas"><div class="cubagem">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}</div><small>* ${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m3</small></td>
+                <td>${classeCelula}</td>
+                <td class="medidas">${medidaPrincipal}<small>* ${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m3</small></td>
                 <td>${item.pacotes || 0}</td>
                 <td>${item.totalPecas || 0}<small>pçs</small></td>
                 <td class="volume">${formatDecimalMockup(item.volume || 0)}<small>(${formatDecimalMockup(item.volumeUnidade || 0)}/un)</small></td>
@@ -1086,6 +1237,17 @@ function imprimirListaDetalhadaPatio(relatorio = null) {
             td span { display:inline-block; min-width:28px; padding:5px 8px; border-radius:4px; font-weight:900; }
             .medidas { text-align: center; }
             .cubagem { font-size: 18px; font-weight: 900; }
+            h2 { margin: 16px 0 6px; font-size: 15px; text-transform: uppercase; color: #0f172a; }
+            .print-note { margin: 0 0 8px; font-size: 12px; color: #64748b; font-weight: 700; }
+            .page { min-height: 96vh; }
+            .page-break { break-before: page; page-break-before: always; }
+            .resumo-final { margin-top: 18px; padding-top: 10px; border-top: 2px solid #0f172a; }
+            .total-cards { display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 12px; }
+            .total-card { border:1px solid #8a8170; background:#fff7e6; border-radius:6px; padding:9px; text-align:center; font-weight:900; }
+            .total-card-geral { background:#0f172a; color:#fff; border-color:#0f172a; }
+            .total-card strong, .total-card span, .total-card small { display:block; }
+            .total-card span { font-size: 17px; margin: 4px 0; }
+            .grupo-repetido { background: transparent !important; border: none !important; color: #334155 !important; font-size: 18px; min-width: 28px; }
             .classe-1 span { background:rgba(22,163,74,.14); border:1px solid rgba(22,163,74,.38); color:#15803d; }
             .classe-1 .cubagem { color:#15803d; }
             .classe-2 span { background:#fff1c2; border:1px solid #f59e0b; color:#d97706; }
@@ -1096,9 +1258,20 @@ function imprimirListaDetalhadaPatio(relatorio = null) {
             small { display: block; color: #0f172a; font-size: 11px; margin-top: 2px; font-weight: 700; }
             @media print { body { padding: 0; } }
         </style></head><body>
-            <h1>Controle de Producao Geral</h1>
-            <p>${serrando ? `Madeira serrando: ${serrando.toUpperCase()}` : 'Lista detalhada da contagem do patio'}</p>
-            <table><thead><tr><th>Classe</th><th>Medidas</th><th>Pacotes</th><th>Total Pçs</th><th>Volume (m³)</th></tr></thead><tbody>${linhas}</tbody></table>
+            <section class="page">
+                <h1>Controle de Producao Geral</h1>
+                <p>${serrando ? `Madeira serrando: ${serrando.toUpperCase()}` : 'Lista resumida da contagem do patio'}</p>
+                ${resumoGeral}
+                <h2>Lista Resumida por Classe e Cubagem</h2>
+                <p class="print-note">Total agrupado somente dos itens selecionados para impressao.</p>
+                <table><thead><tr><th>Classe</th><th>Medidas</th><th>Pacotes</th><th>Total Pçs</th><th>Volume (m³)</th></tr></thead><tbody>${resumoLinhas}</tbody></table>
+            </section>
+            <section class="page page-break">
+                <h1>Controle de Producao Geral</h1>
+                <p>${serrando ? `Madeira serrando: ${serrando.toUpperCase()}` : 'Lista detalhada da contagem do patio'}</p>
+                <h2>Lista Detalhada</h2>
+                <table><thead><tr><th>Classe</th><th>Medidas</th><th>Pacotes</th><th>Total Pçs</th><th>Volume (m³)</th></tr></thead><tbody>${linhas}</tbody></table>
+            </section>
         </body></html>
     `);
     win.document.close();
@@ -1145,14 +1318,16 @@ function renderizarItensPatioTemp() {
     ordenarItensPatioTemp();
 
     if (itensPatioTemp.length === 0) {
+        itensPatioSelecionados.clear();
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
+                <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
                     Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.
                 </td>
             </tr>
         `;
         atualizarConsolidatedStats();
+        atualizarResumoSelecaoPatio();
         return;
     }
 
@@ -1196,6 +1371,9 @@ function renderizarItensPatioTemp() {
 
         html += `
             <tr class="patio-lista-row">
+                <td class="hide-on-print" style="text-align:center;">
+                    <input type="checkbox" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)" title="Selecionar para imprimir" style="width:18px; height:18px; accent-color:#16a34a;">
+                </td>
                 <!-- CLASSE -->
                 <td>
                     ${classeHtml}
@@ -1241,6 +1419,7 @@ function renderizarItensPatioTemp() {
     });
 
     tbody.innerHTML = html;
+    atualizarResumoSelecaoPatio();
     atualizarConsolidatedStats();
 }
 

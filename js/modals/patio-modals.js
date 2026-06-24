@@ -233,10 +233,19 @@
                         </button>
                     </div>
 
+                    <div class="hide-on-print" style="display:flex; align-items:center; gap:12px; margin:0 0 10px 0; color:#f8fafc; font-size:.82rem; font-weight:800;">
+                        <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                            <input type="checkbox" onchange="window.selecionarTodosItensPatio(this.checked)" style="width:17px; height:17px; accent-color:#16a34a;">
+                            Selecionar todos
+                        </label>
+                        <span id="patioSelecaoResumo" style="color:#cbd5e1;">Nenhum item selecionado</span>
+                    </div>
+
                     <div class="table-container" style="overflow-x: auto;">
                         <table class="patio-lista-areia" style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 1.5px solid #543725;">
+                                    <th class="hide-on-print" style="font-size: 0.75rem; padding: 12px 8px; font-weight: bold; text-transform: uppercase; text-align: center;">SEL.</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">CLASSE</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">MEDIDAS</th>
                                     <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">PACOTES</th>
