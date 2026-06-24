@@ -99,6 +99,50 @@ input[inputmode="decimal"],
     align-items: end;
 }
 
+.frota-photo-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(15,23,42,.82);
+    color: #bfdbfe;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0,0,0,.25);
+}
+
+.frota-photo-btn:hover {
+    color: #fff;
+    background: rgba(37,99,235,.9);
+}
+
+.config-table-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.config-wide-table {
+    min-width: 0 !important;
+}
+
+.config-wide-table th,
+.config-wide-table td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    padding: 9px 8px;
+}
+
+.config-wide-table th:last-child,
+.config-wide-table td:last-child {
+    width: 128px;
+}
+
 .patio-campo-pecas,
 .patio-campo-volume {
     max-width: 96px;

@@ -302,6 +302,55 @@ window.handleDocumentoUpload = function(event) {
     reader.readAsDataURL(file);
 };
 
+function redimensionarFotoFrota(file, maxSize = 900) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                const escala = Math.min(1, maxSize / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * escala));
+                canvas.height = Math.max(1, Math.round(img.height * escala));
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.82));
+            };
+            img.onerror = reject;
+            img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+window.trocarFotoFrota = function(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+            const foto = await redimensionarFotoFrota(file);
+            let veiculoAtualizado = null;
+            frota = frota.map(v => {
+                if (v.id !== id) return v;
+                veiculoAtualizado = { ...v, foto, fotoTipo: 'real', atualizadoEm: new Date().toISOString() };
+                return veiculoAtualizado;
+            });
+            if (!veiculoAtualizado) return;
+            salvarBanco(KEYS.FROTA, frota);
+            renderizarFrota();
+            await salvarDocFrota(FROTA_COLLECTIONS.FROTA, veiculoAtualizado);
+        } catch (error) {
+            console.error('Erro ao trocar foto da frota:', error);
+            alert('Nao foi possivel atualizar a foto deste veiculo.');
+        }
+    };
+    input.click();
+};
+
 async function salvarVeiculo() {
     const id = document.getElementById('veiculoId').value;
     const modelo = document.getElementById('veicModelo').value.trim().toUpperCase() || 'VEÍCULO S/ MODELO';
@@ -576,9 +625,11 @@ function renderizarFrota() {
         const fotoHtml = v.foto
             ? `<div class="frota-card-foto" style="height: 150px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.22); position: relative;">
                     <img src="${v.foto}" alt="${v.modelo}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    <button type="button" onclick="event.stopPropagation(); window.trocarFotoFrota('${v.id}')" title="Trocar foto" class="frota-photo-btn"><i class="fa-solid fa-camera"></i></button>
                     ${v.fotoTipo === 'ilustrativa' ? '<span style="position:absolute; right:8px; bottom:8px; font-size:0.65rem; font-weight:800; color:#fbbf24; background:rgba(0,0,0,0.68); border:1px solid rgba(251,191,36,0.35); border-radius:999px; padding:3px 7px;">ILUSTRATIVA</span>' : ''}
                 </div>`
             : `<div class="frota-card-foto" style="height: 150px; border-radius: 12px; margin-bottom: 14px; border: 1px dashed var(--panel-border); background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 2rem; position: relative;">
+                    <button type="button" onclick="event.stopPropagation(); window.trocarFotoFrota('${v.id}')" title="Adicionar foto" class="frota-photo-btn"><i class="fa-solid fa-camera"></i></button>
                     ${iconHtml}
                 </div>`;
 

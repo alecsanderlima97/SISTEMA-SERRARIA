@@ -216,8 +216,8 @@
                         <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
                             Registro automatico das principais criacoes, edicoes e exclusoes feitas no sistema.
                         </p>
-                        <div class="table-container" style="max-height: 360px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse;">
+                        <div class="table-container config-table-wrap" style="max-height: 460px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="config-wide-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
@@ -262,8 +262,8 @@
                             </div>
                         </div>
 
-                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse;">
+                        <div class="table-container config-table-wrap" style="max-height: 520px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="config-wide-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                                 <thead>
                                     <tr>
                                         <th>Nome</th>
