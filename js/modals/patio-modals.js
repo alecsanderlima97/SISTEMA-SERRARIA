@@ -127,21 +127,21 @@
                 <!-- PCTS SELEC. -->
                 <div class="patio-kpi-card patio-kpi-blue">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="kpi-label">PCTS SELEC.</span>
+                        <span class="kpi-label">CLASSE 1</span>
                         <i class="fa-solid fa-square-check" style="color: #60a5fa; font-size: 1.2rem;"></i>
                     </div>
                     <div id="lblPacotesHoje" class="kpi-value">0</div>
-                    <small id="lblPecasSelecionadasPatio" style="color:#cbd5e1; font-weight:800;">0 pcs</small>
+                    <small id="lblPecasSelecionadasPatio" style="color:#cbd5e1; font-weight:800;">0,000 m3</small>
                 </div>
 
                 <!-- HOJE M³ -->
                 <div class="patio-kpi-card patio-kpi-green">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="kpi-label">M3 SELEC.</span>
+                        <span class="kpi-label">CLASSE 2</span>
                         <i class="fa-solid fa-truck-ramp-box" style="color: #4ade80; font-size: 1.2rem;"></i>
                     </div>
                     <div id="lblVolumeHoje" class="kpi-value">0,000</div>
-                    <small id="lblTotalPecasPatio" style="color:#cbd5e1; font-weight:800;">0 pcs total</small>
+                    <small id="lblTotalPecasPatio" style="color:#cbd5e1; font-weight:800;">0,000 m3</small>
                 </div>
             </div>
 

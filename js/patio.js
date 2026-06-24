@@ -1445,14 +1445,23 @@ function atualizarConsolidatedStats() {
     let selPacotes = 0;
     let selVolume = 0;
     let selPecas = 0;
+    const porClasse = {
+        1: { pacotes: 0, volume: 0 },
+        2: { pacotes: 0, volume: 0 }
+    };
 
     itensPatioTemp.forEach(item => {
         const pacotes = Number(item.pacotes) || 0;
         const volume = Number(item.volume) || 0;
         const pecas = Number(item.totalPecas) || 0;
+        const classeNum = obterNumeroClasse(item.classe);
         totalPacotes += pacotes;
         totalVolume += volume;
         totalPecas += pecas;
+        if (porClasse[classeNum]) {
+            porClasse[classeNum].pacotes += pacotes;
+            porClasse[classeNum].volume += volume;
+        }
         if (itensPatioSelecionados.has(item.id)) {
             selPacotes += pacotes;
             selVolume += volume;
@@ -1468,13 +1477,13 @@ function atualizarConsolidatedStats() {
 
     if (lblTotalPacotes) lblTotalPacotes.innerText = totalPacotes;
     if (lblTotalVolume) lblTotalVolume.innerText = formatDecimalMockup(totalVolume);
-    if (lblPacotesHoje) lblPacotesHoje.innerText = selPacotes;
-    if (lblVolumeHoje) lblVolumeHoje.innerText = formatDecimalMockup(selVolume);
+    if (lblPacotesHoje) lblPacotesHoje.innerText = porClasse[1].pacotes;
+    if (lblVolumeHoje) lblVolumeHoje.innerText = porClasse[2].pacotes;
 
     const pecasTotal = document.getElementById('lblTotalPecasPatio');
     const pecasSel = document.getElementById('lblPecasSelecionadasPatio');
-    if (pecasTotal) pecasTotal.innerText = `${totalPecas} pçs`;
-    if (pecasSel) pecasSel.innerText = `${selPecas} pçs`;
+    if (pecasTotal) pecasTotal.innerText = `${formatDecimalMockup(porClasse[2].volume)} m³`;
+    if (pecasSel) pecasSel.innerText = `${formatDecimalMockup(porClasse[1].volume)} m³`;
     atualizarResumoProducaoRomaneios();
 }
 
@@ -1524,14 +1533,6 @@ async function atualizarResumoProducaoRomaneios() {
     }
     const saldoTotal = Math.max(0, (totaisPatio.pacotes || 0) - vendidos.totalPacotes);
     box.innerHTML = `
-        <div class="patio-kpi-card" style="background:rgba(22,163,74,0.1);">
-            <span class="kpi-label">PATIO 1A</span>
-            <div class="kpi-value">${totaisPatio.porClasse[1]?.pacotes || 0}</div>
-        </div>
-        <div class="patio-kpi-card" style="background:rgba(245,158,11,0.12);">
-            <span class="kpi-label">PATIO 2A</span>
-            <div class="kpi-value">${totaisPatio.porClasse[2]?.pacotes || 0}</div>
-        </div>
         <div class="patio-kpi-card" style="background:rgba(59,130,246,0.1);">
             <span class="kpi-label">VENDIDOS ROMANEIO</span>
             <div class="kpi-value">${vendidos.totalPacotes || 0}</div>
