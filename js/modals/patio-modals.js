@@ -124,32 +124,39 @@
                     <div id="lblTotalVolume" class="kpi-value">0,000</div>
                 </div>
 
-                <!-- PCTS HOJE -->
+                <!-- PCTS SELEC. -->
                 <div class="patio-kpi-card patio-kpi-blue">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="kpi-label">PCTS HOJE</span>
-                        <i class="fa-solid fa-calendar-check" style="color: #60a5fa; font-size: 1.2rem;"></i>
+                        <span class="kpi-label">PCTS SELEC.</span>
+                        <i class="fa-solid fa-square-check" style="color: #60a5fa; font-size: 1.2rem;"></i>
                     </div>
                     <div id="lblPacotesHoje" class="kpi-value">0</div>
+                    <small id="lblPecasSelecionadasPatio" style="color:#cbd5e1; font-weight:800;">0 pcs</small>
                 </div>
 
                 <!-- HOJE M³ -->
                 <div class="patio-kpi-card patio-kpi-green">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="kpi-label">HOJE M³</span>
+                        <span class="kpi-label">M3 SELEC.</span>
                         <i class="fa-solid fa-truck-ramp-box" style="color: #4ade80; font-size: 1.2rem;"></i>
                     </div>
                     <div id="lblVolumeHoje" class="kpi-value">0,000</div>
+                    <small id="lblTotalPecasPatio" style="color:#cbd5e1; font-weight:800;">0 pcs total</small>
                 </div>
             </div>
 
             <!-- SEÇÃO DE LANÇAMENTO E TABELA -->
             <div id="resumoPatioRomaneios" class="patio-kpi-grid hide-on-print" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin:-8px 0 22px 0;"></div>
             <div id="painelResumoProducaoPatio" class="glass-panel hide-on-print" style="display:none; margin:-8px 0 22px; padding:18px;"></div>
+            <div class="hide-on-print" style="display:flex; justify-content:flex-end; margin:-6px 0 10px;">
+                <button type="button" onclick="window.toggleCardCadastroPatio()" class="btn-patio-light" style="padding:7px 10px; font-size:.76rem; border-radius:7px;">
+                    <i id="iconeToggleCadastroPatio" class="fa-solid fa-eye-slash"></i> <span id="textoToggleCadastroPatio">Ocultar cadastro</span>
+                </button>
+            </div>
 
             <div class="glass-panel" style="margin-bottom: 25px; padding: 25px;">
                 <!-- FORMULÁRIO DE LANÇAMENTO -->
-                <div class="hide-on-print" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed rgba(230,126,34,0.15);">
+                <div id="cardCadastroLotePatio" class="hide-on-print" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed rgba(230,126,34,0.15);">
                     <h3 style="margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-circle-plus" style="color:#e67e22;"></i> Cadastrar Novo Lote no Pátio</h3>
 
                     <form id="formAdicionarItemPatio" class="patio-form-grid package-entry-grid">

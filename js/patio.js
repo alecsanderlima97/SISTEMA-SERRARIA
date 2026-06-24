@@ -129,7 +129,7 @@ function inicializarPatioListeners() {
     }
 
     if (btnImprimirEtiquetas) {
-        btnImprimirEtiquetas.addEventListener('click', imprimirListaDetalhadaPatio);
+        btnImprimirEtiquetas.addEventListener('click', () => imprimirListaDetalhadaPatio());
     }
     if (btnImprimirEtiquetasFisicas) {
         btnImprimirEtiquetasFisicas.addEventListener('click', () => {
@@ -1069,6 +1069,7 @@ function atualizarResumoSelecaoPatio() {
             ? `${ids.length} item(ns) selecionado(s)`
             : 'Nenhum item selecionado';
     }
+    atualizarConsolidatedStats();
 }
 
 window.toggleSelecionarItemPatio = function(id, checked) {
@@ -1081,6 +1082,17 @@ window.selecionarTodosItensPatio = function(checked) {
     if (checked) itensPatioTemp.forEach(item => itensPatioSelecionados.add(item.id));
     else itensPatioSelecionados.clear();
     renderizarItensPatioTemp();
+};
+
+window.toggleCardCadastroPatio = function() {
+    const card = document.getElementById('cardCadastroLotePatio');
+    const texto = document.getElementById('textoToggleCadastroPatio');
+    const icone = document.getElementById('iconeToggleCadastroPatio');
+    if (!card) return;
+    const vaiOcultar = card.style.display !== 'none';
+    card.style.display = vaiOcultar ? 'none' : '';
+    if (texto) texto.textContent = vaiOcultar ? 'Mostrar cadastro' : 'Ocultar cadastro';
+    if (icone) icone.className = vaiOcultar ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
 };
 
 function montarResumoImpressaoPatio(lista) {
@@ -1153,7 +1165,8 @@ function montarResumoGeralPatio(lista) {
         <div class="total-card total-card-geral">
             <strong>Total Geral</strong>
             <span>${geral.pacotes} pacote(s)</span>
-            <small>${geral.pecas} pçs | ${formatDecimalMockup(geral.volume)} m³</small>
+            <em>${formatDecimalMockup(geral.volume)} m³</em>
+            <small>${geral.pecas} pçs</small>
         </div>
     `;
 
@@ -1247,6 +1260,7 @@ function imprimirListaDetalhadaPatio(relatorio = null) {
             .total-card-geral { background:#0f172a; color:#fff; border-color:#0f172a; }
             .total-card strong, .total-card span, .total-card small { display:block; }
             .total-card span { font-size: 17px; margin: 4px 0; }
+            .total-card em { display:block; font-style:normal; font-size:18px; margin:4px 0; color:#22c55e; }
             .grupo-repetido { background: transparent !important; border: none !important; color: #334155 !important; font-size: 18px; min-width: 28px; }
             .classe-1 span { background:rgba(22,163,74,.14); border:1px solid rgba(22,163,74,.38); color:#15803d; }
             .classe-1 .cubagem { color:#15803d; }
@@ -1427,18 +1441,40 @@ function renderizarItensPatioTemp() {
 function atualizarConsolidatedStats() {
     let totalPacotes = 0;
     let totalVolume = 0;
+    let totalPecas = 0;
+    let selPacotes = 0;
+    let selVolume = 0;
+    let selPecas = 0;
 
     itensPatioTemp.forEach(item => {
-        totalPacotes += item.pacotes;
-        totalVolume += item.volume;
+        const pacotes = Number(item.pacotes) || 0;
+        const volume = Number(item.volume) || 0;
+        const pecas = Number(item.totalPecas) || 0;
+        totalPacotes += pacotes;
+        totalVolume += volume;
+        totalPecas += pecas;
+        if (itensPatioSelecionados.has(item.id)) {
+            selPacotes += pacotes;
+            selVolume += volume;
+            selPecas += pecas;
+        }
     });
 
     // Atualizar UI
-    document.getElementById('lblTotalPacotes').innerText = totalPacotes;
-    document.getElementById('lblTotalVolume').innerText = formatDecimalMockup(totalVolume);
+    const lblTotalPacotes = document.getElementById('lblTotalPacotes');
+    const lblTotalVolume = document.getElementById('lblTotalVolume');
+    const lblPacotesHoje = document.getElementById('lblPacotesHoje');
+    const lblVolumeHoje = document.getElementById('lblVolumeHoje');
 
-    document.getElementById('lblPacotesHoje').innerText = totalPacotes;
-    document.getElementById('lblVolumeHoje').innerText = formatDecimalMockup(totalVolume);
+    if (lblTotalPacotes) lblTotalPacotes.innerText = totalPacotes;
+    if (lblTotalVolume) lblTotalVolume.innerText = formatDecimalMockup(totalVolume);
+    if (lblPacotesHoje) lblPacotesHoje.innerText = selPacotes;
+    if (lblVolumeHoje) lblVolumeHoje.innerText = formatDecimalMockup(selVolume);
+
+    const pecasTotal = document.getElementById('lblTotalPecasPatio');
+    const pecasSel = document.getElementById('lblPecasSelecionadasPatio');
+    if (pecasTotal) pecasTotal.innerText = `${totalPecas} pçs`;
+    if (pecasSel) pecasSel.innerText = `${selPecas} pçs`;
     atualizarResumoProducaoRomaneios();
 }
 
