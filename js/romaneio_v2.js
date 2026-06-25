@@ -785,6 +785,27 @@ function formatarNumeroMadeiraOption(valor, casas = 1) {
     return numero.toFixed(casas).replace('.', ',');
 }
 
+function formatarMedidaRomaneioValor(esp, larg, comp) {
+    return `${Number(esp || 0).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${Number(larg || 0).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${Number(comp || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`;
+}
+
+function medidaRealPacoteRomaneio(p) {
+    return formatarMedidaRomaneioValor(p.esp, p.larg, p.compR || p.compV);
+}
+
+function medidaVendaPacoteRomaneio(p) {
+    return formatarMedidaRomaneioValor(p.esp, p.larg, p.compV || p.compR);
+}
+
+function pacoteCubadoDiferenteRomaneio(p) {
+    return Math.abs(Number(p.compV || 0) - Number(p.compR || p.compV || 0)) > 0.0001;
+}
+
+function detalheCubagemVendaRomaneio(p) {
+    if (!pacoteCubadoDiferenteRomaneio(p)) return '';
+    return `<span style="display:block; margin-top:3px; color:#f59e0b; font-size:.74rem; font-weight:800;">Cubado como ${medidaVendaPacoteRomaneio(p)}</span>`;
+}
+
 function formatarMedidasMadeiraOption(p) {
     return `${formatarNumeroMadeiraOption(p.espessura, 1)}/${formatarNumeroMadeiraOption(p.largura, 1)}/${formatarNumeroMadeiraOption(p.comprimentoVenda, 2)}`;
 }
@@ -937,7 +958,8 @@ function adicionarPacote() {
         produtoNome: nomeMadeira,
         qualidade: qualidade.toUpperCase(),
         especie,
-        medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
+        medidas: formatarMedidaRomaneioValor(esp, larg, compR),
+        medidasVenda: formatarMedidaRomaneioValor(esp, larg, compV),
         esp, larg, compV, compR,
         pecasPorPacote,
         alt, cam, amarras, configPct,
@@ -1061,7 +1083,8 @@ function salvarEdicaoPacote() {
             produtoNome: nomeMadeira,
             qualidade,
             especie,
-            medidas: `${esp.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${larg.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} / ${compV.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}m`,
+            medidas: formatarMedidaRomaneioValor(esp, larg, compR),
+            medidasVenda: formatarMedidaRomaneioValor(esp, larg, compV),
             esp, larg, compV, compR,
             pecasPorPacote,
             alt, cam, amarras, configPct,
@@ -1210,7 +1233,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
                     const cor = getCorPorQualidade(p.qualidade || 'PADRAO');
                     const totalPecas = Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
                     const valorUnit = totalPecas ? (Number(p.valorTotalWood || 0) / totalPecas) : 0;
-                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${p.medidas || '-'}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${formatarM3Baixo(p.m3VendaTotal || 0)}</td><td>R$ ${arredondarParaBaixo(valorUnit, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${arredondarParaBaixo(p.valorTotalWood || 0, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${medidaRealPacoteRomaneio(p)}${pacoteCubadoDiferenteRomaneio(p) ? `<br><b style="color:#d97706;">Cubado como ${medidaVendaPacoteRomaneio(p)}</b>` : ''}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${formatarM3Baixo(p.m3VendaTotal || 0)}</td><td>R$ ${arredondarParaBaixo(valorUnit, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${arredondarParaBaixo(p.valorTotalWood || 0, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
                 }).join('')}
             </tbody>
         </table>`;
@@ -1280,7 +1303,7 @@ function renderizarTabelaPacotes() {
     };
     const ordenarPorCubagem = (lista) => [...lista].sort((a, b) => {
         return numeroClasseRomaneio(a.qualidade) - numeroClasseRomaneio(b.qualidade)
-            || (Number(b.compV) || 0) - (Number(a.compV) || 0)
+            || (Number(b.compR || b.compV) || 0) - (Number(a.compR || a.compV) || 0)
             || (Number(b.esp) || 0) - (Number(a.esp) || 0)
             || (Number(b.larg) || 0) - (Number(a.larg) || 0)
             || (b.pecasPorPacote || 0) - (a.pecasPorPacote || 0);
@@ -1295,7 +1318,8 @@ function renderizarTabelaPacotes() {
         `;
         if (!primeiraCubagem) return configHtml;
         return `
-            <div style="font-weight:900; color:${cor}; font-size:0.95rem; white-space:nowrap;">${p.medidas}</div>
+            <div style="font-weight:900; color:${cor}; font-size:0.95rem; white-space:nowrap;">${medidaRealPacoteRomaneio(p)}</div>
+            ${detalheCubagemVendaRomaneio(p)}
             ${configHtml}
         `;
     };
@@ -1337,7 +1361,7 @@ function renderizarTabelaPacotes() {
                             ${(() => {
                                 let ultimaCubagem = '';
                                 return ordenarPorCubagem(g.itens).map(p => {
-                                    const cubagemAtual = `${p.produtoNome || ''}|${p.medidas || ''}`;
+                                    const cubagemAtual = `${p.produtoNome || ''}|${medidaRealPacoteRomaneio(p)}`;
                                     const primeiraCubagem = cubagemAtual !== ultimaCubagem;
                                     ultimaCubagem = cubagemAtual;
                                     return `
@@ -1700,7 +1724,7 @@ window.verPreviaRomaneioV2 = () => {
                 ${r.pacotes.map(p => `
                     <tr>
                         <td><strong>${p.qualidade}</strong></td>
-                        <td>${p.produtoNome}<br><small>${p.medidas}</small></td>
+                        <td>${p.produtoNome}<br><small>${medidaRealPacoteRomaneio(p)}${pacoteCubadoDiferenteRomaneio(p) ? `<br><b style="color:#d97706;">Cubado como ${medidaVendaPacoteRomaneio(p)}</b>` : ''}</small></td>
                         <td>${p.qtdPacotes}</td>
                         <td><small>${p.configPct}</small></td>
                         <td>${p.pecasPorPacote}</td>
