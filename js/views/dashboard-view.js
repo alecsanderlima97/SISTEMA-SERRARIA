@@ -62,77 +62,77 @@
 
                 <!-- Cards de Resumo -->
                 <div class="dashboard-grid" data-dashboard-permission="indicadores">
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Total de romaneios/cargas de madeira serrada registrados no sistema para o periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-truck-moving"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-cargas">0</h3>
                             <p>Total de Cargas</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Soma do volume em m³ de madeira serrada vendida nos romaneios do periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-layer-group"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-volume-total">0 m³</h3>
                             <p>Madeira Vendida</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="toras">
+                    <div class="kpi-card glass-panel" data-dashboard-view="toras" title="Soma do volume em m³ das entradas registradas na Conferencia de Cargas no periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-tree"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-entrada-toras">0 m³</h3>
                             <p>Conferência de Cargas</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Valor total em reais dos romaneios de madeira serrada registrados no periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-faturamento-madeira">R\$ 0,00</h3>
                             <p>Faturamento Madeira</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos">
+                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos" title="Valor total em reais das vendas de cavaco e po registradas no periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-leaf"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-faturamento-sub">R\$ 0,00</h3>
                             <p>Fat. Cavaco/Pó</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos">
+                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos" title="Soma dos metros carregados em vendas de cavaco e po no periodo analisado.">
                         <div class="kpi-icon"><i class="fa-solid fa-fill-drip"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-volume-sub">0 m³</h3>
                             <p>Vol. Cavaco/Pó</p>
                         </div>
                     </div>
-	                    <div class="kpi-card glass-panel" data-dashboard-view="rendimento">
+	                    <div class="kpi-card glass-panel" data-dashboard-view="rendimento" title="Comparativo entre volume de madeira serrada vendida e volume de toras recebidas/conferidas no periodo.">
 	                        <div class="kpi-icon"><i class="fa-solid fa-industry"></i></div>
 	                        <div class="kpi-data">
 	                            <h3 id="dash-rendimento-serraria">0%</h3>
 	                            <p>Rendimento Serraria</p>
 	                        </div>
 	                    </div>
-	                    <div class="kpi-card glass-panel">
+	                    <div class="kpi-card glass-panel" title="Quantidade de clientes cadastrados e marcados como ativos no sistema.">
 	                        <div class="kpi-icon"><i class="fa-solid fa-user-tie"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-clientes">0</h3>
                             <p>Clientes Ativos</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="estoque">
+                    <div class="kpi-card glass-panel" data-dashboard-view="estoque" title="Quantidade de itens do estoque com saldo baixo ou abaixo do minimo configurado.">
                         <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-estoque">0</h3>
                             <p>Itens Acabando</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="despesas">
+                    <div class="kpi-card glass-panel" data-dashboard-view="despesas" title="Soma das despesas financeiras registradas para o mes/periodo atual.">
                         <div class="kpi-icon" style="color:#ef4444;"><i class="fa-solid fa-arrow-trend-down"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-despesas-mes">R\$ 0,00</h3>
                             <p>Despesas</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="financeiro">
+                    <div class="kpi-card glass-panel" data-dashboard-view="financeiro" title="Resultado comparando receitas registradas e despesas do periodo.">
                         <div class="kpi-icon" style="color:#16a34a;"><i class="fa-solid fa-scale-balanced"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-comparativo-financeiro">R\$ 0,00</h3>
