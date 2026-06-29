@@ -101,14 +101,25 @@ function atualizarContadorSubprodutos() {
     if (el) el.textContent = `${subprodutosSelecionadosRelatorio.size} selecionado(s)`;
 }
 
+function formatarDataHoraLancamentoSubproduto(venda = {}) {
+    const origem = venda.criadoEm || venda.createdAt || venda.dataCriacao || venda.data;
+    if (!origem) return 'Data de lancamento nao registrada.';
+    const data = String(origem).includes('T') ? new Date(origem) : new Date(`${origem}T${venda.hora || venda.horario || '00:00:00'}`);
+    if (Number.isNaN(data.getTime())) return 'Data de lancamento nao registrada.';
+    return `Lancado no sistema em ${data.toLocaleDateString('pt-BR')} as ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`;
+}
+
 function filtrarLancamentosSubprodutos() {
     const busca = (document.getElementById('subRelBusca')?.value || '').trim().toLowerCase();
     const produto = normalizarTipoSubproduto(document.getElementById('subRelProduto')?.value || '');
+    const status = (document.getElementById('subRelStatus')?.value || '').toUpperCase();
     const inicio = document.getElementById('subRelDataInicio')?.value || '';
     const fim = document.getElementById('subRelDataFim')?.value || '';
     return vendasSubprodutosCache.filter(v => {
         const texto = `${v.cliente || ''} ${v.romaneio || ''} ${v.romaneioCliente || ''}`.toLowerCase();
+        const statusVenda = (v.statusPagamento || 'PENDENTE').toUpperCase();
         return (!busca || texto.includes(busca)) && (!produto || normalizarTipoSubproduto(v.tipo) === produto)
+            && (!status || statusVenda === status)
             && (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
     }).sort(ordenarSubprodutosConformeFiltro);
 }
@@ -708,9 +719,22 @@ function executarAcaoDocumentoSubproduto(acao) {
     }
 }
 
-function criarBotoesAcoesSubproduto(id) {
+function seloPagamentoSubproduto(venda = {}) {
+    const pago = String(venda.statusPagamento || 'PENDENTE').toUpperCase() === 'PAGO';
+    const dataBaixa = venda.pagamento?.dataHora ? new Date(venda.pagamento.dataHora) : null;
+    const detalhe = pago && dataBaixa && !Number.isNaN(dataBaixa.getTime())
+        ? ` title="Pago em ${dataBaixa.toLocaleDateString('pt-BR')} as ${dataBaixa.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${venda.pagamento?.usuario ? ` por ${venda.pagamento.usuario}` : ''}"`
+        : ' title="Pagamento pendente"';
+    return `<span${detalhe} style="display:inline-flex; align-items:center; gap:5px; justify-content:center; min-width:82px; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:900; border:1px solid ${pago ? 'rgba(34,197,94,.45)' : 'rgba(245,158,11,.45)'}; color:${pago ? '#4ade80' : '#fbbf24'}; background:${pago ? 'rgba(34,197,94,.12)' : 'rgba(245,158,11,.12)'};"><i class="fa-solid ${pago ? 'fa-circle-check' : 'fa-clock'}"></i>${pago ? 'Pago' : 'Pendente'}</span>`;
+}
+
+function criarBotoesAcoesSubproduto(id, venda = {}) {
+    const pago = String(venda.statusPagamento || 'PENDENTE').toUpperCase() === 'PAGO';
     return `
         <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:${pago ? '#fbbf24' : '#4ade80'}; border-color:${pago ? 'rgba(251,191,36,0.35)' : 'rgba(74,222,128,0.35)'};" onclick="window.alternarPagamentoSubproduto('${id}')">
+                <i class="fa-solid ${pago ? 'fa-rotate-left' : 'fa-circle-check'}"></i> ${pago ? 'Reabrir' : 'Pago'}
+            </button>
             <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px;" onclick="window.editarVendaSubproduto('${id}')">
                 <i class="fa-solid fa-pen"></i> Editar
             </button>
@@ -764,7 +788,7 @@ function renderizarLancamentosSubprodutos() {
     const ultimos = filtrarLancamentosSubprodutos();
         atualizarResumoCarregamentosHoje();
         if (!ultimos.length) {
-            lista.innerHTML = '<tr><td colspan="10" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
+            lista.innerHTML = '<tr><td colspan="11" style="padding:14px; text-align:center;">Nenhum lancamento encontrado.</td></tr>';
             atualizarContadorSubprodutos();
             return;
         }
@@ -774,8 +798,9 @@ function renderizarLancamentosSubprodutos() {
             const total = Number(venda.total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             const qtd = Number(venda.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const valorUnit = Number(venda.valorUnitario || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const resumoLancamento = formatarDataHoraLancamentoSubproduto(venda);
             return `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <tr title="${resumoLancamento}" style="border-bottom:1px solid rgba(255,255,255,0.05);">
                     <td style="padding:10px 8px; text-align:center;"><input type="checkbox" class="check-sub-relatorio" data-id="${venda.id}" ${subprodutosSelecionadosRelatorio.has(venda.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.toggleSubprodutoRelatorio && window.toggleSubprodutoRelatorio('${venda.id}', this.checked)"></td>
                     <td style="padding:10px 8px; font-weight:800;">${venda.romaneio || '-'}</td>
                     <td style="padding:10px 8px;">${data}</td>
@@ -784,8 +809,9 @@ function renderizarLancamentosSubprodutos() {
                     <td style="padding:10px 8px; text-align:right;">${qtd} ${venda.unidade || 'm3'}</td>
                     <td style="padding:10px 8px; text-align:right;">${valorUnit}</td>
                     <td style="padding:10px 8px;">${venda.placaCaminhao || '-'}</td>
+                    <td style="padding:10px 8px; text-align:center;">${seloPagamentoSubproduto(venda)}</td>
                     <td style="padding:10px 8px; text-align:right; color:var(--accent-color); font-weight:700;">${total}</td>
-                    <td style="padding:10px 8px; text-align:right;">${criarBotoesAcoesSubproduto(venda.id)}</td>
+                    <td style="padding:10px 8px; text-align:right;">${criarBotoesAcoesSubproduto(venda.id, venda)}</td>
                 </tr>
             `;
         }).join('');
@@ -920,6 +946,9 @@ if (btnCalcCavaco) {
         btnCalcCavaco.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
 
         try {
+            const vendaAnterior = vendaSubprodutoEditandoId
+                ? vendasSubprodutosCache.find(item => item.id === vendaSubprodutoEditandoId)
+                : null;
             // Salvar a venda no Firestore
             const novaVenda = {
                 data: dataVenda,
@@ -940,7 +969,10 @@ if (btnCalcCavaco) {
                 quantidade: qtd,
                 valorUnitario: valorUni,
                 total: total,
-                criadoEm: new Date().toISOString()
+                statusPagamento: vendaAnterior?.statusPagamento || 'PENDENTE',
+                pagamento: vendaAnterior?.pagamento || null,
+                criadoEm: vendaAnterior?.criadoEm || new Date().toISOString(),
+                atualizadoEm: new Date().toISOString()
             };
 
             if (vendaSubprodutoEditandoId) {
@@ -1014,6 +1046,36 @@ window.whatsappVendaSubproduto = (id) => {
     if (prepararDocumentoVendaSubproduto(id)) executarAcaoDocumentoSubproduto('whatsapp');
 };
 
+window.alternarPagamentoSubproduto = async (id) => {
+    const venda = vendasSubprodutosCache.find(item => item.id === id);
+    if (!venda) return;
+    const pago = String(venda.statusPagamento || 'PENDENTE').toUpperCase() === 'PAGO';
+    const acao = pago ? 'reabrir como pendente' : 'marcar como pago';
+    if (!confirm(`Deseja ${acao} este lancamento?`)) return;
+    const usuario = window.App?.userName || document.getElementById('userNameHeader')?.textContent?.trim() || auth.currentUser?.email || 'Usuario';
+    const dados = pago
+        ? { statusPagamento: 'PENDENTE', pagamento: null, atualizadoEm: new Date().toISOString() }
+        : {
+            statusPagamento: 'PAGO',
+            pagamento: {
+                dataHora: new Date().toISOString(),
+                usuario,
+                uid: auth.currentUser?.uid || null
+            },
+            atualizadoEm: new Date().toISOString()
+        };
+    try {
+        await window.FS.updateDoc('vendas_subprodutos', id, dados);
+        const idx = vendasSubprodutosCache.findIndex(item => item.id === id);
+        if (idx >= 0) vendasSubprodutosCache[idx] = { ...vendasSubprodutosCache[idx], ...dados };
+        renderizarLancamentosSubprodutos();
+        document.dispatchEvent(new Event('historicoUpdated'));
+    } catch (e) {
+        console.error('Erro ao atualizar pagamento do subproduto:', e);
+        alert('Nao foi possivel atualizar o status de pagamento.');
+    }
+};
+
 window.editarVendaSubproduto = (id) => {
     const venda = vendasSubprodutosCache.find(item => item.id === id);
     if (!venda) return;
@@ -1063,7 +1125,7 @@ window.SectionLoader?.register('view-cavaco', () => Promise.all([
     carregarClientesSubprodutos(),
     carregarLancamentosSubprodutos()
 ]));
-['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim', 'subRelOrdem'].forEach(id => {
+['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim', 'subRelOrdem', 'subRelStatus'].forEach(id => {
     const campo = document.getElementById(id);
     if (campo) campo.addEventListener(id === 'subRelBusca' ? 'input' : 'change', renderizarLancamentosSubprodutos);
 });

@@ -230,6 +230,7 @@
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data inicial</label><input type="date" id="subRelDataInicio" style="padding:8px;"></div>
                             <div><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Data final</label><input type="date" id="subRelDataFim" style="padding:8px;"></div>
                             <div style="min-width:150px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Ordem</label><select id="subRelOrdem" style="padding:8px; width:100%;"><option value="recentes">Mais recentes</option><option value="antigos">Mais antigos</option></select></div>
+                            <div style="min-width:145px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Pagamento</label><select id="subRelStatus" style="padding:8px; width:100%;"><option value="">Todos</option><option value="PENDENTE">Pendentes</option><option value="PAGO">Pagos</option></select></div>
                             <div id="subRelContador" style="min-width:145px; padding:9px 12px; border:1px solid rgba(45,212,191,.35); border-radius:7px; color:#5eead4; font-weight:800; text-align:center;">0 selecionados</div>
                             <button type="button" class="btn-primary" onclick="window.gerarRelatorioFechamentoSubprodutos && window.gerarRelatorioFechamentoSubprodutos()" style="padding:10px 14px;"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Fechamento</button>
                         </div>
@@ -245,6 +246,7 @@
                                         <th style="padding: 10px; text-align: right;">Metragem</th>
                                         <th style="padding: 10px; text-align: right;">Valor Un.</th>
                                         <th style="padding: 10px; text-align: left;">Placa</th>
+                                        <th style="padding: 10px; text-align: center;">Status</th>
                                         <th style="padding: 10px; text-align: right;">Total</th>
                                         <th style="padding: 10px; text-align: right;">Acoes</th>
                                     </tr>

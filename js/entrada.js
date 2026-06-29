@@ -411,6 +411,14 @@ function normalizeText(value) {
     return (value || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+function formatarDataHoraLancamentoEntrada(en = {}) {
+    const origem = en.criadoEm || en.createdAt || en.dataCriacao || en.data;
+    if (!origem) return 'Data de lancamento nao registrada.';
+    const data = String(origem).includes('T') ? new Date(origem) : new Date(`${origem}T${en.horario || '00:00:00'}`);
+    if (Number.isNaN(data.getTime())) return 'Data de lancamento nao registrada.';
+    return `Lancado no sistema em ${data.toLocaleDateString('pt-BR')} as ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`;
+}
+
 function usuarioPodeVerFinanceiroEmpreiteiro() {
     return normalizeText(window.App?.userRole) === 'gerente';
 }
@@ -593,6 +601,7 @@ function renderizarEntradas() {
     // Ordenar decrescente pela data e hora de entrada
     filtradas.sort((a,b) => new Date(b.data + 'T' + (b.horario || '00:00')) - new Date(a.data + 'T' + (a.horario || '00:00'))).forEach(en => {
         const tr = document.createElement('tr');
+        tr.title = formatarDataHoraLancamentoEntrada(en);
         
         const dtObj = new Date(en.data + 'T12:00:00'); // hack para timezone
         const dtStr = dtObj.toLocaleDateString('pt-BR');

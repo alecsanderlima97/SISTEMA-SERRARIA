@@ -1369,7 +1369,9 @@ function renderizarItensPatioTemp() {
             ? '<span title="Etiqueta impressa" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(22,163,74,.14); color:#16a34a; font-size:.72rem; margin-left:6px;"><i class="fa-solid fa-tag"></i></span>'
             : '';
         const ultimoUso = item.ultimoUsoRomaneio;
-        const usoRomaneioHtml = ultimoUso ? `<div style="margin-top:4px; color:#0f766e; font-size:.72rem; font-weight:800;"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>` : '';
+        const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
+        const mostrarUsoRomaneio = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000;
+        const usoRomaneioHtml = mostrarUsoRomaneio ? `<div style="margin-top:4px; color:#0f766e; font-size:.72rem; font-weight:800;"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>` : '';
         const medidasHtml = primeiraCubagem
             ? `
                 <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}${etiquetaIcone}</div>
