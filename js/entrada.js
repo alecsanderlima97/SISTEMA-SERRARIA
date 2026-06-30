@@ -261,6 +261,27 @@ function atualizarSelectEmpreiteiros() {
 }
 window.renderizarEmpreiteiros = renderizarEmpreiteiros;
 
+window.abrirCadastroEmpreiteiro = function() {
+    empreiteiroEditandoId = null;
+    matosEmpreiteiroEditando = [];
+    if (formEmpreiteiro) {
+        formEmpreiteiro.reset();
+        const btn = formEmpreiteiro.querySelector('button[type="submit"]');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Empreiteiro';
+    }
+    renderizarMatosEmpreiteiro();
+    const cardCad = document.getElementById('cardFormEmpreiteiro');
+    const gridLayout = document.getElementById('gridEntradasGeralLayout');
+    const colEsquerda = gridLayout ? gridLayout.querySelector('.form-column-left') : null;
+    if (cardCad) cardCad.style.display = 'block';
+    if (colEsquerda) {
+        colEsquerda.style.display = 'block';
+        colEsquerda.style.width = '100%';
+        colEsquerda.style.maxWidth = '100%';
+    }
+    cardCad?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
 function preencherDadosEmpreiteiroSelecionado() {
     if (!selectEmpreiteiro) return;
     const opt = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
@@ -1423,7 +1444,7 @@ window.switchTabEntrada = function(tabName) {
         tabEmpreiteiros.style.color = 'var(--accent-color)';
         tabEmpreiteiros.style.borderBottom = '3px solid var(--accent-color)';
         
-        colEsquerda.style.display = cardEmp.style.display === 'block' ? 'block' : 'none';
+        colEsquerda.style.display = 'none';
         colEsquerda.style.width = '100%';
         colEsquerda.style.maxWidth = '100%';
         colEsquerda.style.margin = '0 0 16px 0';
@@ -1580,6 +1601,8 @@ function inicializarModuloEntrada() {
             renderizarEmpreiteiros();
         });
     }
+    const btnNovoEmpreiteiro = document.getElementById('btnNovoEmpreiteiro');
+    if (btnNovoEmpreiteiro) btnNovoEmpreiteiro.addEventListener('click', window.abrirCadastroEmpreiteiro);
     const btnAdicionarMatoEmpreiteiro = document.getElementById('btnAdicionarMatoEmpreiteiro');
     if (btnAdicionarMatoEmpreiteiro) btnAdicionarMatoEmpreiteiro.addEventListener('click', adicionarMatoEmpreiteiro);
     const empMatoInput = document.getElementById('empMato');

@@ -218,6 +218,7 @@
                             <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                 <h2><i class="fa-solid fa-list-ul"></i> Empreiteiros</h2>
                                 <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" id="btnNovoEmpreiteiro" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-plus"></i> Novo Empreiteiro</button>
                                     <input type="text" id="filtroEmpreiteirosBusca" placeholder="Buscar por Nome ou Mato..." style="padding: 8px 12px; font-size: 0.85rem; width: 190px; margin-bottom: 0;">
                                     <button type="button" id="btnOrdenarEmpreiteiros" class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; height: 35px; border-radius: 8px;"><i class="fa-solid fa-arrow-down-a-z"></i> A-Z</button>
                                 </div>
