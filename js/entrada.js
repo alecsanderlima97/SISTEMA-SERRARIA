@@ -433,6 +433,32 @@ function temDescarga(en) {
     return (en.totalDescarga || 0) > 0 && (en.valorDescargaM3 || 0) > 0;
 }
 
+function entradaCompraAvulsaAtiva() {
+    return document.getElementById('entOrigemTora')?.value === 'COMPRA_AVULSA';
+}
+
+function atualizarOrigemToraEntrada() {
+    const avulsa = entradaCompraAvulsaAtiva();
+    const grupoFornecedor = document.getElementById('grupoFornecedorAvulso');
+    const grupoValor = document.getElementById('grupoValorAvulso');
+    const grupoEmpreiteiro = selectEmpreiteiro?.closest('.input-group');
+    const fornecedor = document.getElementById('entFornecedorAvulso');
+    const valorAvulso = document.getElementById('entValorAvulso');
+    if (grupoFornecedor) grupoFornecedor.style.display = avulsa ? 'flex' : 'none';
+    if (grupoValor) grupoValor.style.display = avulsa ? 'flex' : 'none';
+    if (grupoEmpreiteiro) grupoEmpreiteiro.style.display = avulsa ? 'none' : 'flex';
+    if (selectEmpreiteiro) selectEmpreiteiro.required = !avulsa;
+    if (fornecedor) fornecedor.required = avulsa;
+    if (valorAvulso) valorAvulso.required = false;
+    if (avulsa) {
+        if (selectEmpreiteiro) selectEmpreiteiro.value = '';
+        const matoSelect = document.getElementById('entMatoSelect');
+        if (matoSelect) matoSelect.style.display = 'none';
+        if (entMato) entMato.style.display = '';
+    }
+    calcularVolumeAtual();
+}
+
 window.atualizarPermissoesEntrada = function() {
     aplicarVisibilidadeFinanceiraEntrada();
     renderizarEntradas();
@@ -506,7 +532,9 @@ function calcularVolumeAtual() {
     
     // Calculo Financeiro
     let valorMetro = 0;
-    if(selectEmpreiteiro && selectEmpreiteiro.selectedIndex > 0) {
+    if (entradaCompraAvulsaAtiva()) {
+        valorMetro = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('entValorAvulso')?.value || '0') : 0;
+    } else if(selectEmpreiteiro && selectEmpreiteiro.selectedIndex > 0) {
         const optEmpreiteiro = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
         const selectMato = document.getElementById('entMatoSelect');
         valorMetro = parseFloat(selectMato?.selectedOptions?.[0]?.dataset?.valor || optEmpreiteiro.dataset.valor) || 0;
@@ -1015,15 +1043,21 @@ function configurarSubmitEntrada() {
             return;
         }
         
-        const empreiteiroId = selectEmpreiteiro.value;
-        const empreiteiroNome = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
+        const origemTora = document.getElementById('entOrigemTora')?.value || 'EMPREITEIRO';
+        const compraAvulsa = origemTora === 'COMPRA_AVULSA';
+        const empreiteiroId = compraAvulsa ? null : selectEmpreiteiro.value;
+        const fornecedorAvulso = (document.getElementById('entFornecedorAvulso')?.value || '').toUpperCase().trim();
+        const empreiteiroNome = compraAvulsa ? fornecedorAvulso : selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
         const usuarioAuditoria = getUsuarioAtualAuditoria();
         
         const novaEntrada = {
             data: document.getElementById('entData').value,
             horario: document.getElementById('entHorario').value,
+            origemTora,
+            compraAvulsa,
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
+            fornecedor: empreiteiroNome,
             mato: ((document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
             produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
             observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
@@ -1146,6 +1180,13 @@ window.alterarEntrada = function(id) {
     if(!en) return;
     alert('Você será direcionado para a tela de Registro / Calculadora M³ para alterar esta entrada.');
     entradaEditandoId = id;
+    const origemInput = document.getElementById('entOrigemTora');
+    if (origemInput) origemInput.value = en.origemTora || (en.compraAvulsa ? 'COMPRA_AVULSA' : 'EMPREITEIRO');
+    atualizarOrigemToraEntrada();
+    const fornecedorAvulsoInput = document.getElementById('entFornecedorAvulso');
+    if (fornecedorAvulsoInput) fornecedorAvulsoInput.value = en.compraAvulsa ? (en.empreiteiroNome || en.fornecedor || '') : '';
+    const valorAvulsoInput = document.getElementById('entValorAvulso');
+    if (valorAvulsoInput) valorAvulsoInput.value = en.compraAvulsa && window.formatCurrencyValue ? window.formatCurrencyValue(en.valorMetroEmpreiteiro || 0) : '';
     document.getElementById('entData').value = en.data || '';
     document.getElementById('entHorario').value = en.horario || '';
     if(selectEmpreiteiro) {
@@ -1424,7 +1465,7 @@ function inicializarModuloEntrada() {
     configurarSubmitEntrada();
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entMotorista', 'entCaminhao', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
+    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entFornecedorAvulso', 'entMotorista', 'entCaminhao', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);
@@ -1456,6 +1497,13 @@ function inicializarModuloEntrada() {
     if(entValorDescarga) {
         entValorDescarga.addEventListener('input', window.formatCurrencyInput);
         entValorDescarga.addEventListener('input', calcularVolumeAtual);
+    }
+    const entOrigemTora = document.getElementById('entOrigemTora');
+    if (entOrigemTora) entOrigemTora.addEventListener('change', atualizarOrigemToraEntrada);
+    const entValorAvulso = document.getElementById('entValorAvulso');
+    if (entValorAvulso) {
+        entValorAvulso.addEventListener('input', window.formatCurrencyInput);
+        entValorAvulso.addEventListener('input', calcularVolumeAtual);
     }
     if(entHorario) {
         entHorario.addEventListener('input', calcularVolumeAtual);
@@ -1580,6 +1628,7 @@ function inicializarModuloEntrada() {
         entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
 
+    atualizarOrigemToraEntrada();
     window.switchTabEntrada('registro');
 
 }

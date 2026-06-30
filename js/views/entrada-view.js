@@ -67,16 +67,31 @@
                             </div>
                             <form id="formEntrada" class="grid-form">
                                 <div class="input-group">
+                                    <label for="entOrigemTora">Origem da tora *</label>
+                                    <select id="entOrigemTora" required>
+                                        <option value="EMPREITEIRO">Empreiteiro</option>
+                                        <option value="COMPRA_AVULSA">Compra avulsa</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
                                     <label for="entEmpreiteiro">Empreiteiro *</label>
                                     <select id="entEmpreiteiro" required>
                                         <option value="">Selecione o Empreiteiro...</option>
                                         <!-- Preenchido via JS -->
                                     </select>
                                 </div>
+                                <div class="input-group" id="grupoFornecedorAvulso" style="display:none;">
+                                    <label for="entFornecedorAvulso">Fornecedor avulso *</label>
+                                    <input type="text" id="entFornecedorAvulso" class="text-uppercase-input" placeholder="Ex: Fazenda Sao Pedro">
+                                </div>
                                 <div class="input-group">
                                     <label for="entMato">Mato</label>
                                     <select id="entMatoSelect" style="display: none;"></select>
                                     <input type="text" id="entMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
+                                </div>
+                                <div class="input-group" id="grupoValorAvulso" style="display:none;">
+                                    <label for="entValorAvulso">Valor compra avulsa (R$ / m³)</label>
+                                    <input type="text" id="entValorAvulso" placeholder="R$ 0,00">
                                 </div>
                                 <div class="input-group">
                                     <label for="entProdutoCarga">Produto da carga *</label>
