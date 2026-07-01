@@ -415,6 +415,7 @@ let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtr
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
 let entradasSelecionadas = new Set();
+let descargasSelecionadas = new Set();
 let entradasUnsubscribe = null;
 
 function getUsuarioAtualAuditoria() {
@@ -739,10 +740,15 @@ function getDescargasFiltradas() {
 function renderizarDescarregamentos() {
     if (!listaDescarregamentos) return;
     const filtradas = getDescargasFiltradas();
+    const idsVisiveis = new Set(filtradas.map(en => en.id));
+    descargasSelecionadas.forEach(id => {
+        if (!idsVisiveis.has(id)) descargasSelecionadas.delete(id);
+    });
 
     if (filtradas.length === 0) {
-        listaDescarregamentos.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
+        listaDescarregamentos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
         atualizarResumoDescarregamento(filtradas);
+        atualizarSelecaoDescarregamento(filtradas);
         return;
     }
 
@@ -751,7 +757,9 @@ function renderizarDescarregamentos() {
         const tr = document.createElement('tr');
         const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
         const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
+        const isChecked = descargasSelecionadas.has(en.id) ? 'checked' : '';
         tr.innerHTML = `
+            <td style="text-align:center;"><input type="checkbox" class="check-descarga" data-id="${en.id}" ${isChecked} style="transform: scale(1.2); cursor:pointer;"></td>
             <td>${dtStr}<br><small style="color:#aaa;">${en.horario || '-'}</small></td>
             <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br><small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small></td>
             <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. Média: ${formatDecimalValue(en.mediaAltura)}m</td>
@@ -777,8 +785,19 @@ function renderizarDescarregamentos() {
     });
 
     atualizarResumoDescarregamento(filtradas);
+    atualizarSelecaoDescarregamento(filtradas);
 }
 window.renderizarDescarregamentos = renderizarDescarregamentos;
+
+function atualizarSelecaoDescarregamento(lista = getDescargasFiltradas()) {
+    const info = document.getElementById('descargaSelecionadosInfo');
+    if (info) info.textContent = `${descargasSelecionadas.size} selecionado(s)`;
+    const checkAll = document.getElementById('checkAllDescargas');
+    if (checkAll) {
+        checkAll.checked = lista.length > 0 && lista.every(en => descargasSelecionadas.has(en.id));
+        checkAll.indeterminate = descargasSelecionadas.size > 0 && !checkAll.checked;
+    }
+}
 
 function atualizarResumoDescarregamento(lista) {
     const totalVolume = lista.reduce((sum, en) => sum + (en.volume || 0), 0);
@@ -792,9 +811,13 @@ function atualizarResumoDescarregamento(lista) {
 }
 
 window.gerarRelatorioDescarregamento = function() {
-    const lista = getDescargasFiltradas().sort((a,b) => new Date(a.data + 'T' + (a.horario || '00:00')) - new Date(b.data + 'T' + (b.horario || '00:00')));
+    const baseFiltrada = getDescargasFiltradas();
+    const listaBase = descargasSelecionadas.size
+        ? baseFiltrada.filter(en => descargasSelecionadas.has(en.id))
+        : baseFiltrada;
+    const lista = listaBase.sort((a,b) => new Date(a.data + 'T' + (a.horario || '00:00')) - new Date(b.data + 'T' + (b.horario || '00:00')));
     if (lista.length === 0) {
-        alert("Nenhum descarregamento com valor encontrado para imprimir.");
+        alert("Nenhum descarregamento encontrado. Selecione itens ou ajuste o periodo.");
         return;
     }
 
@@ -802,9 +825,11 @@ window.gerarRelatorioDescarregamento = function() {
     const totalValor = lista.reduce((sum, en) => sum + (en.totalDescarga || 0), 0);
     const dataInicio = document.getElementById('filtroDescargaDataInicio')?.value;
     const dataFim = document.getElementById('filtroDescargaDataFim')?.value;
-    const periodo = dataInicio || dataFim
-        ? `${dataInicio ? new Date(dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${dataFim ? new Date(dataFim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`
-        : 'Periodo geral';
+    const periodo = descargasSelecionadas.size
+        ? `${lista.length} descarregamento(s) selecionado(s)`
+        : (dataInicio || dataFim
+            ? `${dataInicio ? new Date(dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'Inicio'} a ${dataFim ? new Date(dataFim + 'T12:00:00').toLocaleDateString('pt-BR') : 'Fim'}`
+            : 'Periodo geral');
 
     const rows = lista.map((en, index) => {
         const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
@@ -1547,6 +1572,25 @@ function inicializarModuloEntrada() {
     if(filtroDescargaDataFim) filtroDescargaDataFim.addEventListener('change', renderizarDescarregamentos);
     const btnGerarRelatorioDescarga = document.getElementById('btnGerarRelatorioDescarga');
     if(btnGerarRelatorioDescarga) btnGerarRelatorioDescarga.addEventListener('click', window.gerarRelatorioDescarregamento);
+    const checkAllDescargas = document.getElementById('checkAllDescargas');
+    if (checkAllDescargas) {
+        checkAllDescargas.addEventListener('change', (e) => {
+            getDescargasFiltradas().forEach(en => {
+                if (e.target.checked) descargasSelecionadas.add(en.id);
+                else descargasSelecionadas.delete(en.id);
+            });
+            renderizarDescarregamentos();
+        });
+    }
+    if (listaDescarregamentos) {
+        listaDescarregamentos.addEventListener('change', (e) => {
+            if (!e.target.classList.contains('check-descarga')) return;
+            const id = e.target.dataset.id;
+            if (e.target.checked) descargasSelecionadas.add(id);
+            else descargasSelecionadas.delete(id);
+            atualizarSelecaoDescarregamento();
+        });
+    }
 
     // Selecionar tudo
     const checkAll = document.getElementById('checkAllEntradas');

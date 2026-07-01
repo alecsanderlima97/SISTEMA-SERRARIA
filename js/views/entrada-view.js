@@ -326,6 +326,7 @@
                                         <label style="font-size: 0.75rem; color: #ccc; margin-bottom: 4px;">Data Fim</label>
                                         <input type="date" id="filtroDescargaDataFim" style="padding: 8px 10px; font-size: 0.85rem; margin-bottom: 0; height: 38px;">
                                     </div>
+                                    <div id="descargaSelecionadosInfo" style="padding:9px 12px; border:1px solid rgba(45,212,191,.35); border-radius:7px; color:#5eead4; font-weight:800; min-width:150px; text-align:center;">0 selecionados</div>
                                 </div>
                             </div>
                             
@@ -333,6 +334,7 @@
                                 <table>
                                     <thead>
                                         <tr>
+                                            <th style="width:40px; text-align:center;"><input type="checkbox" id="checkAllDescargas" style="transform: scale(1.2); cursor:pointer;"></th>
                                             <th>Data/Hora</th>
                                             <th>Fornecedor</th>
                                             <th>Dimensões</th>
