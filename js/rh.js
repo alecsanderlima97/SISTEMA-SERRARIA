@@ -880,10 +880,18 @@ function atualizarPreviewHoraExtra() {
     let adicional = window.parseCurrencyValue ? window.parseCurrencyValue(adicionalRaw) : parseFloat(adicionalRaw.replace(',', '.')) || 0;
     if (adicionalRaw.trim().startsWith('-')) adicional = -Math.abs(adicional);
     const tarifa = obterTarifaHEFuncionario(f, tipo);
+    const tarifaNormal = obterTarifaHEFuncionario(f, 'NORMAL');
+    const tarifaEspecial = obterTarifaHEFuncionario(f, 'ESPECIAL');
     const total = (horas * tarifa) + (parseFloat(adicional) || 0);
     const valorHoraEl = document.getElementById('he-valor-hora-preview');
     const totalEl = document.getElementById('he-total-preview');
-    if (valorHoraEl) valorHoraEl.textContent = `${tarifa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h`;
+    if (valorHoraEl) {
+        valorHoraEl.innerHTML = `
+            <span style="display:block;">Normal: ${tarifaNormal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
+            <span style="display:block; margin-top:2px;">Fim semana: ${tarifaEspecial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
+            <small style="display:block; margin-top:4px; color:#fbbf24;">Usando: ${tipo === 'ESPECIAL' ? 'fim de semana/especial' : 'dia normal'}</small>
+        `;
+    }
     if (totalEl) totalEl.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 

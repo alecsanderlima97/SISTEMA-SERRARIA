@@ -36,8 +36,8 @@
                         <label>Valor Fixo / Diária Especial (Presets)</label>
                         <select id="he-preset" onchange="window.aplicarPresetHE(this.value)">
                             <option value="NENHUM">-- Nenhum (Lançar Horas Trabalhadas) --</option>
-                            <option value="MEIO">Meio Período / Fim de Semana (R\$ 50,00 fixo)</option>
-                            <option value="INTEGRAL">Período Integral / Fim de Semana (R\$ 100,00 fixo)</option>
+                            <option value="MEIO">Meio dia (R\$ 60,00 fixo)</option>
+                            <option value="INTEGRAL">Dia todo (R\$ 110,00 fixo)</option>
                         </select>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-bottom: 12px;">
