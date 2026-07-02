@@ -325,8 +325,14 @@ function configurarFormulariosRH() {
             } else {
                 heTipoDia.value = 'NORMAL';
             }
+            atualizarPreviewHoraExtra();
         });
     }
+
+    ['he-horas', 'he-adicional'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', atualizarPreviewHoraExtra);
+    });
 
     // Form de horas extras submit
     const formHE = document.getElementById('formHE');
@@ -386,7 +392,7 @@ function calcularResumoHorasExtras(func, lista = null) {
     const valorHE100 = func.valorHeEspecial !== undefined ? (parseFloat(func.valorHeEspecial) || 0) : (((func.salario || 0) / 220) * 2.0);
     return heList.reduce((acc, h) => {
         const horas = parseFloat(h.horas) || 0;
-        const tarifa = h.tipo === 'ESPECIAL' ? valorHE100 : valorHE50;
+        const tarifa = obterTarifaHEFuncionario(func, h.tipo);
         const adicional = parseFloat(h.adicional) || 0;
         acc.horas += horas;
         acc.valor += (horas * tarifa) + adicional;
@@ -749,6 +755,7 @@ window.abrirModalHE = (id) => {
     atualizarBotaoHoraExtra();
     const presetDropdown = document.getElementById('he-preset');
     if (presetDropdown) presetDropdown.value = 'NENHUM';
+    atualizarPreviewHoraExtra();
 
     renderizarTabelaHE(f);
     renderizarHistoricoHE(f);
@@ -811,7 +818,7 @@ function renderizarTabelaHE(func) {
         return `
             <tr>
                 <td><strong>${diaFormatado.toUpperCase()}</strong></td>
-                <td><span style="font-size:1.05rem; font-weight:bold; color:white;">${h.horas}h</span></td>
+                <td><span style="font-size:1.05rem; font-weight:bold; color:white;">${formatarHorasHE(h.horas)}</span></td>
                 <td>
                     <span style="padding:4px 8px; border-radius:12px; font-size:0.75rem; display:inline-block; font-weight:bold; ${badgeCor}">
                         ${labelTipo}
@@ -839,6 +846,47 @@ function renderizarTabelaHE(func) {
     if (totalValor) totalValor.textContent = somaValores.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function parseHorasHE(valor) {
+    const texto = String(valor || '').trim();
+    if (!texto) return 0;
+    if (texto.includes(':')) {
+        const [h, m = '0'] = texto.split(':');
+        return (parseInt(h, 10) || 0) + ((parseInt(m, 10) || 0) / 60);
+    }
+    return parseFloat(texto.replace(',', '.')) || 0;
+}
+
+function formatarHorasHE(valor) {
+    const horas = Number(valor) || 0;
+    const h = Math.floor(horas);
+    const m = Math.round((horas - h) * 60);
+    if (m === 0) return `${h}h`;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}h`;
+}
+
+function obterTarifaHEFuncionario(func, tipo) {
+    const normal = func.valorHeNormal !== undefined ? (parseFloat(func.valorHeNormal) || 0) : (((func.salario || 0) / 220) * 1.5);
+    const especial = func.valorHeEspecial !== undefined ? (parseFloat(func.valorHeEspecial) || 0) : (((func.salario || 0) / 220) * 2.0);
+    return tipo === 'ESPECIAL' ? especial : normal;
+}
+
+function atualizarPreviewHoraExtra() {
+    const idFunc = document.getElementById('he-funcionario-id')?.value;
+    const f = funcionariosAtuais.find(x => x.id === idFunc);
+    if (!f) return;
+    const tipo = document.getElementById('he-tipo-dia')?.value || 'NORMAL';
+    const horas = parseHorasHE(document.getElementById('he-horas')?.value);
+    const adicionalRaw = document.getElementById('he-adicional')?.value || '0';
+    let adicional = window.parseCurrencyValue ? window.parseCurrencyValue(adicionalRaw) : parseFloat(adicionalRaw.replace(',', '.')) || 0;
+    if (adicionalRaw.trim().startsWith('-')) adicional = -Math.abs(adicional);
+    const tarifa = obterTarifaHEFuncionario(f, tipo);
+    const total = (horas * tarifa) + (parseFloat(adicional) || 0);
+    const valorHoraEl = document.getElementById('he-valor-hora-preview');
+    const totalEl = document.getElementById('he-total-preview');
+    if (valorHoraEl) valorHoraEl.textContent = `${tarifa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h`;
+    if (totalEl) totalEl.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function atualizarBotaoHoraExtra() {
     const btn = document.getElementById('btnSalvarHE');
     if (!btn) return;
@@ -855,20 +903,21 @@ window.editarHoraExtra = function(idHE) {
 
     horaExtraEditandoId = idHE;
     document.getElementById('he-data').value = h.data || '';
-    document.getElementById('he-horas').value = h.horas || '';
+    document.getElementById('he-horas').value = formatarHorasHE(h.horas).replace('h', '');
     document.getElementById('he-tipo-dia').value = h.tipo || 'NORMAL';
     document.getElementById('he-adicional').value = h.adicional ? window.formatCurrencyValue(h.adicional) : '';
     document.getElementById('he-observacao').value = h.observacao || '';
     const presetDropdown = document.getElementById('he-preset');
     if (presetDropdown) presetDropdown.value = 'NENHUM';
     atualizarBotaoHoraExtra();
+    atualizarPreviewHoraExtra();
     document.getElementById('he-horas')?.focus();
 };
 
 async function adicionarHoraExtra() {
     const idFunc = document.getElementById('he-funcionario-id').value;
     const data = document.getElementById('he-data').value;
-    const horas = parseFloat(document.getElementById('he-horas').value) || 0;
+    const horas = parseHorasHE(document.getElementById('he-horas').value);
     const tipo = document.getElementById('he-tipo-dia').value;
 
     // Campos Adicionais
@@ -917,6 +966,7 @@ async function adicionarHoraExtra() {
         atualizarBotaoHoraExtra();
         const presetDropdown = document.getElementById('he-preset');
         if (presetDropdown) presetDropdown.value = 'NENHUM';
+        atualizarPreviewHoraExtra();
         document.getElementById('he-horas').focus();
         
         // Atualizar tabela principal de funcionários
@@ -1592,13 +1642,13 @@ window.aplicarPresetHE = (tipo) => {
 
     if (tipo === 'MEIO') {
         inputHoras.value = '0';
-        inputAdicional.value = '50,00';
-        inputObservacao.value = 'DIÁRIA MEIO PERÍODO';
+        inputAdicional.value = '60,00';
+        inputObservacao.value = 'MEIO DIA';
         inputTipoDia.value = 'ESPECIAL';
     } else if (tipo === 'INTEGRAL') {
         inputHoras.value = '0';
-        inputAdicional.value = '100,00';
-        inputObservacao.value = 'DIÁRIA INTEGRAL';
+        inputAdicional.value = '110,00';
+        inputObservacao.value = 'DIA TODO';
         inputTipoDia.value = 'ESPECIAL';
     } else {
         inputHoras.value = '';
@@ -1614,6 +1664,7 @@ window.aplicarPresetHE = (tipo) => {
             inputTipoDia.value = 'NORMAL';
         }
     }
+    atualizarPreviewHoraExtra();
 };
 
 
@@ -1634,3 +1685,4 @@ window.aplicarPresetHE = window.aplicarPresetHE;
 window.abrirRelatorioMensalHE = window.abrirRelatorioMensalHE;
 window.fecharModalRelatorioHE = window.fecharModalRelatorioHE;
 window.SectionLoader?.register('view-rh', carregarFuncionarios);
+

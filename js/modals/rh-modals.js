@@ -19,7 +19,17 @@
                         </div>
                         <div class="input-group" style="margin-bottom: 0;">
                             <label>Quantidade de Horas</label>
-                            <input type="number" id="he-horas" step="0.5" min="0" max="24" placeholder="Ex: 2">
+                            <input type="text" id="he-horas" inputmode="numeric" placeholder="Ex: 02:30 ou 2,5">
+                        </div>
+                    </div>
+                    <div id="he-preview-calculo" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin-bottom:12px;">
+                        <div style="padding:10px; border-radius:8px; background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.22);">
+                            <small style="display:block; color:var(--text-muted); font-weight:800;">VALOR POR HORA</small>
+                            <strong id="he-valor-hora-preview" style="display:block; margin-top:4px; color:#4ade80;">R$ 0,00/h</strong>
+                        </div>
+                        <div style="padding:10px; border-radius:8px; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.22);">
+                            <small style="display:block; color:var(--text-muted); font-weight:800;">TOTAL DO LANCAMENTO</small>
+                            <strong id="he-total-preview" style="display:block; margin-top:4px; color:#60a5fa;">R$ 0,00</strong>
                         </div>
                     </div>
                     <div class="input-group" style="margin-bottom: 12px;">
