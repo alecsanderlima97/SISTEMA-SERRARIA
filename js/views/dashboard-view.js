@@ -17,6 +17,26 @@
                     </div>
                 </div>
 
+                <div class="glass-panel hide-on-print" style="margin: -8px 0 18px 0; padding: 14px; border-radius: 8px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; align-items:end;">
+                        <div class="input-group" style="margin:0;">
+                            <label>Mes dos KPIs</label>
+                            <input type="month" id="dashFiltroMes">
+                        </div>
+                        <div class="input-group" style="margin:0;">
+                            <label>Data inicial</label>
+                            <input type="date" id="dashFiltroInicio">
+                        </div>
+                        <div class="input-group" style="margin:0;">
+                            <label>Data final</label>
+                            <input type="date" id="dashFiltroFim">
+                        </div>
+                        <button type="button" class="btn-primary" onclick="window.aplicarFiltroDashboard && window.aplicarFiltroDashboard()" style="height:42px; padding: 0 16px;"><i class="fa-solid fa-filter"></i> Aplicar</button>
+                        <button type="button" class="btn-secondary" onclick="window.voltarMesAtualDashboard && window.voltarMesAtualDashboard()" style="height:42px; padding: 0 16px;"><i class="fa-solid fa-calendar-day"></i> Mes atual</button>
+                    </div>
+                    <small id="dashPeriodoInfo" style="display:block; margin-top:8px; color: var(--text-muted);">Indicadores baseados no periodo selecionado.</small>
+                </div>
+
                 <div id="panelProducaoPatio" class="glass-panel fluxo-patio-panel" data-dashboard-permission="fluxo-patio" style="display: none; margin-bottom: 25px; padding: 22px; border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 16px;">
                         <div>

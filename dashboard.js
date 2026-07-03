@@ -3,6 +3,7 @@ import { db, getDocs, collection } from './js/firebase-init.js';
 let chartVendasInstance = null;
 let chartVolumeInstance = null;
 let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [], estoque: [], financeiro: [], relatoriosFinanceiros: [] };
+let dashboardPeriodo = null;
 
 const formatBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatM3 = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} m³`;
@@ -38,34 +39,8 @@ async function initDashboard() {
             relatoriosFinanceiros: docsToArray(snapRelatoriosFinanceiros)
         };
 
-        const totalCargas = dashboardData.romaneios.length;
-        const volumeMadeira = dashboardData.romaneios.reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
-        const faturamentoMadeira = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0);
-        const volumeToras = dashboardData.entradas.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
-        const volumeSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
-        const volumeSubMes = dashboardData.subprodutos
-            .filter(s => getMesKey(s) === getMesKey({ data: new Date().toISOString() }))
-            .reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
-        const faturamentoSub = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
-        const faturamentoTotal = faturamentoMadeira + faturamentoSub;
-        const resumoFinanceiro = getResumoFinanceiroLocal();
-        const comparativoFinanceiro = faturamentoTotal - resumoFinanceiro.despesas;
-        window.dashboardFinanceiroResumo = { faturamentoTotal, faturamentoMadeira, faturamentoSub, despesasMes: resumoFinanceiro.despesas, comparativoFinanceiro };
-        const saldoSubEstimado = Math.max(volumeToras - volumeMadeira - volumeSub, 0);
-        const aproveitamentoTotal = volumeToras > 0 ? ((volumeMadeira + volumeSub + saldoSubEstimado) / volumeToras) * 100 : 0;
-        const itensAcabando = getItensAlmoxarifadoAcabando();
-
-        setText('dash-total-cargas', totalCargas);
-        setText('dash-volume-total', formatM3(volumeMadeira));
-        setText('dash-entrada-toras', formatM3(volumeToras));
-        setText('dash-faturamento-madeira', formatBRL(faturamentoMadeira));
-        setText('dash-faturamento-sub', formatBRL(faturamentoSub));
-        setText('dash-despesas-mes', formatBRL(resumoFinanceiro.despesas));
-        setText('dash-comparativo-financeiro', formatBRL(comparativoFinanceiro));
-        setText('dash-volume-sub', formatM3(volumeSubMes));
-        setText('dash-rendimento-serraria', `${aproveitamentoTotal.toFixed(1).replace('.', ',')}%`);
-        setText('dash-total-clientes', snapClientes.size);
-        setText('dash-total-estoque', itensAcabando.length);
+        configurarFiltroDashboard();
+        atualizarKpisDashboard(snapClientes.size);
 
         bindKpiClicks();
         renderDashboardView('madeira');
@@ -76,11 +51,7 @@ async function initDashboard() {
 }
 
 document.addEventListener('financeiroUpdated', () => {
-    const resumo = getResumoFinanceiroLocal();
-    const faturamentoTotal = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
-        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
-    setText('dash-despesas-mes', formatBRL(resumo.despesas));
-    setText('dash-comparativo-financeiro', formatBRL(faturamentoTotal - resumo.despesas));
+    atualizarKpisDashboard();
     renderRelatorioMensalDashboard();
 });
 
@@ -89,6 +60,119 @@ function docsToArray(snapshot) {
     snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
     return list;
 }
+
+function configurarFiltroDashboard() {
+    const mesInput = document.getElementById('dashFiltroMes');
+    const inicioInput = document.getElementById('dashFiltroInicio');
+    const fimInput = document.getElementById('dashFiltroFim');
+    if (!mesInput || mesInput.dataset.bound === '1') return;
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    mesInput.value = mesInput.value || mesAtual;
+    dashboardPeriodo = periodoPorMes(mesInput.value);
+    mesInput.dataset.bound = '1';
+    mesInput.addEventListener('change', () => {
+        if (!mesInput.value) return;
+        dashboardPeriodo = periodoPorMes(mesInput.value);
+        if (inicioInput) inicioInput.value = '';
+        if (fimInput) fimInput.value = '';
+        atualizarKpisDashboard();
+        renderRelatorioMensalDashboard();
+    });
+}
+
+function atualizarKpisDashboard(totalClientes = null) {
+    const periodo = getDashboardPeriodoSelecionado();
+    const romaneiosPeriodo = dashboardData.romaneios.filter(item => itemDentroPeriodo(item, periodo));
+    const entradasPeriodo = dashboardData.entradas.filter(item => itemDentroPeriodo(item, periodo));
+    const subprodutosPeriodo = dashboardData.subprodutos.filter(item => itemDentroPeriodo(item, periodo));
+    const totalCargas = romaneiosPeriodo.length;
+    const volumeMadeira = romaneiosPeriodo.reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
+    const faturamentoMadeira = romaneiosPeriodo.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0);
+    const volumeToras = entradasPeriodo.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
+    const volumeSub = subprodutosPeriodo.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
+    const faturamentoSub = subprodutosPeriodo.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    const faturamentoTotal = faturamentoMadeira + faturamentoSub;
+    const resumoFinanceiro = getResumoFinanceiroLocal(periodo.inicio, periodo.fim);
+    const comparativoFinanceiro = faturamentoTotal - resumoFinanceiro.despesas;
+    window.dashboardFinanceiroResumo = { faturamentoTotal, faturamentoMadeira, faturamentoSub, despesasMes: resumoFinanceiro.despesas, comparativoFinanceiro };
+    const saldoSubEstimado = Math.max(volumeToras - volumeMadeira - volumeSub, 0);
+    const aproveitamentoTotal = volumeToras > 0 ? ((volumeMadeira + volumeSub + saldoSubEstimado) / volumeToras) * 100 : 0;
+    const itensAcabando = getItensAlmoxarifadoAcabando();
+
+    setText('dash-total-cargas', totalCargas);
+    setText('dash-volume-total', formatM3(volumeMadeira));
+    setText('dash-entrada-toras', formatM3(volumeToras));
+    setText('dash-faturamento-madeira', formatBRL(faturamentoMadeira));
+    setText('dash-faturamento-sub', formatBRL(faturamentoSub));
+    setText('dash-despesas-mes', formatBRL(resumoFinanceiro.despesas));
+    setText('dash-comparativo-financeiro', formatBRL(comparativoFinanceiro));
+    setText('dash-volume-sub', formatM3(volumeSub));
+    setText('dash-rendimento-serraria', `${aproveitamentoTotal.toFixed(1).replace('.', ',')}%`);
+    if (totalClientes !== null) setText('dash-total-clientes', totalClientes);
+    setText('dash-total-estoque', itensAcabando.length);
+    setText('dashPeriodoInfo', `KPIs de ${formatDataBR(periodo.inicio)} ate ${formatDataBR(periodo.fim)}.`);
+}
+
+function getDashboardPeriodoSelecionado() {
+    if (dashboardPeriodo) return dashboardPeriodo;
+    const hoje = new Date();
+    return periodoPorMes(`${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`);
+}
+
+function periodoPorMes(mes) {
+    const [ano, mesNum] = String(mes || '').split('-').map(Number);
+    const base = ano && mesNum ? new Date(ano, mesNum - 1, 1) : new Date();
+    const inicio = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-01`;
+    const fimDate = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    const fim = `${fimDate.getFullYear()}-${String(fimDate.getMonth() + 1).padStart(2, '0')}-${String(fimDate.getDate()).padStart(2, '0')}`;
+    return { inicio, fim, mes: inicio.slice(0, 7) };
+}
+
+function itemDentroPeriodo(item, periodo) {
+    const data = normalizarDataISO(item);
+    return !!data && data >= periodo.inicio && data <= periodo.fim;
+}
+
+function normalizarDataISO(item) {
+    const raw = item?.data || item?.dataCarregamento || item?.dataCriacao || item?.criadoEm || item?.dataEmissao || item?.vencimento || '';
+    if (!raw) return '';
+    if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+    const date = raw?.toDate ? raw.toDate() : new Date(raw);
+    if (!date || isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatDataBR(iso) {
+    if (!iso) return '-';
+    const [ano, mes, dia] = iso.split('-');
+    return `${dia}/${mes}/${ano}`;
+}
+
+window.aplicarFiltroDashboard = function() {
+    const mes = document.getElementById('dashFiltroMes')?.value || '';
+    const inicio = document.getElementById('dashFiltroInicio')?.value || '';
+    const fim = document.getElementById('dashFiltroFim')?.value || '';
+    dashboardPeriodo = inicio || fim
+        ? { inicio: inicio || fim, fim: fim || inicio, mes: '' }
+        : periodoPorMes(mes);
+    atualizarKpisDashboard();
+    renderRelatorioMensalDashboard();
+};
+
+window.voltarMesAtualDashboard = function() {
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const mesInput = document.getElementById('dashFiltroMes');
+    const inicioInput = document.getElementById('dashFiltroInicio');
+    const fimInput = document.getElementById('dashFiltroFim');
+    if (mesInput) mesInput.value = mesAtual;
+    if (inicioInput) inicioInput.value = '';
+    if (fimInput) fimInput.value = '';
+    dashboardPeriodo = periodoPorMes(mesAtual);
+    atualizarKpisDashboard();
+    renderRelatorioMensalDashboard();
+};
 
 function setText(id, value) {
     const el = document.getElementById(id);
@@ -352,10 +436,12 @@ function obterLancamentosFinanceirosLocal() {
     }
 }
 
-function getResumoFinanceiroLocal() {
-    const hoje = new Date();
-    const inicio = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
-    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+function getResumoFinanceiroLocal(inicio = null, fim = null) {
+    if (!inicio || !fim) {
+        const periodo = getDashboardPeriodoSelecionado();
+        inicio = periodo.inicio;
+        fim = periodo.fim;
+    }
     const detalhes = calcularDespesasDetalhadas(inicio, fim);
     return { despesas: detalhes.total, quantidade: detalhes.quantidade, detalhes };
 }
@@ -529,31 +615,29 @@ function setResumo(maiorCarga, melhorDia, madeiras) {
 function renderRelatorioMensalDashboard() {
     const info = document.getElementById('dash-relatorio-mensal-info');
     if (!info) return;
-    const hoje = new Date();
-    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const periodo = getDashboardPeriodoSelecionado();
+    const mesAtual = periodo.mes || periodo.inicio.slice(0, 7);
     const relatoriosLocais = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
     const salvo = dashboardData.relatoriosFinanceiros.find(item => item.id === mesAtual || item.mes === mesAtual) || relatoriosLocais[mesAtual];
     if (salvo) {
         info.textContent = `${mesAtual}: despesas ${formatBRL(salvo.despesas)} | comparativo ${formatBRL(salvo.comparativoFinanceiro || salvo.faturamentoReal || 0)}`;
         return;
     }
-    info.textContent = hoje.getDate() === 1
-        ? 'Hoje é dia de fechar e salvar o relatório mensal.'
-        : 'Fechamento mensal ainda não salvo.';
+    info.textContent = `Periodo ${formatDataBR(periodo.inicio)} ate ${formatDataBR(periodo.fim)} ainda nao salvo.`;
 }
 
 window.visualizarRelatorioMensalDashboard = function() {
-    const hoje = new Date();
-    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const periodo = getDashboardPeriodoSelecionado();
+    const mesAtual = periodo.mes || periodo.inicio.slice(0, 7);
     const relatoriosLocais = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
     const salvo = dashboardData.relatoriosFinanceiros.find(item => item.id === mesAtual || item.mes === mesAtual) || relatoriosLocais[mesAtual];
     if (!salvo) {
-        alert('Ainda não existe relatório salvo para este mês.');
+        alert('Ainda nao existe relatorio salvo para este periodo.');
         return;
     }
 
     alert(
-        `RELATÓRIO MENSAL - ${mesAtual}\n\n` +
+        `RELATORIO MENSAL - ${mesAtual}\n\n` +
         `Despesas: ${formatBRL(salvo.despesas || 0)}\n` +
         `Faturamento: ${formatBRL(salvo.faturamento || 0)}\n` +
         `Comparativo: ${formatBRL(salvo.comparativoFinanceiro || 0)}\n` +
@@ -561,14 +645,18 @@ window.visualizarRelatorioMensalDashboard = function() {
     );
 };
 window.salvarRelatorioMensalDashboard = async function() {
-    const hoje = new Date();
-    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-    const resumo = getResumoFinanceiroLocal();
-    const faturamento = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
-        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    const periodo = getDashboardPeriodoSelecionado();
+    const mesAtual = periodo.mes || periodo.inicio.slice(0, 7);
+    const resumo = getResumoFinanceiroLocal(periodo.inicio, periodo.fim);
+    const romaneiosPeriodo = dashboardData.romaneios.filter(item => itemDentroPeriodo(item, periodo));
+    const subprodutosPeriodo = dashboardData.subprodutos.filter(item => itemDentroPeriodo(item, periodo));
+    const faturamento = romaneiosPeriodo.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
+        + subprodutosPeriodo.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     const relatorios = JSON.parse(localStorage.getItem('orquestra_financeiro_relatorios_mensais') || '{}');
     relatorios[mesAtual] = {
         mes: mesAtual,
+        inicio: periodo.inicio,
+        fim: periodo.fim,
         despesas: resumo.despesas,
         faturamento,
         comparativoFinanceiro: faturamento - resumo.despesas,
@@ -583,5 +671,5 @@ window.salvarRelatorioMensalDashboard = async function() {
         ];
     }
     renderRelatorioMensalDashboard();
-    alert('Relatório mensal salvo no painel de controle.');
+    alert('Relatorio mensal salvo no painel de controle.');
 };
