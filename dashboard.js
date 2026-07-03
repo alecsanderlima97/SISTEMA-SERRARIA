@@ -4,6 +4,7 @@ let chartVendasInstance = null;
 let chartVolumeInstance = null;
 let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [], estoque: [], financeiro: [], relatoriosFinanceiros: [] };
 let dashboardPeriodo = null;
+let dashboardViewAtual = 'madeira';
 
 const formatBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatM3 = (v) => `${(Number(v) || 0).toFixed(2).replace('.', ',')} m³`;
@@ -77,6 +78,7 @@ function configurarFiltroDashboard() {
         if (inicioInput) inicioInput.value = '';
         if (fimInput) fimInput.value = '';
         atualizarKpisDashboard();
+        renderDashboardView(dashboardViewAtual);
         renderRelatorioMensalDashboard();
     });
 }
@@ -157,6 +159,7 @@ window.aplicarFiltroDashboard = function() {
         ? { inicio: inicio || fim, fim: fim || inicio, mes: '' }
         : periodoPorMes(mes);
     atualizarKpisDashboard();
+    renderDashboardView(dashboardViewAtual);
     renderRelatorioMensalDashboard();
 };
 
@@ -171,6 +174,7 @@ window.voltarMesAtualDashboard = function() {
     if (fimInput) fimInput.value = '';
     dashboardPeriodo = periodoPorMes(mesAtual);
     atualizarKpisDashboard();
+    renderDashboardView(dashboardViewAtual);
     renderRelatorioMensalDashboard();
 };
 
@@ -189,52 +193,53 @@ function bindKpiClicks() {
 }
 
 function renderDashboardView(view) {
+    dashboardViewAtual = view || 'madeira';
     if (view === 'subprodutos') {
-        renderLineChart('Fluxo de venda Cavaco/Pó', agruparSubprodutosPorDia());
-        renderBarChart('Volume por tipo de subproduto', agruparSubprodutosPorTipo());
+        renderLineChart('Cavaco/Po por dia', agruparSubprodutosPorDia(), 'm3');
+        renderBarChart('Volume por tipo de subproduto', agruparSubprodutosPorTipo(), 'm3');
         renderResumoSubprodutos();
         return;
     }
 
     if (view === 'toras') {
-        renderLineChart('Entrada de toras por dia', agruparEntradasPorDia());
-        renderBarChart('Entrada por empreiteiro', agruparEntradasPorEmpreiteiro());
+        renderLineChart('Entrada de toras por dia', agruparEntradasPorDia(), 'm3');
+        renderBarChart('Entrada por empreiteiro', agruparEntradasPorEmpreiteiro(), 'm3');
         renderResumoToras();
         return;
     }
 
     if (view === 'rendimento') {
-        renderLineChart('Comparativo mensal da serraria', agruparRendimentoPorMes());
-        renderBarChart('Rendimento da serraria em m³', calcularRendimentoSerraria());
+        renderLineChart('Rendimento no periodo', agruparRendimentoPorMes(), 'm3');
+        renderBarChart('Rendimento da serraria em m3', calcularRendimentoSerraria(), 'm3');
         renderResumoRendimento();
         return;
     }
 
     if (view === 'financeiro') {
-        renderLineChart('Comparativo financeiro mensal', agruparFaturamentoRealPorMes());
-        renderBarChart('Despesas mensais', agruparDespesasPorMes());
+        renderLineChart('Comparativo financeiro no periodo', agruparFaturamentoRealPorMes(), 'brl');
+        renderBarChart('Despesas por origem', calcularDespesasDetalhadasPeriodo().porOrigem, 'brl');
         renderResumoFinanceiroDashboard();
         return;
     }
 
     if (view === 'despesas') {
-        const detalhes = calcularDespesasDetalhadas();
-        renderBarChart('Relatório de despesas por origem', detalhes.porOrigem);
-        renderLineChart('Despesas mensais consolidadas', agruparDespesasPorMes());
+        const detalhes = calcularDespesasDetalhadasPeriodo();
+        renderBarChart('Despesas por origem', detalhes.porOrigem, 'brl');
+        renderLineChart('Despesas por origem no periodo', detalhes.porOrigem, 'brl');
         renderResumoDespesasDashboard(detalhes);
         return;
     }
 
     if (view === 'estoque') {
         const itens = getItensAlmoxarifadoAcabando();
-        renderBarChart('Itens acabando no estoque', agruparItensAcabando(itens));
-        renderLineChart('Itens abaixo do mínimo', agruparItensAcabando(itens));
+        renderBarChart('Itens acabando no estoque', agruparItensAcabando(itens), 'num');
+        renderLineChart('Itens abaixo do minimo', agruparItensAcabando(itens), 'num');
         renderResumoEstoqueAcabando(itens);
         return;
     }
 
-    renderLineChart('Evolução do faturamento de madeira', agruparMadeiraPorDia());
-    renderBarChart('Madeiras mais vendidas', agruparMadeiraPorTipo());
+    renderLineChart('Faturamento de madeira por dia', agruparMadeiraPorDia(), 'brl');
+    renderBarChart('Madeiras mais vendidas', agruparMadeiraPorTipo(), 'm3');
     renderResumoMadeira();
 }
 
@@ -255,10 +260,10 @@ function getItensAlmoxarifadoAcabando() {
     }
 }
 
-function renderLineChart(label, dados) {
+function renderLineChart(label, dados, tipo = 'num') {
     const canvas = document.getElementById('chartVendasPeriodo');
     if (!canvas || typeof Chart === 'undefined') return;
-    setChartTitle('chartDashboardLineTitle', label, 'chart-line');
+    setChartTitle('chartDashboardLineTitle', `${label} - ${getPeriodoLabel()}`, 'chart-line');
     const entries = Object.entries(dados || {}).sort(([a], [b]) => a.localeCompare(b));
     const hasData = entries.some(([, value]) => Number(value) > 0);
     const labels = hasData ? entries.map(([key]) => abreviarLabel(key)) : ['Sem dados'];
@@ -273,6 +278,10 @@ function renderLineChart(label, dados) {
                 data: values,
                 borderColor: '#00ff88',
                 backgroundColor: 'rgba(0, 255, 136, 0.12)',
+                pointBackgroundColor: '#f8fafc',
+                pointBorderColor: '#00ff88',
+                pointRadius: 4,
+                pointHoverRadius: 6,
                 fill: true,
                 tension: 0.35
             }]
@@ -286,7 +295,7 @@ function renderLineChart(label, dados) {
                     backgroundColor: '#111827',
                     titleColor: '#fff',
                     bodyColor: '#e5e7eb',
-                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumberChart(ctx.parsed.y)}` }
+                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatChartValue(ctx.parsed.y, tipo)}` }
                 }
             },
             layout: { padding: { top: 8, right: 18, bottom: 24, left: 12 } },
@@ -295,16 +304,16 @@ function renderLineChart(label, dados) {
                     ticks: { color: '#9ca3af', maxRotation: 35, minRotation: 0, autoSkip: true, padding: 8 },
                     grid: { color: 'rgba(255,255,255,0.06)' }
                 },
-                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: formatNumberChart }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: value => formatChartValue(value, tipo) }, grid: { color: 'rgba(255,255,255,0.06)' } }
             }
         }
     });
 }
 
-function renderBarChart(label, dados) {
+function renderBarChart(label, dados, tipo = 'num') {
     const canvas = document.getElementById('chartVolumeEspessura');
     if (!canvas || typeof Chart === 'undefined') return;
-    setChartTitle('chartDashboardBarTitle', label, 'chart-bar');
+    setChartTitle('chartDashboardBarTitle', `${label} - ${getPeriodoLabel()}`, 'chart-bar');
     const entries = Object.entries(dados || {})
         .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
         .slice(0, 8);
@@ -319,12 +328,14 @@ function renderBarChart(label, dados) {
             datasets: [{
                 label,
                 data: values,
-                backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                borderColor: '#3498db',
-                borderWidth: 1
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b'],
+                borderColor: 'rgba(255,255,255,0.22)',
+                borderWidth: 1,
+                borderRadius: 6
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -333,16 +344,16 @@ function renderBarChart(label, dados) {
                     backgroundColor: '#111827',
                     titleColor: '#fff',
                     bodyColor: '#e5e7eb',
-                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumberChart(ctx.parsed.y)}` }
+                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatChartValue(ctx.parsed.x, tipo)}` }
                 }
             },
             layout: { padding: { top: 8, right: 18, bottom: 28, left: 12 } },
             scales: {
                 x: {
-                    ticks: { color: '#9ca3af', maxRotation: 35, minRotation: 0, autoSkip: false, padding: 8 },
+                    ticks: { color: '#9ca3af', callback: value => formatChartValue(value, tipo) },
                     grid: { color: 'rgba(255,255,255,0.06)' }
                 },
-                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: formatNumberChart }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                y: { ticks: { color: '#d1d5db', autoSkip: false }, grid: { color: 'rgba(255,255,255,0.04)' } }
             }
         }
     });
@@ -355,12 +366,23 @@ function setChartTitle(id, text, icon) {
 
 function abreviarLabel(label) {
     const texto = String(label || '-').trim();
-    return texto.length > 18 ? `${texto.slice(0, 16)}...` : texto;
+    return texto.length > 34 ? `${texto.slice(0, 32)}...` : texto;
 }
 
 function formatNumberChart(value) {
     const numero = Number(value) || 0;
     return numero.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function formatChartValue(value, tipo = 'num') {
+    if (tipo === 'brl') return formatBRL(value);
+    if (tipo === 'm3') return formatM3(value);
+    return formatNumberChart(value);
+}
+
+function getPeriodoLabel() {
+    const periodo = getDashboardPeriodoSelecionado();
+    return `${formatDataBR(periodo.inicio)} a ${formatDataBR(periodo.fim)}`;
 }
 
 function getDataKey(item) {
@@ -379,37 +401,42 @@ function getVolumeRomaneio(r) {
     return (r.pacotes || []).reduce((sum, p) => sum + (Number(p.m3VendaTotal) || 0), 0);
 }
 
+function dadosPeriodo(nome) {
+    const periodo = getDashboardPeriodoSelecionado();
+    return (dashboardData[nome] || []).filter(item => itemDentroPeriodo(item, periodo));
+}
+
 function agruparMadeiraPorDia() {
-    return dashboardData.romaneios.reduce((acc, r) => addGroup(acc, getDataKey(r), r.financeiro?.totalGeral || 0), {});
+    return dadosPeriodo('romaneios').reduce((acc, r) => addGroup(acc, getDataKey(r), r.financeiro?.totalGeral || 0), {});
 }
 
 function agruparMadeiraPorTipo() {
-    return dashboardData.romaneios.reduce((acc, r) => {
+    return dadosPeriodo('romaneios').reduce((acc, r) => {
         (r.pacotes || []).forEach(p => addGroup(acc, p.qualidade || p.tipo || p.descricao, p.m3VendaTotal || 0));
         return acc;
     }, {});
 }
 
 function agruparEntradasPorDia() {
-    return dashboardData.entradas.reduce((acc, e) => addGroup(acc, getDataKey(e), e.volume || 0), {});
+    return dadosPeriodo('entradas').reduce((acc, e) => addGroup(acc, getDataKey(e), e.volume || 0), {});
 }
 
 function agruparEntradasPorEmpreiteiro() {
-    return dashboardData.entradas.reduce((acc, e) => addGroup(acc, e.empreiteiroNome || e.fornecedor, e.volume || 0), {});
+    return dadosPeriodo('entradas').reduce((acc, e) => addGroup(acc, e.empreiteiroNome || e.fornecedor, e.volume || 0), {});
 }
 
 function agruparSubprodutosPorDia() {
-    return dashboardData.subprodutos.reduce((acc, s) => addGroup(acc, getDataKey(s), s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getDataKey(s), s.quantidade || 0), {});
 }
 
 function agruparSubprodutosPorTipo() {
-    return dashboardData.subprodutos.reduce((acc, s) => addGroup(acc, s.tipo, s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, s.tipo, s.quantidade || 0), {});
 }
 
 function calcularRendimentoSerraria() {
-    const toras = dashboardData.entradas.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
-    const madeira = dashboardData.romaneios.reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
-    const subVendido = dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
+    const toras = dadosPeriodo('entradas').reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
+    const madeira = dadosPeriodo('romaneios').reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
+    const subVendido = dadosPeriodo('subprodutos').reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
     const saldoSub = Math.max(toras - madeira - subVendido, 0);
     return {
         'Toras recebidas': toras,
@@ -421,9 +448,9 @@ function calcularRendimentoSerraria() {
 
 function agruparRendimentoPorMes() {
     const grupos = {};
-    dashboardData.entradas.forEach(e => addGroup(grupos, `Toras ${getMesKey(e)}`, e.volume || 0));
-    dashboardData.romaneios.forEach(r => addGroup(grupos, `Madeira ${getMesKey(r)}`, getVolumeRomaneio(r)));
-    dashboardData.subprodutos.forEach(s => addGroup(grupos, `Subprodutos ${getMesKey(s)}`, s.quantidade || 0));
+    dadosPeriodo('entradas').forEach(e => addGroup(grupos, `Toras ${getMesKey(e)}`, e.volume || 0));
+    dadosPeriodo('romaneios').forEach(r => addGroup(grupos, `Madeira ${getMesKey(r)}`, getVolumeRomaneio(r)));
+    dadosPeriodo('subprodutos').forEach(s => addGroup(grupos, `Subprodutos ${getMesKey(s)}`, s.quantidade || 0));
     return grupos;
 }
 
@@ -447,17 +474,25 @@ function getResumoFinanceiroLocal(inicio = null, fim = null) {
 }
 
 function agruparDespesasPorMes() {
+    const periodo = getDashboardPeriodoSelecionado();
     const grupos = {};
-    obterLancamentosFinanceirosLocal().forEach(item => addGroup(grupos, getMesKey({ data: item.vencimento }), item.valor || 0));
-    dashboardData.entradas.forEach(item => {
+    obterLancamentosFinanceirosLocal()
+        .filter(item => itemDentroPeriodo({ data: item.vencimento }, periodo))
+        .forEach(item => addGroup(grupos, getDataKey({ data: item.vencimento }), item.valor || 0));
+    dadosPeriodo('entradas').forEach(item => {
         addGroup(grupos, getMesKey({ data: item.data }), Number(item.totalEmpreiteiro || 0) + Number(item.totalDescarga || 0));
     });
     dashboardData.funcionarios.forEach(func => {
-        const mes = getMesKey({ data: func.admissao || new Date().toISOString() });
-        addGroup(grupos, mes, Number(func.salario || 0));
-        (func.horasExtras || []).forEach(he => addGroup(grupos, getMesKey({ data: he.data }), calcularValorHoraExtra(func, he)));
+        (func.horasExtras || [])
+            .filter(he => itemDentroPeriodo({ data: he.data }, periodo))
+            .forEach(he => addGroup(grupos, getDataKey({ data: he.data }), calcularValorHoraExtra(func, he)));
     });
     return grupos;
+}
+
+function calcularDespesasDetalhadasPeriodo() {
+    const periodo = getDashboardPeriodoSelecionado();
+    return calcularDespesasDetalhadas(periodo.inicio, periodo.fim);
 }
 
 function calcularDespesasDetalhadas(inicio = getInicioMesAtual(), fim = getFimMesAtual()) {
@@ -500,19 +535,19 @@ function getFimMesAtual() {
 
 function agruparFaturamentoRealPorMes() {
     const grupos = {};
-    dashboardData.romaneios.forEach(r => addGroup(grupos, getMesKey(r), r.financeiro?.totalGeral || 0));
-    dashboardData.subprodutos.forEach(s => addGroup(grupos, getMesKey(s), s.total || 0));
+    dadosPeriodo('romaneios').forEach(r => addGroup(grupos, getDataKey(r), r.financeiro?.totalGeral || 0));
+    dadosPeriodo('subprodutos').forEach(s => addGroup(grupos, getDataKey(s), s.total || 0));
     const despesas = agruparDespesasPorMes();
-    Object.keys(despesas).forEach(mes => {
-        grupos[mes] = (grupos[mes] || 0) - despesas[mes];
+    Object.keys(despesas).forEach(dia => {
+        grupos[dia] = (grupos[dia] || 0) - despesas[dia];
     });
     return grupos;
 }
 
 function renderResumoFinanceiroDashboard() {
     const resumo = getResumoFinanceiroLocal();
-    const faturamento = dashboardData.romaneios.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
-        + dashboardData.subprodutos.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    const faturamento = dadosPeriodo('romaneios').reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
+        + dadosPeriodo('subprodutos').reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     setResumo(
         `Lucro geral: ${formatBRL(faturamento)}`,
         `Despesas gerais: ${formatBRL(resumo.despesas)}`,
@@ -539,21 +574,21 @@ function getMesKey(item) {
 }
 
 function renderResumoMadeira() {
-    const maior = dashboardData.romaneios.reduce((best, r) => getVolumeRomaneio(r) > best.volume ? { volume: getVolumeRomaneio(r), label: r.numero || r.numeroCarga || '-' } : best, { volume: 0, label: '-' });
+    const maior = dadosPeriodo('romaneios').reduce((best, r) => getVolumeRomaneio(r) > best.volume ? { volume: getVolumeRomaneio(r), label: r.numero || r.numeroCarga || '-' } : best, { volume: 0, label: '-' });
     const melhorDia = topEntry(agruparMadeiraPorDia(), formatBRL);
     const tipos = topList(agruparMadeiraPorTipo(), formatM3);
     setResumo(`${maior.label} - ${formatM3(maior.volume)}`, melhorDia, tipos);
 }
 
 function renderResumoToras() {
-    const maior = dashboardData.entradas.reduce((best, e) => (Number(e.volume) || 0) > best.volume ? { volume: Number(e.volume) || 0, label: e.romaneioNum || '-' } : best, { volume: 0, label: '-' });
+    const maior = dadosPeriodo('entradas').reduce((best, e) => (Number(e.volume) || 0) > best.volume ? { volume: Number(e.volume) || 0, label: e.romaneioNum || '-' } : best, { volume: 0, label: '-' });
     const melhorDia = topEntry(agruparEntradasPorDia(), formatM3);
     const empreiteiros = topList(agruparEntradasPorEmpreiteiro(), formatM3);
     setResumo(`${maior.label} - ${formatM3(maior.volume)}`, melhorDia, empreiteiros);
 }
 
 function renderResumoSubprodutos() {
-    const maior = dashboardData.subprodutos.reduce((best, s) => (Number(s.quantidade) || 0) > best.volume ? { volume: Number(s.quantidade) || 0, label: s.romaneio || s.romaneioCliente || '-' } : best, { volume: 0, label: '-' });
+    const maior = dadosPeriodo('subprodutos').reduce((best, s) => (Number(s.quantidade) || 0) > best.volume ? { volume: Number(s.quantidade) || 0, label: s.romaneio || s.romaneioCliente || '-' } : best, { volume: 0, label: '-' });
     const melhorDia = topEntry(agruparSubprodutosPorDia(), formatM3);
     const tipos = topList(agruparSubprodutosPorTipo(), formatM3);
     const mensal = topList(agruparSubprodutosPorMes(), formatM3);
@@ -561,7 +596,7 @@ function renderResumoSubprodutos() {
 }
 
 function agruparSubprodutosPorMes() {
-    return dashboardData.subprodutos.reduce((acc, s) => addGroup(acc, getMesKey(s), s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getMesKey(s), s.quantidade || 0), {});
 }
 
 function agruparItensAcabando(itens) {
