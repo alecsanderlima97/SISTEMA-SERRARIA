@@ -810,6 +810,24 @@ function atualizarResumoDescarregamento(lista) {
     if (valor) valor.textContent = totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 }
 
+function obterMateriaPrimaEntrada(en = {}) {
+    return (en.produtoCarga || en.tipoProduto || en.materiaPrima || 'NAO INFORMADO').toString().toUpperCase();
+}
+
+function resumirMateriaPrimaEntradas(lista = []) {
+    const grupos = lista.reduce((acc, en) => {
+        const nome = obterMateriaPrimaEntrada(en);
+        if (!acc[nome]) acc[nome] = { qtd: 0, volume: 0 };
+        acc[nome].qtd += 1;
+        acc[nome].volume += Number(en.volume || 0);
+        return acc;
+    }, {});
+    return Object.entries(grupos)
+        .sort((a, b) => b[1].volume - a[1].volume)
+        .map(([nome, item]) => `${nome}: ${item.qtd} carga(s) / ${item.volume.toFixed(2).replace('.', ',')} m3`)
+        .join(' | ') || 'NAO INFORMADO';
+}
+
 window.gerarRelatorioDescarregamento = function() {
     const baseFiltrada = getDescargasFiltradas();
     const listaBase = descargasSelecionadas.size
@@ -823,6 +841,7 @@ window.gerarRelatorioDescarregamento = function() {
 
     const totalVolume = lista.reduce((sum, en) => sum + (en.volume || 0), 0);
     const totalValor = lista.reduce((sum, en) => sum + (en.totalDescarga || 0), 0);
+    const resumoMateriaPrima = resumirMateriaPrimaEntradas(lista);
     const dataInicio = document.getElementById('filtroDescargaDataInicio')?.value;
     const dataFim = document.getElementById('filtroDescargaDataFim')?.value;
     const periodo = descargasSelecionadas.size
@@ -834,12 +853,14 @@ window.gerarRelatorioDescarregamento = function() {
     const rows = lista.map((en, index) => {
         const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
         const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
+        const materiaPrima = obterMateriaPrimaEntrada(en);
         return `
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
                 <td>${dtStr} ${en.horario || ''}</td>
                 <td>${funcionario}</td>
                 <td>${en.romaneioNum || '-'}</td>
+                <td><strong>${materiaPrima}</strong></td>
                 <td>${en.motorista || '-'}</td>
                 <td>${en.placa || '-'}</td>
                 <td style="text-align:right;">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
@@ -861,6 +882,7 @@ window.gerarRelatorioDescarregamento = function() {
         .summary { display: flex; gap: 12px; margin: 18px 0; }
         .box { flex: 1; border: 1px solid #ccc; padding: 12px; text-align: center; }
         .box strong { display:block; margin-top: 5px; font-size: 16px; }
+        .materials { border: 1px solid #ddd; background: #fff7d6; padding: 10px 12px; margin: -6px 0 16px; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 7px; }
         th { background: #eee; text-align: left; }
@@ -877,15 +899,16 @@ window.gerarRelatorioDescarregamento = function() {
         <div class="box">Volume Total<strong>${totalVolume.toFixed(2).replace('.', ',')} m³</strong></div>
         <div class="box">Total a Pagar<strong>${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong></div>
     </div>
+    <div class="materials">Materia-prima: ${resumoMateriaPrima}</div>
     <table>
         <thead>
             <tr>
-                <th>Nº</th><th>Data/Hora</th><th>Funcionario</th><th>Romaneio</th><th>Motorista</th><th>Placa</th><th>Volume</th><th>Valor/m³</th><th>Total</th>
+                <th>N.</th><th>Data/Hora</th><th>Funcionario</th><th>Romaneio</th><th>Materia-prima</th><th>Motorista</th><th>Placa</th><th>Volume</th><th>Valor/m3</th><th>Total</th>
             </tr>
         </thead>
         <tbody>
             ${rows}
-            <tr class="total"><td colspan="6" style="text-align:right;">Total</td><td style="text-align:right;">${totalVolume.toFixed(2).replace('.', ',')} m³</td><td></td><td style="text-align:right;">${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td></tr>
+            <tr class="total"><td colspan="7" style="text-align:right;">Total</td><td style="text-align:right;">${totalVolume.toFixed(2).replace('.', ',')} m³</td><td></td><td style="text-align:right;">${totalValor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td></tr>
         </tbody>
     </table>
     <div class="signatures">
@@ -928,6 +951,7 @@ window.gerarRelatorioConsolidado = function() {
     const count = selected.length;
     const totalVolume = selected.reduce((sum, en) => sum + (en.volume || 0), 0);
     const totalPay = selected.reduce((sum, en) => sum + (en.totalEmpreiteiro || 0), 0);
+    const resumoMateriaPrima = resumirMateriaPrimaEntradas(selected);
     
     const dataInicioInput = document.getElementById('filtroEntradasDataInicio')?.value;
     const dataFimInput = document.getElementById('filtroEntradasDataFim')?.value;
@@ -947,6 +971,7 @@ window.gerarRelatorioConsolidado = function() {
         const dtStr = dtObj.toLocaleDateString('pt-BR');
         const vTotal = en.totalEmpreiteiro ? en.totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
         const vMetro = en.valorMetroEmpreiteiro ? en.valorMetroEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'R$ 0,00';
+        const materiaPrima = obterMateriaPrimaEntrada(en);
         
         tableRowsHtml += `
             <tr>
@@ -955,6 +980,7 @@ window.gerarRelatorioConsolidado = function() {
                 <td style="font-weight:bold;">${en.romaneioNum || '-'}</td>
                 <td class="empreiteiro-cell"><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong></td>
                 <td class="mato-cell"><strong>${en.mato || '-'}</strong></td>
+                <td class="produto-cell"><strong>${materiaPrima}</strong></td>
                 <td>${en.motorista || '-'}</td>
                 <td style="text-align:center;">
                     <span style="border: 1px solid #777; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-size: 0.85em;">${en.placa}</span>
@@ -989,6 +1015,8 @@ window.gerarRelatorioConsolidado = function() {
         table.records tr:nth-child(even) { background: #fafafa; }
         .empreiteiro-cell strong, .mato-cell strong { display: block; font-size: 13px; color: #111; text-transform: uppercase; line-height: 1.25; }
         .mato-cell { background: #fff7d6; }
+        .produto-cell { background: #eefdf4; color: #166534; }
+        .materials { border: 1px solid #ddd; background: #fff7d6; padding: 10px 12px; margin: -8px 0 16px; font-weight: bold; }
         .total-row { font-weight: bold; background: #eef2f5 !important; font-size: 12px; }
         .signatures { margin-top: 60px; display: flex; justify-content: space-around; }
         .signature-line { text-align: center; width: 250px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
@@ -1030,6 +1058,8 @@ window.gerarRelatorioConsolidado = function() {
         </div>
     </div>
 
+    <div class="materials">Materia-prima: ${resumoMateriaPrima}</div>
+
     <table class="records">
         <thead>
             <tr>
@@ -1038,6 +1068,7 @@ window.gerarRelatorioConsolidado = function() {
                 <th style="width: 80px; text-align:left;">Nº Romaneio</th>
                 <th>Empreiteiro</th>
                 <th>Mato</th>
+                <th>Materia-prima</th>
                 <th>Motorista</th>
                 <th style="width: 145px; text-align:center;">Veículo (Placa/Modelo)</th>
                 <th style="text-align:center;">Dimensões da Carga</th>
@@ -1049,7 +1080,7 @@ window.gerarRelatorioConsolidado = function() {
         <tbody>
             ${tableRowsHtml}
             <tr class="total-row">
-                <td colspan="8" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
+                <td colspan="9" style="text-align: right; text-transform: uppercase;"><strong>Consolidado Geral:</strong></td>
                 <td style="text-align: right; font-size:12px; color:#27ae60;">${totalVolume.toFixed(2).replace('.', ',')} m³</td>
                 <td></td>
                 <td style="text-align: right; font-size:12px; color:#2980b9;">${totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
