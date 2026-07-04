@@ -45,7 +45,10 @@
                                     <label for="empMato">Matos</label>
                                     <div class="emp-matos-row">
                                         <input type="text" id="empMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
-                                        <input type="text" id="empMatoValor" placeholder="R\$ / m³" style="margin-bottom: 0;">
+                                        <input type="text" id="empMatoValor" placeholder="Tora R\$ / m3" style="margin-bottom: 0;">
+                                        <input type="text" id="empMatoValorLenha" placeholder="Lenha R\$ / m3" style="margin-bottom: 0;">
+                                        <input type="text" id="empMatoValorOutros" placeholder="Outros R\$ / m3" style="margin-bottom: 0;">
+                                        <input type="text" id="empMatoValorCorte" placeholder="Corte/Remocao R\$ / m3" style="margin-bottom: 0;">
                                         <button type="button" id="btnAdicionarMatoEmpreiteiro" class="btn-primary"><i class="fa-solid fa-plus"></i> Adicionar</button>
                                     </div>
                                     <div id="empMatosLista" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;"></div>
@@ -100,6 +103,8 @@
                                         <option value="TORA DE EUCALIPTO">TORA DE EUCALIPTO</option>
                                         <option value="TORA DE PINO">TORA DE PINO</option>
                                         <option value="LENHA">LENHA</option>
+                                        <option value="OUTROS">OUTROS</option>
+                                        <option value="CORTE/REMOCAO">CORTE/REMOCAO</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
