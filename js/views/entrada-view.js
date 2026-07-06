@@ -43,6 +43,14 @@
                                 </div>
                                 <div class="input-group emp-matos-group">
                                     <label for="empMato">Matos</label>
+                                    <div class="emp-matos-labels">
+                                        <span>Mato</span>
+                                        <span>Tora</span>
+                                        <span>Lenha</span>
+                                        <span>Outros</span>
+                                        <span>Corte/Remocao</span>
+                                        <span></span>
+                                    </div>
                                     <div class="emp-matos-row">
                                         <input type="text" id="empMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                         <input type="text" id="empMatoValor" placeholder="Tora R\$ / m3" style="margin-bottom: 0;">

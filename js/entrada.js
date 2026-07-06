@@ -30,6 +30,16 @@ function injetarEstiloEmpreiteiro() {
             gap: 10px;
             align-items: stretch;
         }
+        #formEmpreiteiro .emp-matos-labels {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.3fr) repeat(4, minmax(105px, 130px)) minmax(132px, auto);
+            gap: 10px;
+            margin: 2px 0 6px;
+            color: #a7b0c0;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
         #formEmpreiteiro .emp-matos-row input,
         #formEmpreiteiro .emp-matos-row button {
             min-width: 0;
@@ -99,8 +109,12 @@ function injetarEstiloEmpreiteiro() {
         }
         @media (max-width: 760px) {
             #formEmpreiteiro.form-empreiteiro,
-            #formEmpreiteiro .emp-matos-row {
+            #formEmpreiteiro .emp-matos-row,
+            #formEmpreiteiro .emp-matos-labels {
                 grid-template-columns: 1fr;
+            }
+            #formEmpreiteiro .emp-matos-labels span:not(:first-child) {
+                display: none;
             }
             #formEmpreiteiro .input-group {
                 grid-column: 1 / -1 !important;
