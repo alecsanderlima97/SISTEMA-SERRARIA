@@ -1,4 +1,4 @@
-import { db, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from './firebase-init.js';
+import { db, auth, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from './firebase-init.js';
 
 // --- Ferramentas Auxiliares / Calculadoras ---
 
