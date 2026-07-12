@@ -1110,19 +1110,19 @@ function salvarEdicaoPacote() {
 }
 
 function atualizarTotalGeral() {
-    let totalMadeira = 0;
     let totalM3Frete = 0;
     let totalM3Venda = 0;
     let totalPacotes = 0;
     let totalPecasGeral = 0;
 
     romaneioAtual.pacotes.forEach(p => {
-        totalMadeira += p.valorTotalWood;
         totalM3Frete += p.m3FreteTotal;
         totalM3Venda += Number(p.m3VendaTotal || 0);
         totalPacotes += (p.qtdPacotes || 0);
         totalPecasGeral += (p.pecasPorPacote * p.qtdPacotes) || 0;
     });
+    const gruposFinanceiros = agruparFinanceiroPorClasse(romaneioAtual.pacotes);
+    const totalMadeira = gruposFinanceiros.reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
 
     const valorFreteUnit = window.parseCurrencyValue(document.getElementById('v2-valor-frete').value) || 0;
     let totalFrete = arredondarParaBaixo(totalM3Frete * valorFreteUnit, 2);
@@ -1169,19 +1169,24 @@ function agruparFinanceiroPorClasse(pacotes = []) {
     const grupos = new Map();
     pacotes.forEach(p => {
         const classe = (p.qualidade || p.classe || 'SEM CLASSE').toString().toUpperCase();
-        const chave = classe;
+        const precoM3 = Number(p.precoM3 || 0);
+        const chave = `${classe}|${precoM3.toFixed(2)}`;
         if (!grupos.has(chave)) {
-            grupos.set(chave, { classe, m3: 0, valor: 0, pacotes: 0 });
+            grupos.set(chave, { classe, m3: 0, valor: 0, pacotes: 0, precoM3 });
         }
         const grupo = grupos.get(chave);
         grupo.m3 += Number(p.m3VendaTotal || 0);
-        grupo.valor += Number(p.valorTotalWood || 0);
         grupo.pacotes += Number(p.qtdPacotes || 0);
     });
-    return [...grupos.values()].sort((a, b) => {
+    const lista = [...grupos.values()].map(grupo => ({
+        ...grupo,
+        m3: arredondarParaBaixo(grupo.m3, 3),
+        valor: arredondarParaBaixo(grupo.m3 * grupo.precoM3, 2)
+    }));
+    return lista.sort((a, b) => {
         const na = numeroClasseRomaneio(a.classe) || 99;
         const nb = numeroClasseRomaneio(b.classe) || 99;
-        return na - nb || a.classe.localeCompare(b.classe, 'pt-BR');
+        return na - nb || a.classe.localeCompare(b.classe, 'pt-BR') || a.precoM3 - b.precoM3;
     });
 }
 
@@ -1193,16 +1198,15 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
     let totalPcts = 0;
     let totalPcs = 0;
     let totalM3Madeira = 0;
-    let totalMadeira = 0;
     let totalM3Frete = 0;
 
     pacotes.forEach(p => {
         totalPcts += Number(p.qtdPacotes || 0);
         totalPcs += Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
         totalM3Madeira += Number(p.m3VendaTotal || 0);
-        totalMadeira += Number(p.valorTotalWood || 0);
         totalM3Frete += Number(p.m3FreteTotal || p.m3VendaTotal || 0);
     });
+    const totalMadeira = agruparFinanceiroPorClasse(pacotes).reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
 
     const taxa = Number(r.financeiro?.taxaNF || 0);
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
@@ -1220,8 +1224,7 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
 function gerarHtmlDocumentoRomaneio(payload) {
     const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
     const linhasFinanceiroClasse = agruparFinanceiroPorClasse(pacotes).map(grupo => {
-        const precoMedio = grupo.m3 > 0 ? arredondarParaBaixo(grupo.valor / grupo.m3, 2) : 0;
-        return `<div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0; border-bottom:1px solid #e2e8f0;"><span>${grupo.classe}: ${formatarM3Baixo(grupo.m3)} m3 × R$ ${precoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><b>R$ ${arredondarParaBaixo(grupo.valor, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`;
+        return `<div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0; border-bottom:1px solid #e2e8f0;"><span>${grupo.classe}: ${formatarM3Baixo(grupo.m3)} m3 × R$ ${Number(grupo.precoM3 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><b>R$ ${arredondarParaBaixo(grupo.valor, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`;
     }).join('');
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
     const adicionalFrete = Number(r.logistica?.adicionalFrete || 0);
@@ -1394,10 +1397,9 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
     const taxa = romaneioAtual.financeiro.taxaNF;
     const totalComTaxa = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
     const linhasClasse = agruparFinanceiroPorClasse(romaneioAtual.pacotes).map(grupo => {
-        const precoMedio = grupo.m3 > 0 ? arredondarParaBaixo(grupo.valor / grupo.m3, 2) : 0;
         return `
             <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; align-items:center;">
-                <span style="color: var(--text-muted);">${grupo.classe}: ${formatarM3Baixo(grupo.m3)} m³ × R$ ${precoMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                <span style="color: var(--text-muted);">${grupo.classe}: ${formatarM3Baixo(grupo.m3)} m³ × R$ ${Number(grupo.precoM3 || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 <span>R$ ${arredondarParaBaixo(grupo.valor, 2).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
             </div>
         `;
