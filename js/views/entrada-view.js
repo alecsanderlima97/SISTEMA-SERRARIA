@@ -216,7 +216,8 @@
                                     <textarea id="entObservacaoCarga" class="text-uppercase-input" rows="3" placeholder="Observações sobre a carga, produto ou conferência..." style="width:100%; resize:vertical;"></textarea>
                                 </div>
 
-                                <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px;">
+                                <div class="input-group" style="grid-column: 1 / -1; justify-content: flex-end; margin-top: 15px; display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button type="button" id="btnCancelarEdicaoEntrada" class="btn-secondary" style="display:none; padding: 12px 24px; font-size: 1rem;"><i class="fa-solid fa-xmark"></i> Cancelar edição</button>
                                     <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 1rem;"><i class="fa-solid fa-save"></i> Registrar Entrada</button>
                                 </div>
                             </form>

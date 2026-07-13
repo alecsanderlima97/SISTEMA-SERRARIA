@@ -495,6 +495,41 @@ let entradasSelecionadas = new Set();
 let descargasSelecionadas = new Set();
 let entradasUnsubscribe = null;
 
+function atualizarEstadoEdicaoEntrada() {
+    const btnSalvar = formEntrada?.querySelector('button[type="submit"]');
+    const btnCancelar = document.getElementById('btnCancelarEdicaoEntrada');
+    if (btnSalvar) {
+        btnSalvar.innerHTML = entradaEditandoId
+            ? '<i class="fa-solid fa-save"></i> Atualizar Entrada'
+            : '<i class="fa-solid fa-save"></i> Registrar Entrada';
+    }
+    if (btnCancelar) btnCancelar.style.display = entradaEditandoId ? 'inline-flex' : 'none';
+}
+
+window.cancelarEdicaoEntrada = function() {
+    entradaEditandoId = null;
+    formEntrada?.reset();
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+    if (entData) entData.valueAsDate = new Date();
+    if (entHorario) {
+        const now = new Date();
+        entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    }
+    atualizarOrigemToraEntrada();
+    atualizarEstadoEdicaoEntrada();
+    calcularVolumeAtual();
+};
+
+function moverFechamentoEntradasParaTopo() {
+    const panel = document.getElementById('panelRelatorioConsolidado');
+    const table = document.querySelector('#panelListaEntradas .table-container');
+    if (panel && table && panel.nextElementSibling !== table) {
+        table.parentElement.insertBefore(panel, table);
+        panel.style.marginTop = '0';
+        panel.style.marginBottom = '16px';
+    }
+}
+
 function getUsuarioAtualAuditoria() {
     const user = auth.currentUser || {};
     const nomeHeader = document.getElementById('userNameHeader')?.textContent?.trim();
@@ -1246,7 +1281,7 @@ function configurarSubmitEntrada() {
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) atualizada com sucesso!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
-                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Registrar Entrada';
+                atualizarEstadoEdicaoEntrada();
             } else {
                 novaEntrada.criadoEm = new Date().toISOString();
                 novaEntrada.criadoPor = usuarioAuditoria;
@@ -1260,7 +1295,7 @@ function configurarSubmitEntrada() {
             }
             
             formEntrada.reset();
-            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(1.12) : 'R$ 1,12';
+            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
             if(entData) entData.valueAsDate = new Date();
             if(entHorario) {
                 const now = new Date();
@@ -1272,7 +1307,8 @@ function configurarSubmitEntrada() {
             console.error(error);
             alert("Erro ao salvar entrada.");
         } finally {
-            if(!entradaEditandoId) submitBtn.innerHTML = textoOriginal;
+            if(!entradaEditandoId) atualizarEstadoEdicaoEntrada();
+            else submitBtn.innerHTML = textoOriginal;
             submitBtn.disabled = false;
         }
     });
@@ -1334,7 +1370,6 @@ Observacao: ${en.observacaoCarga || 'N/A'}
 window.alterarEntrada = function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
-    alert('Você será direcionado para a tela de Registro / Calculadora M³ para alterar esta entrada.');
     entradaEditandoId = id;
     const origemInput = document.getElementById('entOrigemTora');
     if (origemInput) origemInput.value = en.origemTora || (en.compraAvulsa ? 'COMPRA_AVULSA' : 'EMPREITEIRO');
@@ -1364,7 +1399,7 @@ window.alterarEntrada = function(id) {
     document.getElementById('entPlaca').value = en.placa || '';
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
-    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(en.valorDescargaM3 || 1.12) : formatDecimalValue(en.valorDescargaM3 || 1.12);
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(Number(en.valorDescargaM3 || 0)) : formatDecimalValue(Number(en.valorDescargaM3 || 0));
     
     // Carregar alturas individuais se existirem
     if (en.alturas && Array.isArray(en.alturas)) {
@@ -1383,8 +1418,7 @@ window.alterarEntrada = function(id) {
         document.getElementById('entAltDir3').value = '';
     }
     
-    const btn = formEntrada.querySelector('button[type="submit"]');
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> Atualizar Entrada';
+    atualizarEstadoEdicaoEntrada();
     
     if (typeof window.switchTabEntrada === 'function') {
         window.switchTabEntrada('registro');
@@ -1619,6 +1653,13 @@ function inicializarModuloEntrada() {
     entData = document.getElementById('entData');
     entHorario = document.getElementById('entHorario');
     configurarSubmitEntrada();
+    moverFechamentoEntradasParaTopo();
+    atualizarEstadoEdicaoEntrada();
+
+    const btnCancelarEdicaoEntrada = document.getElementById('btnCancelarEdicaoEntrada');
+    if (btnCancelarEdicaoEntrada) {
+        btnCancelarEdicaoEntrada.addEventListener('click', window.cancelarEdicaoEntrada);
+    }
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
     ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entFornecedorAvulso', 'entMotorista', 'entCaminhao', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
