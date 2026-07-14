@@ -530,6 +530,18 @@ function moverFechamentoEntradasParaTopo() {
     }
 }
 
+function normalizarCodigoRomaneioEntrada(valor) {
+    return String(valor || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function existeRomaneioEntradaDuplicado(codigo, ignorarId = null) {
+    const alvo = normalizarCodigoRomaneioEntrada(codigo);
+    if (!alvo) return false;
+    return (window.entradasAtuaisLista || []).some(en =>
+        en.id !== ignorarId && normalizarCodigoRomaneioEntrada(en.romaneioNum) === alvo
+    );
+}
+
 function getUsuarioAtualAuditoria() {
     const user = auth.currentUser || {};
     const nomeHeader = document.getElementById('userNameHeader')?.textContent?.trim();
@@ -1268,6 +1280,12 @@ function configurarSubmitEntrada() {
             totalDescarga: calcData.totalDescarga,
             atualizadoEm: new Date().toISOString()
         };
+
+        if (existeRomaneioEntradaDuplicado(novaEntrada.romaneioNum, entradaEditandoId)) {
+            alert(`Já existe uma entrada cadastrada com o romaneio ${novaEntrada.romaneioNum}. Verifique antes de salvar.`);
+            document.getElementById('entRomaneio')?.focus();
+            return;
+        }
         
         const submitBtn = formEntrada.querySelector('button[type="submit"]');
         const textoOriginal = submitBtn.innerHTML;

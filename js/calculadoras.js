@@ -91,6 +91,18 @@ function ordenarSubprodutosRelatorio(a, b) {
     return numero || String(a.romaneio || '').localeCompare(String(b.romaneio || ''), 'pt-BR', { numeric: true });
 }
 
+function normalizarCodigoRomaneioSubproduto(valor) {
+    return String(valor || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function existeRomaneioSubprodutoDuplicado(codigo, ignorarId = null) {
+    const alvo = normalizarCodigoRomaneioSubproduto(codigo);
+    if (!alvo || alvo === '---') return false;
+    return vendasSubprodutosCache.some(venda =>
+        venda.id !== ignorarId && normalizarCodigoRomaneioSubproduto(venda.romaneio) === alvo
+    );
+}
+
 function ordenarSubprodutosConformeFiltro(a, b) {
     const resultado = ordenarSubprodutosRelatorio(a, b);
     return (document.getElementById('subRelOrdem')?.value || 'recentes') === 'recentes' ? -resultado : resultado;
@@ -936,6 +948,12 @@ if (btnCalcCavaco) {
 
         if (qtd <= 0 || valorUni <= 0) {
             alert("Preencha corretamente a quantidade e o valor unitário!");
+            return;
+        }
+
+        if (existeRomaneioSubprodutoDuplicado(romaneio, vendaSubprodutoEditandoId)) {
+            alert(`Já existe uma venda de subproduto cadastrada com o romaneio ${romaneio.toUpperCase().trim()}. Verifique antes de salvar.`);
+            document.getElementById('calcCavRomaneio')?.focus();
             return;
         }
 
