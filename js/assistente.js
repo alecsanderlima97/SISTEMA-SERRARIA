@@ -9,6 +9,89 @@ const KEYS_ASSISTENTE = {
 const ASSISTANT_USAGE_KEY = 'orquestra_assistente_openai_usage';
 const ASSISTANT_BUDGET_KEY = 'orquestra_assistente_openai_budget';
 
+const GUIAS_TELA = {
+    'view-dashboard': {
+        titulo: 'Inicio',
+        passos: [
+            'Use os KPIs para conferir producao, vendas e financeiro do periodo.',
+            'Passe o mouse nos indicadores para entender a origem dos calculos.',
+            'Abra o relatorio mensal para comparar meses anteriores.'
+        ]
+    },
+    'view-romaneio-v2': {
+        titulo: 'Gerar Romaneio',
+        passos: [
+            'Selecione o cliente e confira datas, frete e dados logisticos.',
+            'Use Puxar do Patio para escolher pacotes ja contados no estoque.',
+            'Confira o detalhamento financeiro antes de finalizar a carga.'
+        ]
+    },
+    'view-cavaco': {
+        titulo: 'Venda de Subprodutos',
+        passos: [
+            'Escolha o cliente, o tipo de subproduto e confira o numero do romaneio.',
+            'O sistema bloqueia romaneio duplicado antes de salvar.',
+            'Use Ultimos Lancamentos para gerar fechamento por periodo ou itens selecionados.'
+        ]
+    },
+    'view-entrada': {
+        titulo: 'Conferencia de Cargas',
+        passos: [
+            'Registre a entrada com fornecedor/empreiteiro, mato, produto e romaneio.',
+            'Confira os valores de tora, lenha, outros e corte/remocao antes de salvar.',
+            'Use Descarregamento para montar fechamentos por periodo.'
+        ]
+    },
+    'view-produtos': {
+        titulo: 'Gestao de Madeira',
+        passos: [
+            'Cadastre classe, medidas e configuracao do pacote.',
+            'Mantenha a ordem por classe e medida para facilitar o romaneio.',
+            'Evite duplicar medidas iguais com configuracoes diferentes sem necessidade.'
+        ]
+    },
+    'view-estoque': {
+        titulo: 'Controle de Estoque',
+        passos: [
+            'Cadastre itens com categoria, unidade e limite de alerta.',
+            'Use Entrada/Saida para movimentar estoque sem editar quantidade manualmente.',
+            'Confira a lista de movimentacoes quando houver divergencia.'
+        ]
+    },
+    'view-frotas': {
+        titulo: 'Controle de Frota',
+        passos: [
+            'Use os cards para acessar abastecimento, manutencao e relatos.',
+            'Registre problemas da maquina para gerar notificacao ate resolver.',
+            'Mantenha foto e dados do veiculo atualizados para facilitar uso no celular.'
+        ]
+    },
+    'view-financeiro': {
+        titulo: 'Financeiro',
+        passos: [
+            'Importe documentos financeiros e confira tipo, vencimento e valor antes de salvar.',
+            'Boletos a vencer aparecem no topo e destacam o menu Financeiro.',
+            'Use a pasta raiz local para guardar PDFs sem pesar o banco de dados.'
+        ]
+    },
+    'view-rh': {
+        titulo: 'RH Funcionarios',
+        passos: [
+            'Cadastre dados completos do funcionario, forma de pagamento e observacoes.',
+            'Lance horas extras por mes e feche o periodo quando finalizar.',
+            'Use a ficha completa para consultar vales, faltas, atestados e CAT.'
+        ]
+    },
+    'view-configuracoes': {
+        titulo: 'Configuracoes',
+        passos: [
+            'Controle permissao de usuarios por tela e subtela.',
+            'Use backup antes de alteracoes grandes.',
+            'Mantenha perfil e dados da empresa atualizados.'
+        ]
+    }
+};
+
 function lerLista(key) {
     try {
         return JSON.parse(localStorage.getItem(key) || '[]');
@@ -282,9 +365,50 @@ window.enviarPerguntaAssistenteHome = function() {
     window.perguntarAssistente(pergunta);
 };
 
+function obterTelaAtivaAssistente() {
+    return document.querySelector('.view-section.active-section')?.id || 'view-dashboard';
+}
+
+function renderizarGuiaAssistente(sectionId = obterTelaAtivaAssistente()) {
+    const guia = GUIAS_TELA[sectionId] || {
+        titulo: 'Guia do Sistema',
+        passos: ['Use o menu lateral para navegar.', 'Preencha campos obrigatorios com atencao.', 'Em caso de duvida, pergunte ao assistente.']
+    };
+    const content = document.getElementById('assistantGuideContent');
+    if (!content) return;
+    content.innerHTML = `
+        <div class="assistant-guide-title">${guia.titulo}</div>
+        <ol>${guia.passos.map(passo => `<li>${passo}</li>`).join('')}</ol>
+    `;
+}
+
+function injetarEstilosGuiaAssistente() {
+    if (document.getElementById('assistantGuideStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'assistantGuideStyles';
+    style.textContent = `
+        .assistant-guide-card { margin:10px 12px; padding:12px; border:1px solid rgba(245,158,11,.28); border-radius:10px; background:rgba(245,158,11,.08); color:var(--text-color); }
+        .assistant-guide-card > strong { display:block; color:#f59e0b; margin-bottom:7px; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; }
+        .assistant-guide-title { font-weight:900; color:#f8fafc; margin-bottom:7px; }
+        .assistant-guide-card ol { margin:0; padding-left:18px; display:grid; gap:6px; }
+        .assistant-guide-card li { color:var(--text-muted); line-height:1.35; font-size:.86rem; }
+    `;
+    document.head.appendChild(style);
+}
+
+window.mostrarGuiaDaTelaAtual = function(abrirPainel = false) {
+    renderizarGuiaAssistente();
+    if (abrirPainel) window.toggleAssistenteIA(true);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    injetarEstilosGuiaAssistente();
     inicializarAssistenteArrastavel();
     atualizarPainelUsoAssistente();
+    renderizarGuiaAssistente();
+    document.querySelectorAll('.sidebar a[data-target], .profile-dropdown a[data-target]').forEach(link => {
+        link.addEventListener('click', () => setTimeout(() => renderizarGuiaAssistente(link.dataset.target), 180));
+    });
     document.getElementById('assistantBudgetInput')?.addEventListener('change', (event) => {
         const valor = Math.max(0, Number(event.target.value || 0));
         localStorage.setItem(ASSISTANT_BUDGET_KEY, String(valor || 1));

@@ -27,10 +27,15 @@
             <div class="assistant-usage-bar"><span id="assistantUsageBar"></span></div>
         </div>
         <div class="assistant-quick-actions">
+            <button type="button" onclick="window.mostrarGuiaDaTelaAtual && window.mostrarGuiaDaTelaAtual(true)">Me guie nesta tela</button>
             <button type="button" onclick="window.perguntarAssistente('resumo geral')">Resumo geral</button>
             <button type="button" onclick="window.perguntarAssistente('analisar frotas')">Frotas</button>
             <button type="button" onclick="window.perguntarAssistente('analisar estoque')">Estoque</button>
             <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
+        </div>
+        <div id="assistantGuideCard" class="assistant-guide-card">
+            <strong>Guia da tela</strong>
+            <div id="assistantGuideContent">Abra uma tela do sistema para ver orientações rápidas.</div>
         </div>
         <div id="assistantMessages" class="assistant-messages">
             <div class="assistant-msg assistant-msg-bot">Olá! Posso analisar estoque, frotas, financeiro e relatos pendentes com os dados do sistema.</div>

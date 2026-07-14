@@ -122,6 +122,71 @@ function estaVencido(item) {
     return new Date(`${item.vencimento}T12:00:00`) < hoje;
 }
 
+function diasAteVencimentoFinanceiro(item) {
+    if (!item.vencimento) return null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(`${item.vencimento}T00:00:00`);
+    vencimento.setHours(0, 0, 0, 0);
+    return Math.ceil((vencimento - hoje) / 86400000);
+}
+
+function obterBoletosAVencerFinanceiro() {
+    return obterLancamentosFinanceiros()
+        .filter(item => !item.pago && item.vencimento)
+        .map(item => ({ ...item, diasVencimento: diasAteVencimentoFinanceiro(item) }))
+        .filter(item => item.diasVencimento !== null && item.diasVencimento <= 7)
+        .sort((a, b) => a.diasVencimento - b.diasVencimento || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR'));
+}
+
+function textoVencimentoLembrete(item) {
+    if (item.diasVencimento < 0) return `vencido ha ${Math.abs(item.diasVencimento)} dia(s)`;
+    if (item.diasVencimento === 0) return 'vence hoje';
+    if (item.diasVencimento === 1) return 'vence amanha';
+    return `vence em ${item.diasVencimento} dias`;
+}
+
+function mostrarLembretesFinanceiros() {
+    const alertas = obterBoletosAVencerFinanceiro();
+    let banner = document.getElementById('financeiroLembreteTopo');
+    const linkFinanceiro = document.querySelector('a[data-target="view-financeiro"]');
+    if (!alertas.length) {
+        banner?.remove();
+        linkFinanceiro?.classList.remove('financeiro-menu-alerta');
+        document.body.classList.remove('financeiro-tem-alerta');
+        return;
+    }
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'financeiroLembreteTopo';
+        banner.className = 'financeiro-lembrete-topo hide-on-print';
+        document.body.appendChild(banner);
+    }
+    const total = alertas.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const principais = alertas.slice(0, 4).map(item => `${escapeHtmlFinanceiro(item.descricao || item.tipo || 'Documento')} - ${formatarMoeda(item.valor)} (${textoVencimentoLembrete(item)})`).join('  |  ');
+    banner.innerHTML = `
+        <button type="button" class="financeiro-lembrete-main" onclick="window.irParaFinanceiroAlertas()">
+            <i class="fa-solid fa-bell"></i>
+            <span><strong>${alertas.length} boleto(s)/conta(s) a vencer</strong> - ${formatarMoeda(total)} - ${principais}</span>
+        </button>
+        ${alertas[0]?.documento ? `<button type="button" class="financeiro-lembrete-doc" onclick="window.abrirAnexoFinanceiro('${alertas[0].id}', 'documento')" title="Abrir documento mais urgente"><i class="fa-solid fa-file-arrow-up"></i> Abrir boleto</button>` : ''}
+        <button type="button" class="financeiro-lembrete-close" onclick="document.getElementById('financeiroLembreteTopo')?.remove()"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    linkFinanceiro?.classList.add('financeiro-menu-alerta');
+    document.body.classList.add('financeiro-tem-alerta');
+}
+
+window.irParaFinanceiroAlertas = function() {
+    const link = document.querySelector('a[data-target="view-financeiro"]');
+    link?.click();
+    setTimeout(() => {
+        const filtro = document.getElementById('financeiroFiltroStatus');
+        if (filtro) filtro.value = 'ABERTO';
+        window.renderFinanceiro?.();
+        document.getElementById('financeiroLista')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
+};
+
 function obterStatusItem(item) {
     if (item.pago) return { label: 'Pago', classe: 'pago' };
     if (item.conferenciaStatus === 'pendente') return { label: 'Pendente', classe: 'pendente' };
@@ -650,7 +715,14 @@ window.importarFilaMonitorFinanceiro = async function(files) {
             const texto = await lerArquivoComoTexto(file);
             const fila = JSON.parse(texto);
             const sugestao = fila.sugestao || {};
-            const dadosExtraidos = fila.anexo ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
+            const anexoLocal = fila.anexo?.localPath ? {
+                nome: fila.anexo.nome || fila.nomeArquivo || file.name,
+                tipo: fila.anexo.tipo || 'application/octet-stream',
+                localPath: fila.anexo.localPath,
+                localFolder: fila.anexo.localFolder || fila.pastaLocal || '',
+                storage: 'LOCAL'
+            } : null;
+            const dadosExtraidos = fila.anexo?.dados ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const registro = {
                 id,
@@ -662,7 +734,8 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 observacao: `${sugestao.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`}${dadosExtraidos?.precisaConferencia ? ' | CONFERIR MANUALMENTE' : ''}`,
                 pago: false,
                 pagoEm: null,
-                documento: fila.anexo || null,
+                conferenciaStatus: 'pendente',
+                documento: anexoLocal || fila.anexo || null,
                 comprovante: null,
                 atualizadoEm: new Date().toISOString(),
                 criadoEm: new Date().toISOString()
@@ -797,6 +870,7 @@ window.renderFinanceiro = function() {
 
     if (lista.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">Nenhum lançamento financeiro nesta aba.</td></tr>';
+        mostrarLembretesFinanceiros();
         return;
     }
 
@@ -827,6 +901,7 @@ window.renderFinanceiro = function() {
             </tr>
         `;
     }).join('');
+    mostrarLembretesFinanceiros();
 };
 
 window.atualizarSelecaoFinanceiro = function() {
@@ -918,6 +993,11 @@ window.excluirFinanceiro = async function(id) {
 window.abrirAnexoFinanceiro = function(id, tipo) {
     const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
     const anexo = item?.[tipo];
+    if (anexo?.storage === 'LOCAL' || anexo?.localPath) {
+        const caminho = anexo.localPath || anexo.localFolder || anexo.nome || '';
+        window.prompt('Arquivo salvo localmente. Copie o caminho abaixo e cole no Explorador de Arquivos para abrir:', caminho);
+        return;
+    }
     if (!anexo?.dados) return;
     const win = window.open('', '_blank');
     if (!win) {
@@ -1135,6 +1215,23 @@ function injetarEstilosFinanceiro() {
         .financeiro-import-grid .span-2 { grid-column:span 2; }
         .financeiro-import-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-wrap:wrap; }
         .financeiro-import-actions button { min-height:40px; white-space:nowrap; }
+        .financeiro-lembrete-topo {
+            position:fixed; top:10px; left:50%; transform:translateX(-50%);
+            z-index:9998; width:min(980px, calc(100vw - 28px)); display:flex; align-items:center; gap:8px;
+            padding:8px; border-radius:10px; border:1px solid rgba(245,158,11,.5);
+            background:rgba(17,24,39,.96); color:#fff7ed; box-shadow:0 18px 50px rgba(0,0,0,.45);
+            animation: financeiroPulse 1.35s ease-in-out infinite;
+        }
+        .financeiro-lembrete-main { flex:1; min-width:0; border:0; background:transparent; color:inherit; display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer; font-weight:800; }
+        .financeiro-lembrete-main span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; animation: financeiroTicker 18s linear infinite; }
+        .financeiro-lembrete-main i { color:#f59e0b; font-size:1rem; }
+        .financeiro-lembrete-doc, .financeiro-lembrete-close { border:1px solid rgba(245,158,11,.38); background:rgba(245,158,11,.14); color:#fff7ed; border-radius:8px; min-height:34px; padding:0 10px; font-weight:900; cursor:pointer; white-space:nowrap; }
+        .financeiro-lembrete-close { width:34px; padding:0; display:grid; place-items:center; }
+        .financeiro-menu-alerta { position:relative; animation: financeiroMenuGlow 1.1s ease-in-out infinite; }
+        .financeiro-menu-alerta::after { content:''; width:9px; height:9px; border-radius:999px; background:#f59e0b; box-shadow:0 0 12px #f59e0b; margin-left:auto; }
+        @keyframes financeiroPulse { 0%,100% { box-shadow:0 18px 50px rgba(0,0,0,.45), 0 0 0 rgba(245,158,11,0); } 50% { box-shadow:0 18px 50px rgba(0,0,0,.45), 0 0 22px rgba(245,158,11,.42); } }
+        @keyframes financeiroMenuGlow { 0%,100% { filter:none; } 50% { filter:brightness(1.35); } }
+        @keyframes financeiroTicker { 0%,12% { transform:translateX(0); } 88%,100% { transform:translateX(-12%); } }
         @media (max-width: 1100px) {
             .financeiro-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .financeiro-obs { grid-column: span 2; }
@@ -1146,6 +1243,10 @@ function injetarEstilosFinanceiro() {
             .financeiro-obs { grid-column: span 1; }
             .financeiro-import-grid { grid-template-columns:1fr; }
             .financeiro-import-grid .span-2 { grid-column:span 1; }
+            .financeiro-lembrete-topo { top:8px; width:calc(100vw - 14px); align-items:stretch; }
+            .financeiro-lembrete-main span { white-space:normal; font-size:.82rem; }
+            .financeiro-lembrete-doc { font-size:0; width:38px; padding:0; }
+            .financeiro-lembrete-doc i { font-size:.9rem; }
         }
     `;
     document.head.appendChild(style);
