@@ -103,6 +103,24 @@ function existeRomaneioSubprodutoDuplicado(codigo, ignorarId = null) {
     );
 }
 
+async function existeRomaneioSubprodutoDuplicadoNuvem(codigo, ignorarId = null) {
+    const alvo = normalizarCodigoRomaneioSubproduto(codigo);
+    if (!alvo || alvo === '---') return false;
+    if (existeRomaneioSubprodutoDuplicado(codigo, ignorarId)) return true;
+    if (!window.FS?.getCollection) return false;
+    try {
+        const vendas = await window.FS.getCollection('vendas_subprodutos');
+        vendasSubprodutosCache = Array.isArray(vendas) ? vendas : vendasSubprodutosCache;
+        return vendasSubprodutosCache.some(venda =>
+            venda.id !== ignorarId && normalizarCodigoRomaneioSubproduto(venda.romaneio) === alvo
+        );
+    } catch (error) {
+        console.error('Erro ao validar romaneio duplicado de subproduto:', error);
+        alert('Nao foi possivel validar duplicidade do romaneio na nuvem. Tente novamente.');
+        return true;
+    }
+}
+
 function ordenarSubprodutosConformeFiltro(a, b) {
     const resultado = ordenarSubprodutosRelatorio(a, b);
     return (document.getElementById('subRelOrdem')?.value || 'recentes') === 'recentes' ? -resultado : resultado;
@@ -951,7 +969,7 @@ if (btnCalcCavaco) {
             return;
         }
 
-        if (existeRomaneioSubprodutoDuplicado(romaneio, vendaSubprodutoEditandoId)) {
+        if (await existeRomaneioSubprodutoDuplicadoNuvem(romaneio, vendaSubprodutoEditandoId)) {
             alert(`Já existe uma venda de subproduto cadastrada com o romaneio ${romaneio.toUpperCase().trim()}. Verifique antes de salvar.`);
             document.getElementById('calcCavRomaneio')?.focus();
             return;
