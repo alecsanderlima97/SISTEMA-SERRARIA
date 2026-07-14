@@ -15,6 +15,7 @@
                 </div>
 
                 <div class="tabs-container hide-on-print financeiro-tabs">
+                    <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('caixa-financeira')" data-fin-tab="caixa-financeira"><i class="fa-solid fa-inbox"></i> Caixa Financeira</button>
                     <button type="button" class="btn-tab-financeiro active" onclick="window.switchFinanceiroAba('despesas-gerais')" data-fin-tab="despesas-gerais"><i class="fa-solid fa-receipt"></i> Despesas Gerais</button>
                     <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('boletos')" data-fin-tab="boletos"><i class="fa-solid fa-barcode"></i> Boletos Aleatórios</button>
                     <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('impostos')" data-fin-tab="impostos"><i class="fa-solid fa-landmark"></i> Impostos</button>
@@ -30,13 +31,13 @@
                     <form id="financeiroForm" class="financeiro-form-grid">
                         <input type="hidden" id="financeiroId">
                         <div class="input-group"><label for="financeiroTipo">Tipo / Classe</label><input type="text" id="financeiroTipo" list="financeiroClassesList" placeholder="Ex: IMPOSTO, BOLETO, MULTA" class="text-uppercase-input"><datalist id="financeiroClassesList"></datalist></div>
-                        <div class="input-group"><label for="financeiroDescricao">Descrição</label><input type="text" id="financeiroDescricao" list="financeiroDescricaoList" placeholder="Ex: FGTS, ENERGIA, INTERNET" class="text-uppercase-input"><datalist id="financeiroDescricaoList"></datalist></div>
+                        <div class="input-group"><label for="financeiroDescricao">Descrição</label><input type="text" id="financeiroDescricao" list="financeiroDescricaoList" autocomplete="off" placeholder="Ex: FGTS, ENERGIA, INTERNET" class="text-uppercase-input"><datalist id="financeiroDescricaoList"></datalist></div>
                         <div class="input-group"><label for="financeiroVencimento">Data de vencimento</label><input type="date" id="financeiroVencimento"></div>
                         <div class="input-group"><label for="financeiroValor">Valor</label><input type="text" id="financeiroValor" placeholder="R$ 0,00"></div>
                         <div class="input-group"><label>Status</label><label class="financeiro-status-toggle" for="financeiroPago"><input type="checkbox" id="financeiroPago"><span id="financeiroStatusTexto">Não pago</span></label></div>
                         <div class="input-group financeiro-obs"><label for="financeiroObservacao">Observação</label><textarea id="financeiroObservacao" rows="2" placeholder="Referência, parcela, fornecedor ou detalhe importante..."></textarea></div>
-                        <div class="input-group"><label for="financeiroDocumento">Documento</label><input type="file" id="financeiroDocumento" accept=".pdf,image/*"><small id="financeiroDocumentoNome">Nenhum documento anexado</small></div>
-                        <div class="input-group"><label for="financeiroComprovante">Comprovante PG</label><input type="file" id="financeiroComprovante" accept=".pdf,image/*"><small id="financeiroComprovanteNome">Nenhum comprovante anexado</small></div>
+                        <div class="input-group"><label for="financeiroDocumento">Documento</label><input type="file" id="financeiroDocumento" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroDocumentoNome">Nenhum documento anexado</small><button type="button" id="btnLerDocumentoFinanceiro" class="btn-secondary" style="margin-top:8px; padding:8px 10px; font-size:.82rem; width:100%;"><i class="fa-solid fa-wand-magic-sparkles"></i> Ler documento automaticamente</button></div>
+                        <div class="input-group"><label for="financeiroComprovante">Comprovante PG</label><input type="file" id="financeiroComprovante" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroComprovanteNome">Nenhum comprovante anexado</small></div>
                         <div class="financeiro-form-actions"><button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Salvar lançamento</button></div>
                     </form>
                 </div>
@@ -44,12 +45,20 @@
                 <div class="glass-panel financeiro-list-card">
                     <div class="financeiro-list-header hide-on-print">
                         <div><h3 id="financeiroTituloLista" style="margin:0;">Despesas Gerais</h3><small id="financeiroResumoLista" style="color:var(--text-muted);">0 registros</small></div>
-                        <button type="button" class="btn-primary" onclick="window.abrirRelatorioFinanceiro()"><i class="fa-solid fa-file-lines"></i> Gerar relatório</button>
-                        <div class="financeiro-filtros"><select id="financeiroFiltroStatus" onchange="window.renderFinanceiro()"><option value="TODOS">Todos</option><option value="ABERTO">Não pagos</option><option value="PAGO">Pagos</option><option value="VENCIDO">Vencidos</option></select><input type="search" id="financeiroBusca" oninput="window.renderFinanceiro()" placeholder="Buscar lançamento..."></div>
+                        <div class="financeiro-list-actions">
+                            <input type="file" id="financeiroArquivosInput" multiple accept=".pdf,.xml,text/xml,application/xml,image/*" style="display:none;">
+                            <input type="file" id="financeiroPastaInput" webkitdirectory directory multiple accept=".pdf,.xml,text/xml,application/xml,image/*" style="display:none;">
+                            <input type="file" id="financeiroFilaInput" multiple accept=".json,application/json" style="display:none;">
+                            <button type="button" class="btn-primary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Selecionar arquivos financeiros</button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroPastaInput')?.click()" title="Importa todos os PDFs/XMLs da pasta selecionada"><i class="fa-solid fa-folder-open"></i> Importar pasta inteira</button>
+                            <button type="button" class="btn-danger" id="btnExcluirFinanceiroSelecionados" onclick="window.excluirFinanceiroSelecionados()" style="display:none;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
+                            <button type="button" class="btn-primary" onclick="window.abrirRelatorioFinanceiro()"><i class="fa-solid fa-file-lines"></i> Gerar relatório</button>
+                        </div>
+                        <div class="financeiro-filtros"><select id="financeiroFiltroStatus" onchange="window.renderFinanceiro()"><option value="TODOS">Todos</option><option value="ABERTO">Não pagos</option><option value="PENDENTE">Pendentes</option><option value="PAGO">Pagos</option><option value="VENCIDO">Vencidos</option></select><select id="financeiroOrdenacao" onchange="window.renderFinanceiro()"><option value="VENCIMENTO_ASC">Vencimento: mais antigo</option><option value="VENCIMENTO_DESC">Vencimento: mais recente</option><option value="CRIADO_DESC">Lançamento: mais recente</option><option value="CRIADO_ASC">Lançamento: mais antigo</option></select><input type="search" id="financeiroBusca" oninput="window.renderFinanceiro()" placeholder="Buscar lançamento..."></div>
                     </div>
                     <div class="table-responsive">
                         <table class="financeiro-table">
-                            <thead><tr><th>Tipo</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Anexos</th><th>Ações</th></tr></thead>
+                            <thead><tr><th><input type="checkbox" id="financeiroSelecionarTodos" onchange="window.marcarTodosFinanceiro(this.checked)" title="Selecionar todos"></th><th>Tipo</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Anexos</th><th>Ações</th></tr></thead>
                             <tbody id="financeiroLista"></tbody>
                         </table>
                     </div>
