@@ -1,5 +1,5 @@
 param(
-    [string]$RootDir = "C:\ORQUESTRA.CS\SERRARIA-VANMARTE",
+    [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE",
     [int]$IntervaloSegundos = 10
 )
 

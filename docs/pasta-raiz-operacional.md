@@ -3,7 +3,7 @@
 Padrao recomendado para manter documentos locais fora do banco de dados.
 
 ```text
-C:\ORQUESTRA.CS\SERRARIA-VANMARTE\
+C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE\
 ├── BACKUPS\
 ├── FINANCEIRO\
 │   ├── ENTRADA\
@@ -51,13 +51,13 @@ powershell -ExecutionPolicy Bypass -File scripts\iniciar-automacao-local.ps1
 Depois coloque PDFs/XMLs em:
 
 ```text
-C:\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\ENTRADA
+C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\ENTRADA
 ```
 
 O monitor organiza os arquivos e cria JSONs em:
 
 ```text
-C:\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\FILA
+C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\FILA
 ```
 
 No sistema, use o botao `Importar fila local`.
@@ -69,4 +69,4 @@ Para rotina diaria, prefira sempre a pasta `FINANCEIRO\ENTRADA`, porque ela evit
 
 ## Backup
 
-Incluir a pasta `C:\ORQUESTRA.CS\SERRARIA-VANMARTE` na rotina de backup do cliente.
+Incluir a pasta `C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE` na rotina de backup do cliente.
