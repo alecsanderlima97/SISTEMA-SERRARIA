@@ -1,5 +1,6 @@
 param(
     [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE",
+    [string]$FinanceiroDir = "C:\VANMARTE\FINANCEIRO.ORQUESTRACS",
     [int]$Port = 8765
 )
 
@@ -14,7 +15,7 @@ if (-not (Test-Path -LiteralPath $Instalador)) { throw "Instalador nao encontrad
 if (-not (Test-Path -LiteralPath $Servidor)) { throw "Servidor local nao encontrado: $Servidor" }
 if (-not (Test-Path -LiteralPath $Monitor)) { throw "Monitor financeiro nao encontrado: $Monitor" }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $Instalador -RootDir $RootDir
+& powershell -NoProfile -ExecutionPolicy Bypass -File $Instalador -RootDir $RootDir -FinanceiroDir $FinanceiroDir
 
 Start-Process powershell -WindowStyle Normal -ArgumentList @(
     "-NoProfile",
@@ -22,6 +23,7 @@ Start-Process powershell -WindowStyle Normal -ArgumentList @(
     "-NoExit",
     "-File", "`"$Servidor`"",
     "-RootDir", "`"$RootDir`"",
+    "-ExtraRootDir", "`"$FinanceiroDir`"",
     "-Port", "$Port"
 )
 
@@ -30,11 +32,12 @@ Start-Process powershell -WindowStyle Normal -ArgumentList @(
     "-ExecutionPolicy", "Bypass",
     "-NoExit",
     "-File", "`"$Monitor`"",
-    "-RootDir", "`"$RootDir`""
+    "-RootDir", "`"$RootDir`"",
+    "-FinanceiroDir", "`"$FinanceiroDir`""
 )
 
 Write-Host ""
 Write-Host "Automacao local iniciada."
-Write-Host "Pasta de entrada: $RootDir\FINANCEIRO\ENTRADA"
-Write-Host "Fila para importar no sistema: $RootDir\FINANCEIRO\FILA"
+Write-Host "Pasta de entrada: $FinanceiroDir\ENTRADA"
+Write-Host "Fila para importar no sistema: $FinanceiroDir\FILA"
 Write-Host "Servidor de visualizacao: http://127.0.0.1:$Port"

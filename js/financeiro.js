@@ -803,6 +803,11 @@ window.importarFilaMonitorFinanceiro = async function(files) {
         try {
             const texto = await lerArquivoComoTexto(file);
             const fila = JSON.parse(texto);
+            const caminhoLocal = String(fila.anexo?.localPath || fila.arquivoLocal || '');
+            if (caminhoLocal.includes('C:\\ORQUESTRA.CS\\')) {
+                console.warn('Fila antiga ignorada:', file.name, caminhoLocal);
+                continue;
+            }
             const sugestao = fila.sugestao || {};
             const anexoLocal = fila.anexo?.localPath ? {
                 nome: fila.anexo.nome || fila.nomeArquivo || file.name,
@@ -813,18 +818,31 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 storage: 'LOCAL'
             } : null;
             const dadosExtraidos = fila.anexo?.dados ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
+            const conferencia = await confirmarImportacaoFinanceira(
+                anexoLocal || fila.anexo || { nome: fila.nomeArquivo || file.name },
+                {
+                    tipo: dadosExtraidos?.tipo || sugestao.tipo || 'DOCUMENTO',
+                    descricao: dadosExtraidos?.descricao || sugestao.descricao || 'PENDENTE DE CONFERENCIA',
+                    vencimento: dadosExtraidos?.vencimento || sugestao.vencimento || '',
+                    valor: Number(dadosExtraidos?.valor || sugestao.valor || 0),
+                    observacao: sugestao.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
+                    precisaConferencia: dadosExtraidos?.precisaConferencia
+                },
+                fila.nomeArquivo || file.name
+            );
+            if (!conferencia || conferencia.ignorar) continue;
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: normalizarTexto(dadosExtraidos?.tipo || sugestao.tipo || 'DOCUMENTO'),
-                descricao: normalizarTexto(dadosExtraidos?.descricao || sugestao.descricao || 'PENDENTE DE CONFERENCIA'),
-                vencimento: dadosExtraidos?.vencimento || sugestao.vencimento || '',
-                valor: Number(dadosExtraidos?.valor || sugestao.valor || 0),
-                observacao: `${sugestao.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`}${dadosExtraidos?.precisaConferencia ? ' | CONFERIR MANUALMENTE' : ''}`,
+                tipo: normalizarTexto(conferencia.tipo || 'DOCUMENTO'),
+                descricao: normalizarTexto(conferencia.descricao || 'PENDENTE DE CONFERENCIA'),
+                vencimento: conferencia.vencimento || '',
+                valor: Number(conferencia.valor || 0),
+                observacao: conferencia.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
                 pago: false,
                 pagoEm: null,
-                conferenciaStatus: 'pendente',
+                conferenciaStatus: conferencia.precisaConferencia ? 'pendente' : 'conferido',
                 ia: dadosExtraidos?.analisadoPorIA ? {
                     confianca: dadosExtraidos.confiancaIA || 'media',
                     fornecedor: dadosExtraidos.fornecedor || '',
@@ -1091,6 +1109,16 @@ window.excluirFinanceiro = async function(id) {
 window.abrirAnexoFinanceiro = function(id, tipo) {
     const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
     const anexo = item?.[tipo];
+    if (anexo?.dados) {
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('Libere pop-ups para visualizar o anexo.');
+            return;
+        }
+        win.document.write(`<title>${anexo.nome || 'Anexo'}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
+        win.document.close();
+        return;
+    }
     if (anexo?.storage === 'LOCAL' || anexo?.localPath) {
         if (anexo.localUrl) {
             window.open(anexo.localUrl, '_blank');
@@ -1100,14 +1128,6 @@ window.abrirAnexoFinanceiro = function(id, tipo) {
         window.prompt('Arquivo salvo localmente. Copie o caminho abaixo e cole no Explorador de Arquivos para abrir:', caminho);
         return;
     }
-    if (!anexo?.dados) return;
-    const win = window.open('', '_blank');
-    if (!win) {
-        alert('Libere pop-ups para visualizar o anexo.');
-        return;
-    }
-    win.document.write(`<title>${anexo.nome}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
-    win.document.close();
 };
 
 window.abrirRelatorioFinanceiro = function() {

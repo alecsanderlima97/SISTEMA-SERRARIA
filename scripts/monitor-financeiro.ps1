@@ -1,11 +1,14 @@
 param(
     [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE",
+    [string]$FinanceiroDir = "C:\VANMARTE\FINANCEIRO.ORQUESTRACS",
     [int]$IntervaloSegundos = 10
 )
 
 $ErrorActionPreference = "Stop"
 
-$FinanceiroDir = Join-Path $RootDir "FINANCEIRO"
+if ([string]::IsNullOrWhiteSpace($FinanceiroDir)) {
+    $FinanceiroDir = Join-Path $RootDir "FINANCEIRO"
+}
 $EntradaDir = Join-Path $FinanceiroDir "ENTRADA"
 $BoletosDir = Join-Path $FinanceiroDir "BOLETOS"
 $ImpostosDir = Join-Path $FinanceiroDir "IMPOSTOS"

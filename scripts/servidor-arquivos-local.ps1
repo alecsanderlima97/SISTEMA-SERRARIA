@@ -1,10 +1,12 @@
 param(
     [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE",
+    [string]$ExtraRootDir = "C:\VANMARTE\FINANCEIRO.ORQUESTRACS",
     [int]$Port = 8765
 )
 
 $ErrorActionPreference = "Stop"
 $RootFull = [System.IO.Path]::GetFullPath($RootDir)
+$ExtraRootFull = if ([string]::IsNullOrWhiteSpace($ExtraRootDir)) { "" } else { [System.IO.Path]::GetFullPath($ExtraRootDir) }
 $prefix = "http://127.0.0.1:$Port/"
 
 function Write-Response {
@@ -34,6 +36,7 @@ $listener.Start()
 
 Write-Host "Servidor local de arquivos Orquestra.cs"
 Write-Host "Raiz permitida: $RootFull"
+if ($ExtraRootFull) { Write-Host "Raiz extra permitida: $ExtraRootFull" }
 Write-Host "URL: $prefix"
 Write-Host "Pressione Ctrl+C para parar."
 
@@ -56,7 +59,9 @@ while ($listener.IsListening) {
         }
         $decoded = [System.Uri]::UnescapeDataString($rawPath)
         $fullPath = [System.IO.Path]::GetFullPath($decoded)
-        if (-not $fullPath.StartsWith($RootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $inRoot = $fullPath.StartsWith($RootFull, [System.StringComparison]::OrdinalIgnoreCase)
+        $inExtraRoot = $ExtraRootFull -and $fullPath.StartsWith($ExtraRootFull, [System.StringComparison]::OrdinalIgnoreCase)
+        if (-not ($inRoot -or $inExtraRoot)) {
             Write-Response -Context $context -Status 403 -Text "Arquivo fora da pasta raiz permitida."
             continue
         }

@@ -1,5 +1,6 @@
 param(
-    [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE"
+    [string]$RootDir = "C:\VANMARTE\ORQUESTRA.CS\SERRARIA-VANMARTE",
+    [string]$FinanceiroDir = "C:\VANMARTE\FINANCEIRO.ORQUESTRACS"
 )
 
 $ErrorActionPreference = "Stop"
@@ -7,16 +8,16 @@ $ErrorActionPreference = "Stop"
 $dirs = @(
     $RootDir,
     "$RootDir\BACKUPS",
-    "$RootDir\FINANCEIRO",
-    "$RootDir\FINANCEIRO\ENTRADA",
-    "$RootDir\FINANCEIRO\BOLETOS",
-    "$RootDir\FINANCEIRO\IMPOSTOS",
-    "$RootDir\FINANCEIRO\NOTAS-FISCAIS",
-    "$RootDir\FINANCEIRO\COMPROVANTES",
-    "$RootDir\FINANCEIRO\PROCESSADOS",
-    "$RootDir\FINANCEIRO\IGNORADOS",
-    "$RootDir\FINANCEIRO\ERROS",
-    "$RootDir\FINANCEIRO\FILA",
+    $FinanceiroDir,
+    "$FinanceiroDir\ENTRADA",
+    "$FinanceiroDir\BOLETOS",
+    "$FinanceiroDir\IMPOSTOS",
+    "$FinanceiroDir\NOTAS-FISCAIS",
+    "$FinanceiroDir\COMPROVANTES",
+    "$FinanceiroDir\PROCESSADOS",
+    "$FinanceiroDir\IGNORADOS",
+    "$FinanceiroDir\ERROS",
+    "$FinanceiroDir\FILA",
     "$RootDir\ROMANEIOS",
     "$RootDir\RECIBOS",
     "$RootDir\RELATORIOS",
