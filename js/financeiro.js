@@ -2,6 +2,7 @@ console.log("Modulo Financeiro: inicializando...");
 
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
+const FINANCEIRO_AI_USAGE_KEY = 'orquestra_financeiro_ai_usage';
 const FINANCEIRO_COLLECTION = 'financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_COLLECTION = 'financeiro_relatorios_mensais';
 
@@ -409,6 +410,76 @@ function aplicarRegrasFornecedorFinanceiro(dados, textoBusca, limpo) {
     return ajustado;
 }
 
+function leituraFinanceiraIncompleta(dados) {
+    if (!dados) return true;
+    if (dados.precisaConferencia) return true;
+    if (!dados.vencimento && !dados.emissao) return true;
+    if (!Number(dados.valor || 0)) return true;
+    if (!dados.descricao || dados.descricao === 'PENDENTE DE CONFERENCIA') return true;
+    return false;
+}
+
+function salvarUsoIAFinanceiro(usage = {}) {
+    try {
+        const atual = JSON.parse(localStorage.getItem(FINANCEIRO_AI_USAGE_KEY) || '{}');
+        const novo = {
+            totalTokens: Number(atual.totalTokens || 0) + Number(usage.totalTokens || 0),
+            inputTokens: Number(atual.inputTokens || 0) + Number(usage.inputTokens || 0),
+            outputTokens: Number(atual.outputTokens || 0) + Number(usage.outputTokens || 0),
+            estimatedCostUsd: Number(atual.estimatedCostUsd || 0) + Number(usage.estimatedCostUsd || 0),
+            documentos: Number(atual.documentos || 0) + 1
+        };
+        localStorage.setItem(FINANCEIRO_AI_USAGE_KEY, JSON.stringify(novo));
+    } catch (error) {
+        console.warn('Nao foi possivel salvar uso da IA financeira.', error);
+    }
+}
+
+function normalizarDadosIAFinanceiro(dados = {}) {
+    const fornecedor = dados.fornecedor || '';
+    const descricao = dados.descricao || fornecedor || dados.tipo || 'PENDENTE DE CONFERENCIA';
+    const produtos = Array.isArray(dados.produtos) ? dados.produtos.filter(p => p?.descricao) : [];
+    return {
+        tipo: normalizarTexto(dados.tipo || 'DOCUMENTO'),
+        descricao: normalizarTexto(descricao).slice(0, 90),
+        fornecedor: normalizarTexto(fornecedor),
+        cnpj: dados.cnpj || '',
+        vencimento: dados.vencimento || dados.emissao || '',
+        valor: Number(dados.valor || dados.valorTotal || 0),
+        numeroDocumento: dados.numeroDocumento || '',
+        produtos,
+        categoriaSugerida: dados.categoriaSugerida || '',
+        pastaSugerida: dados.pastaSugerida || '',
+        confiancaIA: dados.confianca || 'media',
+        observacaoIA: dados.observacao || '',
+        analisadoPorIA: true,
+        precisaConferencia: dados.confianca === 'baixa'
+    };
+}
+
+async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLocal = {}) {
+    try {
+        const response = await fetch('/api/financeiro-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nomeArquivo: anexo?.nome || '',
+                textoDocumento: String(textoDocumento || '').slice(0, 14000),
+                sugestaoLocal
+            })
+        });
+        const rawText = await response.text();
+        let data = {};
+        try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
+        if (!response.ok) throw new Error(data.error || rawText || 'Falha na IA financeira.');
+        if (data.usage) salvarUsoIAFinanceiro(data.usage);
+        return normalizarDadosIAFinanceiro(data.dados || {});
+    } catch (error) {
+        console.warn('IA financeira indisponivel:', error.message);
+        return null;
+    }
+}
+
 function extrairDescricaoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const boletoAssistencial = limpo.match(/BOLETO\s+ASSISTENCIAL\s+REF\.?\s*\d{2}\/\d{4}/i)?.[0];
@@ -573,9 +644,19 @@ async function extrairDadosAnexoFinanceiro(anexo) {
         texto = textoDeAnexoBase64(anexo);
     }
     if (!texto) return { tipo: 'DOCUMENTO', descricao: 'DOCUMENTO NAO LIDO', vencimento: '', valor: 0, precisaConferencia: true };
-    return (nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto))
+    const dadosLocal = (nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto))
         ? extrairDadosXmlFinanceiro(texto)
         : extrairDadosTextoFinanceiro(texto);
+    if (leituraFinanceiraIncompleta(dadosLocal)) {
+        const dadosIA = await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal);
+        if (dadosIA && !leituraFinanceiraIncompleta(dadosIA)) {
+            return dadosIA;
+        }
+        if (dadosIA) {
+            return { ...dadosLocal, ...dadosIA, precisaConferencia: true };
+        }
+    }
+    return dadosLocal;
 }
 
 function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
@@ -680,6 +761,14 @@ window.importarPastaFinanceira = async function(files) {
                 valor: Number(conferencia?.valor || 0),
                 observacao: conferencia?.observacao || `IMPORTADO DA PASTA FINANCEIRA: ${file.webkitRelativePath || file.name}`,
                 conferenciaStatus: conferencia?.precisaConferencia ? 'pendente' : 'conferido',
+                ia: dados?.analisadoPorIA ? {
+                    confianca: dados.confiancaIA || 'media',
+                    fornecedor: dados.fornecedor || '',
+                    cnpj: dados.cnpj || '',
+                    numeroDocumento: dados.numeroDocumento || '',
+                    produtos: dados.produtos || [],
+                    observacao: dados.observacaoIA || ''
+                } : null,
                 pago: false,
                 pagoEm: null,
                 documento: anexo,
@@ -720,6 +809,7 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 tipo: fila.anexo.tipo || 'application/octet-stream',
                 localPath: fila.anexo.localPath,
                 localFolder: fila.anexo.localFolder || fila.pastaLocal || '',
+                localUrl: fila.anexo.localUrl || '',
                 storage: 'LOCAL'
             } : null;
             const dadosExtraidos = fila.anexo?.dados ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
@@ -735,6 +825,14 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 pago: false,
                 pagoEm: null,
                 conferenciaStatus: 'pendente',
+                ia: dadosExtraidos?.analisadoPorIA ? {
+                    confianca: dadosExtraidos.confiancaIA || 'media',
+                    fornecedor: dadosExtraidos.fornecedor || '',
+                    cnpj: dadosExtraidos.cnpj || '',
+                    numeroDocumento: dadosExtraidos.numeroDocumento || '',
+                    produtos: dadosExtraidos.produtos || [],
+                    observacao: dadosExtraidos.observacaoIA || ''
+                } : null,
                 documento: anexoLocal || fila.anexo || null,
                 comprovante: null,
                 atualizadoEm: new Date().toISOString(),
@@ -888,7 +986,7 @@ window.renderFinanceiro = function() {
             <tr title="${tooltipLancamento}">
                 <td><input type="checkbox" class="financeiro-check" value="${item.id}" onchange="window.atualizarSelecaoFinanceiro()"></td>
                 <td><strong>${item.tipo}</strong></td>
-                <td>${item.descricao}<small>${item.observacao || ''}</small></td>
+                <td>${item.descricao}${item.ia ? `<small style="color:#38bdf8;"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${item.ia.confianca || 'media'}${item.ia.fornecedor ? ` - ${item.ia.fornecedor}` : ''}</small>` : ''}<small>${item.observacao || ''}</small></td>
                 <td>${dataBR(item.vencimento)}</td>
                 <td><strong>${formatarMoeda(item.valor)}</strong></td>
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
@@ -994,6 +1092,10 @@ window.abrirAnexoFinanceiro = function(id, tipo) {
     const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
     const anexo = item?.[tipo];
     if (anexo?.storage === 'LOCAL' || anexo?.localPath) {
+        if (anexo.localUrl) {
+            window.open(anexo.localUrl, '_blank');
+            return;
+        }
         const caminho = anexo.localPath || anexo.localFolder || anexo.nome || '';
         window.prompt('Arquivo salvo localmente. Copie o caminho abaixo e cole no Explorador de Arquivos para abrir:', caminho);
         return;

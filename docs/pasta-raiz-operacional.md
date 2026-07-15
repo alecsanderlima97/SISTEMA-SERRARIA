@@ -38,6 +38,34 @@ C:\ORQUESTRA.CS\SERRARIA-VANMARTE\
 
 - `scripts/instalar-pasta-raiz-orquestra.ps1`: cria a estrutura.
 - `scripts/monitor-financeiro.ps1`: monitora a pasta `ENTRADA` e gera a fila.
+- `scripts/servidor-arquivos-local.ps1`: permite visualizar PDFs locais pelo navegador em `http://127.0.0.1:8765`.
+
+## Para testar
+
+### Fluxo recomendado
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\iniciar-automacao-local.ps1
+```
+
+Depois coloque PDFs/XMLs em:
+
+```text
+C:\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\ENTRADA
+```
+
+O monitor organiza os arquivos e cria JSONs em:
+
+```text
+C:\ORQUESTRA.CS\SERRARIA-VANMARTE\FINANCEIRO\FILA
+```
+
+No sistema, use o botao `Importar fila local`.
+
+### Importacao manual pelo sistema
+
+O botao `Selecionar arquivos financeiros` serve para uso pontual.
+Para rotina diaria, prefira sempre a pasta `FINANCEIRO\ENTRADA`, porque ela evita bagunca em Downloads e mantem os documentos organizados por tipo.
 
 ## Backup
 

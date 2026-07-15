@@ -71,6 +71,21 @@ function Get-DocumentClass {
     return @{ Tipo = "DOCUMENTO"; Dir = $IgnoradosDir }
 }
 
+function Convert-FileToBase64DataUrl {
+    param([string]$Path)
+    $ext = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
+    $mime = switch ($ext) {
+        ".pdf" { "application/pdf" }
+        ".xml" { "application/xml" }
+        ".png" { "image/png" }
+        ".jpg" { "image/jpeg" }
+        ".jpeg" { "image/jpeg" }
+        default { "application/octet-stream" }
+    }
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    return "data:$mime;base64,$([Convert]::ToBase64String($bytes))"
+}
+
 function New-FinanceiroQueueItem {
     param([System.IO.FileInfo]$File)
     $classe = Get-DocumentClass -File $File
@@ -107,6 +122,8 @@ function New-FinanceiroQueueItem {
             tipo = if ($movedFile.Extension.ToLowerInvariant() -eq ".pdf") { "application/pdf" } elseif ($movedFile.Extension.ToLowerInvariant() -eq ".xml") { "application/xml" } else { "application/octet-stream" }
             localPath = $movedFile.FullName
             localFolder = $movedFile.DirectoryName
+            localUrl = "http://127.0.0.1:8765/arquivo?path=$([uri]::EscapeDataString($movedFile.FullName))"
+            dados = Convert-FileToBase64DataUrl $movedFile.FullName
             storage = "LOCAL"
         }
     }

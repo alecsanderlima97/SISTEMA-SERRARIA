@@ -51,6 +51,7 @@
                             <input type="file" id="financeiroFilaInput" multiple accept=".json,application/json" style="display:none;">
                             <button type="button" class="btn-primary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Selecionar arquivos financeiros</button>
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroPastaInput')?.click()" title="Importa todos os PDFs/XMLs da pasta selecionada"><i class="fa-solid fa-folder-open"></i> Importar pasta inteira</button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroFilaInput')?.click()" title="Importa os arquivos JSON gerados pelo monitor local na pasta FINANCEIRO\\FILA"><i class="fa-solid fa-list-check"></i> Importar fila local</button>
                             <button type="button" class="btn-danger" id="btnExcluirFinanceiroSelecionados" onclick="window.excluirFinanceiroSelecionados()" style="display:none;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                             <button type="button" class="btn-primary" onclick="window.abrirRelatorioFinanceiro()"><i class="fa-solid fa-file-lines"></i> Gerar relatório</button>
                         </div>
