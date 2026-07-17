@@ -118,7 +118,9 @@ function prepararResumoAuditoria(data = {}) {
         if (key === 'items' || key === 'senha' || key === 'password') return;
         if (value === undefined) return;
         if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
-            resumo[key] = value;
+            resumo[key] = typeof value === 'string' && (value.startsWith('data:') || value.length > 500)
+                ? `[texto-removido:${value.length}]`
+                : value;
             return;
         }
         if (Array.isArray(value)) {
@@ -128,6 +130,28 @@ function prepararResumoAuditoria(data = {}) {
         resumo[key] = '[objeto]';
     });
     return resumo;
+}
+
+function removerDadosPesadosFirestore(valor, profundidade = 0) {
+    if (valor === null || valor === undefined) return valor;
+    if (typeof valor === 'string') {
+        if (valor.startsWith('data:') || valor.length > 200000) return `[anexo-removido:${valor.length}]`;
+        return valor;
+    }
+    if (typeof valor !== 'object') return valor;
+    if (profundidade > 8) return '[objeto-profundo]';
+    if (Array.isArray(valor)) return valor.map(item => removerDadosPesadosFirestore(item, profundidade + 1));
+
+    const limpo = {};
+    Object.entries(valor).forEach(([key, item]) => {
+        if ((key === 'dados' || key === 'base64' || key === 'documentoBase64') && typeof item === 'string') {
+            limpo[key] = `[anexo-removido:${item.length}]`;
+            limpo.possuiArquivoLocal = true;
+            return;
+        }
+        limpo[key] = removerDadosPesadosFirestore(item, profundidade + 1);
+    });
+    return limpo;
 }
 
 async function registrarAuditoria({ acao, colecao, docId, dados = {}, antes = null } = {}) {
@@ -192,7 +216,7 @@ async function gerarSnapshotNuvem({ motivo = 'automatico', collections = CLOUD_S
         for (const collName of collections) {
             const snap = await getDocs(collection(db, collName));
             const items = [];
-            snap.forEach(itemDoc => items.push({ id: itemDoc.id, ...itemDoc.data() }));
+            snap.forEach(itemDoc => items.push(removerDadosPesadosFirestore({ id: itemDoc.id, ...itemDoc.data() })));
 
             await addDoc(collection(db, 'backup_snapshot_itens'), withTenantMeta({
                 snapshotId: backupRef.id,
@@ -248,13 +272,14 @@ window.FS = {
     },
     async setDoc(collName, docId, data) {
         try {
+            const dataLimpa = removerDadosPesadosFirestore(data);
             const existente = await getDoc(doc(db, collName, docId));
-            await setDoc(doc(db, collName, docId), withTenantMeta(data, !existente.exists()));
+            await setDoc(doc(db, collName, docId), withTenantMeta(dataLimpa, !existente.exists()));
             await registrarAuditoria({
                 acao: existente.exists() ? 'atualizar' : 'criar',
                 colecao: collName,
                 docId,
-                dados: data,
+                dados: dataLimpa,
                 antes: existente.exists() ? existente.data() : null
             });
         } catch (err) {
@@ -264,8 +289,9 @@ window.FS = {
     },
     async addDoc(collName, data) {
         try {
-            const ref = await addDoc(collection(db, collName), withTenantMeta(data, true));
-            await registrarAuditoria({ acao: 'criar', colecao: collName, docId: ref.id, dados: data });
+            const dataLimpa = removerDadosPesadosFirestore(data);
+            const ref = await addDoc(collection(db, collName), withTenantMeta(dataLimpa, true));
+            await registrarAuditoria({ acao: 'criar', colecao: collName, docId: ref.id, dados: dataLimpa });
             return ref.id;
         } catch (err) {
             console.error(`Erro ao adicionar doc em ${collName}:`, err);
@@ -274,13 +300,14 @@ window.FS = {
     },
     async updateDoc(collName, docId, data) {
         try {
+            const dataLimpa = removerDadosPesadosFirestore(data);
             const existente = await getDoc(doc(db, collName, docId));
-            await updateDoc(doc(db, collName, docId), withTenantMeta(data, false));
+            await updateDoc(doc(db, collName, docId), withTenantMeta(dataLimpa, false));
             await registrarAuditoria({
                 acao: 'atualizar',
                 colecao: collName,
                 docId,
-                dados: data,
+                dados: dataLimpa,
                 antes: existente.exists() ? existente.data() : null
             });
         } catch (err) {

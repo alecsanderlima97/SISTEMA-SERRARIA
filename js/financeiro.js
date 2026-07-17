@@ -88,6 +88,25 @@ function salvarLancamentosFinanceiros(lista) {
     localStorage.setItem(FINANCEIRO_KEY, JSON.stringify(lista || []));
 }
 
+function removerDadosPesadosAnexoFinanceiro(anexo) {
+    if (!anexo) return null;
+    const { dados, ...leve } = anexo;
+    return {
+        ...leve,
+        possuiArquivoLocal: Boolean(anexo.localPath || anexo.localUrl || dados),
+        tamanhoLocalEstimado: typeof dados === 'string' ? dados.length : (anexo.tamanho || null)
+    };
+}
+
+function prepararFinanceiroParaNuvem(item) {
+    if (!item) return item;
+    return {
+        ...item,
+        documento: removerDadosPesadosAnexoFinanceiro(item.documento),
+        comprovante: removerDadosPesadosAnexoFinanceiro(item.comprovante)
+    };
+}
+
 async function carregarFinanceiroNuvem() {
     if (!window.FS) return;
     try {
@@ -96,7 +115,7 @@ async function carregarFinanceiroNuvem() {
         if (nuvem.length > 0) {
             salvarLancamentosFinanceiros(nuvem);
         } else if (locais.length > 0) {
-            await Promise.all(locais.map(item => window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, item)));
+            await Promise.all(locais.map(item => window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, prepararFinanceiroParaNuvem(item))));
         }
         financeiroNuvemCarregada = true;
         renderFinanceiro();
@@ -108,7 +127,7 @@ async function carregarFinanceiroNuvem() {
 async function salvarFinanceiroNuvem(item) {
     if (!window.FS || !item?.id) return;
     try {
-        await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, item);
+        await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, prepararFinanceiroParaNuvem(item));
     } catch (error) {
         console.error(`Falha ao salvar financeiro/${item.id} no Firestore.`, error);
         alert('Lancamento salvo localmente, mas nao foi possivel sincronizar com a nuvem agora.');
