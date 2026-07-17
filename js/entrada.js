@@ -157,8 +157,8 @@ function criarMatoEmpreiteiro(nome, valorMetro = 0, extras = {}) {
     return {
         nome: (nome || '').toString().toUpperCase().trim(),
         valorMetro: valorPadrao,
-        valorLenha: Number(extras?.valorLenha ?? extras?.valorMetroLenha ?? valorPadrao) || 0,
-        valorOutros: Number(extras?.valorOutros ?? extras?.valorMetroOutros ?? valorPadrao) || 0,
+        valorLenha: Number(extras?.valorLenha ?? extras?.valorMetroLenha ?? 0) || 0,
+        valorOutros: Number(extras?.valorOutros ?? extras?.valorMetroOutros ?? 0) || 0,
         valorCorteRemocao: Number(extras?.valorCorteRemocao ?? extras?.valorCorte ?? 0) || 0
     };
 }
@@ -220,8 +220,8 @@ function adicionarMatoEmpreiteiro() {
     const inputValorCorte = document.getElementById('empMatoValorCorte');
     const mato = (input?.value || '').toUpperCase().trim();
     const valorMetro = window.parseCurrencyValue(inputValor?.value || '') || 0;
-    const valorLenha = window.parseCurrencyValue(inputValorLenha?.value || '') || valorMetro;
-    const valorOutros = window.parseCurrencyValue(inputValorOutros?.value || '') || valorMetro;
+    const valorLenha = window.parseCurrencyValue(inputValorLenha?.value || '') || 0;
+    const valorOutros = window.parseCurrencyValue(inputValorOutros?.value || '') || 0;
     const valorCorteRemocao = window.parseCurrencyValue(inputValorCorte?.value || '') || 0;
     if (!mato) return;
     const existente = matosEmpreiteiroEditando.find(item => normalizarNomeMato(item.nome) === normalizarNomeMato(mato));
