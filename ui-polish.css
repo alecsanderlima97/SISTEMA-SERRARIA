@@ -319,6 +319,23 @@ table td {
     min-width: 118px !important;
 }
 
+.patio-editando-pisca {
+    animation: patioEditandoPisca 0.55s ease-in-out 3;
+    border-color: rgba(34, 197, 94, 0.8) !important;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25), 0 0 22px rgba(34, 197, 94, 0.2) !important;
+}
+
+.patio-linha-editando {
+    outline: 2px solid rgba(34, 197, 94, 0.85);
+    outline-offset: -2px;
+    box-shadow: inset 4px 0 0 #22c55e;
+}
+
+@keyframes patioEditandoPisca {
+    0%, 100% { filter: none; }
+    50% { filter: brightness(1.22); }
+}
+
 #producaoPatioLista .fluxo-patio-row-areia {
     background: #f1dfbd !important;
     border-bottom: 2px solid #d1b57f !important;

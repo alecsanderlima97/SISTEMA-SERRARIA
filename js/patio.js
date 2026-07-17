@@ -16,6 +16,7 @@ let romaneiosPatioCacheEm = 0;
 let romaneiosPatioPromise = null;
 let resumoProducaoPatioIndice = 0;
 let itensPatioSelecionados = new Set();
+let itemPatioEditandoId = null;
 const CACHE_PATIO_MS = 30000;
 
 async function carregarRelatoriosPatioCache(force = false) {
@@ -299,6 +300,27 @@ window.fecharFluxoPatio = function() {
 async function carregarRelatorioPatioAtual() {
     const relatorios = await carregarRelatoriosPatioCache();
     return relatorios[0] || null;
+}
+
+function selecionarClassePatio(selectClasse, classe) {
+    if (!selectClasse) return;
+    const numero = obterNumeroClasse(classe) || 1;
+    const opcao = Array.from(selectClasse.options || []).find(option => obterNumeroClasse(option.value) === numero);
+    selectClasse.value = opcao ? opcao.value : selectClasse.value;
+    atualizarCorSelectClasse(selectClasse);
+}
+
+function destacarEdicaoPatio() {
+    const card = document.getElementById('cardCadastroLotePatio');
+    const form = document.getElementById('formAdicionarItemPatio');
+    const alvo = card || form;
+    if (!alvo) return;
+
+    alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    alvo.classList.remove('patio-editando-pisca');
+    void alvo.offsetWidth;
+    alvo.classList.add('patio-editando-pisca');
+    setTimeout(() => alvo.classList.remove('patio-editando-pisca'), 1800);
 }
 
 async function renderizarFluxoPatio() {
@@ -932,8 +954,9 @@ function adicionarItemAoPatio() {
     const dtObj = new Date(inputData + 'T12:00:00');
     const dataFormatada = dtObj.toLocaleDateString('pt-BR');
 
-    itensPatioTemp.push({
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+    const itemAtualizado = {
+        ...(itensPatioTemp.find(i => i.id === itemPatioEditandoId) || {}),
+        id: itemPatioEditandoId || Date.now().toString() + Math.random().toString(36).substr(2, 5),
         dataRaw: inputData,
         dataFormatted: dataFormatada,
         tipo: tipo.toUpperCase(),
@@ -948,7 +971,14 @@ function adicionarItemAoPatio() {
         totalPecas: pacotes * pecas,
         volumeUnidade: volumeUnidade,
         volume: volumeLinha
-    });
+    };
+
+    if (itemPatioEditandoId) {
+        itensPatioTemp = itensPatioTemp.map(item => item.id === itemPatioEditandoId ? itemAtualizado : item);
+        itemPatioEditandoId = null;
+    } else {
+        itensPatioTemp.push(itemAtualizado);
+    }
 
     // Mantem medidas/tipo/classe/especie para agilizar lancamentos repetidos.
     document.getElementById('patioItemPacotes').value = '';
@@ -1018,7 +1048,7 @@ window.editarItemPatio = function(id) {
     if (!item) return;
 
     document.getElementById('patioItemTipo').value = item.tipo || 'TÃBUA';
-    document.getElementById('patioItemClasse').value = item.classe || '1Âª CLASSE';
+    selecionarClassePatio(document.getElementById('patioItemClasse'), item.classe || '1Âª CLASSE');
     const especieInput = document.querySelector(`input[name="patioItemEspecie"][value="${item.especie || 'EUCALIPTO'}"]`);
     if (especieInput) especieInput.checked = true;
 
@@ -1034,9 +1064,10 @@ window.editarItemPatio = function(id) {
     document.getElementById('patioItemAmarras').value = configPacote.am || '';
     atualizarPreviewVolumeItemPatio();
 
-    itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
+    itemPatioEditandoId = id;
     renderizarItensPatioTemp();
-    document.getElementById('patioItemPacotes').focus();
+    destacarEdicaoPatio();
+    setTimeout(() => document.getElementById('patioItemPacotes')?.focus(), 350);
 };
 
 window.imprimirEtiquetaItemPatio = function(id) {
@@ -1386,7 +1417,7 @@ function renderizarItensPatioTemp() {
                 </div>${usoRomaneioHtml}`;
 
         html += `
-            <tr class="patio-lista-row">
+            <tr class="patio-lista-row ${item.id === itemPatioEditandoId ? 'patio-linha-editando' : ''}">
                 <td class="hide-on-print" style="text-align:center;">
                     <input type="checkbox" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)" title="Selecionar para imprimir" style="width:18px; height:18px; accent-color:#16a34a;">
                 </td>
