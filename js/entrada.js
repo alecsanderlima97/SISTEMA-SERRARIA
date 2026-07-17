@@ -689,7 +689,7 @@ function calcularVolumeAtual() {
     if (resFinanceiro) resFinanceiro.textContent = totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoFinanceira) {
         const produtoCarga = document.getElementById('entProdutoCarga')?.value || 'TORA';
-        infoFinanceira.textContent = `Baseado em ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m3 (${produtoCarga})`;
+        infoFinanceira.textContent = `${formatDecimalValue(volume)} m3 x ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m3 = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} (${produtoCarga})`;
     }
 
     atualizarValorDescargaPorHorario();
@@ -1354,13 +1354,22 @@ window.visualizarEntrada = function(id) {
         alturasStr = `Esq: [${formatDecimalValue(en.alturas[0])}m, ${formatDecimalValue(en.alturas[1])}m, ${formatDecimalValue(en.alturas[2])}m]
 Dir: [${formatDecimalValue(en.alturas[3])}m, ${formatDecimalValue(en.alturas[4])}m, ${formatDecimalValue(en.alturas[5])}m]`;
     }
+    const volumeEntrada = Number(en.volume || 0);
+    const valorMetroEmpreiteiro = Number(en.valorMetroEmpreiteiro || 0);
+    const totalEmpreiteiro = Number(en.totalEmpreiteiro ?? (volumeEntrada * valorMetroEmpreiteiro)) || 0;
+    const valorDescargaM3 = Number(en.valorDescargaM3 || 0);
+    const totalDescarga = Number(en.totalDescarga ?? (volumeEntrada * valorDescargaM3)) || 0;
     const financeiroDetalhe = usuarioPodeVerFinanceiroEmpreiteiro()
-        ? `Valor/Metro Empreiteiro: R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}
-Total Empreiteiro: R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}
-Valor Descarga/m³: R$ ${(en.valorDescargaM3 || 0).toFixed(2)}
-Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`
-        : `Valor Descarga/m³: R$ ${(en.valorDescargaM3 || 0).toFixed(2)}
-Total Descarga: R$ ${(en.totalDescarga || 0).toFixed(2)}`;
+        ? `Produto usado no calculo: ${en.produtoCarga || 'N/A'}
+Valor/m3 empreiteiro: ${valorMetroEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+Calculo empreiteiro: ${formatDecimalValue(volumeEntrada)} m3 x ${valorMetroEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m3
+Total a receber: ${totalEmpreiteiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+
+Valor descarga/m3: ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+Calculo descarga: ${formatDecimalValue(volumeEntrada)} m3 x ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m3
+Total descarga: ${totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`
+        : `Valor descarga/m3: ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+Total descarga: ${totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`;
     
     alert(`Detalhes da Entrada:
 Romaneio: ${en.romaneioNum || 'N/A'}
