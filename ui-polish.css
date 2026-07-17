@@ -331,6 +331,18 @@ table td {
     box-shadow: inset 4px 0 0 #22c55e;
 }
 
+.romaneio-editando-pisca {
+    animation: patioEditandoPisca 0.55s ease-in-out 3;
+    border-color: rgba(245, 158, 11, 0.9) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22), 0 0 24px rgba(245, 158, 11, 0.18) !important;
+}
+
+.romaneio-linha-editando {
+    outline: 2px solid rgba(245, 158, 11, 0.85);
+    outline-offset: -2px;
+    box-shadow: inset 4px 0 0 #f59e0b;
+}
+
 @keyframes patioEditandoPisca {
     0%, 100% { filter: none; }
     50% { filter: brightness(1.22); }

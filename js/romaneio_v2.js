@@ -1028,7 +1028,19 @@ function editarPacoteV2(id) {
     document.getElementById('btn-add-pacote-v2').style.display = 'none';
     document.getElementById('btn-update-pacote-v2').style.display = 'block';
     
-    window.scrollTo({ top: document.getElementById('secao-romaneio-v2').offsetTop, behavior: 'smooth' });
+    destacarEdicaoPacoteRomaneio();
+}
+
+function destacarEdicaoPacoteRomaneio() {
+    const cardPacotes = document.querySelector('#secao-romaneio-v2 .package-entry-card');
+    if (!cardPacotes) return;
+
+    cardPacotes.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    cardPacotes.classList.remove('romaneio-editando-pisca');
+    void cardPacotes.offsetWidth;
+    cardPacotes.classList.add('romaneio-editando-pisca');
+    setTimeout(() => cardPacotes.classList.remove('romaneio-editando-pisca'), 1800);
+    setTimeout(() => document.getElementById('v2-qtd-pacotes')?.focus(), 350);
 }
 
 function salvarEdicaoPacote() {
@@ -1368,7 +1380,7 @@ function renderizarTabelaPacotes() {
                                     const primeiraCubagem = cubagemAtual !== ultimaCubagem;
                                     ultimaCubagem = cubagemAtual;
                                     return `
-                                        <tr>
+                                        <tr class="${p.id === pacoteEditandoId ? 'romaneio-linha-editando' : ''}">
                                             <td>${primeiraCubagem ? `<strong>${p.produtoNome}</strong><br>` : ''}${montarMedidaRomaneio(p, primeiraCubagem, cor)}</td>
                                             <td>${p.qtdPacotes}</td>
                                             <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
