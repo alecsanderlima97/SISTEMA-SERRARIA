@@ -1,4 +1,4 @@
-console.log("Modulo Financeiro: inicializando...");
+﻿console.log("Modulo Financeiro: inicializando...");
 
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
@@ -34,10 +34,47 @@ const FINANCEIRO_ABAS = {
     }
 };
 
-let financeiroAbaAtiva = 'despesas-gerais';
+const FINANCEIRO_PASTAS = {
+    todos: { titulo: 'Todos', icone: 'fa-folder-open', cor: '#60a5fa', subpastas: ['GERAL'] },
+    impostos: { titulo: 'Impostos', icone: 'fa-landmark', cor: '#f59e0b', subpastas: ['RECEITA FEDERAL', 'FGTS', 'INSS', 'SINDICATO', 'TAXAS'] },
+    boletos: { titulo: 'Boletos', icone: 'fa-barcode', cor: '#38bdf8', subpastas: ['SICREDI', 'FORNECEDORES', 'ALUGUEL', 'OUTROS BOLETOS'] },
+    fornecedores: { titulo: 'Fornecedores', icone: 'fa-truck-field', cor: '#22c55e', subpastas: ['AIR EXPRESS', 'MATERIAIS', 'SERVICOS', 'OUTROS FORNECEDORES'] },
+    funcionarios: { titulo: 'Funcionarios', icone: 'fa-users', cor: '#a78bfa', subpastas: ['HOLERITES', 'VALES', 'BENEFICIOS', 'OUTROS'] },
+    fixas: { titulo: 'Despesas Fixas', icone: 'fa-repeat', cor: '#fb7185', subpastas: ['ENERGIA', 'INTERNET', 'TELEFONE', 'CONTABILIDADE', 'SISTEMAS'] },
+    conferir: { titulo: 'Conferir', icone: 'fa-triangle-exclamation', cor: '#f97316', subpastas: ['PENDENTE', 'SEM LEITURA', 'OUTROS'] }
+};
+
+let financeiroAbaAtiva = 'todos';
 let financeiroAnexosTemp = { documento: null, comprovante: null };
 let financeiroRelatorioAtual = [];
 let financeiroNuvemCarregada = false;
+
+function obterPastaFinanceiraItem(item = {}) {
+    if (item.pastaFinanceira) return item.pastaFinanceira;
+    const tipo = normalizarTexto(item.tipo);
+    const desc = normalizarTexto(`${item.descricao || ''} ${item.observacao || ''}`);
+    if (item.conferenciaStatus === 'pendente') return 'conferir';
+    if (/IMPOSTO|DARF|FGTS|INSS|RECEITA|SINDICATO|TAXA/.test(`${tipo} ${desc}`)) return 'impostos';
+    if (/FUNCIONARIO|FUNCIONÃRIO|HOLERITE|VALE|SALARIO|SALÃRIO/.test(`${tipo} ${desc}`)) return 'funcionarios';
+    if (/ENERGIA|INTERNET|TELEFONE|ALUGUEL|CONTABILIDADE|SISTEMA/.test(desc)) return 'fixas';
+    if (/FORNECEDOR|AIR EXPRESS|MATERIAIS|SERVICO|SERVIÃ‡O/.test(desc)) return 'fornecedores';
+    if (/BOLETO|COBRANCA|COBRANÃ‡A|PARCELA/.test(`${tipo} ${desc}`)) return 'boletos';
+    return 'conferir';
+}
+
+function obterSubpastaFinanceiraItem(item = {}) {
+    if (item.subpastaFinanceira) return item.subpastaFinanceira;
+    const texto = normalizarTexto(`${item.tipo || ''} ${item.descricao || ''} ${item.observacao || ''}`);
+    if (/RECEITA|DARF/.test(texto)) return 'RECEITA FEDERAL';
+    if (/FGTS/.test(texto)) return 'FGTS';
+    if (/INSS/.test(texto)) return 'INSS';
+    if (/SICREDI/.test(texto)) return 'SICREDI';
+    if (/AIR EXPRESS/.test(texto)) return 'AIR EXPRESS';
+    if (/ENERGIA/.test(texto)) return 'ENERGIA';
+    if (/INTERNET/.test(texto)) return 'INTERNET';
+    if (/TELEFONE|VIVO/.test(texto)) return 'TELEFONE';
+    return FINANCEIRO_PASTAS[obterPastaFinanceiraItem(item)]?.subpastas?.[0] || 'GERAL';
+}
 
 function normalizarTexto(valor) {
     return (valor || '').toString().trim().toUpperCase();
@@ -140,6 +177,17 @@ function obterBoletosAVencerFinanceiro() {
         .sort((a, b) => a.diasVencimento - b.diasVencimento || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR'));
 }
 
+function usuarioPodeVerLembreteFinanceiro() {
+    const emailsPermitidos = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
+    const email = String(
+        window.App?.userData?.email ||
+        window.auth?.currentUser?.email ||
+        document.getElementById('perfilEmail')?.value ||
+        ''
+    ).toLowerCase().trim();
+    return emailsPermitidos.includes(email);
+}
+
 function textoVencimentoLembrete(item) {
     if (item.diasVencimento < 0) return `vencido ha ${Math.abs(item.diasVencimento)} dia(s)`;
     if (item.diasVencimento === 0) return 'vence hoje';
@@ -148,9 +196,15 @@ function textoVencimentoLembrete(item) {
 }
 
 function mostrarLembretesFinanceiros() {
-    const alertas = obterBoletosAVencerFinanceiro();
     let banner = document.getElementById('financeiroLembreteTopo');
     const linkFinanceiro = document.querySelector('a[data-target="view-financeiro"]');
+    if (!usuarioPodeVerLembreteFinanceiro()) {
+        banner?.remove();
+        linkFinanceiro?.classList.remove('financeiro-menu-alerta');
+        document.body.classList.remove('financeiro-tem-alerta');
+        return;
+    }
+    const alertas = obterBoletosAVencerFinanceiro();
     if (!alertas.length) {
         banner?.remove();
         linkFinanceiro?.classList.remove('financeiro-menu-alerta');
@@ -192,24 +246,47 @@ function obterStatusItem(item) {
     if (item.pago) return { label: 'Pago', classe: 'pago' };
     if (item.conferenciaStatus === 'pendente') return { label: 'Pendente', classe: 'pendente' };
     if (estaVencido(item)) return { label: 'Vencido', classe: 'vencido' };
-    return { label: item.conferenciaStatus === 'conferido' ? 'Conferido' : 'Não pago', classe: 'aberto' };
+    return { label: item.conferenciaStatus === 'conferido' ? 'Conferido' : 'NÃ£o pago', classe: 'aberto' };
 }
 
 function atualizarStatusToggle() {
     const pago = document.getElementById('financeiroPago')?.checked;
     const texto = document.getElementById('financeiroStatusTexto');
-    if (texto) texto.textContent = pago ? 'Pago' : 'Não pago';
+    if (texto) texto.textContent = pago ? 'Pago' : 'NÃ£o pago';
 }
 
 function atualizarDatalistsFinanceiro() {
-    const lista = obterLancamentosFinanceiros().filter(item => item.aba === financeiroAbaAtiva);
-    const config = FINANCEIRO_ABAS[financeiroAbaAtiva];
+    const lista = obterLancamentosFinanceiros().filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
+    const config = FINANCEIRO_ABAS[financeiroAbaAtiva] || FINANCEIRO_ABAS['caixa-financeira'];
     const tipos = [...new Set([...config.tipoPadrao, ...lista.map(item => item.tipo).filter(Boolean)])];
     const descricoes = [...new Set([...config.descricaoPadrao, ...lista.map(item => item.descricao).filter(Boolean)])];
 
     document.getElementById('financeiroClassesList').innerHTML = tipos.map(item => `<option value="${item}"></option>`).join('');
     document.getElementById('financeiroDescricaoList').innerHTML = descricoes.map(item => `<option value="${item}"></option>`).join('');
+    const pastaSelect = document.getElementById('financeiroPasta');
+    if (pastaSelect) {
+        pastaSelect.innerHTML = Object.entries(FINANCEIRO_PASTAS)
+            .filter(([key]) => key !== 'todos')
+            .map(([key, pasta]) => `<option value="${key}">${pasta.titulo}</option>`)
+            .join('');
+        if (!pastaSelect.value) pastaSelect.value = financeiroAbaAtiva !== 'todos' ? financeiroAbaAtiva : 'conferir';
+    }
+    atualizarSubpastasFinanceiro();
 }
+
+window.atualizarSubpastasFinanceiro = function() {
+    const pasta = document.getElementById('financeiroPasta')?.value || 'conferir';
+    const base = FINANCEIRO_PASTAS[pasta]?.subpastas || ['GERAL'];
+    const extras = obterLancamentosFinanceiros()
+        .filter(item => obterPastaFinanceiraItem(item) === pasta)
+        .map(obterSubpastaFinanceiraItem)
+        .filter(Boolean);
+    const subpastas = [...new Set([...base, ...extras])];
+    const datalist = document.getElementById('financeiroSubpastasList');
+    if (datalist) datalist.innerHTML = subpastas.map(item => `<option value="${item}"></option>`).join('');
+    const input = document.getElementById('financeiroSubpasta');
+    if (input && !input.value) input.value = subpastas[0] || 'GERAL';
+};
 
 function preencherNomeArquivo(tipo, file) {
     const id = tipo === 'documento' ? 'financeiroDocumentoNome' : 'financeiroComprovanteNome';
@@ -373,7 +450,7 @@ function limparDescricaoDocumentoFinanceiro(valor) {
     return String(valor || '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}.*$/g, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}.*$/g, '')
-        .replace(/\s+(VENCIMENTO|AGENCIA|AGÊNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
+        .replace(/\s+(VENCIMENTO|AGENCIA|AGÃŠNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
         .replace(/\s{2,}/g, ' ')
         .slice(0, 90)
         .trim();
@@ -484,6 +561,9 @@ function extrairDescricaoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const boletoAssistencial = limpo.match(/BOLETO\s+ASSISTENCIAL\s+REF\.?\s*\d{2}\/\d{4}/i)?.[0];
     if (boletoAssistencial) return boletoAssistencial.toUpperCase();
+    const beneficiario = limpo.match(/NOME\s+DO\s+BENEFICI[ÃA]RIO\s+([A-Z0-9 .&\\/,-]{4,90}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE)/i)?.[1]
+        || limpo.match(/BENEFICI[ÃA]RIO\s+([A-Z0-9 .&\\/,-]{4,90}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE)/i)?.[1];
+    if (beneficiario) return limparDescricaoDocumentoFinanceiro(beneficiario);
     const refDoc = limpo.match(/REF\.?\s*DOC\.?\s*[:\-]?\s*([A-Z0-9./ -]{4,40})/i)?.[0];
     if (refDoc) return refDoc.toUpperCase();
     return '';
@@ -491,7 +571,7 @@ function extrairDescricaoBoletoFinanceiro(texto) {
 
 function extrairVencimentoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
-    const aposPagavel = limpo.match(/PAG[AÁ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
+    const aposPagavel = limpo.match(/PAG[AÃ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
     const todas = Array.from(limpo.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)).map(match => match[1]);
     return aposPagavel || todas[todas.length - 1] || '';
 }
@@ -503,16 +583,40 @@ function extrairValorLinhaDigitavelFinanceiro(texto) {
     return Number(match[0].slice(-10)) / 100;
 }
 
+function extrairVencimentoBoletoRobustoFinanceiro(texto) {
+    const limpo = String(texto || '').replace(/\s+/g, ' ');
+    const porRotulo = limpo.match(/VENCIMENTO[\s\S]{0,80}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
+    const aposPagavel = limpo.match(/PAG[A-ZÃƒÂÃ]{0,4}VEL[\s\S]{0,220}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
+    const todas = Array.from(limpo.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)).map(match => match[1]);
+    return porRotulo || aposPagavel || todas[todas.length - 1] || '';
+}
+
+function extrairValorBoletoRobustoFinanceiro(texto) {
+    const limpo = String(texto || '').replace(/\s+/g, ' ');
+    const porRotulo = limpo.match(/VALOR\s+DO\s+DOCUMENTO[\s\S]{0,80}?([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/i)?.[1]
+        || limpo.match(/\(=\)\s*VALOR\s+DO\s+DOCUMENTO[\s\S]{0,80}?([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/i)?.[1];
+    if (porRotulo) return parseMoeda(porRotulo);
+
+    const candidatos = Array.from(String(texto || '').matchAll(/(?:\b\d[\d.\s-]{45,90}\d\b)/g))
+        .map(match => match[0].replace(/\D/g, ''))
+        .filter(num => num.length >= 47);
+    const linha = candidatos.find(num => num.startsWith('748')) || candidatos.find(num => num.length >= 47);
+    if (!linha) return extrairValorLinhaDigitavelFinanceiro(texto);
+    const codigo = linha.startsWith('748') ? linha.slice(0, 47) : linha.slice(-47);
+    const valor = Number(codigo.slice(-10)) / 100;
+    return Number.isFinite(valor) ? valor : 0;
+}
+
 function extrairDadosTextoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const textoBusca = limpo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    const data = limpo.match(/(?:vencimento|venc\.?|pagar at[eé]|data de vencimento)[:\s]*(\d{2}[\/.-]\d{2}[\/.-]\d{4})/i)?.[1]
+    const data = limpo.match(/(?:vencimento|venc\.?|pagar at[eÃ©]|data de vencimento)[:\s]*(\d{2}[\/.-]\d{2}[\/.-]\d{4})/i)?.[1]
         || limpo.match(/\b(\d{2}[\/.-]\d{2}[\/.-]\d{4})\b/)?.[1];
     const valor = limpo.match(/(?:valor(?:\s+total\s+do\s+documento|\s+do\s+documento)?|valor cobrado|valor a pagar|total da guia|valor a recolher|total)[:\s()=R$]*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/i)?.[1]
         || limpo.match(/R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/)?.[1];
     const favorecido = limparDescricaoDocumentoFinanceiro(
         extrairLinhaAposRotuloFinanceiro(texto, /^(benefici|cedente|favorecido|fornecedor)\b[:\s-]*/i)
-        || limpo.match(/(?:benefici[áa]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
+        || limpo.match(/(?:benefici[Ã¡a]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
         || primeiraLinhaUtilFinanceiro(texto)
     );
     const vencimento = data ? data.split(/[\/.-]/).reverse().join('-') : '';
@@ -525,10 +629,10 @@ function extrairDadosTextoFinanceiro(texto) {
             precisaConferencia: true
         };
     }
-    const isBoleto = /boleto|nosso n[uÃº]mero|ficha de compensa|linha digitavel|linha digitável/i.test(limpo);
+    const isBoleto = /boleto|nosso n[uÃƒÂº]mero|ficha de compensa|linha digitavel|linha digitÃ¡vel/i.test(limpo);
     if (isBoleto) {
-        const vencimentoBoleto = extrairVencimentoBoletoFinanceiro(texto);
-        const valorBoleto = valor ? parseMoeda(valor) : extrairValorLinhaDigitavelFinanceiro(texto);
+        const vencimentoBoleto = extrairVencimentoBoletoRobustoFinanceiro(texto);
+        const valorBoleto = extrairValorBoletoRobustoFinanceiro(texto) || (valor ? parseMoeda(valor) : 0);
         const descricaoBoleto = extrairDescricaoBoletoFinanceiro(texto);
         return aplicarRegrasFornecedorFinanceiro({
             tipo: 'BOLETO',
@@ -664,6 +768,7 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
         const pendente = dados?.precisaConferencia || !dados?.valor || !dados?.vencimento;
         const nomeSeguro = escapeHtmlFinanceiro(anexo?.nome || origemArquivo || 'Documento');
         const origemSegura = escapeHtmlFinanceiro(origemArquivo || anexo?.nome || '');
+        const podeVisualizar = Boolean(anexo?.dados || anexo?.localUrl || anexo?.localPath);
         const overlay = document.createElement('div');
         overlay.className = 'financeiro-import-modal';
         overlay.innerHTML = `
@@ -673,7 +778,10 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
                         <h3><i class="fa-solid fa-file-circle-check"></i> Conferir documento financeiro</h3>
                         <small>${nomeSeguro}</small>
                     </div>
-                    <span class="financeiro-status-badge ${pendente ? 'pendente' : 'aberto'}">${pendente ? 'Pendente' : 'Lido automaticamente'}</span>
+                    <div class="financeiro-import-head-actions">
+                        ${podeVisualizar ? '<button type="button" class="btn-secondary" data-action="visualizar"><i class="fa-solid fa-eye"></i> Visualizar PDF</button>' : ''}
+                        <span class="financeiro-status-badge ${pendente ? 'pendente' : 'aberto'}">${pendente ? 'Pendente' : 'Lido automaticamente'}</span>
+                    </div>
                 </div>
                 ${pendente ? '<div class="financeiro-import-alert"><i class="fa-solid fa-triangle-exclamation"></i> Confira os dados antes de salvar. Se este arquivo nao for financeiro, clique em Ignorar.</div>' : ''}
                 <div class="financeiro-import-grid">
@@ -706,6 +814,10 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
                     resolve(null);
                     return;
                 }
+                if (action === 'visualizar') {
+                    abrirAnexoFinanceiroDireto(anexo);
+                    return;
+                }
                 const tipo = normalizarTexto(overlay.querySelector('#importFinTipo')?.value || '');
                 const descricao = normalizarTexto(overlay.querySelector('#importFinDescricao')?.value || '');
                 const vencimento = overlay.querySelector('#importFinVencimento')?.value || '';
@@ -723,6 +835,46 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
             });
         });
     });
+}
+
+function abrirAnexoFinanceiroDireto(anexo) {
+    if (!anexo) return;
+    if (anexo.dados) {
+        const blobUrl = dataUrlParaBlobUrlFinanceiro(anexo.dados);
+        if (blobUrl) {
+            window.open(blobUrl, '_blank');
+            return;
+        }
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('Libere pop-ups para visualizar o anexo.');
+            return;
+        }
+        win.document.write(`<title>${escapeHtmlFinanceiro(anexo.nome || 'Anexo')}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
+        win.document.close();
+        return;
+    }
+    if (anexo.localUrl) {
+        window.open(anexo.localUrl, '_blank');
+        return;
+    }
+    const caminho = anexo.localPath || anexo.localFolder || anexo.nome || '';
+    window.prompt('Arquivo salvo localmente. Copie o caminho abaixo e cole no Explorador de Arquivos para abrir:', caminho);
+}
+
+function dataUrlParaBlobUrlFinanceiro(dataUrl) {
+    try {
+        const [header, base64] = String(dataUrl).split(',');
+        if (!header || !base64) return '';
+        const mime = header.match(/data:([^;]+)/)?.[1] || 'application/octet-stream';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return URL.createObjectURL(new Blob([bytes], { type: mime }));
+    } catch (error) {
+        console.error('Falha ao preparar visualizacao do anexo:', error);
+        return '';
+    }
 }
 
 window.importarPastaFinanceira = async function(files) {
@@ -925,20 +1077,40 @@ window.obterResumoFinanceiroLocal = function(inicio = inicioMesAtual(), fim = fi
 
 window.switchFinanceiroAba = function(aba) {
     financeiroAbaAtiva = aba;
-    document.querySelectorAll('.btn-tab-financeiro').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.finTab === aba);
+    document.querySelectorAll('.financeiro-folder-card').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.finFolder === aba);
     });
-    document.getElementById('financeiroTituloLista').textContent = FINANCEIRO_ABAS[aba].titulo;
+    document.getElementById('financeiroTituloLista').textContent = FINANCEIRO_PASTAS[aba]?.titulo || FINANCEIRO_ABAS[aba]?.titulo || 'Financeiro';
     const tituloForm = document.getElementById('financeiroTituloForm');
     if (tituloForm) {
-        tituloForm.innerHTML = aba === 'caixa-financeira'
+        tituloForm.innerHTML = aba === 'todos'
             ? '<i class="fa-solid fa-inbox"></i> Adicionar documento financeiro'
-            : '<i class="fa-solid fa-plus-circle"></i> Novo lançamento financeiro';
+            : '<i class="fa-solid fa-plus-circle"></i> Novo lancamento financeiro';
     }
     window.limparFinanceiroForm();
     renderFinanceiro();
 };
 
+function renderPastasFinanceiras() {
+    const board = document.getElementById('financeiroPastas');
+    if (!board) return;
+    const lista = obterLancamentosFinanceiros();
+    board.innerHTML = Object.entries(FINANCEIRO_PASTAS).map(([key, pasta]) => {
+        const itens = key === 'todos' ? lista : lista.filter(item => obterPastaFinanceiraItem(item) === key);
+        const total = itens.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+        const abertos = itens.filter(item => !item.pago).length;
+        const subpastas = [...new Set(itens.map(obterSubpastaFinanceiraItem).filter(Boolean))].slice(0, 4);
+        return `
+            <button type="button" class="financeiro-folder-card ${financeiroAbaAtiva === key ? 'active' : ''}" data-fin-folder="${key}" onclick="window.switchFinanceiroAba('${key}')" style="--folder-color:${pasta.cor}">
+                <i class="fa-solid ${pasta.icone}"></i>
+                <span>${pasta.titulo}</span>
+                <strong>${formatarMoeda(total)}</strong>
+                <small>${itens.length} doc(s) - ${abertos} aberto(s)</small>
+                ${subpastas.length ? `<em>${subpastas.join(' / ')}</em>` : ''}
+            </button>
+        `;
+    }).join('');
+}
 window.limparFinanceiroForm = function() {
     document.getElementById('financeiroForm')?.reset();
     document.getElementById('financeiroId').value = '';
@@ -954,12 +1126,13 @@ window.renderFinanceiro = function() {
     if (!tbody) return;
 
     atualizarKpisFinanceiro();
+    renderPastasFinanceiras();
     atualizarDatalistsFinanceiro();
 
     const filtroStatus = document.getElementById('financeiroFiltroStatus')?.value || 'TODOS';
     const ordenacao = document.getElementById('financeiroOrdenacao')?.value || 'VENCIMENTO_ASC';
     const busca = normalizarTexto(document.getElementById('financeiroBusca')?.value);
-    let lista = obterLancamentosFinanceiros().filter(item => item.aba === financeiroAbaAtiva);
+    let lista = obterLancamentosFinanceiros().filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
 
     if (filtroStatus === 'PAGO') lista = lista.filter(item => item.pago);
     if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago);
@@ -985,7 +1158,7 @@ window.renderFinanceiro = function() {
     if (btnExcluirSelecionados) btnExcluirSelecionados.style.display = 'none';
 
     if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">Nenhum lançamento financeiro nesta aba.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">Nenhum lanÃ§amento financeiro nesta aba.</td></tr>';
         mostrarLembretesFinanceiros();
         return;
     }
@@ -998,7 +1171,7 @@ window.renderFinanceiro = function() {
         ].filter(Boolean).join('');
         const criadoEm = dataHoraBR(item.criadoEm);
         const atualizadoEm = dataHoraBR(item.atualizadoEm);
-        const tooltipLancamento = `Lançado no sistema em: ${criadoEm}${atualizadoEm !== criadoEm ? ` | Última alteração: ${atualizadoEm}` : ''}`;
+        const tooltipLancamento = `LanÃ§ado no sistema em: ${criadoEm}${atualizadoEm !== criadoEm ? ` | Ãšltima alteraÃ§Ã£o: ${atualizadoEm}` : ''}`;
 
         return `
             <tr title="${tooltipLancamento}">
@@ -1046,10 +1219,10 @@ window.marcarTodosFinanceiro = function(checked) {
 window.excluirFinanceiroSelecionados = async function() {
     const ids = Array.from(document.querySelectorAll('.financeiro-check:checked')).map(input => input.value);
     if (!ids.length) {
-        alert('Selecione pelo menos um lançamento para excluir.');
+        alert('Selecione pelo menos um lanÃ§amento para excluir.');
         return;
     }
-    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${ids.length} lançamento(s) financeiro(s)?`);
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${ids.length} lanÃ§amento(s) financeiro(s)?`);
     if (!autorizado) return;
     for (const id of ids) {
         const okNuvem = await excluirFinanceiroNuvem(id);
@@ -1109,25 +1282,7 @@ window.excluirFinanceiro = async function(id) {
 window.abrirAnexoFinanceiro = function(id, tipo) {
     const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
     const anexo = item?.[tipo];
-    if (anexo?.dados) {
-        const win = window.open('', '_blank');
-        if (!win) {
-            alert('Libere pop-ups para visualizar o anexo.');
-            return;
-        }
-        win.document.write(`<title>${anexo.nome || 'Anexo'}</title><iframe src="${anexo.dados}" style="width:100%; height:100vh; border:0;"></iframe>`);
-        win.document.close();
-        return;
-    }
-    if (anexo?.storage === 'LOCAL' || anexo?.localPath) {
-        if (anexo.localUrl) {
-            window.open(anexo.localUrl, '_blank');
-            return;
-        }
-        const caminho = anexo.localPath || anexo.localFolder || anexo.nome || '';
-        window.prompt('Arquivo salvo localmente. Copie o caminho abaixo e cole no Explorador de Arquivos para abrir:', caminho);
-        return;
-    }
+    abrirAnexoFinanceiroDireto(anexo);
 };
 
 window.abrirRelatorioFinanceiro = function() {
@@ -1149,7 +1304,7 @@ window.prepararRelatorioFinanceiro = function() {
     const inicio = document.getElementById('financeiroRelatorioInicio')?.value || '';
     const fim = document.getElementById('financeiroRelatorioFim')?.value || '';
     const statusFiltro = document.getElementById('financeiroRelatorioStatus')?.value || 'TODOS';
-    let lista = obterLancamentosFinanceiros().filter(item => item.aba === financeiroAbaAtiva);
+    let lista = obterLancamentosFinanceiros().filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
 
     if (inicio) lista = lista.filter(item => item.vencimento >= inicio);
     if (fim) lista = lista.filter(item => item.vencimento <= fim);
@@ -1174,7 +1329,7 @@ window.prepararRelatorioFinanceiro = function() {
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
             </tr>
         `;
-    }).join('') : '<tr><td colspan="6" style="text-align:center; padding:22px; color:var(--text-muted);">Nenhum lançamento no período selecionado.</td></tr>';
+    }).join('') : '<tr><td colspan="6" style="text-align:center; padding:22px; color:var(--text-muted);">Nenhum lanÃ§amento no perÃ­odo selecionado.</td></tr>';
 
     const todos = document.getElementById('financeiroRelatorioTodos');
     if (todos) todos.checked = lista.length > 0;
@@ -1207,25 +1362,25 @@ window.imprimirRelatorioFinanceiro = function() {
     const selecionados = new Set(Array.from(document.querySelectorAll('.financeiro-relatorio-check:checked')).map(input => input.value));
     const lista = financeiroRelatorioAtual.filter(item => selecionados.has(item.id));
     if (lista.length === 0) {
-        alert('Selecione pelo menos um lançamento para gerar o relatório.');
+        alert('Selecione pelo menos um lanÃ§amento para gerar o relatÃ³rio.');
         return;
     }
     const total = lista.reduce((acc, item) => acc + Number(item.valor || 0), 0);
     const win = window.open('', '_blank');
     if (!win) {
-        alert('Libere pop-ups para imprimir o relatório.');
+        alert('Libere pop-ups para imprimir o relatÃ³rio.');
         return;
     }
     win.document.write(`
-        <html><head><title>Relatório Financeiro</title><style>
+        <html><head><title>RelatÃ³rio Financeiro</title><style>
             body{font-family:Arial,sans-serif;padding:24px;color:#111827} h1{margin-bottom:4px}
             table{width:100%;border-collapse:collapse;margin-top:18px} th,td{border-bottom:1px solid #ddd;padding:9px;text-align:left}
             th{background:#f3f4f6} .total{font-size:20px;font-weight:bold;color:#dc2626;margin-top:16px}
         </style></head><body>
-            <h1>Relatório Financeiro - ${FINANCEIRO_ABAS[financeiroAbaAtiva].titulo}</h1>
-            <p>Período: ${dataBR(document.getElementById('financeiroRelatorioInicio').value)} até ${dataBR(document.getElementById('financeiroRelatorioFim').value)}</p>
+            <h1>RelatÃ³rio Financeiro - ${FINANCEIRO_ABAS[financeiroAbaAtiva].titulo}</h1>
+            <p>PerÃ­odo: ${dataBR(document.getElementById('financeiroRelatorioInicio').value)} atÃ© ${dataBR(document.getElementById('financeiroRelatorioFim').value)}</p>
             <div class="total">Valor total: ${formatarMoeda(total)}</div>
-            <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
+            <table><thead><tr><th>Tipo</th><th>DescriÃ§Ã£o</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
                 ${lista.map(item => `<tr><td>${item.tipo}</td><td>${item.descricao}</td><td>${dataBR(item.vencimento)}</td><td>${obterStatusItem(item).label}</td><td>${formatarMoeda(item.valor)}</td></tr>`).join('')}
             </tbody></table>
             <script>window.onload=function(){window.print();}</script>
@@ -1243,7 +1398,7 @@ async function salvarFinanceiroSubmit(event) {
     const valor = parseMoeda(document.getElementById('financeiroValor').value);
 
     if (!tipo || !descricao || !vencimento || valor <= 0) {
-        alert('Preencha tipo, descrição, vencimento e valor.');
+        alert('Preencha tipo, descriÃ§Ã£o, vencimento e valor.');
         return;
     }
 
@@ -1253,7 +1408,9 @@ async function salvarFinanceiroSubmit(event) {
     const pago = document.getElementById('financeiroPago').checked;
     const registro = {
         id,
-        aba: financeiroAbaAtiva,
+        aba: financeiroAbaAtiva === 'todos' ? 'caixa-financeira' : financeiroAbaAtiva,
+        pastaFinanceira: document.getElementById('financeiroPasta')?.value || (financeiroAbaAtiva === 'todos' ? 'conferir' : financeiroAbaAtiva),
+        subpastaFinanceira: normalizarTexto(document.getElementById('financeiroSubpasta')?.value || ''),
         tipo,
         descricao,
         vencimento,
@@ -1281,27 +1438,64 @@ async function salvarFinanceiroSubmit(event) {
 function injetarEstilosFinanceiro() {
     const style = document.createElement('style');
     style.textContent = `
+        .financeiro-folder-board { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:18px; }
+        .financeiro-folder-card { text-align:left; border:1px solid rgba(148,163,184,0.22); border-radius:10px; padding:12px; min-height:118px; background:linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); color:var(--text-color); cursor:pointer; display:flex; flex-direction:column; gap:5px; box-shadow:0 10px 26px rgba(0,0,0,0.18); }
+        .financeiro-folder-card i { color:var(--folder-color); font-size:1.25rem; }
+        .financeiro-folder-card span { font-weight:900; color:#f8fafc; }
+        .financeiro-folder-card strong { color:var(--folder-color); font-size:1.05rem; }
+        .financeiro-folder-card small, .financeiro-folder-card em { color:var(--text-muted); font-style:normal; font-size:.76rem; line-height:1.25; }
+        .financeiro-folder-card.active { border-color:var(--folder-color); background:linear-gradient(180deg, color-mix(in srgb, var(--folder-color) 18%, rgba(255,255,255,0.04)), rgba(255,255,255,0.03)); box-shadow:0 0 0 1px color-mix(in srgb, var(--folder-color) 30%, transparent), 0 14px 32px rgba(0,0,0,0.24); }
         .financeiro-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--panel-border); padding-bottom:12px; }
         .btn-tab-financeiro { min-height:34px; background:rgba(255,255,255,0.03); border:1px solid var(--panel-border); color:var(--text-muted); border-radius:7px; padding:8px 12px; font-weight:800; cursor:pointer; display:flex; gap:7px; align-items:center; white-space:nowrap; }
         .btn-tab-financeiro.active { color:var(--accent-color); border-color:var(--accent-color); background:rgba(107,142,35,0.12); }
-        .financeiro-form-card, .financeiro-list-card { padding:18px; margin-bottom:18px; }
-        .financeiro-form-card > div:first-child { align-items:flex-start !important; gap:12px; }
-        .financeiro-form-grid { display:grid; grid-template-columns: 1.05fr 1.25fr 0.9fr 0.85fr 0.85fr; gap:12px; align-items:start; }
+        .financeiro-form-card, .financeiro-list-card { padding:18px; margin-bottom:18px; max-width:1120px; margin-left:auto; margin-right:auto; }
+        .financeiro-form-card > div:first-child { align-items:center !important; gap:12px; }
+        .financeiro-form-grid { display:grid; grid-template-columns: 140px 170px 120px minmax(240px, 1fr) 125px 110px 92px; grid-template-areas:
+            "pasta subpasta tipo desc venc valor status"
+            "doc doc doc doc doc doc doc"
+            "obs obs obs obs obs obs obs"
+            ". . . . . save save"; gap:12px; align-items:end; }
+        .fin-pasta { grid-area:pasta; }
+        .fin-subpasta { grid-area:subpasta; }
+        .fin-tipo { grid-area:tipo; }
+        .fin-desc { grid-area:desc; }
+        .fin-venc { grid-area:venc; }
+        .fin-valor { grid-area:valor; }
+        .fin-status { grid-area:status; }
+        .fin-obs { grid-area:obs; }
+        .fin-doc { grid-area:doc; }
+        .fin-comprovante { grid-area:comprovante; }
+        .fin-save { grid-area:save; }
         .financeiro-form-grid .input-group { min-width:0; }
         .financeiro-form-grid .input-group label { min-height:14px; margin-bottom:5px; font-size:0.68rem; letter-spacing:.02em; }
         .financeiro-form-grid input,
         .financeiro-form-grid select,
         .financeiro-form-grid textarea { width:100%; min-height:38px; border-radius:7px; box-sizing:border-box; }
-        .financeiro-form-grid textarea { min-height:76px; resize:vertical; }
+        .financeiro-form-grid textarea { min-height:96px; resize:vertical; }
         .financeiro-form-grid small { display:block; margin-top:5px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .financeiro-obs { grid-column: span 2; }
-        .financeiro-form-actions { display:flex; align-items:flex-end; justify-content:flex-end; height:100%; }
+        .financeiro-obs { grid-column:auto; }
+        .financeiro-form-actions { display:flex; align-items:center; justify-content:flex-end; height:auto; min-height:40px; }
         .financeiro-form-actions .btn-primary,
         .financeiro-form-actions .btn-secondary,
         .financeiro-form-actions .btn-danger { min-height:40px; width:100%; justify-content:center; white-space:nowrap; }
-        #btnLerDocumentoFinanceiro { min-height:38px; line-height:1.1; white-space:normal; }
-        .financeiro-status-toggle { min-height:38px; border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#ef4444; border-radius:7px; padding:8px 10px; display:flex; align-items:center; gap:8px; font-weight:900; cursor:pointer; }
+        .fin-save .btn-primary { max-width:190px; min-width:170px; margin-left:auto; }
+        #btnLerDocumentoFinanceiro { min-height:38px; line-height:1.1; white-space:nowrap; }
+        .financeiro-status-toggle { width:92px; min-height:38px; border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#ef4444; border-radius:7px; padding:6px 8px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.68rem; line-height:1.05; text-align:center; font-weight:900; cursor:pointer; }
+        .financeiro-status-toggle input { width:14px !important; height:14px; min-height:14px; flex:0 0 auto; }
         .financeiro-status-toggle:has(input:checked) { border-color:rgba(16,185,129,0.45); background:rgba(16,185,129,0.12); color:#10b981; }
+        .financeiro-file-row { display:grid; grid-template-columns:110px minmax(220px, 1fr) 42px; gap:10px; align-items:center; max-width:100%; }
+        .financeiro-file-row input[type="file"] { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+        .financeiro-file-compact { min-height:38px; border:1px solid var(--panel-border); border-radius:7px; background:#0f172a; color:#f8fafc; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.78rem; font-weight:900; cursor:pointer; margin:0 !important; }
+        .financeiro-file-row small { margin:0; align-self:center; }
+        .financeiro-file-row .btn-secondary { min-width:42px; width:42px; min-height:38px; padding:0; display:grid; place-items:center; }
+        .financeiro-form-clean .fin-doc { grid-column:1 / -1 !important; grid-area:doc !important; width:100% !important; }
+        .financeiro-form-clean .fin-obs { grid-column:1 / -1 !important; grid-area:obs !important; width:100% !important; }
+        .financeiro-form-clean .fin-save { grid-column:6 / -1 !important; grid-area:save !important; width:100% !important; }
+        .financeiro-form-clean .fin-obs textarea { width:100% !important; min-height:104px !important; display:block !important; }
+        .financeiro-form-clean .financeiro-file-row { width:100% !important; display:grid !important; grid-template-columns:120px minmax(260px, 1fr) 44px !important; gap:10px !important; align-items:center !important; }
+        .financeiro-form-clean .financeiro-file-compact { min-height:38px !important; height:38px !important; border:1px solid var(--panel-border) !important; border-radius:7px !important; background:#0f172a !important; color:#f8fafc !important; display:flex !important; align-items:center !important; justify-content:center !important; gap:6px !important; font-size:.78rem !important; font-weight:900 !important; cursor:pointer !important; margin:0 !important; padding:0 10px !important; letter-spacing:0 !important; text-transform:none !important; }
+        .financeiro-form-clean #financeiroDocumentoNome { margin:0 !important; font-size:.82rem !important; color:#d1d5db !important; line-height:38px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+        .financeiro-form-clean #btnLerDocumentoFinanceiro { width:44px !important; min-width:44px !important; height:38px !important; min-height:38px !important; padding:0 !important; display:grid !important; place-items:center !important; }
         .financeiro-list-header { display:grid; grid-template-columns: minmax(170px, 1fr) auto; gap:12px; align-items:center; margin-bottom:14px; }
         .financeiro-list-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
         .financeiro-list-actions button { min-height:38px; white-space:nowrap; }
@@ -1329,6 +1523,8 @@ function injetarEstilosFinanceiro() {
         .financeiro-import-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:12px; border-bottom:1px solid rgba(148,163,184,0.18); }
         .financeiro-import-head h3 { margin:0 0 4px; color:#f8fafc; }
         .financeiro-import-head small { color:var(--text-muted); word-break:break-word; }
+        .financeiro-import-head-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        .financeiro-import-head-actions button { min-height:36px; white-space:nowrap; }
         .financeiro-import-alert { margin:12px 0; padding:10px 12px; border-radius:8px; color:#fed7aa; background:rgba(249,115,22,0.14); border:1px solid rgba(249,115,22,0.28); font-weight:800; }
         .financeiro-import-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; margin-top:14px; }
         .financeiro-import-grid label { color:var(--text-muted); font-size:.76rem; font-weight:900; text-transform:uppercase; }
@@ -1355,14 +1551,37 @@ function injetarEstilosFinanceiro() {
         @keyframes financeiroMenuGlow { 0%,100% { filter:none; } 50% { filter:brightness(1.35); } }
         @keyframes financeiroTicker { 0%,12% { transform:translateX(0); } 88%,100% { transform:translateX(-12%); } }
         @media (max-width: 1100px) {
-            .financeiro-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .financeiro-obs { grid-column: span 2; }
+            .financeiro-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas:
+                "pasta subpasta"
+                "tipo desc"
+                "venc valor"
+                "status status"
+                "doc doc"
+                "obs obs"
+                "save save"; }
+            .fin-save .btn-primary { max-width:220px; }
+            .financeiro-status-toggle { width:100%; max-width:120px; }
             .financeiro-list-header { grid-template-columns:1fr; }
             .financeiro-list-header > div:nth-child(2) { justify-content:flex-start; }
         }
         @media (max-width: 680px) {
-            .financeiro-form-grid, .financeiro-filtros { grid-template-columns: 1fr; }
-            .financeiro-obs { grid-column: span 1; }
+            .financeiro-form-grid { grid-template-columns: 1fr; grid-template-areas:
+                "pasta"
+                "subpasta"
+                "tipo"
+                "desc"
+                "venc"
+                "valor"
+                "status"
+                "doc"
+                "obs"
+                "save"; }
+            .financeiro-filtros { grid-template-columns: 1fr; }
+            .financeiro-status-toggle { max-width:112px; }
+            .financeiro-file-row { grid-template-columns:104px 1fr 42px; }
+            .financeiro-form-clean .fin-save { grid-column:1 / -1 !important; }
+            .financeiro-form-clean .financeiro-file-row { grid-template-columns:104px minmax(0, 1fr) 42px !important; }
+            .fin-save .btn-primary { max-width:none; width:100%; }
             .financeiro-import-grid { grid-template-columns:1fr; }
             .financeiro-import-grid .span-2 { grid-column:span 1; }
             .financeiro-lembrete-topo { top:8px; width:calc(100vw - 14px); align-items:stretch; }
@@ -1425,3 +1644,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.SectionLoader?.register('view-financeiro', carregarFinanceiroNuvem);
+
+

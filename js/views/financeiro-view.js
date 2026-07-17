@@ -14,13 +14,7 @@
                     <div class="kpi-card glass-panel"><div class="kpi-icon" style="background: rgba(220,38,38,0.14); color: #dc2626;"><i class="fa-solid fa-arrow-trend-down"></i></div><div class="kpi-data"><h3 id="financeiroKpiDespesas">R$ 0,00</h3><p>Despesas</p></div></div>
                 </div>
 
-                <div class="tabs-container hide-on-print financeiro-tabs">
-                    <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('caixa-financeira')" data-fin-tab="caixa-financeira"><i class="fa-solid fa-inbox"></i> Caixa Financeira</button>
-                    <button type="button" class="btn-tab-financeiro active" onclick="window.switchFinanceiroAba('despesas-gerais')" data-fin-tab="despesas-gerais"><i class="fa-solid fa-receipt"></i> Despesas Gerais</button>
-                    <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('boletos')" data-fin-tab="boletos"><i class="fa-solid fa-barcode"></i> Boletos Aleatórios</button>
-                    <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('impostos')" data-fin-tab="impostos"><i class="fa-solid fa-landmark"></i> Impostos</button>
-                    <button type="button" class="btn-tab-financeiro" onclick="window.switchFinanceiroAba('despesas-fixas')" data-fin-tab="despesas-fixas"><i class="fa-solid fa-repeat"></i> Despesas Fixas</button>
-                </div>
+                <div id="financeiroPastas" class="financeiro-folder-board hide-on-print"></div>
 
                 <div class="glass-panel financeiro-form-card hide-on-print">
                     <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
@@ -28,17 +22,19 @@
                         <button type="button" class="btn-secondary" onclick="window.limparFinanceiroForm()"><i class="fa-solid fa-eraser"></i> Limpar</button>
                     </div>
 
-                    <form id="financeiroForm" class="financeiro-form-grid">
+                    <form id="financeiroForm" class="financeiro-form-grid financeiro-form-clean">
                         <input type="hidden" id="financeiroId">
-                        <div class="input-group"><label for="financeiroTipo">Tipo / Classe</label><input type="text" id="financeiroTipo" list="financeiroClassesList" placeholder="Ex: IMPOSTO, BOLETO, MULTA" class="text-uppercase-input"><datalist id="financeiroClassesList"></datalist></div>
-                        <div class="input-group"><label for="financeiroDescricao">Descrição</label><input type="text" id="financeiroDescricao" list="financeiroDescricaoList" autocomplete="off" placeholder="Ex: FGTS, ENERGIA, INTERNET" class="text-uppercase-input"><datalist id="financeiroDescricaoList"></datalist></div>
-                        <div class="input-group"><label for="financeiroVencimento">Data de vencimento</label><input type="date" id="financeiroVencimento"></div>
-                        <div class="input-group"><label for="financeiroValor">Valor</label><input type="text" id="financeiroValor" placeholder="R$ 0,00"></div>
-                        <div class="input-group"><label>Status</label><label class="financeiro-status-toggle" for="financeiroPago"><input type="checkbox" id="financeiroPago"><span id="financeiroStatusTexto">Não pago</span></label></div>
-                        <div class="input-group financeiro-obs"><label for="financeiroObservacao">Observação</label><textarea id="financeiroObservacao" rows="2" placeholder="Referência, parcela, fornecedor ou detalhe importante..."></textarea></div>
-                        <div class="input-group"><label for="financeiroDocumento">Documento</label><input type="file" id="financeiroDocumento" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroDocumentoNome">Nenhum documento anexado</small><button type="button" id="btnLerDocumentoFinanceiro" class="btn-secondary" style="margin-top:8px; padding:8px 10px; font-size:.82rem; width:100%;"><i class="fa-solid fa-wand-magic-sparkles"></i> Ler documento automaticamente</button></div>
-                        <div class="input-group"><label for="financeiroComprovante">Comprovante PG</label><input type="file" id="financeiroComprovante" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroComprovanteNome">Nenhum comprovante anexado</small></div>
-                        <div class="financeiro-form-actions"><button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Salvar lançamento</button></div>
+                        <div class="input-group fin-pasta"><label for="financeiroPasta">Pasta</label><select id="financeiroPasta" onchange="window.atualizarSubpastasFinanceiro()"></select></div>
+                        <div class="input-group fin-subpasta"><label for="financeiroSubpasta">Subpasta</label><input type="text" id="financeiroSubpasta" list="financeiroSubpastasList" placeholder="Ex: RECEITA FEDERAL"><datalist id="financeiroSubpastasList"></datalist></div>
+                        <div class="input-group fin-tipo"><label for="financeiroTipo">Tipo / Classe</label><input type="text" id="financeiroTipo" list="financeiroClassesList" placeholder="Ex: IMPOSTO" class="text-uppercase-input"><datalist id="financeiroClassesList"></datalist></div>
+                        <div class="input-group fin-desc"><label for="financeiroDescricao">Descrição</label><input type="text" id="financeiroDescricao" list="financeiroDescricaoList" autocomplete="off" placeholder="Ex: FGTS, energia, fornecedor" class="text-uppercase-input"><datalist id="financeiroDescricaoList"></datalist></div>
+                        <div class="input-group fin-venc"><label for="financeiroVencimento">Vencimento</label><input type="date" id="financeiroVencimento"></div>
+                        <div class="input-group fin-valor"><label for="financeiroValor">Valor</label><input type="text" id="financeiroValor" placeholder="R$ 0,00"></div>
+                        <div class="input-group fin-status"><label>Status</label><label class="financeiro-status-toggle" for="financeiroPago"><input type="checkbox" id="financeiroPago"><span id="financeiroStatusTexto">Não pago</span></label></div>
+                        <div class="input-group fin-doc"><label for="financeiroDocumento">Documento</label><div class="financeiro-file-row"><label class="financeiro-file-compact" for="financeiroDocumento"><i class="fa-solid fa-file-arrow-up"></i> Escolher</label><input type="file" id="financeiroDocumento" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroDocumentoNome">Nenhum documento anexado</small><button type="button" id="btnLerDocumentoFinanceiro" class="btn-secondary"><i class="fa-solid fa-wand-magic-sparkles"></i></button></div></div>
+                        <div class="input-group financeiro-obs fin-obs"><label for="financeiroObservacao">Observação</label><textarea id="financeiroObservacao" rows="2" placeholder="Referência, parcela, fornecedor ou detalhe importante..."></textarea></div>
+                        <div class="input-group fin-comprovante" style="display:none;"><label for="financeiroComprovante">Comprovante PG</label><input type="file" id="financeiroComprovante" accept=".pdf,.xml,text/xml,application/xml,image/*"><small id="financeiroComprovanteNome">Nenhum comprovante anexado</small></div>
+                        <div class="financeiro-form-actions fin-save"><button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Salvar lançamento</button></div>
                     </form>
                 </div>
 
