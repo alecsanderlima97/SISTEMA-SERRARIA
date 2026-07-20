@@ -443,7 +443,12 @@ function primeiraLinhaUtilFinanceiro(texto) {
         /^uso do banco/i,
         /^carteira/i,
         /^quantidade$/i,
-        /^valor da moeda$/i
+        /^valor da moeda$/i,
+        /^em caso de d[uú]vidas/i,
+        /^contate seu gerente/i,
+        /^central no/i,
+        /^ap[oó]s o vencimento/i,
+        /^instru[cç][oõ]es/i
     ];
     return String(texto || '')
         .split(/\r?\n/)
@@ -467,9 +472,12 @@ function extrairLinhaAposRotuloFinanceiro(texto, rotuloRegex) {
 
 function limparDescricaoDocumentoFinanceiro(valor) {
     return String(valor || '')
+        .replace(/^NOME\s+DO\s+BENEFICI\S*\s*/i, '')
+        .replace(/^BENEFICI\S*\s*/i, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}.*$/g, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}.*$/g, '')
         .replace(/\s+(VENCIMENTO|AGENCIA|AGÃŠNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
+        .replace(/\s+(RUA|AV\.?|AVENIDA|RODOVIA)\s+.*$/i, '')
         .replace(/\s{2,}/g, ' ')
         .slice(0, 90)
         .trim();
@@ -511,7 +519,7 @@ function leituraFinanceiraIncompleta(dados) {
     if (dados.precisaConferencia) return true;
     if (!dados.vencimento && !dados.emissao) return true;
     if (!Number(dados.valor || 0)) return true;
-    if (!dados.descricao || dados.descricao === 'PENDENTE DE CONFERENCIA') return true;
+    if (descricaoFinanceiraRuim(dados.descricao)) return true;
     return false;
 }
 
@@ -578,10 +586,25 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
 
 function extrairDescricaoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
+    const linhas = String(texto || '').split(/\r?\n/).map(linha => linha.replace(/\s+/g, ' ').trim()).filter(Boolean);
     const boletoAssistencial = limpo.match(/BOLETO\s+ASSISTENCIAL\s+REF\.?\s*\d{2}\/\d{4}/i)?.[0];
     if (boletoAssistencial) return boletoAssistencial.toUpperCase();
-    const beneficiario = limpo.match(/NOME\s+DO\s+BENEFICI[ÃA]RIO\s+([A-Z0-9 .&\\/,-]{4,90}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE)/i)?.[1]
-        || limpo.match(/BENEFICI[ÃA]RIO\s+([A-Z0-9 .&\\/,-]{4,90}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE)/i)?.[1];
+    for (let i = 0; i < linhas.length; i++) {
+        if (/NOME\s+DO\s+BENEFICI|BENEFICI|CEDENTE/i.test(linhas[i])) {
+            const mesmaLinha = limparDescricaoDocumentoFinanceiro(linhas[i]);
+            if (mesmaLinha && !/LOCAL DE PAGAMENTO|VENCIMENTO|PAGADOR/i.test(mesmaLinha) && mesmaLinha.length >= 5) {
+                return mesmaLinha;
+            }
+            const proximas = linhas.slice(i + 1, i + 5).filter(linha =>
+                linha.length >= 5
+                && !/LOCAL DE PAGAMENTO|VENCIMENTO|AG[ÊE]NCIA|DATA|DOCUMENTO|ESP[ÉE]CIE|ACEITE|PAGADOR|CNPJ:?\s*$/i.test(linha)
+            );
+            const fornecedorLinha = proximas.find(linha => /[A-Z]{3,}/.test(linha) && !/^\d/.test(linha));
+            if (fornecedorLinha) return limparDescricaoDocumentoFinanceiro(fornecedorLinha);
+        }
+    }
+    const beneficiario = limpo.match(/NOME\s+DO\s+BENEFICI\S*\s+([A-Z0-9 .&\\/,-]{4,120}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE|\s+VENCIMENTO)/i)?.[1]
+        || limpo.match(/BENEFICI\S*\s+([A-Z0-9 .&\\/,-]{4,120}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE|\s+VENCIMENTO)/i)?.[1];
     if (beneficiario) return limparDescricaoDocumentoFinanceiro(beneficiario);
     const refDoc = limpo.match(/REF\.?\s*DOC\.?\s*[:\-]?\s*([A-Z0-9./ -]{4,40})/i)?.[0];
     if (refDoc) return refDoc.toUpperCase();
@@ -624,6 +647,11 @@ function extrairValorBoletoRobustoFinanceiro(texto) {
     const codigo = linha.startsWith('748') ? linha.slice(0, 47) : linha.slice(-47);
     const valor = Number(codigo.slice(-10)) / 100;
     return Number.isFinite(valor) ? valor : 0;
+}
+
+function descricaoFinanceiraRuim(descricao) {
+    return !descricao
+        || /PENDENTE|DOCUMENTO|IMPORTADO|EM CASO DE D[ÚU]VIDAS|CONTATE SEU GERENTE|CENTRAL NO|INSTRU[CÇ][OÕ]ES|AP[ÓO]S O VENCIMENTO/i.test(descricao);
 }
 
 function extrairDadosTextoFinanceiro(texto) {
@@ -989,15 +1017,25 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 storage: 'LOCAL'
             } : null;
             const dadosExtraidos = fila.anexo?.dados ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
+            const sugestaoDescricao = normalizarTexto(sugestao.descricao || '');
+            const dadosDescricao = normalizarTexto(dadosExtraidos?.descricao || '');
+            const descricaoFinal = !descricaoFinanceiraRuim(dadosDescricao)
+                ? dadosDescricao
+                : (!descricaoFinanceiraRuim(sugestaoDescricao) ? sugestaoDescricao : 'PENDENTE DE CONFERENCIA');
+            const valorSugestao = Number(sugestao.valor || 0);
+            const valorExtraido = Number(dadosExtraidos?.valor || 0);
+            const valorFinal = valorExtraido > 0 ? valorExtraido : valorSugestao;
+            const vencimentoFinal = dadosExtraidos?.vencimento || sugestao.vencimento || '';
+            const tipoFinal = dadosExtraidos?.tipo || sugestao.tipo || 'DOCUMENTO';
             const conferencia = await confirmarImportacaoFinanceira(
                 anexoLocal || fila.anexo || { nome: fila.nomeArquivo || file.name },
                 {
-                    tipo: dadosExtraidos?.tipo || sugestao.tipo || 'DOCUMENTO',
-                    descricao: dadosExtraidos?.descricao || sugestao.descricao || 'PENDENTE DE CONFERENCIA',
-                    vencimento: dadosExtraidos?.vencimento || sugestao.vencimento || '',
-                    valor: Number(dadosExtraidos?.valor || sugestao.valor || 0),
+                    tipo: tipoFinal,
+                    descricao: descricaoFinal,
+                    vencimento: vencimentoFinal,
+                    valor: valorFinal,
                     observacao: sugestao.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
-                    precisaConferencia: dadosExtraidos?.precisaConferencia
+                    precisaConferencia: dadosExtraidos?.precisaConferencia || !valorFinal || !vencimentoFinal || descricaoFinanceiraRuim(descricaoFinal)
                 },
                 fila.nomeArquivo || file.name
             );
