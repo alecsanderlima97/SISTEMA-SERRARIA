@@ -1092,12 +1092,25 @@ function obterItensPatioSelecionadosObrigatorio(lista, mensagem) {
     return lista.filter(item => ids.includes(item.id));
 }
 
+function obterResumoPatioSelecionado() {
+    const ids = obterIdsPatioSelecionados();
+    return itensPatioTemp
+        .filter(item => ids.includes(item.id))
+        .reduce((acc, item) => {
+            acc.linhas += 1;
+            acc.pacotes += Number(item.pacotes) || 0;
+            acc.volume += Number(item.volume) || 0;
+            acc.pecas += Number(item.totalPecas) || 0;
+            return acc;
+        }, { linhas: 0, pacotes: 0, volume: 0, pecas: 0 });
+}
+
 function atualizarResumoSelecaoPatio() {
     const label = document.getElementById('patioSelecaoResumo');
-    const ids = obterIdsPatioSelecionados();
+    const resumo = obterResumoPatioSelecionado();
     if (label) {
-        label.textContent = ids.length
-            ? `${ids.length} item(ns) selecionado(s)`
+        label.textContent = resumo.linhas
+            ? `${resumo.pacotes} pct(s) selecionado(s) | ${formatDecimalMockup(resumo.volume)} m³`
             : 'Nenhum item selecionado';
     }
     atualizarConsolidatedStats();
