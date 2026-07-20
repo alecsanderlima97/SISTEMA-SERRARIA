@@ -275,6 +275,19 @@ function obterItemPatioSelecionadoRomaneio() {
     return patioItensDisponiveis.find(i => i.id === select?.value) || null;
 }
 
+function limparVinculoPatioRomaneio() {
+    const selectPatio = document.getElementById('v2-select-patio');
+    if (selectPatio) selectPatio.value = '';
+    const qtdPacotes = document.getElementById('v2-qtd-pacotes');
+    if (qtdPacotes) qtdPacotes.removeAttribute('max');
+    const saldoInfo = document.getElementById('v2-saldo-patio');
+    if (saldoInfo) {
+        saldoInfo.style.display = 'none';
+        saldoInfo.textContent = '';
+    }
+    renderizarListaVisualPatioRomaneio();
+}
+
 function saldoItemPatioRomaneio(item) {
     const jaReservados = romaneioAtual.pacotes
         .filter(p => p.origemPatio && p.patioRelatorioId === patioRelatorioRomaneio?.id && p.patioCubagemKey === chavePatioRomaneio(item))
@@ -386,7 +399,7 @@ function selecionarPacotePatioRomaneio() {
 
     const produtoSelect = document.getElementById('v2-select-produto');
     if (produtoSelect) produtoSelect.value = '__manual__';
-    selecionarMadeiraCadastrada({ target: produtoSelect });
+    selecionarMadeiraCadastrada({ target: produtoSelect, preservarPatio: true });
     const set = (id, valor) => {
         const el = document.getElementById(id);
         if (el) el.value = valor ?? '';
@@ -713,6 +726,7 @@ function selecionarTransportadoraCadastrada(e) {
 function selecionarMadeiraCadastrada(e) {
     const grupoManual = document.getElementById('grupoV2MadeiraManual');
     const inputManual = document.getElementById('v2-produto-manual');
+    if (!e?.preservarPatio) limparVinculoPatioRomaneio();
     if (e.target.value === '__manual__') {
         if (grupoManual) grupoManual.style.display = 'flex';
         ['v2-espessura', 'v2-largura', 'v2-comprimento', 'v2-comprimento-real'].forEach(id => {
