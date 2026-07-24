@@ -275,6 +275,16 @@ function obterItemPatioSelecionadoRomaneio() {
     return patioItensDisponiveis.find(i => i.id === select?.value) || null;
 }
 
+function obterItemPatioOriginalPacoteRomaneio(pacote) {
+    if (!pacote?.origemPatio) return null;
+    return patioItensDisponiveis.find(item =>
+        item.id === pacote.patioItemId
+        || (Array.isArray(item.patioItemIds) && item.patioItemIds.includes(pacote.patioItemId))
+        || (Array.isArray(pacote.patioItemIds) && pacote.patioItemIds.includes(item.id))
+        || chavePatioRomaneio(item) === pacote.patioCubagemKey
+    ) || null;
+}
+
 function limparVinculoPatioRomaneio() {
     const selectPatio = document.getElementById('v2-select-patio');
     if (selectPatio) selectPatio.value = '';
@@ -1066,8 +1076,8 @@ function salvarEdicaoPacote() {
     const precoM3 = window.parseCurrencyValue(document.getElementById('v2-preco-m3-item').value) || 0;
     const qtdPacotes = parseInt(document.getElementById('v2-qtd-pacotes').value) || 1;
     const pacoteOriginal = romaneioAtual.pacotes.find(x => x.id === pacoteEditandoId);
-    const itemPatio = obterItemPatioSelecionadoRomaneio()
-        || (pacoteOriginal?.origemPatio ? patioItensDisponiveis.find(item => chavePatioRomaneio(item) === pacoteOriginal.patioCubagemKey) : null);
+    const itemPatioOriginal = obterItemPatioOriginalPacoteRomaneio(pacoteOriginal);
+    const itemPatio = itemPatioOriginal || obterItemPatioSelecionadoRomaneio();
     const pecasPorPacote = parseInt(document.getElementById('v2-quantidade').value) || 0;
     const esp = parseNumeroBR(document.getElementById('v2-espessura').value);
     const larg = parseNumeroBR(document.getElementById('v2-largura').value);
@@ -1082,10 +1092,15 @@ function salvarEdicaoPacote() {
     }
 
     if (itemPatio) {
+        const chaveItemPatio = chavePatioRomaneio(itemPatio);
         const outrosReservados = romaneioAtual.pacotes
-            .filter(p => p.id !== pacoteEditandoId && p.origemPatio && p.patioCubagemKey === chavePatioRomaneio(itemPatio))
+            .filter(p => p.id !== pacoteEditandoId && p.origemPatio && p.patioCubagemKey === chaveItemPatio)
             .reduce((total, p) => total + Number(p.patioQtdPacotes || p.qtdPacotes || 0), 0);
-        const disponivel = Number(itemPatio.pacotes || 0) - outrosReservados;
+        const reservaOriginal = pacoteOriginal?.origemPatio && pacoteOriginal.patioCubagemKey === chaveItemPatio
+            ? Number(pacoteOriginal.patioQtdPacotes || pacoteOriginal.qtdPacotes || 0)
+            : 0;
+        const disponivelBase = Number(itemPatio.pacotes || 0) - outrosReservados;
+        const disponivel = Math.max(disponivelBase, reservaOriginal);
         if (qtdPacotes > disponivel) {
             alert(`Saldo insuficiente no patio. Disponivel para este item: ${Math.max(0, disponivel)} pacote(s).`);
             return;
