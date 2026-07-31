@@ -165,11 +165,11 @@
                             <div style="display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 16px; align-items: end; margin: 8px 0;">
                                 <div style="display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: stretch;">
                                     <div style="height: 190px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 2px 0;">
-                                        <span>5000</span>
-                                        <span>4000</span>
-                                        <span>3000</span>
-                                        <span>2000</span>
-                                        <span>1000</span>
+                                        <span id="dieselScaleMax">5000</span>
+                                        <span id="dieselScale80">4000</span>
+                                        <span id="dieselScale60">3000</span>
+                                        <span id="dieselScale40">2000</span>
+                                        <span id="dieselScale20">1000</span>
                                         <span>0</span>
                                     </div>
                                     <div style="height: 190px; border-left: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(to top, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px); position: relative;">
@@ -195,7 +195,7 @@
                                         </div>
                                         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px;">
                                             <span style="font-size: 0.72rem; color: var(--text-muted);">Capacidade</span>
-                                            <div style="font-size: 1rem; font-weight: 800; color: white;">5.000 L</div>
+                                            <div style="font-size: 1rem; font-weight: 800; color: white;" id="dieselCapacityText">5.000 L</div>
                                         </div>
                                         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px;">
                                             <span style="font-size: 0.72rem; color: var(--text-muted);">Vazio</span>
@@ -209,6 +209,19 @@
                                 <span style="font-weight: bold; color: #60a5fa; display: block; margin-bottom: 2px;"><i class="fa-solid fa-circle-info"></i> Sugestão de Compra</span>
                                 <span id="dieselAdviceText">Aguardando dados...</span>
                             </div>
+                            <div style="display:grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap:10px; align-items:end;">
+                                <div class="input-group">
+                                    <label for="dieselTankCapacityInput">Capacidade do tanque (L)</label>
+                                    <input type="number" id="dieselTankCapacityInput" min="1" step="1" inputmode="numeric" placeholder="5000" onblur="window.salvarCapacidadeTanqueDieselEstoque()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="dieselTankLevelInput">Nivel atual (L)</label>
+                                    <input type="number" id="dieselTankLevelInput" min="0" step="1" inputmode="numeric" placeholder="0" onblur="window.ajustarNivelTanqueDieselEstoque()">
+                                </div>
+                            </div>
+                            <button type="button" class="btn-primary" onclick="window.abrirModalReabastecerTanqueEstoque()" style="width:100%; padding:12px 16px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:800;">
+                                <i class="fa-solid fa-gas-pump"></i> Reabastecer Tanque
+                            </button>
                         </div>
 
                         <!-- SIMULADORES DE LUBRIFICANTES (CONVERSÃO DE BALDES 20L) -->
@@ -285,6 +298,47 @@
                 </div>
 
             </section>
+
+            <!-- ====== MODAL: REABASTECER TANQUE DIESEL ====== -->
+            <div id="modalReabastecerTanqueEstoque" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">
+                <div class="modal-content-v2" style="width: 100%; max-width: 620px; border-radius: 16px; padding: 25px; border: 1px solid var(--panel-border); background: #1e293b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px;">
+                        <h2 style="margin: 0; color: white;"><i class="fa-solid fa-gas-pump" style="color: #eab308;"></i> Reabastecer Tanque Mestre</h2>
+                        <button type="button" class="btn-action-card" onclick="window.fecharModalReabastecerTanqueEstoque()" style="padding: 8px 12px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <form id="formReabastecerTanqueEstoque" class="grid-form" style="grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="tanqueReabData">Data</label>
+                            <input type="date" id="tanqueReabData" required>
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="tanqueReabDescricao">Descricao do diesel</label>
+                            <input type="text" id="tanqueReabDescricao" class="text-uppercase-input" placeholder="DIESEL COMUM" required>
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="tanqueReabQtd">Quantidade (L)</label>
+                            <input type="number" id="tanqueReabQtd" min="0.01" step="0.01" inputmode="decimal" placeholder="Ex: 1000" required oninput="window.calcularTotalReabastecimentoTanqueEstoque()">
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label for="tanqueReabUnitario">Valor unitario (R$/L)</label>
+                            <input type="text" id="tanqueReabUnitario" placeholder="R$ 0,00" required oninput="window.formatCurrencyInput(event); window.calcularTotalReabastecimentoTanqueEstoque();">
+                        </div>
+                        <div style="grid-column: span 4; border: 1px solid rgba(34, 197, 94, 0.35); background: rgba(34, 197, 94, 0.08); border-radius: 10px; padding: 12px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <span style="color: var(--text-muted); font-weight:700;">Total da entrada</span>
+                            <strong id="tanqueReabTotal" style="color:#22c55e; font-size:1.2rem;">R$ 0,00</strong>
+                        </div>
+                        <div class="input-group" style="grid-column: span 4;">
+                            <label for="tanqueReabObs">Observacao</label>
+                            <textarea id="tanqueReabObs" rows="3" placeholder="Fornecedor, nota, motorista ou detalhe da entrada"></textarea>
+                        </div>
+                        <div style="grid-column: span 4; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+                            <button type="button" class="btn-secondary" onclick="window.fecharModalReabastecerTanqueEstoque()" style="padding: 10px 18px;">Cancelar</button>
+                            <button type="submit" class="btn-primary" style="padding: 10px 22px;"><i class="fa-solid fa-floppy-disk"></i> Salvar Entrada</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <!-- ====== MODAL: NOVO ITEM NO ESTOQUE ====== -->
             <div id="modalNovoItemEstoque" class="modal-v2" style="display: none; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.85);">

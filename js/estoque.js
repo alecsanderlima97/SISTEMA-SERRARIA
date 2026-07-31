@@ -8,6 +8,7 @@ console.log("Módulo de Estoque Premium: Inicializando almoxarifado unificado...
 
 const ESTOQUE_KEY = 'orquestra_estoque';
 const MOV_KEY = 'orquestra_estoque_movimentacoes';
+const TANQUE_DIESEL_KEY = 'orquestra_estoque_tanque_diesel';
 const FROTA_KEY = 'orquestra_frota';
 const ESTOQUE_INICIALIZADO_KEY = 'orquestra_estoque_inicializado';
 
@@ -139,6 +140,16 @@ async function carregarDadosDoFirestore() {
         movimentacoesEstoque = movsDados;
         localStorage.setItem(MOV_KEY, JSON.stringify(movimentacoesEstoque));
 
+        try {
+            const configsEstoque = await window.FS.getCollection('estoque_config');
+            const configTanque = configsEstoque.find(c => c.id === 'tanque_diesel_mestre');
+            if (configTanque) {
+                localStorage.setItem(TANQUE_DIESEL_KEY, JSON.stringify(configTanque));
+            }
+        } catch (configErr) {
+            console.warn('Configuracao do tanque carregada apenas localmente:', configErr);
+        }
+
         renderizarEstoque();
         window.renderSimuladores();
         window.renderizarMovimentacoesEstoque();
@@ -183,6 +194,14 @@ function inicializarEventosEstoque() {
     document.getElementById('estCategoria')?.addEventListener('change', atualizarCamposLubrificanteEstoque);
     document.getElementById('estQtdGaloes')?.addEventListener('input', atualizarTotalLubrificanteEstoque);
     document.getElementById('estLitrosGalao')?.addEventListener('input', atualizarTotalLubrificanteEstoque);
+
+    const formTanque = document.getElementById('formReabastecerTanqueEstoque');
+    if (formTanque) {
+        formTanque.addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.salvarReabastecimentoTanqueEstoque();
+        });
+    }
 }
 
 
@@ -552,16 +571,98 @@ function calcularSaldoPorMovimentacoes(item) {
     return Number(item?.quantidade) || 0;
 }
 
+function obterConfigTanqueDiesel() {
+    const padrao = {
+        id: 'tanque_diesel_mestre',
+        nome: 'Tanque Mestre Diesel',
+        capacidade: 5000,
+        descricaoDiesel: 'DIESEL COMUM'
+    };
+
+    try {
+        const local = JSON.parse(localStorage.getItem(TANQUE_DIESEL_KEY) || 'null');
+        return { ...padrao, ...(local || {}) };
+    } catch (_) {
+        return padrao;
+    }
+}
+
+function salvarConfigTanqueDiesel(config) {
+    const atualizada = { ...obterConfigTanqueDiesel(), ...(config || {}), atualizadoEm: new Date().toISOString() };
+    localStorage.setItem(TANQUE_DIESEL_KEY, JSON.stringify(atualizada));
+
+    if (window.FS) {
+        window.FS.setDoc('estoque_config', atualizada.id, atualizada).catch(err => {
+            console.warn('Nao foi possivel sincronizar configuracao do tanque na nuvem:', err);
+        });
+    }
+
+    return atualizada;
+}
+
+function obterItemDieselEstoque(criarSeNaoExistir = true) {
+    itensEstoque = obterEstoque();
+    let diesel = itensEstoque.find(i => normalizarTipoMovimento(i.categoria) === 'DIESEL' && normalizarTipoMovimento(i.nome).includes('DIESEL COMUM'))
+        || itensEstoque.find(i => normalizarTipoMovimento(i.categoria) === 'DIESEL')
+        || itensEstoque.find(i => normalizarTipoMovimento(i.nome).includes('DIESEL'));
+
+    if (!diesel && criarSeNaoExistir) {
+        diesel = {
+            id: 'est_09',
+            nome: 'DIESEL COMUM',
+            categoria: 'DIESEL',
+            quantidade: 0,
+            unitario: 0,
+            limite_alerta: 1000,
+            criadoEm: new Date().toISOString()
+        };
+        itensEstoque.push(diesel);
+        salvarEstoque(itensEstoque);
+    }
+
+    return diesel;
+}
+
+function numeroDecimal(valor) {
+    if (typeof valor === 'number') return valor;
+    return Number(String(valor || '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function formatarLitros(valor) {
+    return `${Math.round(Number(valor) || 0).toLocaleString('pt-BR')} L`;
+}
+
+function atualizarCamposTanqueDiesel(dieselQtd, capacidade) {
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    set('dieselScaleMax', Math.round(capacidade).toLocaleString('pt-BR'));
+    set('dieselScale80', Math.round(capacidade * 0.8).toLocaleString('pt-BR'));
+    set('dieselScale60', Math.round(capacidade * 0.6).toLocaleString('pt-BR'));
+    set('dieselScale40', Math.round(capacidade * 0.4).toLocaleString('pt-BR'));
+    set('dieselScale20', Math.round(capacidade * 0.2).toLocaleString('pt-BR'));
+    set('dieselCapacityText', formatarLitros(capacidade));
+
+    const inputCapacidade = document.getElementById('dieselTankCapacityInput');
+    if (inputCapacidade && document.activeElement !== inputCapacidade) inputCapacidade.value = Math.round(capacidade);
+
+    const inputNivel = document.getElementById('dieselTankLevelInput');
+    if (inputNivel && document.activeElement !== inputNivel) inputNivel.value = Math.round(dieselQtd);
+}
+
 window.renderSimuladores = function() {
     itensEstoque = obterEstoque();
     
-    // 1. Diesel Simulator (capacidade maxima de 5000 litros)
-    const diesel = itensEstoque.find(i => normalizarTipoMovimento(i.categoria) === 'DIESEL')
-        || itensEstoque.find(i => normalizarTipoMovimento(i.nome).includes('DIESEL'));
+    // 1. Diesel Simulator
+    const configTanque = obterConfigTanqueDiesel();
+    const diesel = obterItemDieselEstoque(false);
     const dieselQtd = diesel ? Number(diesel.quantidade || 0) : 0;
-    const dieselCapacity = 5000;
+    const dieselCapacity = Math.max(Number(configTanque.capacidade) || 5000, 1);
     const dieselPercent = Math.min((dieselQtd / dieselCapacity) * 100, 100);
     const dieselSpaceLeft = Math.max(dieselCapacity - dieselQtd, 0);
+    atualizarCamposTanqueDiesel(dieselQtd, dieselCapacity);
 
     const liquid = document.getElementById('dieselLiquidLevel');
     if (liquid) liquid.style.height = `${dieselPercent}%`;
@@ -645,6 +746,167 @@ window.renderSimuladores = function() {
                 </div>
             `;
         }).join('');
+    }
+};
+
+window.salvarCapacidadeTanqueDieselEstoque = function() {
+    const input = document.getElementById('dieselTankCapacityInput');
+    if (!input) return;
+
+    const capacidade = numeroDecimal(input.value);
+    if (capacidade <= 0) {
+        alert('Informe uma capacidade valida para o tanque.');
+        window.renderSimuladores();
+        return;
+    }
+
+    const diesel = obterItemDieselEstoque(false);
+    const nivelAtual = Number(diesel?.quantidade || 0);
+    if (nivelAtual > capacidade) {
+        alert(`A capacidade informada e menor que o nivel atual do tanque (${formatarLitros(nivelAtual)}). Ajuste a capacidade ou o nivel atual primeiro.`);
+        window.renderSimuladores();
+        return;
+    }
+
+    salvarConfigTanqueDiesel({ capacidade });
+    window.renderSimuladores();
+    renderResumoEstoque();
+};
+
+window.ajustarNivelTanqueDieselEstoque = async function() {
+    const input = document.getElementById('dieselTankLevelInput');
+    if (!input) return;
+
+    const novoNivel = numeroDecimal(input.value);
+    const config = obterConfigTanqueDiesel();
+    const capacidade = Number(config.capacidade) || 5000;
+
+    if (novoNivel < 0) {
+        alert('O nivel do tanque nao pode ser negativo.');
+        window.renderSimuladores();
+        return;
+    }
+
+    if (novoNivel > capacidade) {
+        alert(`O nivel informado passa da capacidade do tanque (${formatarLitros(capacidade)}).`);
+        window.renderSimuladores();
+        return;
+    }
+
+    const diesel = obterItemDieselEstoque(true);
+    const nivelAnterior = Number(diesel.quantidade || 0);
+    if (Math.round(nivelAnterior) === Math.round(novoNivel)) {
+        window.renderSimuladores();
+        return;
+    }
+
+    diesel.quantidade = novoNivel;
+    diesel.atualizadoEm = new Date().toISOString();
+    salvarEstoque(itensEstoque);
+
+    try {
+        await window.registrarMovimentacaoEstoque({
+            tipo: novoNivel >= nivelAnterior ? 'ENTRADA' : 'SAÍDA',
+            itemId: diesel.id,
+            itemNome: diesel.nome,
+            categoria: diesel.categoria,
+            quantidade: Math.abs(novoNivel - nivelAnterior),
+            unitario: Number(diesel.unitario || 0),
+            destino: 'TANQUE MESTRE DIESEL',
+            observacao: `Ajuste manual do nivel do tanque: ${formatarLitros(nivelAnterior)} para ${formatarLitros(novoNivel)}`
+        });
+    } catch (err) {
+        console.error('Erro ao registrar ajuste do tanque:', err);
+    }
+
+    agendarRenderEstoque(0);
+};
+
+window.abrirModalReabastecerTanqueEstoque = function() {
+    const diesel = obterItemDieselEstoque(true);
+    const modal = document.getElementById('modalReabastecerTanqueEstoque');
+    if (!modal) return;
+
+    const data = document.getElementById('tanqueReabData');
+    const desc = document.getElementById('tanqueReabDescricao');
+    const qtd = document.getElementById('tanqueReabQtd');
+    const unit = document.getElementById('tanqueReabUnitario');
+    const obs = document.getElementById('tanqueReabObs');
+
+    if (data) data.value = new Date().toISOString().split('T')[0];
+    if (desc) desc.value = diesel?.nome || 'DIESEL COMUM';
+    if (qtd) qtd.value = '';
+    if (unit) unit.value = window.formatCurrencyValue ? window.formatCurrencyValue(Number(diesel?.unitario || 0)) : `R$ ${Number(diesel?.unitario || 0).toFixed(2)}`;
+    if (obs) obs.value = '';
+
+    window.calcularTotalReabastecimentoTanqueEstoque();
+    modal.style.display = 'flex';
+};
+
+window.fecharModalReabastecerTanqueEstoque = function() {
+    const modal = document.getElementById('modalReabastecerTanqueEstoque');
+    if (modal) modal.style.display = 'none';
+};
+
+window.calcularTotalReabastecimentoTanqueEstoque = function() {
+    const qtd = numeroDecimal(document.getElementById('tanqueReabQtd')?.value || 0);
+    const unit = window.parseCurrencyValue
+        ? window.parseCurrencyValue(document.getElementById('tanqueReabUnitario')?.value || '')
+        : numeroDecimal(document.getElementById('tanqueReabUnitario')?.value || 0);
+    const total = qtd * unit;
+    const el = document.getElementById('tanqueReabTotal');
+    if (el) el.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
+window.salvarReabastecimentoTanqueEstoque = async function() {
+    const data = document.getElementById('tanqueReabData')?.value || new Date().toISOString().split('T')[0];
+    const descricao = (document.getElementById('tanqueReabDescricao')?.value || 'DIESEL COMUM').trim().toUpperCase();
+    const qtd = numeroDecimal(document.getElementById('tanqueReabQtd')?.value || 0);
+    const unit = window.parseCurrencyValue
+        ? window.parseCurrencyValue(document.getElementById('tanqueReabUnitario')?.value || '')
+        : numeroDecimal(document.getElementById('tanqueReabUnitario')?.value || 0);
+    const obs = (document.getElementById('tanqueReabObs')?.value || '').trim();
+    const config = obterConfigTanqueDiesel();
+    const capacidade = Number(config.capacidade) || 5000;
+
+    if (qtd <= 0 || unit < 0) {
+        alert('Informe quantidade e valor unitario corretamente.');
+        return;
+    }
+
+    const diesel = obterItemDieselEstoque(true);
+    const nivelAnterior = Number(diesel.quantidade || 0);
+    const novoNivel = nivelAnterior + qtd;
+
+    if (novoNivel > capacidade && !confirm(`Esta entrada passara da capacidade configurada do tanque (${formatarLitros(capacidade)}). Deseja continuar mesmo assim?`)) {
+        return;
+    }
+
+    diesel.nome = descricao || diesel.nome || 'DIESEL COMUM';
+    diesel.categoria = 'DIESEL';
+    diesel.quantidade = novoNivel;
+    diesel.unitario = unit;
+    diesel.atualizadoEm = new Date().toISOString();
+    salvarEstoque(itensEstoque);
+    salvarConfigTanqueDiesel({ descricaoDiesel: diesel.nome });
+
+    try {
+        await window.registrarMovimentacaoEstoque({
+            tipo: 'ENTRADA',
+            itemId: diesel.id,
+            itemNome: diesel.nome,
+            categoria: diesel.categoria,
+            quantidade: qtd,
+            unitario: unit,
+            destino: 'TANQUE MESTRE DIESEL',
+            observacao: `Reabastecimento do tanque mestre em ${data}. ${obs}`.trim()
+        });
+
+        window.fecharModalReabastecerTanqueEstoque();
+        agendarRenderEstoque(0);
+        alert('Entrada de diesel registrada no tanque mestre e nas movimentacoes do estoque.');
+    } catch (err) {
+        console.error('Erro ao salvar reabastecimento do tanque:', err);
     }
 };
 
