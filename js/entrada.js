@@ -494,6 +494,8 @@ window.entradasAtuaisLista = [];
 let entradasSelecionadas = new Set();
 let descargasSelecionadas = new Set();
 let entradasUnsubscribe = null;
+const FECHAMENTOS_SALVOS_KEY = 'orquestra_fechamentos_salvos';
+let fechamentosSalvosExtracao = [];
 
 function atualizarEstadoEdicaoEntrada() {
     const btnSalvar = formEntrada?.querySelector('button[type="submit"]');
@@ -528,6 +530,83 @@ function moverFechamentoEntradasParaTopo() {
         panel.style.marginTop = '0';
         panel.style.marginBottom = '16px';
     }
+}
+
+function injetarEstiloFechamentosEntrada() {
+    if (document.getElementById('fechamentos-entrada-style')) return;
+    const style = document.createElement('style');
+    style.id = 'fechamentos-entrada-style';
+    style.textContent = `
+        .fechamentos-salvos-lista {
+            max-height: 360px;
+            overflow-y: auto;
+            display: grid;
+            gap: 10px;
+            padding-right: 4px;
+        }
+        .fechamento-folder-card {
+            border: 1px solid rgba(234, 179, 8, 0.24);
+            background: rgba(234, 179, 8, 0.06);
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .fechamento-folder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .fechamento-folder-title {
+            margin: 0;
+            color: #facc15;
+            font-size: 0.96rem;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .fechamento-file-row {
+            display: grid;
+            grid-template-columns: minmax(170px, 1.2fr) repeat(3, minmax(100px, .7fr)) minmax(210px, auto);
+            gap: 10px;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 10px 0 0;
+            margin-top: 10px;
+        }
+        .fechamento-file-row strong {
+            color: white;
+            font-size: 0.88rem;
+        }
+        .fechamento-file-row small {
+            color: var(--text-muted);
+            display: block;
+            margin-top: 2px;
+        }
+        .fechamento-status-badge {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 74px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .fechamento-status-aberto { color: #f87171; background: rgba(239,68,68,.13); border: 1px solid rgba(239,68,68,.3); }
+        .fechamento-status-parcial { color: #facc15; background: rgba(250,204,21,.13); border: 1px solid rgba(250,204,21,.32); }
+        .fechamento-status-quitado { color: #4ade80; background: rgba(34,197,94,.13); border: 1px solid rgba(34,197,94,.32); }
+        @media (max-width: 900px) {
+            .fechamento-file-row {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 function normalizarCodigoRomaneioEntrada(valor) {
@@ -1063,6 +1142,330 @@ function atualizarPainelFechamento() {
     if (volText) volText.textContent = totalVolume.toFixed(2).replace('.', ',') + ' m³';
     if (payText) payText.textContent = totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 }
+
+function formatarMoedaEntrada(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function obterStatusFechamento(total, pago) {
+    const valorTotal = Number(total || 0);
+    const valorPago = Number(pago || 0);
+    if (valorPago <= 0) return 'ABERTO';
+    if (valorPago + 0.009 >= valorTotal) return 'QUITADO';
+    return 'PARCIAL';
+}
+
+function obterFechamentosLocais() {
+    try {
+        return JSON.parse(localStorage.getItem(FECHAMENTOS_SALVOS_KEY) || '[]');
+    } catch (_) {
+        return [];
+    }
+}
+
+function salvarFechamentosLocais(lista) {
+    fechamentosSalvosExtracao = Array.isArray(lista) ? lista : [];
+    localStorage.setItem(FECHAMENTOS_SALVOS_KEY, JSON.stringify(fechamentosSalvosExtracao));
+}
+
+async function carregarFechamentosSalvosExtracao() {
+    try {
+        if (window.FS) {
+            const nuvem = await window.FS.getCollection('fechamentos_salvos');
+            fechamentosSalvosExtracao = nuvem
+                .filter(item => item.tipo === 'EXTRACAO_EMPREITEIRO')
+                .sort((a, b) => new Date(b.criadoEm || b.dataGeracao || 0) - new Date(a.criadoEm || a.dataGeracao || 0));
+            salvarFechamentosLocais(fechamentosSalvosExtracao);
+        } else {
+            fechamentosSalvosExtracao = obterFechamentosLocais().filter(item => item.tipo === 'EXTRACAO_EMPREITEIRO');
+        }
+    } catch (err) {
+        console.warn('Fechamentos carregados apenas localmente:', err);
+        fechamentosSalvosExtracao = obterFechamentosLocais().filter(item => item.tipo === 'EXTRACAO_EMPREITEIRO');
+    }
+    renderizarFechamentosSalvosExtracao();
+}
+
+function obterSelecionadasFechamentoExtracao() {
+    return (window.entradasAtuaisLista || [])
+        .filter(en => entradasSelecionadas.has(en.id))
+        .sort((a, b) => new Date(a.data + 'T' + (a.horario || '00:00')) - new Date(b.data + 'T' + (b.horario || '00:00')));
+}
+
+function montarFechamentoExtracaoSelecionado() {
+    const selected = obterSelecionadasFechamentoExtracao();
+    if (!selected.length) {
+        alert('Selecione as cargas que farão parte do fechamento.');
+        return null;
+    }
+
+    const pessoas = [...new Set(selected.map(en => (en.empreiteiroNome || en.fornecedor || 'SEM NOME').trim().toUpperCase()))];
+    if (pessoas.length > 1) {
+        alert('Para salvar em pasta, selecione cargas de apenas um empreiteiro/fornecedor por fechamento.');
+        return null;
+    }
+
+    const totalVolume = selected.reduce((sum, en) => sum + Number(en.volume || 0), 0);
+    const totalValor = selected.reduce((sum, en) => sum + Number(en.totalEmpreiteiro || 0), 0);
+    const datas = selected.map(en => en.data).filter(Boolean).sort();
+    const usuario = getUsuarioAtualAuditoria();
+    const pessoaNome = pessoas[0] || 'SEM NOME';
+    const agora = new Date().toISOString();
+    const id = `fech_ext_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    return {
+        id,
+        tipo: 'EXTRACAO_EMPREITEIRO',
+        direcao: 'A_PAGAR',
+        modulo: 'Conferencia de Cargas',
+        pessoaTipo: selected[0]?.compraAvulsa ? 'FORNECEDOR' : 'EMPREITEIRO',
+        pessoaId: selected[0]?.empreiteiroId || null,
+        pessoaNome,
+        pastaNome: pessoaNome,
+        periodoInicio: datas[0] || '',
+        periodoFim: datas[datas.length - 1] || '',
+        dataGeracao: agora,
+        geradoPor: usuario,
+        totalRegistros: selected.length,
+        totalVolume,
+        valorTotal: totalValor,
+        valorPago: 0,
+        saldoRestante: totalValor,
+        status: obterStatusFechamento(totalValor, 0),
+        pagamentos: [],
+        resumoMateriaPrima: resumirMateriaPrimaEntradas(selected),
+        itemIds: selected.map(en => en.id),
+        itens: selected.map(en => ({
+            id: en.id,
+            data: en.data || '',
+            horario: en.horario || '',
+            romaneioNum: en.romaneioNum || '',
+            empreiteiroNome: en.empreiteiroNome || en.fornecedor || '',
+            mato: en.mato || '',
+            materiaPrima: obterMateriaPrimaEntrada(en),
+            motorista: en.motorista || '',
+            caminhao: en.caminhao || '',
+            placa: en.placa || '',
+            comp: Number(en.comp || 0),
+            larg: Number(en.larg || 0),
+            mediaAltura: Number(en.mediaAltura || 0),
+            volume: Number(en.volume || 0),
+            valorMetroEmpreiteiro: Number(en.valorMetroEmpreiteiro || 0),
+            totalEmpreiteiro: Number(en.totalEmpreiteiro || 0)
+        }))
+    };
+}
+
+window.salvarFechamentoExtracao = async function() {
+    const fechamento = montarFechamentoExtracaoSelecionado();
+    if (!fechamento) return;
+
+    const periodo = `${fechamento.periodoInicio ? new Date(fechamento.periodoInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '-'} a ${fechamento.periodoFim ? new Date(fechamento.periodoFim + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}`;
+    if (!confirm(`Salvar fechamento de ${fechamento.pessoaNome}?\nPeriodo: ${periodo}\nTotal: ${formatarMoedaEntrada(fechamento.valorTotal)}`)) return;
+
+    const lista = obterFechamentosLocais().filter(item => item.id !== fechamento.id);
+    lista.unshift(fechamento);
+    salvarFechamentosLocais(lista);
+    renderizarFechamentosSalvosExtracao();
+
+    try {
+        if (window.FS) await window.FS.setDoc('fechamentos_salvos', fechamento.id, fechamento);
+        alert('Fechamento salvo na pasta do empreiteiro/fornecedor.');
+    } catch (err) {
+        console.error('Erro ao salvar fechamento na nuvem:', err);
+        alert('Fechamento salvo localmente, mas nao foi possivel sincronizar na nuvem agora.');
+    }
+};
+
+function classeStatusFechamento(status) {
+    if (status === 'QUITADO') return 'fechamento-status-quitado';
+    if (status === 'PARCIAL') return 'fechamento-status-parcial';
+    return 'fechamento-status-aberto';
+}
+
+function renderizarFechamentosSalvosExtracao() {
+    const container = document.getElementById('listaFechamentosSalvosExtracao');
+    if (!container) return;
+
+    const busca = normalizeText(document.getElementById('buscaFechamentoExtracao')?.value || '');
+    const filtroStatus = document.getElementById('filtroFechamentoStatusExtracao')?.value || 'TODOS';
+
+    let lista = (fechamentosSalvosExtracao.length ? fechamentosSalvosExtracao : obterFechamentosLocais())
+        .filter(item => item.tipo === 'EXTRACAO_EMPREITEIRO');
+
+    if (busca) lista = lista.filter(item => normalizeText(item.pessoaNome || item.pastaNome || '').includes(busca));
+    if (filtroStatus !== 'TODOS') lista = lista.filter(item => item.status === filtroStatus);
+
+    if (!lista.length) {
+        container.innerHTML = '<div style="color:var(--text-muted); padding:14px; text-align:center;">Nenhum fechamento salvo ainda.</div>';
+        return;
+    }
+
+    const grupos = lista.reduce((acc, item) => {
+        const pasta = (item.pastaNome || item.pessoaNome || 'SEM NOME').toUpperCase();
+        if (!acc[pasta]) acc[pasta] = [];
+        acc[pasta].push(item);
+        return acc;
+    }, {});
+
+    container.innerHTML = Object.entries(grupos).sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([pasta, itens]) => {
+        const totalPasta = itens.reduce((sum, item) => sum + Number(item.valorTotal || 0), 0);
+        const saldoPasta = itens.reduce((sum, item) => sum + Number(item.saldoRestante || 0), 0);
+        const linhas = itens
+            .sort((a, b) => new Date(b.dataGeracao || b.criadoEm || 0) - new Date(a.dataGeracao || a.criadoEm || 0))
+            .map(item => {
+                const periodo = `${item.periodoInicio ? new Date(item.periodoInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '-'} a ${item.periodoFim ? new Date(item.periodoFim + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}`;
+                const status = item.status || obterStatusFechamento(item.valorTotal, item.valorPago);
+                return `
+                    <div class="fechamento-file-row">
+                        <div>
+                            <strong>${periodo}</strong>
+                            <small>${item.totalRegistros || 0} carga(s) / ${(Number(item.totalVolume || 0)).toFixed(2).replace('.', ',')} m3</small>
+                        </div>
+                        <div><small>Total</small><strong>${formatarMoedaEntrada(item.valorTotal)}</strong></div>
+                        <div><small>Pago</small><strong style="color:#4ade80;">${formatarMoedaEntrada(item.valorPago)}</strong></div>
+                        <div><small>Saldo</small><strong style="color:${Number(item.saldoRestante || 0) > 0 ? '#f87171' : '#4ade80'};">${formatarMoedaEntrada(item.saldoRestante)}</strong></div>
+                        <div style="display:flex; justify-content:flex-end; align-items:center; gap:7px; flex-wrap:wrap;">
+                            <span class="fechamento-status-badge ${classeStatusFechamento(status)}">${status}</span>
+                            <button type="button" class="btn-icon" onclick="window.visualizarFechamentoExtracao('${item.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                            <button type="button" class="btn-icon" onclick="window.registrarPagamentoFechamentoExtracao('${item.id}')" title="Registrar pagamento" style="color:#22c55e;"><i class="fa-solid fa-money-bill-transfer"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        return `
+            <div class="fechamento-folder-card">
+                <div class="fechamento-folder-header">
+                    <h4 class="fechamento-folder-title"><i class="fa-solid fa-folder"></i> ${pasta}</h4>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; color:var(--text-muted); font-size:.8rem; font-weight:800;">
+                        <span>${itens.length} fechamento(s)</span>
+                        <span>Total: ${formatarMoedaEntrada(totalPasta)}</span>
+                        <span>Saldo: ${formatarMoedaEntrada(saldoPasta)}</span>
+                    </div>
+                </div>
+                ${linhas}
+            </div>
+        `;
+    }).join('');
+}
+
+window.registrarPagamentoFechamentoExtracao = async function(id) {
+    const lista = obterFechamentosLocais();
+    const fechamento = (fechamentosSalvosExtracao.length ? fechamentosSalvosExtracao : lista).find(item => item.id === id);
+    if (!fechamento) return alert('Fechamento nao encontrado.');
+
+    const valorTexto = prompt(`Valor pago/recebido para ${fechamento.pessoaNome}:\nSaldo atual: ${formatarMoedaEntrada(fechamento.saldoRestante)}`);
+    if (!valorTexto) return;
+    const valor = window.parseCurrencyValue ? window.parseCurrencyValue(valorTexto) : Number(String(valorTexto).replace(/\./g, '').replace(',', '.'));
+    if (!valor || valor <= 0) return alert('Informe um valor valido.');
+
+    const forma = (prompt('Forma de pagamento: Pix, dinheiro, boleto, transferencia, cheque ou outro', 'PIX') || 'PIX').toUpperCase();
+    const obs = prompt('Observacao do pagamento (opcional):', '') || '';
+    const usuario = getUsuarioAtualAuditoria();
+    const pagamentos = Array.isArray(fechamento.pagamentos) ? [...fechamento.pagamentos] : [];
+    pagamentos.push({
+        id: `pag_${Date.now()}`,
+        data: new Date().toISOString().split('T')[0],
+        dataHora: new Date().toISOString(),
+        valor,
+        forma,
+        observacao: obs,
+        registradoPor: usuario
+    });
+
+    const valorPago = pagamentos.reduce((sum, item) => sum + Number(item.valor || 0), 0);
+    const atualizado = {
+        ...fechamento,
+        pagamentos,
+        valorPago,
+        saldoRestante: Number(fechamento.valorTotal || 0) - valorPago,
+        status: obterStatusFechamento(fechamento.valorTotal, valorPago),
+        atualizadoEm: new Date().toISOString(),
+        atualizadoPor: usuario
+    };
+
+    const locais = lista.filter(item => item.id !== id);
+    locais.unshift(atualizado);
+    salvarFechamentosLocais(locais);
+    fechamentosSalvosExtracao = fechamentosSalvosExtracao.filter(item => item.id !== id);
+    fechamentosSalvosExtracao.unshift(atualizado);
+    renderizarFechamentosSalvosExtracao();
+
+    try {
+        if (window.FS) await window.FS.setDoc('fechamentos_salvos', id, atualizado);
+        alert('Pagamento registrado no fechamento.');
+    } catch (err) {
+        console.error('Erro ao sincronizar pagamento do fechamento:', err);
+        alert('Pagamento registrado localmente, mas nao foi possivel sincronizar na nuvem agora.');
+    }
+};
+
+window.visualizarFechamentoExtracao = function(id) {
+    const fechamento = (fechamentosSalvosExtracao.length ? fechamentosSalvosExtracao : obterFechamentosLocais()).find(item => item.id === id);
+    if (!fechamento) return alert('Fechamento nao encontrado.');
+
+    const periodo = `${fechamento.periodoInicio ? new Date(fechamento.periodoInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '-'} a ${fechamento.periodoFim ? new Date(fechamento.periodoFim + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}`;
+    const rows = (fechamento.itens || []).map((en, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${en.data ? new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'} ${en.horario || ''}</td>
+            <td>${en.romaneioNum || '-'}</td>
+            <td>${en.mato || '-'}</td>
+            <td>${en.materiaPrima || '-'}</td>
+            <td>${en.placa || '-'}</td>
+            <td style="text-align:right;">${Number(en.volume || 0).toFixed(2).replace('.', ',')} m3</td>
+            <td style="text-align:right;">${formatarMoedaEntrada(en.valorMetroEmpreiteiro)}</td>
+            <td style="text-align:right;">${formatarMoedaEntrada(en.totalEmpreiteiro)}</td>
+        </tr>
+    `).join('');
+    const pagamentos = (fechamento.pagamentos || []).map(p => `
+        <tr>
+            <td>${p.data ? new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+            <td>${p.forma || '-'}</td>
+            <td>${p.observacao || '-'}</td>
+            <td style="text-align:right;">${formatarMoedaEntrada(p.valor)}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="4">Nenhum pagamento registrado.</td></tr>';
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html>
+        <head>
+            <title>Fechamento - ${fechamento.pessoaNome}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 28px; color:#222; font-size:12px; }
+                h1 { margin:0; font-size:20px; text-transform:uppercase; }
+                .muted { color:#666; margin:4px 0 16px; }
+                .summary { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin:16px 0; }
+                .box { border:1px solid #bbb; padding:10px; border-radius:6px; text-align:center; }
+                .box strong { display:block; font-size:16px; margin-top:4px; }
+                table { width:100%; border-collapse:collapse; margin-top:12px; }
+                th, td { border:1px solid #ccc; padding:7px; }
+                th { background:#eee; text-align:left; }
+                .paid { color:#15803d; font-weight:bold; }
+                .saldo { color:#b91c1c; font-weight:bold; }
+            </style>
+        </head>
+        <body>
+            <h1>Fechamento de Extracao</h1>
+            <div class="muted">Pasta: <strong>${fechamento.pessoaNome}</strong> | Periodo: <strong>${periodo}</strong> | Status: <strong>${fechamento.status}</strong></div>
+            <div class="summary">
+                <div class="box">Cargas<strong>${fechamento.totalRegistros || 0}</strong></div>
+                <div class="box">Volume<strong>${Number(fechamento.totalVolume || 0).toFixed(2).replace('.', ',')} m3</strong></div>
+                <div class="box">Total<strong>${formatarMoedaEntrada(fechamento.valorTotal)}</strong></div>
+                <div class="box">Saldo<strong>${formatarMoedaEntrada(fechamento.saldoRestante)}</strong></div>
+            </div>
+            <p><strong>Materia-prima:</strong> ${fechamento.resumoMateriaPrima || '-'}</p>
+            <table><thead><tr><th>N.</th><th>Data</th><th>Romaneio</th><th>Mato</th><th>Materia-prima</th><th>Placa</th><th>Volume</th><th>R$/m3</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+            <h2>Pagamentos</h2>
+            <table><thead><tr><th>Data</th><th>Forma</th><th>Observacao</th><th>Valor</th></tr></thead><tbody>${pagamentos}</tbody></table>
+            <script>window.onload = function(){ window.print(); }</script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+};
 
 window.gerarRelatorioConsolidado = function() {
     const selected = window.entradasAtuaisLista.filter(en => entradasSelecionadas.has(en.id));
@@ -1681,7 +2084,9 @@ function inicializarModuloEntrada() {
     entHorario = document.getElementById('entHorario');
     configurarSubmitEntrada();
     moverFechamentoEntradasParaTopo();
+    injetarEstiloFechamentosEntrada();
     atualizarEstadoEdicaoEntrada();
+    carregarFechamentosSalvosExtracao();
 
     const btnCancelarEdicaoEntrada = document.getElementById('btnCancelarEdicaoEntrada');
     if (btnCancelarEdicaoEntrada) {
@@ -1811,6 +2216,18 @@ function inicializarModuloEntrada() {
     if (btnGerarConsolidado) {
         btnGerarConsolidado.addEventListener('click', window.gerarRelatorioConsolidado);
     }
+    const btnSalvarFechamentoExtracao = document.getElementById('btnSalvarFechamentoExtracao');
+    if (btnSalvarFechamentoExtracao) {
+        btnSalvarFechamentoExtracao.addEventListener('click', window.salvarFechamentoExtracao);
+    }
+    const btnAtualizarFechamentosExtracao = document.getElementById('btnAtualizarFechamentosExtracao');
+    if (btnAtualizarFechamentosExtracao) {
+        btnAtualizarFechamentosExtracao.addEventListener('click', carregarFechamentosSalvosExtracao);
+    }
+    const buscaFechamentoExtracao = document.getElementById('buscaFechamentoExtracao');
+    if (buscaFechamentoExtracao) buscaFechamentoExtracao.addEventListener('input', renderizarFechamentosSalvosExtracao);
+    const filtroFechamentoStatusExtracao = document.getElementById('filtroFechamentoStatusExtracao');
+    if (filtroFechamentoStatusExtracao) filtroFechamentoStatusExtracao.addEventListener('change', renderizarFechamentosSalvosExtracao);
 
     // Filtros de Empreiteiros
     const filtroEmpreiteirosBusca = document.getElementById('filtroEmpreiteirosBusca');
@@ -1898,4 +2315,3 @@ window.SectionLoader?.register('view-entrada', () => Promise.all([
     carregarEmpreiteiros(),
     carregarEntradas()
 ]));
-

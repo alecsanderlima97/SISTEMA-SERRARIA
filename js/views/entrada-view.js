@@ -317,9 +317,32 @@
                                         <div id="fechamentoValorTotal" style="font-size: 1.4rem; font-weight: bold; color: #3498db; margin-top: 5px;">R\$ 0,00</div>
                                     </div>
                                 </div>
-                                <button type="button" id="btnGerarRelatorioConsolidado" class="btn-primary" style="width: 100%; margin-top: 15px; background: var(--accent-color); color: #000; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                    <i class="fa-solid fa-file-lines"></i> Gerar Relatório de Fechamento
-                                </button>
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 15px;">
+                                    <button type="button" id="btnGerarRelatorioConsolidado" class="btn-primary" style="width: 100%; background: var(--accent-color); color: #000; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="fa-solid fa-file-lines"></i> Gerar Relatório de Fechamento
+                                    </button>
+                                    <button type="button" id="btnSalvarFechamentoExtracao" class="btn-primary" style="width: 100%; background: #16a34a; color: white; font-weight: bold; padding: 12px; font-size: 0.95rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="fa-solid fa-folder-plus"></i> Salvar Fechamento
+                                    </button>
+                                </div>
+                                <div id="panelFechamentosSalvosExtracao" style="margin-top: 18px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                        <h3 style="margin:0; color:#eab308; font-size:0.98rem;"><i class="fa-solid fa-folder-tree"></i> Pastas de Fechamentos Salvos</h3>
+                                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                            <select id="filtroFechamentoStatusExtracao" style="height:34px; border-radius:7px; background:#111827; color:white; border:1px solid var(--panel-border); padding:0 9px;">
+                                                <option value="TODOS">Todos</option>
+                                                <option value="ABERTO">Aberto</option>
+                                                <option value="PARCIAL">Parcial</option>
+                                                <option value="QUITADO">Quitado</option>
+                                            </select>
+                                            <input type="text" id="buscaFechamentoExtracao" placeholder="Buscar pasta..." style="height:34px; width:170px; border-radius:7px; padding:0 10px;">
+                                            <button type="button" id="btnAtualizarFechamentosExtracao" class="btn-secondary" style="height:34px; padding:0 12px;"><i class="fa-solid fa-rotate"></i></button>
+                                        </div>
+                                    </div>
+                                    <div id="listaFechamentosSalvosExtracao" class="fechamentos-salvos-lista">
+                                        <div style="color:var(--text-muted); padding:14px; text-align:center;">Nenhum fechamento salvo ainda.</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

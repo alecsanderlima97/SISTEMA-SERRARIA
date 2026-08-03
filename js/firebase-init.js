@@ -72,6 +72,7 @@ const CLOUD_SNAPSHOT_COLLECTIONS = [
     'frota_relatos',
     'financeiro_lancamentos',
     'financeiro_relatorios_mensais',
+    'fechamentos_salvos',
     'patio_relatorios',
     'agenda',
     'auditoria_logs',
