@@ -510,17 +510,45 @@ function atualizarEstadoEdicaoEntrada() {
 
 window.cancelarEdicaoEntrada = function() {
     entradaEditandoId = null;
-    formEntrada?.reset();
-    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+    resetarFormularioEntradaCompleto();
+};
+
+function aplicarDataHoraAtualEntrada() {
     if (entData) entData.valueAsDate = new Date();
     if (entHorario) {
         const now = new Date();
         entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
+}
+
+function resetarMedidasEntrada() {
+    if (entComp) entComp.value = '';
+    if (entLarg) entLarg.value = '';
+    inputsAlt.forEach(input => {
+        if (input) input.value = '';
+    });
+}
+
+function resetarFormularioEntradaCompleto() {
+    formEntrada?.reset();
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+    aplicarDataHoraAtualEntrada();
     atualizarOrigemToraEntrada();
     atualizarEstadoEdicaoEntrada();
     calcularVolumeAtual();
-};
+}
+
+function prepararNovaEntradaMesmoEmpreiteiro() {
+    if (entRomaneio) entRomaneio.value = '';
+    aplicarDataHoraAtualEntrada();
+    resetarMedidasEntrada();
+    const observacao = document.getElementById('entObservacaoCarga');
+    if (observacao) observacao.value = '';
+    atualizarOrigemToraEntrada();
+    atualizarEstadoEdicaoEntrada();
+    calcularVolumeAtual();
+    entRomaneio?.focus();
+}
 
 function moverFechamentoEntradasParaTopo() {
     const panel = document.getElementById('panelRelatorioConsolidado');
@@ -1692,6 +1720,7 @@ function configurarSubmitEntrada() {
         
         const submitBtn = formEntrada.querySelector('button[type="submit"]');
         const textoOriginal = submitBtn.innerHTML;
+        const estavaEditandoEntrada = !!entradaEditandoId;
         submitBtn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
         submitBtn.disabled = true;
 
@@ -1715,14 +1744,11 @@ function configurarSubmitEntrada() {
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) registrada com sucesso!\n${labelMensagem}: ${valorMensagem}`);
             }
             
-            formEntrada.reset();
-            if(entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
-            if(entData) entData.valueAsDate = new Date();
-            if(entHorario) {
-                const now = new Date();
-                entHorario.value = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            if (!estavaEditandoEntrada && confirm('Deseja continuar lançando com os mesmos dados deste empreiteiro?')) {
+                prepararNovaEntradaMesmoEmpreiteiro();
+            } else {
+                resetarFormularioEntradaCompleto();
             }
-            calcularVolumeAtual();
             carregarEntradas();
         } catch (error) {
             console.error(error);
