@@ -3,6 +3,8 @@
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
 const FINANCEIRO_AI_USAGE_KEY = 'orquestra_financeiro_ai_usage';
+const FINANCEIRO_DB_NAME = 'orquestra_financeiro_arquivos';
+const FINANCEIRO_DB_STORE = 'anexos';
 const FINANCEIRO_COLLECTION = 'financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_COLLECTION = 'financeiro_relatorios_mensais';
 
@@ -93,8 +95,19 @@ function obterLancamentosFinanceiros() {
     return JSON.parse(localStorage.getItem(FINANCEIRO_KEY) || '[]');
 }
 
+function limparDadosPesadosFinanceiro(item) {
+    if (!item) return item;
+    return {
+        ...item,
+        documentosVinculados: normalizarDocumentosVinculadosFinanceiro(item).map(removerDadosPesadosDocumentoVinculadoFinanceiro),
+        documento: removerDadosPesadosAnexoFinanceiro(item.documento),
+        comprovante: removerDadosPesadosAnexoFinanceiro(item.comprovante)
+    };
+}
+
 function salvarLancamentosFinanceiros(lista) {
-    localStorage.setItem(FINANCEIRO_KEY, JSON.stringify(lista || []));
+    const leves = (lista || []).map(limparDadosPesadosFinanceiro);
+    localStorage.setItem(FINANCEIRO_KEY, JSON.stringify(leves));
 }
 
 function removerDadosPesadosAnexoFinanceiro(anexo) {
@@ -102,7 +115,7 @@ function removerDadosPesadosAnexoFinanceiro(anexo) {
     const { dados, ...leve } = anexo;
     return {
         ...leve,
-        possuiArquivoLocal: Boolean(anexo.localPath || anexo.localUrl || dados),
+        possuiArquivoLocal: Boolean(anexo.localPath || anexo.localUrl || anexo.arquivoId || dados),
         tamanhoLocalEstimado: typeof dados === 'string' ? dados.length : (anexo.tamanho || null)
     };
 }
@@ -177,12 +190,98 @@ function removerDadosPesadosDocumentoVinculadoFinanceiro(doc) {
 
 function prepararFinanceiroParaNuvem(item) {
     if (!item) return item;
+    return limparDadosPesadosFinanceiro(item);
+}
+
+function abrirDbArquivosFinanceiro() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            reject(new Error('IndexedDB nao disponivel neste navegador.'));
+            return;
+        }
+        const request = indexedDB.open(FINANCEIRO_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(FINANCEIRO_DB_STORE)) {
+                db.createObjectStore(FINANCEIRO_DB_STORE, { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Falha ao abrir armazenamento local.'));
+    });
+}
+
+async function salvarArquivoFinanceiroLocal(anexo) {
+    if (!anexo?.dados) return anexo || null;
+    const arquivoId = anexo.arquivoId || `fin_file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+        const db = await abrirDbArquivosFinanceiro();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(FINANCEIRO_DB_STORE, 'readwrite');
+            tx.objectStore(FINANCEIRO_DB_STORE).put({
+                id: arquivoId,
+                nome: anexo.nome || 'documento',
+                tipo: anexo.tipo || 'application/octet-stream',
+                dados: anexo.dados,
+                salvoEm: new Date().toISOString()
+            });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error || new Error('Falha ao salvar arquivo local.'));
+        });
+        db.close();
+    } catch (error) {
+        console.warn('Arquivo financeiro nao foi salvo no armazenamento local. O lancamento sera salvo sem o PDF pesado.', error);
+    }
     return {
-        ...item,
-        documentosVinculados: normalizarDocumentosVinculadosFinanceiro(item).map(removerDadosPesadosDocumentoVinculadoFinanceiro),
-        documento: removerDadosPesadosAnexoFinanceiro(item.documento),
-        comprovante: removerDadosPesadosAnexoFinanceiro(item.comprovante)
+        ...anexo,
+        arquivoId,
+        storage: 'INDEXED_DB',
+        possuiArquivoLocal: true
     };
+}
+
+async function obterArquivoFinanceiroLocal(arquivoId) {
+    if (!arquivoId) return null;
+    const db = await abrirDbArquivosFinanceiro();
+    const arquivo = await new Promise((resolve, reject) => {
+        const tx = db.transaction(FINANCEIRO_DB_STORE, 'readonly');
+        const req = tx.objectStore(FINANCEIRO_DB_STORE).get(arquivoId);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('Falha ao ler arquivo local.'));
+    });
+    db.close();
+    return arquivo;
+}
+
+async function hidratarAnexoFinanceiro(anexo) {
+    if (!anexo) return null;
+    if (anexo.dados) return anexo;
+    const arquivo = await obterArquivoFinanceiroLocal(anexo.arquivoId);
+    return arquivo?.dados ? { ...anexo, dados: arquivo.dados, tipo: anexo.tipo || arquivo.tipo, nome: anexo.nome || arquivo.nome } : anexo;
+}
+
+async function migrarArquivosFinanceirosLocal() {
+    const lista = obterLancamentosFinanceiros();
+    let alterou = false;
+    for (const item of lista) {
+        if (item.documento?.dados) {
+            item.documento = await salvarArquivoFinanceiroLocal(item.documento);
+            alterou = true;
+        }
+        if (item.comprovante?.dados) {
+            item.comprovante = await salvarArquivoFinanceiroLocal(item.comprovante);
+            alterou = true;
+        }
+        if (Array.isArray(item.documentosVinculados)) {
+            for (let i = 0; i < item.documentosVinculados.length; i++) {
+                if (item.documentosVinculados[i]?.dados) {
+                    item.documentosVinculados[i] = await salvarArquivoFinanceiroLocal(item.documentosVinculados[i]);
+                    alterou = true;
+                }
+            }
+        }
+    }
+    if (alterou) salvarLancamentosFinanceiros(lista);
 }
 
 async function carregarFinanceiroNuvem() {
@@ -957,7 +1056,7 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
     };
 }
 window.lerDocumentoFinanceiroAutomaticamente = async function() {
-    const anexo = financeiroAnexosTemp.documento;
+    const anexo = await hidratarAnexoFinanceiro(financeiroAnexosTemp.documento);
     if (!anexo?.dados) {
         alert('Selecione primeiro um documento PDF, XML ou imagem.');
         return;
@@ -1152,9 +1251,10 @@ window.importarPastaFinanceira = async function(files) {
                 tipo: file.type || (file.name.toLowerCase().endsWith('.xml') ? 'application/xml' : 'application/octet-stream'),
                 dados: await lerArquivoComoDataUrl(file)
             };
+            const anexoLocal = await salvarArquivoFinanceiroLocal(anexo);
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexo, {});
-            const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexo, categoriaDocumento, 'importacao_pasta');
+            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoLocal, {});
+            const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexoLocal, categoriaDocumento, 'importacao_pasta');
             const registro = {
                 id,
                 aba: 'caixa-financeira',
@@ -1462,7 +1562,7 @@ window.analisarFinanceiroDocumento = async function(id) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
     if (!item) return;
-    const anexo = item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante');
+    const anexo = await hidratarAnexoFinanceiro(item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante'));
     if (!anexo?.dados) {
         alert('Este documento nao possui arquivo local carregado para leitura. Abra/anexe o PDF novamente para analisar.');
         return;
@@ -1566,12 +1666,12 @@ window.excluirFinanceiro = async function(id) {
     renderFinanceiro();
 };
 
-window.abrirAnexoFinanceiro = function(id, tipo, docId = '') {
+window.abrirAnexoFinanceiro = async function(id, tipo, docId = '') {
     const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
     const anexo = tipo === 'vinculado'
         ? normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.id === docId)
         : item?.[tipo];
-    abrirAnexoFinanceiroDireto(anexo);
+    abrirAnexoFinanceiroDireto(await hidratarAnexoFinanceiro(anexo));
 };
 
 window.abrirRelatorioFinanceiro = function() {
@@ -1702,11 +1802,13 @@ async function salvarFinanceiroSubmit(event) {
     const categoriaDocumento = categoriaSelecionada === 'AUTO'
         ? detectarCategoriaDocumentoFinanceiro(financeiroAnexosTemp.documento, { tipo, descricao })
         : categoriaSelecionada;
+    const documentoTemp = financeiroAnexosTemp.documento ? await salvarArquivoFinanceiroLocal(financeiroAnexosTemp.documento) : null;
+    const comprovanteTemp = financeiroAnexosTemp.comprovante ? await salvarArquivoFinanceiroLocal(financeiroAnexosTemp.comprovante) : null;
     const novoDocumento = financeiroAnexosTemp.documento
-        ? criarDocumentoVinculadoFinanceiro(financeiroAnexosTemp.documento, categoriaDocumento, 'formulario')
+        ? criarDocumentoVinculadoFinanceiro(documentoTemp, categoriaDocumento, 'formulario')
         : null;
     const novoComprovante = financeiroAnexosTemp.comprovante
-        ? criarDocumentoVinculadoFinanceiro(financeiroAnexosTemp.comprovante, 'comprovante', 'formulario')
+        ? criarDocumentoVinculadoFinanceiro(comprovanteTemp, 'comprovante', 'formulario')
         : null;
     const documentosVinculados = combinarDocumentosFinanceiro(normalizarDocumentosVinculadosFinanceiro(existente || {}), [novoDocumento, novoComprovante]);
     const documentoPrincipal = novoDocumento || documentosVinculados.find(doc => doc.categoria !== 'comprovante') || null;
@@ -1955,7 +2057,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('financeiroPastaInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroFilaInput')?.addEventListener('change', event => window.importarFilaMonitorFinanceiro(event.target.files));
     window.limparFinanceiroForm();
-    renderFinanceiro();
+    migrarArquivosFinanceirosLocal()
+        .catch(error => console.warn('Nao foi possivel migrar anexos financeiros locais.', error))
+        .finally(renderFinanceiro);
 });
 
 window.SectionLoader?.register('view-financeiro', carregarFinanceiroNuvem);
