@@ -56,7 +56,9 @@ module.exports = async function handler(req, res) {
                 'Nao invente valores. Se nao encontrar, use vazio ou 0 e marque confianca baixa.',
                 'Datas devem estar em ISO yyyy-mm-dd. Valores em numero decimal.',
                 'Classifique tipo como BOLETO, IMPOSTO, NOTA FISCAL, CONTA, COMPROVANTE ou DOCUMENTO.',
-                'Para nota fiscal, extraia fornecedor, cnpj, numeroDocumento, valorTotal e produtos quando existirem.'
+                'Para boleto, o valor principal deve vir de (=) VALOR DO DOCUMENTO, VALOR COBRADO, VALOR A PAGAR ou da linha digitavel; nao use juros, multa, mora, desconto, abatimento ou quantidade como valor.',
+                'Para boleto, fornecedor deve ser o BENEFICIARIO/CEDENTE, nunca o PAGADOR.',
+                'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, valorTotal e produtos quando existirem.'
             ].join(' '),
             input: [{
                 role: 'user',

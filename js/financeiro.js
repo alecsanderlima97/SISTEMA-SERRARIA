@@ -496,7 +496,21 @@ async function extrairTextoPdfFinanceiro(anexo) {
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const content = await page.getTextContent();
-        paginas.push(content.items.map(item => item.str || '').join(' '));
+        const linhas = new Map();
+        content.items
+            .filter(item => String(item.str || '').trim())
+            .forEach(item => {
+                const x = Number(item.transform?.[4] || 0);
+                const y = Math.round(Number(item.transform?.[5] || 0) / 3) * 3;
+                const chave = String(y);
+                if (!linhas.has(chave)) linhas.set(chave, []);
+                linhas.get(chave).push({ x, texto: String(item.str || '').trim() });
+            });
+        const textoPagina = Array.from(linhas.entries())
+            .sort((a, b) => Number(b[0]) - Number(a[0]))
+            .map(([, itens]) => itens.sort((a, b) => a.x - b.x).map(item => item.texto).join(' '))
+            .join('\n');
+        paginas.push(textoPagina);
     }
     return paginas.join('\n').trim();
 }
@@ -716,11 +730,48 @@ function extrairVencimentoBoletoFinanceiro(texto) {
     return aposPagavel || todas[todas.length - 1] || '';
 }
 
+function linhasFinanceiro(texto) {
+    return String(texto || '').split(/\r?\n/).map(linha => linha.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+function parseMoedaFinanceiro(valor) {
+    return parseMoeda(String(valor || '').replace(/\s+/g, ''));
+}
+
+function dinheiroRegexFinanceiro() {
+    return /(?:R\$\s*)?([0-9]{1,3}(?:[.\s][0-9]{3})*,[0-9]{2}|[0-9]+,[0-9]{2})/g;
+}
+
+function extrairValoresMonetariosLinhaFinanceiro(linha) {
+    return Array.from(String(linha || '').matchAll(dinheiroRegexFinanceiro()))
+        .map(match => parseMoedaFinanceiro(match[1]))
+        .filter(valor => Number.isFinite(valor) && valor > 0);
+}
+
+function linhaEhValorNegativoBoletoFinanceiro(linha) {
+    return /\(-\)|DESCONTO|ABATIMENTO|DEDU[CÇ][AÃ]O|DEDUCAO|MORA|MULTA|JUROS|ACR[EÉ]SCIMO|ACRESCIMO|OUTRAS/i.test(linha);
+}
+
 function extrairValorLinhaDigitavelFinanceiro(texto) {
-    const numeros = String(texto || '').replace(/\D/g, '');
-    const match = numeros.match(/748\d{41}/) || numeros.match(/\d{47}/);
-    if (!match) return 0;
-    return Number(match[0].slice(-10)) / 100;
+    const candidatos = [];
+    const coletar = trecho => {
+        const limpo = String(trecho || '').replace(/\D/g, '');
+        if (limpo.length === 47 && /^\d{3}/.test(limpo)) {
+            const valor = Number(limpo.slice(-10)) / 100;
+            if (valor > 0) candidatos.push(valor);
+        }
+        if (limpo.length === 44 && /^\d{3}/.test(limpo)) {
+            const valor = Number(limpo.slice(9, 19)) / 100;
+            if (valor > 0) candidatos.push(valor);
+        }
+    };
+    for (const linha of linhasFinanceiro(texto)) {
+        Array.from(linha.matchAll(/(?:\d[\s.-]*){44,47}/g)).forEach(match => coletar(match[0]));
+    }
+    if (!candidatos.length) {
+        Array.from(String(texto || '').matchAll(/(?:\d[\s.-]*){44,47}/g)).forEach(match => coletar(match[0]));
+    }
+    return candidatos[0] || 0;
 }
 
 function extrairVencimentoBoletoRobustoFinanceiro(texto) {
@@ -733,23 +784,78 @@ function extrairVencimentoBoletoRobustoFinanceiro(texto) {
 
 function extrairValorBoletoRobustoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
-    const porRotulo = limpo.match(/VALOR\s+DO\s+DOCUMENTO[\s\S]{0,80}?([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/i)?.[1]
-        || limpo.match(/\(=\)\s*VALOR\s+DO\s+DOCUMENTO[\s\S]{0,80}?([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/i)?.[1];
-    if (porRotulo) return parseMoeda(porRotulo);
-
-    const candidatos = Array.from(String(texto || '').matchAll(/(?:\b\d[\d.\s-]{45,90}\d\b)/g))
-        .map(match => match[0].replace(/\D/g, ''))
-        .filter(num => num.length >= 47);
-    const linha = candidatos.find(num => num.startsWith('748')) || candidatos.find(num => num.length >= 47);
-    if (!linha) return extrairValorLinhaDigitavelFinanceiro(texto);
-    const codigo = linha.startsWith('748') ? linha.slice(0, 47) : linha.slice(-47);
-    const valor = Number(codigo.slice(-10)) / 100;
-    return Number.isFinite(valor) ? valor : 0;
+    const candidatos = [];
+    linhasFinanceiro(texto).forEach((linha, index, linhas) => {
+        if (!/(VALOR\s+DO\s+DOCUMENTO|VALOR\s+COBRADO|VALOR\s+A\s+PAGAR|TOTAL\s+A\s+PAGAR|VALOR\s+A\s+RECOLHER|TOTAL\s+DA\s+GUIA)/i.test(linha)) return;
+        if (linhaEhValorNegativoBoletoFinanceiro(linha)) return;
+        const janela = [linha, linhas[index + 1] || '', linhas[index + 2] || ''].join(' ');
+        const valores = extrairValoresMonetariosLinhaFinanceiro(janela);
+        if (valores.length) candidatos.push({ valor: valores[valores.length - 1], score: 100 });
+    });
+    const rotulos = [
+        /\(=\)\s*VALOR\s+DO\s+DOCUMENTO[\s\S]{0,180}/ig,
+        /VALOR\s+DO\s+DOCUMENTO[\s\S]{0,180}/ig,
+        /\(=\)\s*VALOR\s+COBRADO[\s\S]{0,180}/ig,
+        /VALOR\s+A\s+PAGAR[\s\S]{0,180}/ig,
+        /TOTAL\s+A\s+PAGAR[\s\S]{0,180}/ig,
+        /VALOR\s+A\s+RECOLHER[\s\S]{0,180}/ig,
+        /TOTAL\s+DA\s+GUIA[\s\S]{0,180}/ig
+    ];
+    rotulos.forEach(regex => {
+        Array.from(limpo.matchAll(regex)).forEach(match => {
+            const trecho = match[0];
+            if (linhaEhValorNegativoBoletoFinanceiro(trecho)) return;
+            const valores = extrairValoresMonetariosLinhaFinanceiro(trecho);
+            if (valores.length) candidatos.push({ valor: valores[valores.length - 1], score: 90 });
+        });
+    });
+    const valorLinha = extrairValorLinhaDigitavelFinanceiro(texto);
+    if (valorLinha > 0) candidatos.push({ valor: valorLinha, score: 95 });
+    candidatos.sort((a, b) => b.score - a.score);
+    return candidatos[0]?.valor || 0;
 }
 
 function descricaoFinanceiraRuim(descricao) {
     return !descricao
         || /PENDENTE|DOCUMENTO|IMPORTADO|EM CASO DE D[ÚU]VIDAS|CONTATE SEU GERENTE|CENTRAL NO|INSTRU[CÇ][OÕ]ES|AP[ÓO]S O VENCIMENTO/i.test(descricao);
+}
+
+function extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo) {
+    if (!/DANFE|NOTA FISCAL|NF-E|NFE|NFS-E|NFSE/.test(textoBusca)) return null;
+    const linhas = linhasFinanceiro(texto);
+    const emissao = limpo.match(/(?:EMISS[AÃ]O|DATA\s+DE\s+EMISS[AÃ]O|DATA\s+DO\s+DOCUMENTO)[^\d]{0,40}(\d{2}[\/.-]\d{2}[\/.-]\d{4})/i)?.[1]
+        || limpo.match(/\b(\d{2}[\/.-]\d{2}[\/.-]\d{4})\b/)?.[1];
+    const numero = limpo.match(/(?:N[ºO]\.?\s*|NUMERO\s+)(?:DA\s+NOTA\s+)?(?:NF-?E\s*)?(\d{3,12})/i)?.[1]
+        || limpo.match(/NF-?E\s*(\d{3,12})/i)?.[1]
+        || '';
+    const fornecedor = limparDescricaoDocumentoFinanceiro(
+        extrairLinhaAposRotuloFinanceiro(texto, /^(IDENTIFICA[CÇ][AÃ]O\s+DO\s+EMITENTE|EMITENTE|NOME\s*\/\s*RAZ[AÃ]O\s+SOCIAL)\b[:\s-]*/i)
+        || linhas.find(linha => /LTDA|EIRELI|S\/A|ME\b|COMERCIO|INDUSTRIA|SERVICOS|SERVI[CÇ]OS/i.test(linha) && !/VANMART|MADEIRAS VANMART|COMERCIO DE MADEIRAS VANMART/i.test(linha))
+        || primeiraLinhaUtilFinanceiro(texto)
+    );
+    const valorNota = (() => {
+        const rotulos = [
+            /VALOR\s+TOTAL\s+DA\s+NOTA[\s\S]{0,160}/ig,
+            /VALOR\s+TOTAL\s+DOS\s+PRODUTOS[\s\S]{0,160}/ig,
+            /VALOR\s+TOTAL\s+NF[\s\S]{0,160}/ig,
+            /TOTAL\s+DA\s+NOTA[\s\S]{0,160}/ig
+        ];
+        for (const regex of rotulos) {
+            const match = Array.from(limpo.matchAll(regex))[0];
+            const valores = match ? extrairValoresMonetariosLinhaFinanceiro(match[0]) : [];
+            if (valores.length) return valores[valores.length - 1];
+        }
+        return 0;
+    })();
+    return {
+        tipo: 'NOTA FISCAL',
+        descricao: fornecedor || 'NOTA FISCAL IMPORTADA',
+        fornecedor,
+        numeroDocumento: numero,
+        vencimento: emissao ? emissao.split(/[\/.-]/).reverse().join('-') : '',
+        valor: valorNota || 0,
+        precisaConferencia: !valorNota || descricaoFinanceiraRuim(fornecedor)
+    };
 }
 
 function extrairDadosTextoFinanceiro(texto) {
@@ -774,6 +880,8 @@ function extrairDadosTextoFinanceiro(texto) {
             precisaConferencia: true
         };
     }
+    const dadosNota = extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo);
+    if (dadosNota) return dadosNota;
     const isBoleto = /boleto|nosso n[uÃƒÂº]mero|ficha de compensa|linha digitavel|linha digitÃ¡vel/i.test(limpo);
     if (isBoleto) {
         const vencimentoBoleto = extrairVencimentoBoletoRobustoFinanceiro(texto);
@@ -823,54 +931,60 @@ function extrairDadosTextoFinanceiro(texto) {
         valor: valor ? parseMoeda(valor) : 0
     };
 }
+
+async function extrairDadosFinanceirosDoAnexo(anexo) {
+    if (!anexo?.dados) throw new Error('Este anexo nao possui arquivo carregado para leitura.');
+    if ((anexo.tipo || '').startsWith('image/')) throw new Error('Imagem ainda precisa de OCR. Preencha manualmente por enquanto.');
+    const nomeArquivo = (anexo.nome || '').toLowerCase();
+    const tipoArquivo = (anexo.tipo || '').toLowerCase();
+    let texto = '';
+    if (nomeArquivo.endsWith('.pdf') || tipoArquivo.includes('pdf')) {
+        texto = await extrairTextoPdfFinanceiro(anexo);
+    } else {
+        texto = textoDeAnexoBase64(anexo);
+    }
+    if (!texto || texto.length < 20) throw new Error('Texto insuficiente no documento. Pode ser PDF escaneado.');
+    const dadosLocal = nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto)
+        ? extrairDadosXmlFinanceiro(texto)
+        : extrairDadosTextoFinanceiro(texto);
+    const dadosIA = leituraFinanceiraIncompleta(dadosLocal)
+        ? await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal || {})
+        : null;
+    return {
+        dados: dadosIA && !leituraFinanceiraIncompleta(dadosIA) ? dadosIA : (dadosLocal || dadosIA),
+        usouIA: Boolean(dadosIA?.analisadoPorIA),
+        texto
+    };
+}
 window.lerDocumentoFinanceiroAutomaticamente = async function() {
     const anexo = financeiroAnexosTemp.documento;
     if (!anexo?.dados) {
         alert('Selecione primeiro um documento PDF, XML ou imagem.');
         return;
     }
-    if ((anexo.tipo || '').startsWith('image/')) {
-        alert('Este documento parece ser imagem. A leitura automatica por imagem/OCR fica para a proxima etapa. Por enquanto, preencha manualmente.');
+    let resultado;
+    try {
+        resultado = await extrairDadosFinanceirosDoAnexo(anexo);
+    } catch (error) {
+        console.error('Erro ao ler documento financeiro:', error);
+        alert(error.message || 'Nao foi possivel ler este documento automaticamente.');
         return;
     }
-    const nomeArquivo = (anexo.nome || '').toLowerCase();
-    const tipoArquivo = (anexo.tipo || '').toLowerCase();
-    let texto = '';
-    if (nomeArquivo.endsWith('.pdf') || tipoArquivo.includes('pdf')) {
-        try {
-            texto = await extrairTextoPdfFinanceiro(anexo);
-        } catch (error) {
-            console.error('Erro ao ler PDF financeiro:', error);
-            alert('Nao foi possivel abrir este PDF automaticamente. Preencha manualmente por enquanto.');
-            return;
-        }
-        if (!texto || texto.length < 20) {
-            alert('Este PDF nao possui texto extraivel. Provavelmente e imagem/escaneado e vai precisar OCR. Preencha manualmente por enquanto.');
-            return;
-        }
-    } else {
-        texto = textoDeAnexoBase64(anexo);
-    }
-    if (!texto) {
-        alert('Nao foi possivel ler o conteudo do documento. Preencha manualmente.');
-        return;
-    }
-    const dados = nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto)
-        ? extrairDadosXmlFinanceiro(texto)
-        : extrairDadosTextoFinanceiro(texto);
+    const { dados, usouIA } = resultado;
     if (!dados) {
         alert('Nao foi possivel identificar os dados do documento. Preencha manualmente.');
         return;
     }
-    preencherCampoFinanceiro('financeiroTipo', dados.tipo, false);
-    preencherCampoFinanceiro('financeiroDescricao', dados.descricao, false);
-    preencherCampoFinanceiro('financeiroVencimento', dados.vencimento, false);
-    if (dados.valor > 0) preencherCampoFinanceiro('financeiroValor', formatarMoeda(dados.valor), false);
+    preencherCampoFinanceiro('financeiroTipo', dados.tipo, true);
+    preencherCampoFinanceiro('financeiroDescricao', dados.descricao, true);
+    preencherCampoFinanceiro('financeiroVencimento', dados.vencimento, true);
+    if (dados.valor > 0) preencherCampoFinanceiro('financeiroValor', formatarMoeda(dados.valor), true);
     atualizarCategoriaDocumentoFinanceiro(anexo, dados);
-    if (!document.getElementById('financeiroObservacao')?.value) {
-        preencherCampoFinanceiro('financeiroObservacao', `IMPORTADO DO DOCUMENTO: ${anexo.nome}`, false);
-    }
-    alert('Leitura concluida. Confira os campos antes de salvar.');
+    const obs = usouIA
+        ? `IMPORTADO DO DOCUMENTO COM APOIO DA IA: ${anexo.nome}`
+        : `IMPORTADO DO DOCUMENTO: ${anexo.nome}`;
+    preencherCampoFinanceiro('financeiroObservacao', obs, true);
+    alert(`Leitura concluida${usouIA ? ' com apoio da IA' : ''}. Confira os campos antes de salvar.`);
 };
 
 async function extrairDadosAnexoFinanceiro(anexo) {
@@ -1031,8 +1145,6 @@ window.importarPastaFinanceira = async function(files) {
     }
     const lista = obterLancamentosFinanceiros();
     const importados = [];
-    let lidosAutomaticamente = 0;
-    let pendentesConferencia = 0;
     for (const file of listaArquivos) {
         try {
             const anexo = {
@@ -1040,35 +1152,19 @@ window.importarPastaFinanceira = async function(files) {
                 tipo: file.type || (file.name.toLowerCase().endsWith('.xml') ? 'application/xml' : 'application/octet-stream'),
                 dados: await lerArquivoComoDataUrl(file)
             };
-            const dados = await extrairDadosAnexoFinanceiro(anexo);
-            const conferencia = await confirmarImportacaoFinanceira(anexo, dados, file.webkitRelativePath || file.name);
-            if (conferencia?.cancelar) break;
-            if (!conferencia) continue;
-            if (conferencia?.precisaConferencia || !conferencia?.valor || !conferencia?.vencimento) {
-                pendentesConferencia++;
-            } else {
-                lidosAutomaticamente++;
-            }
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexo, conferencia || dados || {});
+            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexo, {});
             const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexo, categoriaDocumento, 'importacao_pasta');
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: normalizarTexto(conferencia?.tipo || 'DOCUMENTO'),
-                descricao: normalizarTexto(conferencia?.descricao || 'PENDENTE DE CONFERENCIA'),
-                vencimento: conferencia?.vencimento || '',
-                valor: Number(conferencia?.valor || 0),
-                observacao: conferencia?.observacao || `IMPORTADO DA PASTA FINANCEIRA: ${file.webkitRelativePath || file.name}`,
-                conferenciaStatus: conferencia?.precisaConferencia ? 'pendente' : 'conferido',
-                ia: dados?.analisadoPorIA ? {
-                    confianca: dados.confiancaIA || 'media',
-                    fornecedor: dados.fornecedor || '',
-                    cnpj: dados.cnpj || '',
-                    numeroDocumento: dados.numeroDocumento || '',
-                    produtos: dados.produtos || [],
-                    observacao: dados.observacaoIA || ''
-                } : null,
+                tipo: categoriaDocumento === 'boleto' ? 'BOLETO' : (categoriaDocumento === 'xml' || categoriaDocumento === 'nota_fiscal' ? 'NOTA FISCAL' : 'DOCUMENTO'),
+                descricao: normalizarTexto(file.name.replace(/\.(pdf|xml)$/i, '').replace(/[-_]+/g, ' ')) || 'PENDENTE DE CONFERENCIA',
+                vencimento: '',
+                valor: 0,
+                observacao: `IMPORTADO RAPIDO DA PASTA FINANCEIRA: ${file.webkitRelativePath || file.name}`,
+                conferenciaStatus: 'pendente',
+                ia: null,
                 pago: false,
                 pagoEm: null,
                 situacaoDocumento: categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml' ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
@@ -1090,7 +1186,7 @@ window.importarPastaFinanceira = async function(files) {
     document.querySelectorAll('.btn-tab-financeiro').forEach(btn => btn.classList.toggle('active', btn.dataset.finTab === 'caixa-financeira'));
     document.getElementById('financeiroTituloLista').textContent = FINANCEIRO_ABAS['caixa-financeira'].titulo;
     renderFinanceiro();
-    alert(`${importados.length} documento(s) importado(s).\n${lidosAutomaticamente} lido(s) automaticamente.\n${pendentesConferencia} pendente(s) de conferencia.`);
+    alert(`${importados.length} documento(s) importado(s) rapidamente.\nA leitura automatica ficou manual para evitar lentidao.`);
 };
 
 window.importarFilaMonitorFinanceiro = async function(files) {
@@ -1119,53 +1215,29 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 localUrl: fila.anexo.localUrl || '',
                 storage: 'LOCAL'
             } : null;
-            const dadosExtraidos = fila.anexo?.dados ? await extrairDadosAnexoFinanceiro(fila.anexo) : null;
             const sugestaoDescricao = normalizarTexto(sugestao.descricao || '');
-            const dadosDescricao = normalizarTexto(dadosExtraidos?.descricao || '');
-            const descricaoFinal = !descricaoFinanceiraRuim(dadosDescricao)
-                ? dadosDescricao
-                : (!descricaoFinanceiraRuim(sugestaoDescricao) ? sugestaoDescricao : 'PENDENTE DE CONFERENCIA');
+            const descricaoFinal = !descricaoFinanceiraRuim(sugestaoDescricao) ? sugestaoDescricao : normalizarTexto(fila.nomeArquivo || file.name.replace(/\.json$/i, ''));
             const valorSugestao = Number(sugestao.valor || 0);
-            const valorExtraido = Number(dadosExtraidos?.valor || 0);
-            const valorFinal = valorExtraido > 0 ? valorExtraido : valorSugestao;
-            const vencimentoFinal = dadosExtraidos?.vencimento || sugestao.vencimento || '';
-            const tipoFinal = dadosExtraidos?.tipo || sugestao.tipo || 'DOCUMENTO';
-            const conferencia = await confirmarImportacaoFinanceira(
-                anexoLocal || fila.anexo || { nome: fila.nomeArquivo || file.name },
-                {
-                    tipo: tipoFinal,
-                    descricao: descricaoFinal,
-                    vencimento: vencimentoFinal,
-                    valor: valorFinal,
-                    observacao: sugestao.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
-                    precisaConferencia: dadosExtraidos?.precisaConferencia || !valorFinal || !vencimentoFinal || descricaoFinanceiraRuim(descricaoFinal)
-                },
-                fila.nomeArquivo || file.name
-            );
-            if (!conferencia || conferencia.ignorar) continue;
+            const valorFinal = valorSugestao > 0 ? valorSugestao : 0;
+            const vencimentoFinal = sugestao.vencimento || '';
+            const tipoFinal = sugestao.tipo || 'DOCUMENTO';
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const anexoPrincipal = anexoLocal || fila.anexo || null;
-            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoPrincipal || { nome: fila.nomeArquivo || file.name }, conferencia || dadosExtraidos || {});
+            const precisaConferencia = !valorFinal || !vencimentoFinal || descricaoFinanceiraRuim(descricaoFinal);
+            const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoPrincipal || { nome: fila.nomeArquivo || file.name }, { tipo: tipoFinal, descricao: descricaoFinal });
             const documentoVinculado = anexoPrincipal ? criarDocumentoVinculadoFinanceiro(anexoPrincipal, categoriaDocumento, 'fila_monitor') : null;
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: normalizarTexto(conferencia.tipo || 'DOCUMENTO'),
-                descricao: normalizarTexto(conferencia.descricao || 'PENDENTE DE CONFERENCIA'),
-                vencimento: conferencia.vencimento || '',
-                valor: Number(conferencia.valor || 0),
-                observacao: conferencia.observacao || `IMPORTADO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
+                tipo: normalizarTexto(tipoFinal),
+                descricao: descricaoFinal || 'PENDENTE DE CONFERENCIA',
+                vencimento: vencimentoFinal,
+                valor: Number(valorFinal || 0),
+                observacao: sugestao.observacao || `IMPORTADO RAPIDO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
                 pago: false,
                 pagoEm: null,
-                conferenciaStatus: conferencia.precisaConferencia ? 'pendente' : 'conferido',
-                ia: dadosExtraidos?.analisadoPorIA ? {
-                    confianca: dadosExtraidos.confiancaIA || 'media',
-                    fornecedor: dadosExtraidos.fornecedor || '',
-                    cnpj: dadosExtraidos.cnpj || '',
-                    numeroDocumento: dadosExtraidos.numeroDocumento || '',
-                    produtos: dadosExtraidos.produtos || [],
-                    observacao: dadosExtraidos.observacaoIA || ''
-                } : null,
+                conferenciaStatus: precisaConferencia ? 'pendente' : 'conferido',
+                ia: null,
                 situacaoDocumento: categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml' ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
                 documentosVinculados: documentoVinculado ? [documentoVinculado] : [],
                 documento: documentoVinculado,
@@ -1352,6 +1424,7 @@ window.renderFinanceiro = function() {
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
                 <td>${anexos || '<span style="color:var(--text-muted);">-</span>'}</td>
                 <td class="financeiro-acoes">
+                    <button type="button" class="btn-icon" style="color:#38bdf8; font-size:1.05rem; padding:4px;" onclick="window.analisarFinanceiroDocumento('${item.id}')" title="Ler boleto/NF"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                     <button type="button" class="btn-icon" style="color:var(--primary-color); font-size:1.05rem; padding:4px;" onclick="window.editarFinanceiro('${item.id}')" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
                     <button type="button" class="btn-icon" style="color:#22c55e; font-size:1.05rem; padding:4px;" onclick="window.alternarPagoFinanceiro('${item.id}')" title="Alterar status"><i class="fa-solid fa-circle-check"></i></button>
                     <button type="button" class="btn-icon" style="color:var(--danger-color); font-size:1.05rem; padding:4px;" onclick="window.excluirFinanceiro('${item.id}')" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
@@ -1383,6 +1456,45 @@ window.atualizarSelecaoFinanceiro = function() {
 window.marcarTodosFinanceiro = function(checked) {
     document.querySelectorAll('.financeiro-check').forEach(input => input.checked = checked);
     window.atualizarSelecaoFinanceiro();
+};
+
+window.analisarFinanceiroDocumento = async function(id) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(reg => reg.id === id);
+    if (!item) return;
+    const anexo = item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante');
+    if (!anexo?.dados) {
+        alert('Este documento nao possui arquivo local carregado para leitura. Abra/anexe o PDF novamente para analisar.');
+        return;
+    }
+    try {
+        const { dados, usouIA } = await extrairDadosFinanceirosDoAnexo(anexo);
+        if (!dados) {
+            alert('Nao foi possivel identificar os dados deste documento.');
+            return;
+        }
+        item.tipo = normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO');
+        item.descricao = normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA');
+        item.vencimento = dados.vencimento || item.vencimento || '';
+        item.valor = Number(dados.valor || item.valor || 0);
+        item.conferenciaStatus = leituraFinanceiraIncompleta(dados) ? 'pendente' : 'conferido';
+        item.ia = usouIA ? {
+            confianca: dados.confiancaIA || 'media',
+            fornecedor: dados.fornecedor || '',
+            cnpj: dados.cnpj || '',
+            numeroDocumento: dados.numeroDocumento || '',
+            produtos: dados.produtos || [],
+            observacao: dados.observacaoIA || ''
+        } : item.ia || null;
+        item.atualizadoEm = new Date().toISOString();
+        salvarLancamentosFinanceiros(lista);
+        await salvarFinanceiroNuvem(item);
+        renderFinanceiro();
+        alert(`Documento analisado${usouIA ? ' com apoio da IA' : ''}. Confira o valor e vencimento na lista.`);
+    } catch (error) {
+        console.error('Falha ao analisar documento financeiro:', error);
+        alert(error.message || 'Nao foi possivel analisar este documento.');
+    }
 };
 
 window.excluirFinanceiroSelecionados = async function() {
