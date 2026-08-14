@@ -1286,7 +1286,10 @@ window.importarPastaFinanceira = async function(files) {
     document.querySelectorAll('.btn-tab-financeiro').forEach(btn => btn.classList.toggle('active', btn.dataset.finTab === 'caixa-financeira'));
     document.getElementById('financeiroTituloLista').textContent = FINANCEIRO_ABAS['caixa-financeira'].titulo;
     renderFinanceiro();
-    alert(`${importados.length} documento(s) importado(s) rapidamente.\nA leitura automatica ficou manual para evitar lentidao.`);
+    if (importados.length) {
+        setTimeout(() => analisarFinanceiroImportados(importados.map(item => item.id)), 250);
+    }
+    alert(`${importados.length} documento(s) importado(s) rapidamente.\nA leitura automatica vai continuar em segundo plano e atualizar a lista conforme encontrar valor, vencimento e fornecedor.`);
 };
 
 window.importarFilaMonitorFinanceiro = async function(files) {
@@ -1558,20 +1561,20 @@ window.marcarTodosFinanceiro = function(checked) {
     window.atualizarSelecaoFinanceiro();
 };
 
-window.analisarFinanceiroDocumento = async function(id) {
+window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
-    if (!item) return;
+    if (!item) return false;
     const anexo = await hidratarAnexoFinanceiro(item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante'));
     if (!anexo?.dados) {
-        alert('Este documento nao possui arquivo local carregado para leitura. Abra/anexe o PDF novamente para analisar.');
-        return;
+        if (!silencioso) alert('Este documento nao possui arquivo local carregado para leitura. Abra/anexe o PDF novamente para analisar.');
+        return false;
     }
     try {
         const { dados, usouIA } = await extrairDadosFinanceirosDoAnexo(anexo);
         if (!dados) {
-            alert('Nao foi possivel identificar os dados deste documento.');
-            return;
+            if (!silencioso) alert('Nao foi possivel identificar os dados deste documento.');
+            return false;
         }
         item.tipo = normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO');
         item.descricao = normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA');
@@ -1590,12 +1593,30 @@ window.analisarFinanceiroDocumento = async function(id) {
         salvarLancamentosFinanceiros(lista);
         await salvarFinanceiroNuvem(item);
         renderFinanceiro();
-        alert(`Documento analisado${usouIA ? ' com apoio da IA' : ''}. Confira o valor e vencimento na lista.`);
+        if (!silencioso) alert(`Documento analisado${usouIA ? ' com apoio da IA' : ''}. Confira o valor e vencimento na lista.`);
+        return true;
     } catch (error) {
         console.error('Falha ao analisar documento financeiro:', error);
-        alert(error.message || 'Nao foi possivel analisar este documento.');
+        if (!silencioso) alert(error.message || 'Nao foi possivel analisar este documento.');
+        return false;
     }
 };
+
+async function analisarFinanceiroImportados(ids = []) {
+    if (!ids.length) return;
+    const resumo = document.getElementById('financeiroResumoLista');
+    let lidos = 0;
+    let falhas = 0;
+    for (const id of ids) {
+        if (resumo) resumo.textContent = `${ids.length} importado(s) | lendo ${lidos + falhas + 1}/${ids.length}...`;
+        const ok = await window.analisarFinanceiroDocumento(id, true);
+        if (ok) lidos++;
+        else falhas++;
+        await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    renderFinanceiro();
+    if (resumo) resumo.textContent = `${ids.length} importado(s) | ${lidos} lido(s), ${falhas} pendente(s)`;
+}
 
 window.excluirFinanceiroSelecionados = async function() {
     const ids = Array.from(document.querySelectorAll('.financeiro-check:checked')).map(input => input.value);
