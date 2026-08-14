@@ -42,10 +42,41 @@ module.exports = async function handler(req, res) {
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
         const textoDocumento = String(body.textoDocumento || '').slice(0, 14000);
+        const imagemDocumento = String(body.imagemDocumento || '');
         const nomeArquivo = String(body.nomeArquivo || 'documento');
         const sugestaoLocal = body.sugestaoLocal || {};
-        if (!textoDocumento || textoDocumento.length < 20) {
-            return res.status(400).json({ error: 'Texto do documento insuficiente para analise por IA.' });
+        if ((!textoDocumento || textoDocumento.length < 20) && !imagemDocumento) {
+            return res.status(400).json({ error: 'Texto/imagem do documento insuficiente para analise por IA.' });
+        }
+        const conteudoUsuario = [{
+            type: 'input_text',
+            text: JSON.stringify({
+                nomeArquivo,
+                sugestaoLocal,
+                textoDocumento,
+                formatoResposta: {
+                    tipo: 'BOLETO|IMPOSTO|NOTA FISCAL|CONTA|COMPROVANTE|DOCUMENTO',
+                    descricao: 'texto curto para lista',
+                    fornecedor: '',
+                    cnpj: '',
+                    vencimento: 'yyyy-mm-dd ou vazio',
+                    emissao: 'yyyy-mm-dd ou vazio',
+                    numeroDocumento: '',
+                    valor: 0,
+                    produtos: [{ descricao: '', quantidade: '', valor: 0 }],
+                    categoriaSugerida: '',
+                    pastaSugerida: 'BOLETOS|IMPOSTOS|NOTAS-FISCAIS|COMPROVANTES|IGNORADOS',
+                    confianca: 'alta|media|baixa',
+                    observacao: ''
+                }
+            })
+        }];
+        if (imagemDocumento.startsWith('data:image/')) {
+            conteudoUsuario.push({
+                type: 'input_image',
+                image_url: imagemDocumento,
+                detail: 'high'
+            });
         }
 
         const payload = {
@@ -60,32 +91,7 @@ module.exports = async function handler(req, res) {
                 'Para boleto, fornecedor deve ser o BENEFICIARIO/CEDENTE, nunca o PAGADOR.',
                 'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, valorTotal e produtos quando existirem.'
             ].join(' '),
-            input: [{
-                role: 'user',
-                content: [{
-                    type: 'input_text',
-                    text: JSON.stringify({
-                        nomeArquivo,
-                        sugestaoLocal,
-                        textoDocumento,
-                        formatoResposta: {
-                            tipo: 'BOLETO|IMPOSTO|NOTA FISCAL|CONTA|COMPROVANTE|DOCUMENTO',
-                            descricao: 'texto curto para lista',
-                            fornecedor: '',
-                            cnpj: '',
-                            vencimento: 'yyyy-mm-dd ou vazio',
-                            emissao: 'yyyy-mm-dd ou vazio',
-                            numeroDocumento: '',
-                            valor: 0,
-                            produtos: [{ descricao: '', quantidade: '', valor: 0 }],
-                            categoriaSugerida: '',
-                            pastaSugerida: 'BOLETOS|IMPOSTOS|NOTAS-FISCAIS|COMPROVANTES|IGNORADOS',
-                            confianca: 'alta|media|baixa',
-                            observacao: ''
-                        }
-                    })
-                }]
-            }]
+            input: [{ role: 'user', content: conteudoUsuario }]
         };
 
         const response = await fetch('https://api.openai.com/v1/responses', {

@@ -614,6 +614,22 @@ async function extrairTextoPdfFinanceiro(anexo) {
     return paginas.join('\n').trim();
 }
 
+async function renderizarPrimeiraPaginaPdfFinanceiro(anexo) {
+    if (!window.pdfjsLib) return '';
+    const bytes = bytesDeAnexoBase64(anexo);
+    if (!bytes) return '';
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
+    const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.7 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const context = canvas.getContext('2d', { alpha: false });
+    await page.render({ canvasContext: context, viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.82);
+}
+
 function valorXmlPorTag(xml, tags = []) {
     for (const tag of tags) {
         const el = xml.getElementsByTagName(tag)?.[0];
@@ -734,6 +750,18 @@ function leituraFinanceiraIncompleta(dados) {
     return false;
 }
 
+function leituraFinanceiraUtil(dados) {
+    return Boolean(dados && Number(dados.valor || 0) > 0 && Boolean(dados.vencimento || dados.emissao) && !descricaoFinanceiraRuim(dados.descricao));
+}
+
+function comTimeoutFinanceiro(promessa, ms, mensagem = 'Tempo limite na leitura do documento.') {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(mensagem)), ms);
+    });
+    return Promise.race([promessa, timeout]).finally(() => clearTimeout(timer));
+}
+
 function salvarUsoIAFinanceiro(usage = {}) {
     try {
         const atual = JSON.parse(localStorage.getItem(FINANCEIRO_AI_USAGE_KEY) || '{}');
@@ -772,17 +800,23 @@ function normalizarDadosIAFinanceiro(dados = {}) {
     };
 }
 
-async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLocal = {}) {
+async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLocal = {}, imagemDocumento = '') {
+    let timeout;
     try {
+        const controller = new AbortController();
+        timeout = setTimeout(() => controller.abort(), 30000);
         const response = await fetch('/api/financeiro-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({
                 nomeArquivo: anexo?.nome || '',
                 textoDocumento: String(textoDocumento || '').slice(0, 14000),
-                sugestaoLocal
+                sugestaoLocal,
+                imagemDocumento
             })
         });
+        clearTimeout(timeout);
         const rawText = await response.text();
         let data = {};
         try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
@@ -792,6 +826,8 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
     } catch (error) {
         console.warn('IA financeira indisponivel:', error.message);
         return null;
+    } finally {
+        if (timeout) clearTimeout(timeout);
     }
 }
 
@@ -1033,7 +1069,10 @@ function extrairDadosTextoFinanceiro(texto) {
 
 async function extrairDadosFinanceirosDoAnexo(anexo) {
     if (!anexo?.dados) throw new Error('Este anexo nao possui arquivo carregado para leitura.');
-    if ((anexo.tipo || '').startsWith('image/')) throw new Error('Imagem ainda precisa de OCR. Preencha manualmente por enquanto.');
+    if ((anexo.tipo || '').startsWith('image/')) {
+        const dadosImagem = await analisarDocumentoFinanceiroIA('', anexo, {}, anexo.dados);
+        return { dados: dadosImagem, usouIA: Boolean(dadosImagem?.analisadoPorIA), texto: '' };
+    }
     const nomeArquivo = (anexo.nome || '').toLowerCase();
     const tipoArquivo = (anexo.tipo || '').toLowerCase();
     let texto = '';
@@ -1042,15 +1081,19 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
     } else {
         texto = textoDeAnexoBase64(anexo);
     }
-    if (!texto || texto.length < 20) throw new Error('Texto insuficiente no documento. Pode ser PDF escaneado.');
+    const imagemDocumento = (nomeArquivo.endsWith('.pdf') || tipoArquivo.includes('pdf')) ? await renderizarPrimeiraPaginaPdfFinanceiro(anexo).catch(() => '') : '';
+    if (!texto || texto.length < 20) {
+        const dadosImagem = imagemDocumento ? await analisarDocumentoFinanceiroIA('', anexo, {}, imagemDocumento) : null;
+        return { dados: dadosImagem, usouIA: Boolean(dadosImagem?.analisadoPorIA), texto: '' };
+    }
     const dadosLocal = nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto)
         ? extrairDadosXmlFinanceiro(texto)
         : extrairDadosTextoFinanceiro(texto);
     const dadosIA = leituraFinanceiraIncompleta(dadosLocal)
-        ? await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal || {})
+        ? await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal || {}, imagemDocumento)
         : null;
     return {
-        dados: dadosIA && !leituraFinanceiraIncompleta(dadosIA) ? dadosIA : (dadosLocal || dadosIA),
+        dados: leituraFinanceiraUtil(dadosIA) ? dadosIA : (leituraFinanceiraUtil(dadosLocal) ? dadosLocal : (dadosIA || dadosLocal)),
         usouIA: Boolean(dadosIA?.analisadoPorIA),
         texto
     };
@@ -1571,8 +1614,8 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
         return false;
     }
     try {
-        const { dados, usouIA } = await extrairDadosFinanceirosDoAnexo(anexo);
-        if (!dados) {
+        const { dados, usouIA } = await comTimeoutFinanceiro(extrairDadosFinanceirosDoAnexo(anexo), silencioso ? 45000 : 70000);
+        if (!dados || !leituraFinanceiraUtil(dados)) {
             if (!silencioso) alert('Nao foi possivel identificar os dados deste documento.');
             return false;
         }
@@ -1592,7 +1635,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
         item.atualizadoEm = new Date().toISOString();
         salvarLancamentosFinanceiros(lista);
         await salvarFinanceiroNuvem(item);
-        renderFinanceiro();
+        if (!silencioso) renderFinanceiro();
         if (!silencioso) alert(`Documento analisado${usouIA ? ' com apoio da IA' : ''}. Confira o valor e vencimento na lista.`);
         return true;
     } catch (error) {
