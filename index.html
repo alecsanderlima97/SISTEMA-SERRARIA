@@ -85,12 +85,43 @@
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
                         <input type="text" id="assistantHomeInput" placeholder="Pergunte ao assistente">
                         <button type="button" id="btnAssistantHomeSubmit" title="Perguntar"><i class="fa-solid fa-arrow-right"></i></button>
-                    </div>
+                </div>
                 <div class="header-actions-group">
                     <button type="button" id="btnHeaderRefresh" class="header-refresh-button hide-on-print" title="Atualizar o sistema e buscar a versão mais recente publicada">
                         <i class="fa-solid fa-rotate"></i>
                         <span>Atualizar</span>
                     </button>
+                    <div class="header-weather-widget hide-on-print" id="headerWeatherWidget" data-rain="low">
+                        <button type="button" class="header-weather-button" id="btnHeaderWeather" title="Abrir previsão do tempo" aria-expanded="false">
+                            <span class="header-weather-icon"><i id="headerWeatherIcon" class="fa-solid fa-cloud-sun"></i></span>
+                            <span class="header-weather-copy">
+                                <strong id="headerWeatherTemp">--°</strong>
+                                <small id="headerWeatherRain">Carregando previsão...</small>
+                            </span>
+                            <i class="fa-solid fa-chevron-down header-weather-chevron"></i>
+                        </button>
+                        <div class="header-weather-popover" id="headerWeatherPopover" hidden>
+                            <div class="weather-popover-head">
+                                <div>
+                                    <strong id="weatherLocationName">Ribeirão Branco</strong>
+                                    <small id="weatherUpdatedAt">Buscando dados meteorológicos...</small>
+                                </div>
+                                <button type="button" id="btnWeatherRefresh" class="weather-icon-button" title="Atualizar previsão"><i class="fa-solid fa-rotate"></i></button>
+                            </div>
+                            <div class="weather-current-summary">
+                                <i id="weatherCurrentIcon" class="fa-solid fa-cloud-sun"></i>
+                                <div><strong id="weatherCurrentTemp">--°C</strong><span id="weatherCurrentLabel">Carregando...</span></div>
+                                <div class="weather-rain-focus"><small>Chuva nas próximas 6h</small><strong id="weatherRainNext">--%</strong></div>
+                            </div>
+                            <div class="weather-operational-note" id="weatherOperationalNote">Consultando risco de chuva para a operação.</div>
+                            <div class="weather-days" id="weatherDays"></div>
+                            <div class="weather-popover-actions">
+                                <button type="button" id="btnWeatherUseLocation" title="Usar a localização deste aparelho"><i class="fa-solid fa-location-crosshairs"></i> Local atual</button>
+                                <button type="button" id="btnWeatherUseDefault" title="Voltar para Ribeirão Branco"><i class="fa-solid fa-building"></i> Ribeirão Branco</button>
+                                <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" title="Fonte da previsão meteorológica"><i class="fa-solid fa-circle-info"></i> Fonte</a>
+                            </div>
+                        </div>
+                    </div>
                     <div class="header-user-group">
                         <div class="header-user-text">
                             <div class="header-date-time" id="headerDateTime" aria-live="polite"></div>
@@ -143,7 +174,7 @@
 
     <div id="appVersionFooter" class="app-version-footer hide-on-print" title="Identificação da atualização publicada">
         <i class="fa-solid fa-circle-check"></i>
-        <span>Atualização: kpi-ilustrado-1 | 24/08/2026 15:10</span>
+        <span>Atualização: clima-cabecalho-1 | 24/08/2026 17:14</span>
     </div>
 
     <script src="js/modals/rh-modals.js?v=he-calculo-horas-2"></script>
@@ -181,6 +212,7 @@
     <script type="module" src="js/rh.js?v=he-calculo-horas-2"></script>
     <script type="module" src="js/frotas.js?v=frota-foto-card-1"></script>
     <script type="module" src="js/financeiro.js?v=lembretes-multiplos-1"></script>
+    <script src="js/weather-widget.js?v=clima-cabecalho-1"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js?v=performance-geral-1"></script>
     <script type="module" src="dashboard.js?v=theme-toggle-1"></script>
