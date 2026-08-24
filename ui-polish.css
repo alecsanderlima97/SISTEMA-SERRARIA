@@ -536,3 +536,50 @@ table td {
         grid-column: auto;
     }
 }
+
+.app-version-footer {
+    position: fixed;
+    left: 260px;
+    bottom: 12px;
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 8px 12px;
+    border: 1px solid rgba(180, 147, 93, 0.45);
+    border-radius: 999px;
+    background: rgba(12, 20, 32, 0.84);
+    color: #f8fafc;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0;
+    pointer-events: none;
+    backdrop-filter: blur(12px);
+}
+
+.app-wrapper.sidebar-collapsed + .app-version-footer {
+    left: 96px;
+}
+
+.app-version-footer i {
+    color: #22c55e;
+    font-size: 12px;
+}
+
+body.orquestra-theme .app-version-footer {
+    background: rgba(255, 253, 247, 0.92);
+    color: #334155;
+    border-color: rgba(185, 133, 47, 0.4);
+}
+
+@media (max-width: 760px) {
+    .app-version-footer {
+        left: 12px;
+        right: 12px;
+        bottom: 10px;
+        justify-content: center;
+        font-size: 10px;
+    }
+}
