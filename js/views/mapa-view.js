@@ -41,8 +41,8 @@
                             </div>
 
                             <div class="input-group mapa-endereco">
-                                <label for="mapaEndereco">Endereco / referencia *</label>
-                                <input type="text" id="mapaEndereco" placeholder="Estrada, bairro, cidade ou referencia" required>
+                                <label for="mapaEndereco">Endereco / referencia</label>
+                                <input type="text" id="mapaEndereco" placeholder="Estrada, bairro, cidade ou referencia">
                             </div>
                             <div class="input-group">
                                 <label for="mapaLatitude">Latitude</label>
@@ -100,17 +100,29 @@
                         <div class="section-title">
                             <h2><i class="fa-solid fa-earth-americas"></i> Localizacao</h2>
                         </div>
+                        <div id="mapaMinhaLocalizacao" class="mapa-current-location" data-state="idle">
+                            <span class="mapa-current-location-icon"><i class="fa-solid fa-location-crosshairs"></i></span>
+                            <span>
+                                <strong>Localizacao atual</strong>
+                                <small id="mapaMinhaLocalizacaoTexto">Use sua posicao como ponto de partida.</small>
+                            </span>
+                            <button type="button" class="btn-secondary" onclick="window.obterMinhaLocalizacao && window.obterMinhaLocalizacao()" data-ui-tooltip="Usar a localizacao deste aparelho como origem das rotas.">
+                                <i class="fa-solid fa-crosshairs"></i> Minha localizacao
+                            </button>
+                        </div>
                         <div class="mapa-preview-frame">
                             <iframe id="mapaPreviewFrame" title="Previa do local no Google Maps" loading="lazy"></iframe>
                             <div id="mapaPreviewEmpty" class="mapa-preview-empty">
                                 <i class="fa-solid fa-map-pin"></i>
-                                <strong>Informe endereco ou coordenadas</strong>
-                                <span>A previa do Google Maps aparece aqui.</span>
+                                <strong>Informe o local do mato</strong>
+                                <span>Enquanto isso, o mapa usa sua localizacao atual como base.</span>
                             </div>
                         </div>
+                        <div id="mapaDistanciaAtual" class="mapa-distance-summary" hidden></div>
                         <div class="mapa-preview-actions">
                             <button type="button" class="btn-secondary" onclick="window.abrirMapaAtual && window.abrirMapaAtual('maps')"><i class="fa-solid fa-map-location-dot"></i> Abrir Maps</button>
                             <button type="button" class="btn-secondary" onclick="window.abrirMapaAtual && window.abrirMapaAtual('earth')"><i class="fa-solid fa-earth-americas"></i> Abrir Earth</button>
+                            <button type="button" class="btn-primary" onclick="window.abrirRotaMapaAtual && window.abrirRotaMapaAtual()"><i class="fa-solid fa-route"></i> Traçar rota</button>
                         </div>
                     </div>
                 </div>

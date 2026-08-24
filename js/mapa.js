@@ -7,6 +7,8 @@ const MAPA_STORE = 'contratos';
 
 let mapaMatos = [];
 let mapaContratoTemp = null;
+let minhaLocalizacao = null;
+let localizacaoSolicitada = false;
 
 function uid() {
     return `mato_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -28,6 +30,74 @@ function escapeHtml(valor = '') {
 function moedaNumero(valor) {
     const n = Number(String(valor ?? '').replace(',', '.'));
     return Number.isFinite(n) ? n : 0;
+}
+
+function coordenadasValidas(item = {}) {
+    return Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
+}
+
+function calcularDistanciaKm(origem, destino) {
+    if (!coordenadasValidas(origem) || !coordenadasValidas(destino)) return null;
+    const raioTerraKm = 6371;
+    const paraRadiano = valor => Number(valor) * Math.PI / 180;
+    const dLat = paraRadiano(Number(destino.latitude) - Number(origem.latitude));
+    const dLon = paraRadiano(Number(destino.longitude) - Number(origem.longitude));
+    const lat1 = paraRadiano(origem.latitude);
+    const lat2 = paraRadiano(destino.latitude);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return raioTerraKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatarDistancia(valor) {
+    if (!Number.isFinite(valor)) return '';
+    return valor < 10
+        ? `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`
+        : `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} km`;
+}
+
+function atualizarStatusMinhaLocalizacao(estado = 'idle', texto = '') {
+    const painel = document.getElementById('mapaMinhaLocalizacao');
+    const label = document.getElementById('mapaMinhaLocalizacaoTexto');
+    if (painel) painel.dataset.state = estado;
+    if (label && texto) label.textContent = texto;
+}
+
+function obterMinhaLocalizacao(opcoes = {}) {
+    const silencioso = Boolean(opcoes.silencioso);
+    if (minhaLocalizacao) return Promise.resolve(minhaLocalizacao);
+    if (!navigator.geolocation) {
+        atualizarStatusMinhaLocalizacao('error', 'Localizacao nao disponivel neste aparelho.');
+        if (!silencioso) alert('Este navegador nao oferece acesso a localizacao.');
+        return Promise.resolve(null);
+    }
+
+    localizacaoSolicitada = true;
+    atualizarStatusMinhaLocalizacao('loading', 'Obtendo sua localizacao com seguranca...');
+    return new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(position => {
+            minhaLocalizacao = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                precisaoMetros: Math.round(position.coords.accuracy || 0)
+            };
+            const precisao = minhaLocalizacao.precisaoMetros ? `Precisao aproximada: ${minhaLocalizacao.precisaoMetros} m.` : 'Localizacao pronta.';
+            atualizarStatusMinhaLocalizacao('ready', precisao);
+            atualizarPreviewMapa();
+            renderMapaMatos();
+            resolve(minhaLocalizacao);
+        }, error => {
+            const negado = error?.code === 1;
+            atualizarStatusMinhaLocalizacao('error', negado
+                ? 'Permissao negada. Voce ainda pode usar endereco ou coordenadas.'
+                : 'Nao foi possivel obter sua localizacao agora.');
+            if (!silencioso && !negado) alert('Nao foi possivel obter sua localizacao. Verifique o GPS e tente novamente.');
+            resolve(null);
+        }, {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 300000
+        });
+    });
 }
 
 function salvarLocal() {
@@ -159,7 +229,7 @@ function preencherForm(item = {}) {
 }
 
 function queryMapa(item = getFormData()) {
-    if (item.latitude !== null && item.longitude !== null) return `${item.latitude},${item.longitude}`;
+    if (coordenadasValidas(item)) return `${item.latitude},${item.longitude}`;
     return item.endereco || item.nome || '';
 }
 
@@ -176,6 +246,13 @@ function earthUrl(item) {
 function embedUrl(item) {
     const q = encodeURIComponent(queryMapa(item));
     return q ? `https://www.google.com/maps?q=${q}&output=embed` : '';
+}
+
+function rotaUrl(item, origem = minhaLocalizacao) {
+    const destino = queryMapa(item);
+    if (!destino || !coordenadasValidas(origem)) return '';
+    const pontoPartida = `${origem.latitude},${origem.longitude}`;
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pontoPartida)}&destination=${encodeURIComponent(destino)}&travelmode=driving`;
 }
 
 function formatarArea(item) {
@@ -202,6 +279,11 @@ function statusLabel(status) {
     }[status] || status || 'Em analise';
 }
 
+function distanciaDaLocalizacaoAtual(item) {
+    const distancia = calcularDistanciaKm(minhaLocalizacao, item);
+    return Number.isFinite(distancia) ? formatarDistancia(distancia) : '';
+}
+
 async function carregarMapaMatos() {
     mapaMatos = lerLocal();
     renderMapaMatos();
@@ -225,8 +307,8 @@ async function carregarMapaMatos() {
 async function salvarMapaMato(event) {
     event?.preventDefault();
     const data = getFormData();
-    if (!data.nome || !data.proprietario || !data.endereco) {
-        alert('Preencha nome do mato, dono/proprietario e endereco/referencia.');
+    if (!data.nome || !data.proprietario || (!data.endereco && !coordenadasValidas(data))) {
+        alert('Preencha nome do mato, dono/proprietario e informe o endereco ou as coordenadas.');
         return;
     }
 
@@ -302,6 +384,7 @@ function renderMapaMatos() {
                 <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.endereco || '-')}</span>
                 <span><i class="fa-solid fa-ruler-combined"></i> ${escapeHtml(formatarArea(item))}</span>
                 <span><i class="fa-solid fa-route"></i> ${escapeHtml(item.distanciaKm ? `${Number(item.distanciaKm).toLocaleString('pt-BR')} km` : 'Distancia nao informada')}</span>
+                ${distanciaDaLocalizacaoAtual(item) ? `<span class="mapa-live-distance"><i class="fa-solid fa-location-arrow"></i> ${escapeHtml(distanciaDaLocalizacaoAtual(item))} da sua localizacao</span>` : ''}
                 <span><i class="fa-solid fa-cubes-stacked"></i> ${escapeHtml(item.volumeEstimado ? `${Number(item.volumeEstimado).toLocaleString('pt-BR')} estimado` : 'Volume nao informado')}</span>
             </div>
             ${item.observacoes ? `<p>${escapeHtml(item.observacoes)}</p>` : ''}
@@ -309,6 +392,7 @@ function renderMapaMatos() {
                 <button type="button" class="btn-secondary" onclick="window.editarMapaMato('${escapeHtml(item.id)}')"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
                 <button type="button" class="btn-secondary" onclick="window.abrirMapaMato('${escapeHtml(item.id)}', 'maps')"><i class="fa-solid fa-map-location-dot"></i> Maps</button>
                 <button type="button" class="btn-secondary" onclick="window.abrirMapaMato('${escapeHtml(item.id)}', 'earth')"><i class="fa-solid fa-earth-americas"></i> Earth</button>
+                <button type="button" class="btn-primary" onclick="window.abrirRotaMapaMato('${escapeHtml(item.id)}')"><i class="fa-solid fa-route"></i> Rota</button>
                 <button type="button" class="btn-secondary" onclick="window.abrirContratoMapa('${escapeHtml(item.id)}')" ${item.contratoNome ? '' : 'disabled'}><i class="fa-solid fa-file-contract"></i> Contrato</button>
                 <button type="button" class="btn-danger" onclick="window.excluirMapaMato('${escapeHtml(item.id)}')"><i class="fa-solid fa-trash"></i></button>
             </div>
@@ -319,8 +403,12 @@ function renderMapaMatos() {
 function atualizarPreviewMapa() {
     const frame = document.getElementById('mapaPreviewFrame');
     const empty = document.getElementById('mapaPreviewEmpty');
+    const resumoDistancia = document.getElementById('mapaDistanciaAtual');
     if (!frame) return;
-    const url = embedUrl(getFormData());
+    const destino = getFormData();
+    const temDestino = Boolean(queryMapa(destino));
+    const pontoExibido = temDestino ? destino : minhaLocalizacao;
+    const url = pontoExibido ? embedUrl(pontoExibido) : '';
     if (url) {
         frame.src = url;
         frame.style.display = 'block';
@@ -329,6 +417,20 @@ function atualizarPreviewMapa() {
         frame.removeAttribute('src');
         frame.style.display = 'none';
         if (empty) empty.style.display = 'grid';
+    }
+
+    const distancia = temDestino ? calcularDistanciaKm(minhaLocalizacao, destino) : null;
+    if (resumoDistancia) {
+        if (Number.isFinite(distancia)) {
+            resumoDistancia.hidden = false;
+            resumoDistancia.innerHTML = `<i class="fa-solid fa-route"></i><span><strong>${escapeHtml(formatarDistancia(distancia))}</strong> em linha reta a partir da sua localizacao. Use Traçar rota para ver o caminho por estrada.</span>`;
+        } else if (!temDestino && minhaLocalizacao) {
+            resumoDistancia.hidden = false;
+            resumoDistancia.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>O mapa esta usando sua localizacao atual como ponto de partida.</span>';
+        } else {
+            resumoDistancia.hidden = true;
+            resumoDistancia.textContent = '';
+        }
     }
 }
 
@@ -384,6 +486,33 @@ function abrirMapaAtual(tipo = 'maps') {
     window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+async function abrirRotaComItem(item) {
+    if (!queryMapa(item)) {
+        alert('Informe endereco ou coordenadas do mato para tracar a rota.');
+        return;
+    }
+
+    const janela = window.open('', '_blank');
+    const origem = minhaLocalizacao || await obterMinhaLocalizacao();
+    const url = rotaUrl(item, origem);
+    if (!url) {
+        janela?.close();
+        alert('Ative a localizacao deste aparelho para usar a rota ate o mato.');
+        return;
+    }
+    if (janela) janela.location.href = url;
+    else window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function abrirRotaMapaMato(id) {
+    const item = mapaMatos.find(mato => mato.id === id);
+    if (item) abrirRotaComItem(item);
+}
+
+function abrirRotaMapaAtual() {
+    abrirRotaComItem(getFormData());
+}
+
 async function abrirContratoMapa(id) {
     try {
         const ok = await abrirContratoLocal(id);
@@ -412,10 +541,19 @@ window.editarMapaMato = editarMapaMato;
 window.excluirMapaMato = excluirMapaMato;
 window.abrirMapaMato = abrirMapaMato;
 window.abrirMapaAtual = abrirMapaAtual;
+window.abrirRotaMapaMato = abrirRotaMapaMato;
+window.abrirRotaMapaAtual = abrirRotaMapaAtual;
+window.obterMinhaLocalizacao = obterMinhaLocalizacao;
 window.abrirContratoMapa = abrirContratoMapa;
 
 document.addEventListener('DOMContentLoaded', () => {
     bindMapa();
     carregarMapaMatos();
     atualizarPreviewMapa();
+    document.querySelectorAll('[data-target="view-mapa"]').forEach(link => {
+        link.addEventListener('click', () => {
+            if (localizacaoSolicitada || minhaLocalizacao) return;
+            setTimeout(() => obterMinhaLocalizacao({ silencioso: true }), 250);
+        });
+    });
 });
