@@ -7,9 +7,9 @@
         <div class="assistant-panel-header">
             <div>
                 <strong>Assistente IA</strong>
-                <small>IA OpenAI conectada</small>
+                <small id="assistantConnectionStatus">Analise local pronta</small>
             </div>
-            <button type="button" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="assistant-close-btn" onclick="window.toggleAssistenteIA(false)" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="assistant-usage-card">
             <div>
@@ -34,7 +34,12 @@
             <button type="button" onclick="window.perguntarAssistente('analisar financeiro')">Financeiro</button>
         </div>
         <div id="assistantGuideCard" class="assistant-guide-card">
-            <strong>Guia da tela</strong>
+            <div class="assistant-guide-head">
+                <strong>Guia da tela</strong>
+                <button type="button" onclick="window.fecharGuiaAssistente && window.fecharGuiaAssistente()" title="Fechar guia">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
             <div id="assistantGuideContent">Abra uma tela do sistema para ver orientações rápidas.</div>
         </div>
         <div id="assistantMessages" class="assistant-messages">

@@ -8,6 +8,7 @@ const KEYS_ASSISTENTE = {
 };
 const ASSISTANT_USAGE_KEY = 'orquestra_assistente_openai_usage';
 const ASSISTANT_BUDGET_KEY = 'orquestra_assistente_openai_budget';
+let guiaAssistenteOculta = false;
 
 const GUIAS_TELA = {
     'view-dashboard': {
@@ -305,10 +306,43 @@ async function responderPerguntaOpenAI(pergunta) {
         data = {};
     }
     if (!response.ok) {
-        throw new Error(data.error || rawText || `Falha ao consultar o assistente. Status ${response.status}`);
+        const erro = new Error(data.error || rawText || `Falha ao consultar o assistente. Status ${response.status}`);
+        erro.status = response.status;
+        erro.code = data.code || '';
+        erro.userMessage = data.userMessage || mensagemAmigavelErroOpenAI(erro, rawText);
+        throw erro;
     }
     if (data.usage) salvarUsoAssistente(data.usage);
     return data.resposta || 'Nao consegui gerar uma resposta agora.';
+}
+
+function mensagemAmigavelErroOpenAI(error, rawText = '') {
+    const status = Number(error?.status || 0);
+    const texto = String(error?.message || rawText || '').toLowerCase();
+
+    if (status === 404 || texto.includes('<!doctype') || texto.includes('cannot get /api/assistente')) {
+        return 'No link local simples, a rota da OpenAI nao roda. Vou responder com a analise interna do sistema.';
+    }
+    if (texto.includes('openai_api_key') || texto.includes('api key')) {
+        return 'A chave da OpenAI nao esta configurada no ambiente do sistema.';
+    }
+    if (status === 401 || status === 403) {
+        return 'A OpenAI recusou a autorizacao. Confira a chave e o projeto configurado.';
+    }
+    if (status === 429) {
+        return 'A OpenAI limitou o uso no momento. Tente novamente em alguns instantes.';
+    }
+    if (status >= 500) {
+        return 'A OpenAI ou a rota do assistente respondeu com instabilidade agora.';
+    }
+    return 'A IA online nao respondeu agora. Vou usar a analise interna do sistema.';
+}
+
+function atualizarStatusAssistente(texto, estado = 'local') {
+    const statusEl = document.getElementById('assistantConnectionStatus');
+    if (!statusEl) return;
+    statusEl.textContent = texto;
+    statusEl.dataset.state = estado;
 }
 
 function adicionarMensagem(texto, tipo) {
@@ -327,7 +361,12 @@ window.toggleAssistenteIA = function(force) {
     const abrir = force === undefined ? !panel.classList.contains('open') : Boolean(force);
     panel.classList.toggle('open', abrir);
     panel.setAttribute('aria-hidden', abrir ? 'false' : 'true');
-    if (abrir) setTimeout(() => document.getElementById('assistantInput')?.focus(), 80);
+    if (abrir) {
+        setTimeout(() => {
+            normalizarPosicaoAssistente(panel);
+            document.getElementById('assistantInput')?.focus();
+        }, 80);
+    }
 };
 
 window.perguntarAssistente = async function(pergunta) {
@@ -335,8 +374,10 @@ window.perguntarAssistente = async function(pergunta) {
     window.toggleAssistenteIA(true);
     adicionarMensagem(pergunta, 'user');
     adicionarMensagem('Pensando com IA...', 'bot');
+    atualizarStatusAssistente('Consultando OpenAI...', 'loading');
     try {
         const resposta = await responderPerguntaOpenAI(pergunta);
+        atualizarStatusAssistente('OpenAI conectada', 'online');
         const mensagens = document.querySelectorAll('.assistant-msg-bot');
         const ultima = mensagens[mensagens.length - 1];
         if (ultima && ultima.textContent === 'Pensando com IA...') {
@@ -348,7 +389,9 @@ window.perguntarAssistente = async function(pergunta) {
         const fallback = responderPergunta(pergunta);
         const mensagens = document.querySelectorAll('.assistant-msg-bot');
         const ultima = mensagens[mensagens.length - 1];
-        const texto = `${fallback}\n\nIA OpenAI indisponivel: ${error.message}`;
+        const motivo = error.userMessage || mensagemAmigavelErroOpenAI(error);
+        atualizarStatusAssistente('Modo analise local', 'local');
+        const texto = `${fallback}\n\nAviso: ${motivo}`;
         if (ultima && ultima.textContent === 'Pensando com IA...') {
             ultima.textContent = texto;
         } else {
@@ -375,11 +418,13 @@ function renderizarGuiaAssistente(sectionId = obterTelaAtivaAssistente()) {
         passos: ['Use o menu lateral para navegar.', 'Preencha campos obrigatorios com atencao.', 'Em caso de duvida, pergunte ao assistente.']
     };
     const content = document.getElementById('assistantGuideContent');
+    const card = document.getElementById('assistantGuideCard');
     if (!content) return;
     content.innerHTML = `
         <div class="assistant-guide-title">${guia.titulo}</div>
         <ol>${guia.passos.map(passo => `<li>${passo}</li>`).join('')}</ol>
     `;
+    if (card) card.classList.toggle('is-hidden', guiaAssistenteOculta);
 }
 
 function injetarEstilosGuiaAssistente() {
@@ -388,8 +433,11 @@ function injetarEstilosGuiaAssistente() {
     style.id = 'assistantGuideStyles';
     style.textContent = `
         .assistant-guide-card { margin:10px 12px; padding:12px; border:1px solid rgba(245,158,11,.28); border-radius:10px; background:rgba(245,158,11,.08); color:var(--text-color); }
-        .assistant-guide-card > strong { display:block; color:#f59e0b; margin-bottom:7px; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; }
-        .assistant-guide-title { font-weight:900; color:#f8fafc; margin-bottom:7px; }
+        .assistant-guide-card.is-hidden { display:none; }
+        .assistant-guide-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; }
+        .assistant-guide-head > strong { display:block; color:#f59e0b; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; }
+        .assistant-guide-head button { width:26px; height:26px; border:1px solid rgba(245,158,11,.24); border-radius:8px; background:rgba(255,255,255,.08); color:#f59e0b; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .assistant-guide-title { font-weight:900; color:inherit; margin-bottom:7px; }
         .assistant-guide-card ol { margin:0; padding-left:18px; display:grid; gap:6px; }
         .assistant-guide-card li { color:var(--text-muted); line-height:1.35; font-size:.86rem; }
     `;
@@ -397,8 +445,14 @@ function injetarEstilosGuiaAssistente() {
 }
 
 window.mostrarGuiaDaTelaAtual = function(abrirPainel = false) {
+    guiaAssistenteOculta = false;
     renderizarGuiaAssistente();
     if (abrirPainel) window.toggleAssistenteIA(true);
+};
+
+window.fecharGuiaAssistente = function() {
+    guiaAssistenteOculta = true;
+    document.getElementById('assistantGuideCard')?.classList.add('is-hidden');
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -425,7 +479,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('assistantHomeInput')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') window.enviarPerguntaAssistenteHome();
     });
+    window.addEventListener('resize', () => normalizarPosicaoAssistente(document.getElementById('assistantPanel')));
 });
+
+function normalizarPosicaoAssistente(panel) {
+    if (!panel || !panel.classList.contains('open')) return;
+    if (window.innerWidth <= 700) {
+        panel.style.left = '';
+        panel.style.top = '';
+        panel.style.right = '';
+        return;
+    }
+
+    const width = panel.offsetWidth || 390;
+    const height = panel.offsetHeight || 520;
+    const rect = panel.getBoundingClientRect();
+    const maxLeft = Math.max(8, window.innerWidth - width - 8);
+    const maxTop = Math.max(8, window.innerHeight - height - 8);
+    const left = Math.max(8, Math.min(maxLeft, Number.isFinite(rect.left) ? rect.left : window.innerWidth - width - 18));
+    const top = Math.max(8, Math.min(maxTop, Number.isFinite(rect.top) ? rect.top : 88));
+
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.right = 'auto';
+}
 
 function inicializarAssistenteArrastavel() {
     const panel = document.getElementById('assistantPanel');
@@ -433,7 +510,7 @@ function inicializarAssistenteArrastavel() {
     if (!panel || !header) return;
 
     const posSalva = JSON.parse(localStorage.getItem('orquestra_assistente_posicao') || 'null');
-    if (posSalva) {
+    if (posSalva && window.innerWidth > 700) {
         panel.style.left = `${posSalva.left}px`;
         panel.style.top = `${posSalva.top}px`;
         panel.style.right = 'auto';
@@ -444,6 +521,7 @@ function inicializarAssistenteArrastavel() {
     let offsetY = 0;
 
     header.addEventListener('pointerdown', (event) => {
+        if (window.innerWidth <= 700) return;
         if (event.target.closest('button')) return;
         dragging = true;
         const rect = panel.getBoundingClientRect();

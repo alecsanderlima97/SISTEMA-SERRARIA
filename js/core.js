@@ -454,9 +454,30 @@ window.forceUppercaseInput = function(e) {
     e.target.setSelectionRange(start, end);
 };
 
+function atualizarBotoesTemaAtivo(themeName) {
+    document.querySelectorAll('[data-theme-option]').forEach(button => {
+        button.classList.toggle('active', button.dataset.themeOption === themeName);
+        button.setAttribute('aria-pressed', button.dataset.themeOption === themeName ? 'true' : 'false');
+    });
+}
+
 window.changeTheme = function(themeName) {
+    const theme = themeName || 'original';
     const root = document.documentElement;
-    if (themeName === 'premium') {
+    const premiumAtivo = theme === 'premium';
+    document.body?.classList.toggle('orquestra-theme', premiumAtivo);
+    root.dataset.theme = theme;
+
+    if (premiumAtivo) {
+        root.style.setProperty('--primary-color', '#111827');
+        root.style.setProperty('--primary-hover', '#0f172a');
+        root.style.setProperty('--accent-color', '#0f8fa6');
+        root.style.setProperty('--bg-color', '#ece8dc');
+        root.style.setProperty('--panel-bg', '#fffdf7');
+        root.style.setProperty('--panel-border', '#ddd3c4');
+        root.style.setProperty('--text-color', '#111827');
+        root.style.setProperty('--text-muted', '#64748b');
+    } else if (theme === 'musgo') {
         root.style.setProperty('--primary-color', '#4a5d23');
         root.style.setProperty('--primary-hover', '#3a4a1c');
         root.style.setProperty('--accent-color', '#6b8e23');
@@ -465,7 +486,7 @@ window.changeTheme = function(themeName) {
         root.style.setProperty('--panel-border', 'rgba(255, 255, 255, 0.08)');
         root.style.setProperty('--text-color', '#e6edf3');
         root.style.setProperty('--text-muted', '#a1a1a1');
-    } else if (themeName === 'dark') {
+    } else if (theme === 'dark') {
         root.style.setProperty('--primary-color', '#3b82f6');
         root.style.setProperty('--primary-hover', '#2563eb');
         root.style.setProperty('--accent-color', '#60a5fa');
@@ -474,7 +495,7 @@ window.changeTheme = function(themeName) {
         root.style.setProperty('--panel-border', 'rgba(255, 255, 255, 0.08)');
         root.style.setProperty('--text-color', '#f8fafc');
         root.style.setProperty('--text-muted', '#94a3b8');
-    } else if (themeName === 'light') {
+    } else if (theme === 'light') {
         root.style.setProperty('--primary-color', '#2563eb');
         root.style.setProperty('--primary-hover', '#1d4ed8');
         root.style.setProperty('--accent-color', '#3b82f6');
@@ -493,7 +514,9 @@ window.changeTheme = function(themeName) {
         root.style.setProperty('--text-color', '#e6edf3');
         root.style.setProperty('--text-muted', '#a1a1a1');
     }
-    localStorage.setItem('orquestrasis_theme', themeName);
+    localStorage.setItem('orquestrasis_theme', theme);
+    atualizarBotoesTemaAtivo(theme);
+    document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme } }));
 };
 
 window.exportarBackup = async function(btnElement) {
@@ -1211,8 +1234,11 @@ const App = {
                         this.userPermissions = novasPermissoes;
                         this.userName = novoNome;
                         
-                        // Aplicar classe de perfil dinamicamente no body para controle CSS
-                        document.body.className = `role-${this.userRole.toLowerCase()}`;
+                        // Aplicar classe de perfil sem remover classes visuais ativas do sistema.
+                        Array.from(document.body.classList).forEach(classe => {
+                            if (classe.startsWith('role-')) document.body.classList.remove(classe);
+                        });
+                        document.body.classList.add(`role-${normalizeRole(this.userRole)}`);
                         
                         // Atualizar nome e cargo nos cabeçalhos da página
                         const nameHeader = document.getElementById('userNameHeader');

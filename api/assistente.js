@@ -46,21 +46,36 @@ function calcularCustoEstimadoOpenAI(usage = {}) {
     };
 }
 
+function enviarErro(res, status, code, userMessage, detalhe) {
+    return res.status(status).json({
+        error: detalhe || userMessage,
+        userMessage,
+        code,
+        status
+    });
+}
+
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Metodo nao permitido.' });
+        return enviarErro(res, 405, 'method_not_allowed', 'Metodo nao permitido para o assistente.');
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'OPENAI_API_KEY nao configurada na Vercel.' });
+        return enviarErro(
+            res,
+            500,
+            'missing_openai_key',
+            'A chave da OpenAI nao esta configurada no ambiente do sistema.',
+            'OPENAI_API_KEY nao configurada na Vercel.'
+        );
     }
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
         const pergunta = String(body.pergunta || '').trim();
         if (!pergunta) {
-            return res.status(400).json({ error: 'Pergunta obrigatoria.' });
+            return enviarErro(res, 400, 'missing_question', 'Digite uma pergunta para o assistente.');
         }
 
         const payload = {
@@ -84,14 +99,19 @@ module.exports = async function handler(req, res) {
             ]
         };
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch('https://api.openai.com/v1/responses', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
+        clearTimeout(timeout);
 
         const rawText = await response.text();
         let data = {};
@@ -102,17 +122,31 @@ module.exports = async function handler(req, res) {
         }
 
         if (!response.ok) {
-            return res.status(response.status).json({
-                error: data.error?.message || rawText || 'Falha ao consultar a OpenAI.',
-                status: response.status
-            });
+            const detalhe = data.error?.message || rawText || 'Falha ao consultar a OpenAI.';
+            let code = 'openai_error';
+            let userMessage = 'A OpenAI nao respondeu corretamente agora.';
+            if (response.status === 401 || response.status === 403) {
+                code = 'openai_auth_error';
+                userMessage = 'A OpenAI recusou a autorizacao. Confira a chave configurada.';
+            } else if (response.status === 429) {
+                code = 'openai_rate_limited';
+                userMessage = 'A OpenAI limitou o uso no momento. Tente novamente em alguns instantes.';
+            } else if (response.status >= 500) {
+                code = 'openai_unstable';
+                userMessage = 'A OpenAI esta instavel agora. O assistente pode usar a analise local.';
+            }
+            return enviarErro(res, response.status, code, userMessage, detalhe);
         }
 
         const resposta = extrairTextoOpenAI(data);
         if (!resposta) {
-            return res.status(502).json({
-                error: 'A OpenAI respondeu, mas nao retornou texto. Tente novamente ou troque o modelo.'
-            });
+            return enviarErro(
+                res,
+                502,
+                'openai_empty_response',
+                'A OpenAI respondeu, mas nao retornou texto. Tente novamente.',
+                'A OpenAI respondeu, mas nao retornou texto. Tente novamente ou troque o modelo.'
+            );
         }
 
         return res.status(200).json({
@@ -121,6 +155,21 @@ module.exports = async function handler(req, res) {
             usage: calcularCustoEstimadoOpenAI(data.usage)
         });
     } catch (error) {
-        return res.status(500).json({ error: error.message || 'Erro interno no assistente.' });
+        if (error?.name === 'AbortError') {
+            return enviarErro(
+                res,
+                504,
+                'openai_timeout',
+                'A OpenAI demorou demais para responder. Tente novamente.',
+                'Timeout ao consultar a OpenAI.'
+            );
+        }
+        return enviarErro(
+            res,
+            500,
+            'assistant_internal_error',
+            'Erro interno no assistente. Use a analise local por enquanto.',
+            error.message || 'Erro interno no assistente.'
+        );
     }
 };

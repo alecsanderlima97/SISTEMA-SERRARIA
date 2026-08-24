@@ -14,9 +14,10 @@
     <link rel="icon" type="image/png" href="assets/icons/orquestra-icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/orquestra-icon-192.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=performance-geral-1">
+    <link rel="stylesheet" href="styles.css?v=assistant-fix-1">
     <link rel="stylesheet" href="romaneio-v2.css">
     <link rel="stylesheet" href="ui-polish.css?v=frota-config-1">
+    <link rel="stylesheet" href="orquestra-theme.css?v=orquestra-theme-10">
     <!-- Chart.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -24,6 +25,11 @@
 </head>
 
 <body>
+    <script>
+        try {
+            document.body.classList.toggle('orquestra-theme', localStorage.getItem('orquestrasis_theme') === 'premium');
+        } catch (error) {}
+    </script>
     <!-- Bootstrap, diagnosticos e fallback estrutural -->
     <script src="js/bootstrap.js"></script>
 
@@ -47,20 +53,20 @@
             </div>
             <nav>
                 <ul>
-                    <li><a href="#" class="active" data-target="view-dashboard" title="Resumo geral com indicadores principais da serraria."><i class="fa-solid fa-home"></i> Início</a></li>
-                    <li><a href="#" data-target="view-romaneio-v2" title="Gerar romaneios de venda de madeira serrada."><i class="fa-solid fa-file-invoice"></i> Gerar Romaneio</a></li>
+                    <li><a href="#" class="active" data-target="view-dashboard" title="Resumo geral com indicadores principais da serraria."><i class="fa-solid fa-gauge-high"></i> Início</a></li>
+                    <li><a href="#" data-target="view-romaneio-v2" title="Gerar romaneios de venda de madeira serrada."><i class="fa-solid fa-file-signature"></i> Gerar Romaneio</a></li>
                     <li><a href="#" data-target="view-cavaco" title="Registrar vendas de cavaco, pó de serra, cascas e outros subprodutos."><i class="fa-solid fa-recycle"></i> Venda de Subprodutos</a></li>
-                    <li><a href="#" data-target="view-historico" title="Consultar vendas e romaneios já gerados."><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Vendas</a></li>
-                    <li><a href="#" data-target="view-clientes" title="Cadastrar e gerenciar clientes compradores de madeira."><i class="fa-solid fa-users"></i> Clientes</a></li>
-                    <li><a href="#" data-target="view-transportes" title="Cadastrar transportadoras, motoristas e veículos de frete."><i class="fa-solid fa-truck"></i> Transportadoras</a></li>
-                    <li><a href="#" data-target="view-entrada" title="Conferir cargas de toras recebidas e descarregamentos."><i class="fa-solid fa-clipboard-check"></i> Conferência de Cargas</a></li>
-                    <li><a href="#" data-target="view-produtos" title="Gerenciar madeiras, medidas, estilos e preços usados nos romaneios."><i class="fa-solid fa-tree-city"></i> Gestão de Madeira</a></li>
-                    <li><a href="#" data-target="view-estoque" title="Controlar estoque de peças, diesel, filtros, lubrificantes e almoxarifado."><i class="fa-solid fa-boxes-stacked"></i> Controle de Estoque</a></li>
-                    <li><a href="#" data-target="view-frotas" title="Acompanhar máquinas, abastecimentos, manutenções e relatos da frota."><i class="fa-solid fa-truck-pickup"></i> Controle de Frota</a></li>
-                    <li><a href="#" data-target="view-financeiro" title="Controlar contas, despesas, vencimentos e relatórios financeiros."><i class="fa-solid fa-sack-dollar"></i> Financeiro</a></li>
-                    <li><a href="#" data-target="view-rh" title="Gerenciar funcionários, salários, vales, férias e horas extras."><i class="fa-solid fa-id-card-clip"></i> RH Funcionários</a></li>
-                    <li><a href="#" data-target="view-calculadoras" title="Ferramentas rápidas para cálculos operacionais da serraria."><i class="fa-solid fa-calculator"></i> Calculadoras</a></li>
-                    <li><a href="#" data-target="view-agenda" title="Organizar lembretes, tarefas e compromissos do dia."><i class="fa-solid fa-calendar-days"></i> Agenda / Calendário</a></li>
+                    <li><a href="#" data-target="view-historico" title="Consultar vendas e romaneios já gerados."><i class="fa-solid fa-timeline"></i> Histórico de Vendas</a></li>
+                    <li><a href="#" data-target="view-clientes" title="Cadastrar e gerenciar clientes compradores de madeira."><i class="fa-solid fa-address-book"></i> Clientes</a></li>
+                    <li><a href="#" data-target="view-transportes" title="Cadastrar transportadoras, motoristas e veículos de frete."><i class="fa-solid fa-truck-fast"></i> Transportadoras</a></li>
+                    <li><a href="#" data-target="view-entrada" title="Conferir cargas de toras recebidas e descarregamentos."><i class="fa-solid fa-clipboard-list"></i> Conferência de Cargas</a></li>
+                    <li><a href="#" data-target="view-produtos" title="Gerenciar madeiras, medidas, estilos e preços usados nos romaneios."><i class="fa-solid fa-tree"></i> Gestão de Madeira</a></li>
+                    <li><a href="#" data-target="view-estoque" title="Controlar estoque de peças, diesel, filtros, lubrificantes e almoxarifado."><i class="fa-solid fa-warehouse"></i> Controle de Estoque</a></li>
+                    <li><a href="#" data-target="view-frotas" title="Acompanhar máquinas, abastecimentos, manutenções e relatos da frota."><i class="fa-solid fa-tractor"></i> Controle de Frota</a></li>
+                    <li><a href="#" data-target="view-financeiro" title="Controlar contas, despesas, vencimentos e relatórios financeiros."><i class="fa-solid fa-wallet"></i> Financeiro</a></li>
+                    <li><a href="#" data-target="view-rh" title="Gerenciar funcionários, salários, vales, férias e horas extras."><i class="fa-solid fa-users-gear"></i> RH Funcionários</a></li>
+                    <li><a href="#" data-target="view-calculadoras" title="Ferramentas rápidas para cálculos operacionais da serraria."><i class="fa-solid fa-square-root-variable"></i> Calculadoras</a></li>
+                    <li><a href="#" data-target="view-agenda" title="Organizar lembretes, tarefas e compromissos do dia."><i class="fa-solid fa-calendar-check"></i> Agenda / Calendário</a></li>
                 </ul>
             </nav>
         </aside>
@@ -108,7 +114,7 @@
             <script src="js/views/produtos-view.js?v=comprimento-livre-1"></script>
             <script src="js/views/estoque-view.js?v=lubrificantes-galoes-2"></script>
             <script src="js/views/frotas-view.js"></script>
-            <script src="js/views/financeiro-view.js?v=documentos-vinculados-financeiro-1"></script>
+            <script src="js/views/financeiro-view.js?v=orquestra-theme-1"></script>
             <script src="js/modals/frotas-modals.js?v=manutencao-layout-2"></script>
             <script src="js/views/rh-view.js?v=rh-mobile-1"></script>
             <script src="js/views/calculadoras-view.js?v=compacta-2"></script>
@@ -121,7 +127,7 @@
 
             <script src="js/views/romaneio-v2-view.js?v=baixa-patio-romaneio-1"></script>
 
-            <script src="js/views/configuracoes-view.js?v=config-sem-scroll-horizontal-1"></script>
+            <script src="js/views/configuracoes-view.js?v=theme-toggle-1"></script>
 
 
         </main>
@@ -137,7 +143,7 @@
 
     <script src="js/modals/usuario-modals.js"></script>
 
-    <script src="js/widgets/assistant-widget.js?v=assistant-floating-1"></script>
+    <script src="js/widgets/assistant-widget.js?v=assistant-floating-3"></script>
     <script src="js/print-utils.js?v=pdf-render-3"></script>
     <script src="js/section-loader.js?v=performance-1"></script>
 
@@ -146,13 +152,13 @@
     <script type="module" src="js/firebase-init.js?v=descarga-relatos-frota-1"></script>
 
     <!-- Scripts da aplicaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o -->
-    <script type="module" src="js/core.js?v=carregamento-sob-demanda-2"></script>
+    <script type="module" src="js/core.js?v=theme-toggle-1"></script>
     <script type="module" src="js/clientes.js?v=performance-geral-1"></script>
     <script type="module" src="js/produtos.js?v=performance-geral-1"></script>
     <script type="module" src="js/contas-receber.js?v=cobranca-clientes-1"></script>
     <script type="module" src="js/calculadoras.js?v=cobranca-clientes-1"></script>
     <script type="module" src="js/transportes.js?v=performance-geral-1"></script>
-    <script type="module" src="js/assistente.js?v=openai-api-5"></script>
+    <script type="module" src="js/assistente.js?v=openai-api-7"></script>
     <script type="module" src="js/entrada.js?v=continuar-empreiteiro-1"></script>
     <script type="module" src="js/estoque.js?v=lubrificantes-galoes-2"></script>
     <script type="module" src="js/romaneio_v2.js?v=cobranca-clientes-1"></script>
@@ -160,10 +166,10 @@
     <script type="module" src="js/patio.js?v=uso-romaneio-temporario-1"></script>
     <script type="module" src="js/rh.js?v=he-calculo-horas-2"></script>
     <script type="module" src="js/frotas.js?v=frota-foto-card-1"></script>
-    <script type="module" src="js/financeiro.js?v=financeiro-leitura-segundo-plano-2"></script>
+    <script type="module" src="js/financeiro.js?v=orquestra-theme-4"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js?v=performance-geral-1"></script>
-    <script type="module" src="dashboard.js?v=filtro-graficos-periodo-1"></script>
+    <script type="module" src="dashboard.js?v=theme-toggle-1"></script>
     <script src="js/widgets/scroll-helper-widget.js"></script>
 
     <script src="js/ui-helpers.js?v=atalhos-campos-1"></script>

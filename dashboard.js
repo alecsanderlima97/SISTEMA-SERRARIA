@@ -56,6 +56,10 @@ document.addEventListener('financeiroUpdated', () => {
     renderRelatorioMensalDashboard();
 });
 
+document.addEventListener('themeChanged', () => {
+    renderDashboardView(dashboardViewAtual);
+});
+
 function docsToArray(snapshot) {
     const list = [];
     snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
@@ -188,12 +192,21 @@ function bindKpiClicks() {
         if (card.dataset.dashboardBound === '1') return;
         card.dataset.dashboardBound = '1';
         card.style.cursor = 'pointer';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
         card.addEventListener('click', () => renderDashboardView(card.dataset.dashboardView));
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                renderDashboardView(card.dataset.dashboardView);
+            }
+        });
     });
 }
 
 function renderDashboardView(view) {
     dashboardViewAtual = view || 'madeira';
+    marcarKpiAtivo(dashboardViewAtual);
     if (view === 'subprodutos') {
         renderLineChart('Cavaco/Po por dia', agruparSubprodutosPorDia(), 'm3');
         renderBarChart('Volume por tipo de subproduto', agruparSubprodutosPorTipo(), 'm3');
@@ -268,43 +281,68 @@ function renderLineChart(label, dados, tipo = 'num') {
     const hasData = entries.some(([, value]) => Number(value) > 0);
     const labels = hasData ? entries.map(([key]) => abreviarLabel(key)) : ['Sem dados'];
     const values = hasData ? entries.map(([, value]) => Number(value) || 0) : [0];
+    const ctx = canvas.getContext('2d');
+    const premiumTheme = isOrquestraThemeActive();
+    const palette = premiumTheme ? getChartPalette(label, tipo) : { main: '#00ff88', fill: 'rgba(0, 255, 136, 0.12)', soft: 'rgba(0, 255, 136, 0.78)' };
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, palette.fill);
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    setChartInsight(canvas, entries, tipo, hasData ? 'Evolucao do periodo' : 'Sem movimentacao registrada', premiumTheme);
     if (chartVendasInstance) chartVendasInstance.destroy();
-    chartVendasInstance = new Chart(canvas.getContext('2d'), {
+    chartVendasInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels,
             datasets: [{
                 label,
                 data: values,
-                borderColor: '#00ff88',
-                backgroundColor: 'rgba(0, 255, 136, 0.12)',
-                pointBackgroundColor: '#f8fafc',
-                pointBorderColor: '#00ff88',
-                pointRadius: 4,
+                borderColor: palette.main,
+                backgroundColor: gradient,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: palette.main,
+                pointBorderWidth: 2,
+                pointRadius: 3,
                 pointHoverRadius: 6,
+                pointHoverBorderWidth: 3,
                 fill: true,
-                tension: 0.35
+                tension: 0.38,
+                borderWidth: 3
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { labels: { color: '#e5e7eb' } },
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#111827',
-                    titleColor: '#fff',
+                    backgroundColor: 'rgba(17, 24, 39, 0.96)',
+                    titleColor: '#fffdf7',
                     bodyColor: '#e5e7eb',
-                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatChartValue(ctx.parsed.y, tipo)}` }
+                    borderColor: palette.main,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: (items) => entries[items?.[0]?.dataIndex]?.[0] || items?.[0]?.label || '',
+                        label: (item) => `${label}: ${formatChartValue(item.parsed.y, tipo)}`,
+                        afterBody: (items) => tooltipPercentual(items?.[0]?.parsed?.y, values)
+                    }
                 }
             },
-            layout: { padding: { top: 8, right: 18, bottom: 24, left: 12 } },
+            layout: { padding: { top: 10, right: 14, bottom: 8, left: 4 } },
             scales: {
                 x: {
-                    ticks: { color: '#9ca3af', maxRotation: 35, minRotation: 0, autoSkip: true, padding: 8 },
-                    grid: { color: 'rgba(255,255,255,0.06)' }
+                    ticks: { color: premiumTheme ? '#64748b' : '#9ca3af', maxRotation: premiumTheme ? 0 : 35, minRotation: 0, autoSkip: true, padding: 8, font: { size: 11, weight: 700 } },
+                    grid: { display: !premiumTheme, color: 'rgba(255,255,255,0.06)' },
+                    border: { display: false }
                 },
-                y: { beginAtZero: true, ticks: { color: '#9ca3af', callback: value => formatChartValue(value, tipo) }, grid: { color: 'rgba(255,255,255,0.06)' } }
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: premiumTheme ? '#64748b' : '#9ca3af', maxTicksLimit: 6, callback: value => formatChartValue(value, tipo), font: { size: 11, weight: 700 } },
+                    grid: { color: premiumTheme ? 'rgba(148, 126, 93, 0.18)' : 'rgba(255,255,255,0.06)', drawBorder: false },
+                    border: { display: false }
+                }
             }
         }
     });
@@ -320,6 +358,10 @@ function renderBarChart(label, dados, tipo = 'num') {
     const hasData = entries.some(([, value]) => Number(value) > 0);
     const labels = hasData ? entries.map(([key]) => abreviarLabel(key)) : ['Sem dados'];
     const values = hasData ? entries.map(([, value]) => Number(value) || 0) : [0];
+    const premiumTheme = isOrquestraThemeActive();
+    const palette = premiumTheme ? getChartPalette(label, tipo) : { main: '#10b981', fill: 'rgba(16, 185, 129, 0.16)', soft: 'rgba(16, 185, 129, 0.78)' };
+    const colors = labels.map((item, index) => getBarColor(item, palette, index));
+    setChartInsight(canvas, entries, tipo, hasData ? 'Ranking principal' : 'Sem movimentacao registrada', premiumTheme);
     if (chartVolumeInstance) chartVolumeInstance.destroy();
     chartVolumeInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
@@ -328,32 +370,49 @@ function renderBarChart(label, dados, tipo = 'num') {
             datasets: [{
                 label,
                 data: values,
-                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b'],
-                borderColor: 'rgba(255,255,255,0.22)',
+                backgroundColor: colors,
+                borderColor: colors.map(color => color.replace('0.78', '1')),
                 borderWidth: 1,
-                borderRadius: 6
+                borderRadius: 8,
+                borderSkipped: false,
+                barThickness: labels.length <= 4 ? 30 : 22,
+                maxBarThickness: 34
             }]
         },
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'y', intersect: false },
             plugins: {
-                legend: { labels: { color: '#e5e7eb' } },
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#111827',
-                    titleColor: '#fff',
+                    backgroundColor: 'rgba(17, 24, 39, 0.96)',
+                    titleColor: '#fffdf7',
                     bodyColor: '#e5e7eb',
-                    callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatChartValue(ctx.parsed.x, tipo)}` }
+                    borderColor: palette.main,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: (items) => entries[items?.[0]?.dataIndex]?.[0] || items?.[0]?.label || '',
+                        label: (item) => `${label}: ${formatChartValue(item.parsed.x, tipo)}`,
+                        afterBody: (items) => tooltipPercentual(items?.[0]?.parsed?.x, values)
+                    }
                 }
             },
-            layout: { padding: { top: 8, right: 18, bottom: 28, left: 12 } },
+            layout: { padding: { top: 8, right: 12, bottom: 6, left: 2 } },
             scales: {
                 x: {
-                    ticks: { color: '#9ca3af', callback: value => formatChartValue(value, tipo) },
-                    grid: { color: 'rgba(255,255,255,0.06)' }
+                    ticks: { color: premiumTheme ? '#64748b' : '#9ca3af', maxTicksLimit: 5, callback: value => formatChartValue(value, tipo), font: { size: 11, weight: 700 } },
+                    grid: { color: premiumTheme ? 'rgba(148, 126, 93, 0.18)' : 'rgba(255,255,255,0.06)', drawBorder: false },
+                    border: { display: false }
                 },
-                y: { ticks: { color: '#d1d5db', autoSkip: false }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                y: {
+                    ticks: { color: premiumTheme ? '#334155' : '#d1d5db', autoSkip: false, font: { size: 11, weight: 800 } },
+                    grid: { display: !premiumTheme, color: 'rgba(255,255,255,0.04)' },
+                    border: { display: false }
+                }
             }
         }
     });
@@ -361,7 +420,10 @@ function renderBarChart(label, dados, tipo = 'num') {
 
 function setChartTitle(id, text, icon) {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${text}`;
+    if (!el) return;
+    el.innerHTML = isOrquestraThemeActive()
+        ? `<span><i class="fa-solid fa-${icon}"></i> ${text}</span><small>clique nos KPIs para trocar a analise</small>`
+        : `<i class="fa-solid fa-${icon}"></i> ${text}`;
 }
 
 function abreviarLabel(label) {
@@ -378,6 +440,79 @@ function formatChartValue(value, tipo = 'num') {
     if (tipo === 'brl') return formatBRL(value);
     if (tipo === 'm3') return formatM3(value);
     return formatNumberChart(value);
+}
+
+function isOrquestraThemeActive() {
+    return document.body?.classList.contains('orquestra-theme');
+}
+
+function marcarKpiAtivo(view) {
+    document.querySelectorAll('[data-dashboard-view]').forEach(card => {
+        card.classList.toggle('dashboard-kpi-active', card.dataset.dashboardView === view);
+    });
+}
+
+function getChartPalette(label = '', tipo = 'num') {
+    const lower = String(label).toLowerCase();
+    if (tipo === 'brl' || lower.includes('faturamento') || lower.includes('financeiro')) {
+        return { main: '#047857', fill: 'rgba(4, 120, 87, 0.22)', soft: 'rgba(4, 120, 87, 0.78)' };
+    }
+    if (lower.includes('despesa')) {
+        return { main: '#b91c1c', fill: 'rgba(185, 28, 28, 0.18)', soft: 'rgba(185, 28, 28, 0.78)' };
+    }
+    if (lower.includes('tora') || lower.includes('entrada')) {
+        return { main: '#b45309', fill: 'rgba(180, 83, 9, 0.18)', soft: 'rgba(180, 83, 9, 0.78)' };
+    }
+    if (lower.includes('cavaco') || lower.includes('subproduto') || lower.includes('po')) {
+        return { main: '#0f766e', fill: 'rgba(15, 118, 110, 0.18)', soft: 'rgba(15, 118, 110, 0.78)' };
+    }
+    if (lower.includes('estoque') || lower.includes('acabando')) {
+        return { main: '#d9822b', fill: 'rgba(217, 130, 43, 0.16)', soft: 'rgba(217, 130, 43, 0.78)' };
+    }
+    return { main: '#0f8fa6', fill: 'rgba(15, 143, 166, 0.18)', soft: 'rgba(15, 143, 166, 0.78)' };
+}
+
+function getBarColor(label, palette, index) {
+    const texto = String(label || '').toLowerCase();
+    if (texto.includes('1a') || texto.includes('1ª') || texto.includes('1 classe')) return 'rgba(4, 120, 87, 0.82)';
+    if (texto.includes('2a') || texto.includes('2ª') || texto.includes('2 classe')) return 'rgba(196, 122, 28, 0.84)';
+    if (texto.includes('3a') || texto.includes('3ª') || texto.includes('3 classe')) return 'rgba(185, 28, 28, 0.78)';
+    const base = ['rgba(15, 143, 166, 0.82)', 'rgba(4, 120, 87, 0.78)', 'rgba(37, 99, 235, 0.74)', 'rgba(180, 83, 9, 0.78)', 'rgba(124, 58, 237, 0.72)', 'rgba(15, 118, 110, 0.76)', 'rgba(194, 65, 12, 0.72)', 'rgba(71, 85, 105, 0.72)'];
+    return index === 0 ? palette.soft : base[index % base.length];
+}
+
+function tooltipPercentual(value, values) {
+    const total = values.reduce((sum, item) => sum + (Number(item) || 0), 0);
+    if (!total) return '';
+    const percentual = ((Number(value) || 0) / total) * 100;
+    return `Participacao: ${percentual.toFixed(1).replace('.', ',')}% do total exibido`;
+}
+
+function setChartInsight(canvas, entries, tipo, label, enabled = true) {
+    const box = canvas.closest('.chart-box');
+    if (!box) return;
+    let insight = box.querySelector('.dashboard-chart-insight');
+    if (!enabled) {
+        insight?.remove();
+        return;
+    }
+    if (!insight) {
+        insight = document.createElement('div');
+        insight.className = 'dashboard-chart-insight';
+        box.querySelector('h3')?.insertAdjacentElement('afterend', insight);
+    }
+    const validEntries = entries.filter(([, value]) => Number(value) > 0);
+    if (!validEntries.length) {
+        insight.innerHTML = `<span>${label}</span><strong>Nenhum dado para o periodo.</strong>`;
+        return;
+    }
+    const total = validEntries.reduce((sum, [, value]) => sum + (Number(value) || 0), 0);
+    const top = [...validEntries].sort((a, b) => b[1] - a[1])[0];
+    insight.innerHTML = `
+        <span>${label}</span>
+        <strong>Total: ${formatChartValue(total, tipo)}</strong>
+        <em>Maior: ${abreviarLabel(top[0])} - ${formatChartValue(top[1], tipo)}</em>
+    `;
 }
 
 function getPeriodoLabel() {

@@ -9,6 +9,8 @@ import {
 // Adicione aqui os e-mails que devem ser Gerentes
 // ======================================================
 const ADMIN_EMAILS = [
+    'escritoriovanmarte@hotmail.com',
+    'escritoriovanmarte@gmail.com',
     'limaalecsander@gmail.com'
 ];
 const DEFAULT_EMPRESA_ID = 'vanmarte';
@@ -16,10 +18,23 @@ const LOGIN_SOUND_PATH = 'assets/audio/login_sound.mp3';
 const MIN_LOGIN_SOUND_MS = 3500;
 
 function getCargoInicial(email) {
-    if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
+    if (ADMIN_EMAILS.includes(String(email || '').toLowerCase().trim())) {
         return 'gerente';
     }
     return 'PENDENTE';
+}
+
+function mensagemErroGoogle(error) {
+    if (error?.code === 'auth/unauthorized-domain') {
+        return 'Este endereço local não está autorizado pelo Google. Abra pelo link http://localhost:5500/login.html e tente novamente.';
+    }
+    if (error?.code === 'auth/popup-closed-by-user') {
+        return 'Login com Google cancelado antes de concluir.';
+    }
+    if (error?.code === 'auth/account-exists-with-different-credential') {
+        return 'Este e-mail já existe com outro tipo de login. Entre com e-mail e senha ou use a mesma forma cadastrada.';
+    }
+    return 'Falha ao acessar com Google. Verifique se pop-ups estão liberados e tente novamente.';
 }
 
 function playLoginSound() {
@@ -143,7 +158,7 @@ async function prepararUsuarioGoogle(user) {
     });
 
     if (cargoGoogle === 'PENDENTE') {
-        alert('Seu cadastro foi realizado com sucesso! Aguarde a aprova??o do Gerente para acessar o sistema.');
+        alert('Seu cadastro foi realizado com sucesso! Aguarde a aprovação do Gerente para acessar o sistema.');
     }
 }
 
@@ -156,7 +171,7 @@ async function checkGoogleRedirectResult() {
         }
     } catch (error) {
         console.error('Erro no redirecionamento do Google:', error);
-        showError('Falha na autentica??o com o Google. Tente novamente.');
+        showError(mensagemErroGoogle(error));
     }
 }
 
@@ -177,7 +192,7 @@ if (btnGoogleLogin) {
                 await signInWithRedirect(auth, provider);
                 return;
             }
-            showError('Falha ao acessar com Google. Verifique se pop-ups estão liberados e tente novamente.');
+            showError(mensagemErroGoogle(error));
         } finally {
             btnGoogleLogin.disabled = false;
         }

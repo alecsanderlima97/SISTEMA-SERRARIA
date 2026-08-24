@@ -14,11 +14,17 @@
     <link rel="icon" type="image/png" href="assets/icons/orquestra-icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/orquestra-icon-192.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=assistant-fix-1">
     <link rel="stylesheet" href="ui-polish.css?v=padrao-visual-1">
+    <link rel="stylesheet" href="orquestra-theme.css?v=orquestra-theme-10">
 </head>
 
 <body class="login-body">
+    <script>
+        try {
+            document.body.classList.toggle('orquestra-theme', localStorage.getItem('orquestrasis_theme') === 'premium');
+        } catch (error) {}
+    </script>
     <div class="background-elements hide-on-print">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -134,7 +140,7 @@
         </div>
     </div>
 
-    <script type="module" src="js/login.js?v=login-brand-1"></script>
+    <script type="module" src="js/login.js?v=google-demo-fix-1"></script>
 </body>
 
 </html>

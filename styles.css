@@ -1904,10 +1904,10 @@ body.role-pendente .global-header {
     position: fixed;
     right: 18px;
     top: 88px;
-    bottom: 22px;
+    bottom: auto;
     width: min(390px, calc(100vw - 36px));
-    height: min(680px, calc(100vh - 110px));
-    max-height: calc(100vh - 24px);
+    height: auto;
+    max-height: calc(100vh - 110px);
     z-index: 9999;
     display: none;
     flex-direction: column;
@@ -1941,6 +1941,18 @@ body.role-pendente .global-header {
     display: block;
     color: var(--text-muted);
     margin-top: 2px;
+}
+
+.assistant-panel-header small[data-state="online"] {
+    color: #22c55e;
+}
+
+.assistant-panel-header small[data-state="loading"] {
+    color: #f59e0b;
+}
+
+.assistant-panel-header small[data-state="local"] {
+    color: #38bdf8;
 }
 
 .assistant-usage-card {
@@ -2016,6 +2028,7 @@ body.role-pendente .global-header {
 .assistant-messages {
     flex: 1 1 auto;
     min-height: 0;
+    max-height: 290px;
     overflow-y: scroll;
     overscroll-behavior: contain;
     padding: 14px;
@@ -2061,6 +2074,47 @@ body.role-pendente .global-header {
     background: rgba(255,255,255,0.05);
     color: white;
     padding: 10px;
+}
+
+@media (max-width: 700px) {
+    .assistant-float-button {
+        right: 14px;
+        top: auto;
+        bottom: 82px;
+        width: 46px;
+        height: 46px;
+    }
+
+    .assistant-panel {
+        left: 10px !important;
+        right: 10px !important;
+        top: auto !important;
+        bottom: 74px;
+        width: auto;
+        max-height: calc(100vh - 96px);
+        border-radius: 14px;
+    }
+
+    .assistant-panel-header {
+        cursor: default;
+    }
+
+    .assistant-usage-card {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .assistant-quick-actions {
+        gap: 6px;
+    }
+
+    .assistant-quick-actions button {
+        flex: 1 1 115px;
+        min-height: 34px;
+    }
+
+    .assistant-messages {
+        max-height: 240px;
+    }
 }
 
 /* Shell principal do aplicativo */
