@@ -159,10 +159,72 @@ function normalizarAssinaturaFinanceira(valor) {
         .replace(/\s+/g, ' ');
 }
 
+function limparNomeArquivoDuplicidadeFinanceira(nome = '') {
+    return normalizarAssinaturaFinanceira(nome)
+        .replace(/\.[a-z0-9]{2,5}$/i, '')
+        .replace(/\s*\(\d+\)\s*$/g, '')
+        .replace(/\s+-\s+cop[ií]a$/g, '')
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normalizarDescricaoDuplicidadeFinanceira(valor = '') {
+    const texto = normalizarTexto(valor)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\.[A-Z0-9]{2,5}$/g, '')
+        .replace(/\s*\(\d+\)\s*$/g, '')
+        .replace(/IMPORTADO\s+(RAPIDO\s+)?(DA\s+PASTA|DA\s+FILA|PELO\s+MONITOR)\s+FINANCEIRA\s*:?.*$/g, '')
+        .replace(/GUIAPAGAMENTO[_\s-]*/g, 'GUIA PAGAMENTO ')
+        .replace(/[-_]+/g, ' ')
+        .replace(/[^A-Z0-9/ ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!texto || ['DOCUMENTO', 'BOLETO', 'IMPOSTO', 'NOTA FISCAL', 'PENDENTE DE CONFERENCIA'].includes(texto)) return '';
+    return texto.slice(0, 80);
+}
+
+function valorCentavosFinanceiro(valor) {
+    const numero = Number(valor || 0);
+    return Number.isFinite(numero) ? Math.round(numero * 100) : 0;
+}
+
+function grupoTipoFinanceiro(item = {}) {
+    const texto = normalizarDescricaoDuplicidadeFinanceira(`${item.tipo || ''} ${item.descricao || ''} ${item.ia?.fornecedor || ''}`);
+    if (/NOTA FISCAL|DANFE|NFE|NF E|XML/.test(texto)) return 'NOTA_FISCAL';
+    if (/IMPOSTO|DARF|FGTS|INSS|RECEITA|SINDICATO|TAXA/.test(texto)) return 'IMPOSTO';
+    if (/BOLETO|BLOQUETO|SICREDI|COBRANCA|FICHA DE COMPENSACAO/.test(texto)) return 'BOLETO';
+    return normalizarDescricaoDuplicidadeFinanceira(item.tipo || 'DOCUMENTO') || 'DOCUMENTO';
+}
+
+function extrairIdentificadoresFinanceiros(item = {}) {
+    const texto = normalizarTexto([
+        item.descricao,
+        item.observacao,
+        item.ia?.fornecedor,
+        item.ia?.cnpj,
+        item.ia?.numeroDocumento,
+        item.documento?.nome,
+        item.documento?.localPath
+    ].filter(Boolean).join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const ids = new Set();
+    const linhaDigitavel = texto.match(/\b\d{5}\.?\d{5}\s?\d{5}\.?\d{6}\s?\d{5}\.?\d{6}\s?\d\s?\d{14}\b/g) || [];
+    linhaDigitavel.forEach(valor => ids.add(`linha:${valor.replace(/\D/g, '')}`));
+    const numerosLongos = texto.match(/\b\d{20,60}\b/g) || [];
+    numerosLongos.forEach(valor => ids.add(`num:${valor}`));
+    const cnpjs = texto.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g) || [];
+    cnpjs.forEach(valor => ids.add(`cnpj:${valor.replace(/\D/g, '')}`));
+    const numeroDocumento = normalizarDescricaoDuplicidadeFinanceira(item.ia?.numeroDocumento || '');
+    if (numeroDocumento && numeroDocumento.length >= 4) ids.add(`doc:${numeroDocumento}`);
+    return Array.from(ids);
+}
+
 function obterAssinaturasDocumentoFinanceiro(doc = {}) {
     const assinaturas = [];
     const hash = doc.hashArquivo || doc.sha256 || doc.documentoHash || doc.assinaturaHash;
     const nome = normalizarAssinaturaFinanceira(doc.nome || doc.name || '');
+    const nomeLimpo = limparNomeArquivoDuplicidadeFinanceira(doc.nome || doc.name || '');
     const tamanho = Number(doc.tamanho || doc.size || 0);
     const localPath = normalizarAssinaturaFinanceira(doc.localPath || doc.arquivoLocal || '');
     const localUrl = normalizarAssinaturaFinanceira(doc.localUrl || '');
@@ -171,6 +233,7 @@ function obterAssinaturasDocumentoFinanceiro(doc = {}) {
     if (localPath) assinaturas.push(`path:${localPath}`);
     if (localUrl) assinaturas.push(`url:${localUrl}`);
     if (nome && tamanho > 0) assinaturas.push(`name-size:${nome}|${tamanho}`);
+    if (nomeLimpo && tamanho > 0) assinaturas.push(`name-clean-size:${nomeLimpo}|${tamanho}`);
     if (nome) assinaturas.push(`name:${nome}`);
 
     return assinaturas;
@@ -180,6 +243,30 @@ function obterDocumentosIndexadosFinanceiro(item = {}) {
     return normalizarDocumentosVinculadosFinanceiro(item)
         .concat([item.documento, item.comprovante])
         .filter(Boolean);
+}
+
+function obterAssinaturasLancamentoFinanceiro(item = {}) {
+    const assinaturas = new Set();
+    obterDocumentosIndexadosFinanceiro(item)
+        .flatMap(obterAssinaturasDocumentoFinanceiro)
+        .forEach(chave => assinaturas.add(chave));
+
+    const vencimento = item.vencimento || '';
+    const centavos = valorCentavosFinanceiro(item.valor);
+    const descricao = normalizarDescricaoDuplicidadeFinanceira(item.descricao || item.ia?.fornecedor || '');
+    const grupo = grupoTipoFinanceiro(item);
+    const ids = extrairIdentificadoresFinanceiros(item);
+
+    ids.forEach(id => {
+        if (vencimento && centavos > 0) assinaturas.add(`id-valor:${id}|${vencimento}|${centavos}`);
+        assinaturas.add(`id:${id}`);
+    });
+
+    if (vencimento && centavos > 0 && descricao) {
+        assinaturas.add(`meta:${grupo}|${vencimento}|${centavos}|${descricao}`);
+    }
+
+    return Array.from(assinaturas);
 }
 
 function buscarDocumentoDuplicadoFinanceiro(anexo, ignorarRegistroId = '') {
@@ -203,6 +290,18 @@ function buscarDocumentoDuplicadoFinanceiro(anexo, ignorarRegistroId = '') {
     return null;
 }
 
+function buscarLancamentoDuplicadoFinanceiro(registro, ignorarRegistroId = '') {
+    const assinaturas = new Set(obterAssinaturasLancamentoFinanceiro(registro));
+    if (!assinaturas.size) return null;
+
+    for (const item of obterLancamentosFinanceiros()) {
+        if (ignorarRegistroId && item.id === ignorarRegistroId) continue;
+        const comum = obterAssinaturasLancamentoFinanceiro(item).find(chave => assinaturas.has(chave));
+        if (comum) return { item, assinatura: comum };
+    }
+    return null;
+}
+
 function mensagemDocumentoDuplicadoFinanceiro(anexo, duplicado) {
     const item = duplicado?.item || {};
     const nome = anexo?.nome || duplicado?.documento?.nome || 'documento';
@@ -214,6 +313,117 @@ function mensagemDocumentoDuplicadoFinanceiro(anexo, duplicado) {
         'A importação foi cancelada para evitar lançamento repetido.'
     ].join('\n');
 }
+
+function mensagemLancamentoDuplicadoFinanceiro(registro, duplicado) {
+    const item = duplicado?.item || {};
+    return [
+        `Lançamento duplicado: ${registro.descricao || registro.tipo || 'documento financeiro'}`,
+        `Já existe um registro salvo${item.criadoEm ? ` em ${dataHoraBR(item.criadoEm)}` : ''}.`,
+        `Registro encontrado: ${item.descricao || item.tipo || 'Documento financeiro'}${item.vencimento ? ` - venc. ${dataBR(item.vencimento)}` : ''}${Number(item.valor || 0) ? ` - ${formatarMoeda(item.valor)}` : ''}.`,
+        'A importação foi cancelada para evitar boleto/nota repetido.'
+    ].join('\n');
+}
+
+function obterIdsDuplicadosFinanceiro(lista = []) {
+    const vistos = new Map();
+    const duplicados = new Set();
+    (lista || []).forEach(item => {
+        obterAssinaturasLancamentoFinanceiro(item).forEach(chave => {
+            if (!chave.startsWith('meta:') && !chave.startsWith('id-valor:') && !chave.startsWith('hash:') && !chave.startsWith('name-clean-size:')) return;
+            if (vistos.has(chave)) {
+                duplicados.add(item.id);
+                duplicados.add(vistos.get(chave));
+            } else {
+                vistos.set(chave, item.id);
+            }
+        });
+    });
+    return duplicados;
+}
+
+function dataOrdenacaoFinanceiro(item = {}) {
+    return item.criadoEm || item.atualizadoEm || item.vencimento || '';
+}
+
+function obterGruposDuplicadosFinanceiro(lista = []) {
+    const grupos = new Map();
+    (lista || []).forEach(item => {
+        obterAssinaturasLancamentoFinanceiro(item).forEach(chave => {
+            if (!chave.startsWith('meta:') && !chave.startsWith('id-valor:') && !chave.startsWith('hash:') && !chave.startsWith('name-clean-size:')) return;
+            if (!grupos.has(chave)) grupos.set(chave, []);
+            grupos.get(chave).push(item);
+        });
+    });
+
+    const idsRemover = new Set();
+    const detalhes = [];
+    grupos.forEach((itens, assinatura) => {
+        if (itens.length < 2) return;
+        const ordenados = [...itens].sort((a, b) => {
+            const dataA = dataOrdenacaoFinanceiro(a);
+            const dataB = dataOrdenacaoFinanceiro(b);
+            if (dataA !== dataB) return dataA.localeCompare(dataB);
+            return String(a.id || '').localeCompare(String(b.id || ''));
+        });
+        const manter = ordenados[0];
+        const remover = ordenados.slice(1).filter(item => !idsRemover.has(item.id));
+        remover.forEach(item => idsRemover.add(item.id));
+        if (remover.length) detalhes.push({ assinatura, manter, remover });
+    });
+
+    return {
+        totalRemover: idsRemover.size,
+        idsRemover: Array.from(idsRemover),
+        detalhes
+    };
+}
+
+window.preverDuplicadosFinanceiros = function() {
+    const resultado = obterGruposDuplicadosFinanceiro(obterLancamentosFinanceiros());
+    console.table(resultado.detalhes.flatMap(grupo => grupo.remover.map(item => ({
+        removerId: item.id,
+        remover: item.descricao || item.tipo || 'Documento',
+        vencimento: item.vencimento || '',
+        valor: Number(item.valor || 0),
+        manterId: grupo.manter.id,
+        manter: grupo.manter.descricao || grupo.manter.tipo || 'Documento'
+    }))));
+    return {
+        totalRemover: resultado.totalRemover,
+        idsRemover: resultado.idsRemover,
+        grupos: resultado.detalhes.length
+    };
+};
+
+window.limparDuplicadosFinanceiros = async function(confirmado = false) {
+    const lista = obterLancamentosFinanceiros();
+    const resultado = obterGruposDuplicadosFinanceiro(lista);
+    if (!resultado.totalRemover) {
+        alert('Nenhum lançamento financeiro duplicado foi encontrado pela regra atual.');
+        return { removidos: 0 };
+    }
+
+    if (!confirmado) {
+        const ok = confirm(`Foram encontrados ${resultado.totalRemover} lançamento(s) financeiro(s) duplicado(s).\n\nVou manter o primeiro lançamento de cada grupo e excluir somente as cópias posteriores.\n\nDeseja continuar?`);
+        if (!ok) return { removidos: 0, cancelado: true };
+    }
+
+    let removidosNuvem = 0;
+    for (const id of resultado.idsRemover) {
+        const okNuvem = await excluirFinanceiroNuvem(id);
+        if (!okNuvem) {
+            alert('A limpeza foi interrompida porque um duplicado não pôde ser removido da nuvem. Nenhuma exclusão local adicional será feita agora.');
+            return { removidos: removidosNuvem, interrompido: true };
+        }
+        removidosNuvem++;
+    }
+
+    const remover = new Set(resultado.idsRemover);
+    salvarLancamentosFinanceiros(lista.filter(item => !remover.has(item.id)));
+    renderFinanceiro();
+    alert(`${resultado.totalRemover} lançamento(s) duplicado(s) removido(s).`);
+    return { removidos: resultado.totalRemover };
+};
 
 async function calcularHashArquivoFinanceiro(file) {
     try {
@@ -1431,6 +1641,12 @@ window.importarPastaFinanceira = async function(files) {
                 atualizadoEm: new Date().toISOString(),
                 criadoEm: new Date().toISOString()
             };
+            const duplicadoRegistro = buscarLancamentoDuplicadoFinanceiro(registro);
+            if (duplicadoRegistro) {
+                duplicados.push({ nome: file.name, duplicado: duplicadoRegistro });
+                continue;
+            }
+            obterAssinaturasLancamentoFinanceiro(registro).forEach(chave => assinaturasDoLote.add(chave));
             lista.push(registro);
             importados.push(registro);
             await salvarFinanceiroNuvem(registro);
@@ -1495,7 +1711,6 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 duplicados.push({ nome: fila.nomeArquivo || file.name, duplicado });
                 continue;
             }
-            assinaturasArquivo.forEach(chave => assinaturasDoLote.add(chave));
             const sugestaoDescricao = normalizarTexto(sugestao.descricao || '');
             const descricaoFinal = !descricaoFinanceiraRuim(sugestaoDescricao) ? sugestaoDescricao : normalizarTexto(fila.nomeArquivo || file.name.replace(/\.json$/i, ''));
             const valorSugestao = Number(sugestao.valor || 0);
@@ -1526,6 +1741,17 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 atualizadoEm: new Date().toISOString(),
                 criadoEm: new Date().toISOString()
             };
+            const assinaturasRegistro = obterAssinaturasLancamentoFinanceiro(registro);
+            if (assinaturasRegistro.some(chave => assinaturasDoLote.has(chave))) {
+                duplicados.push({ nome: fila.nomeArquivo || file.name, duplicado: null });
+                continue;
+            }
+            const duplicadoRegistro = buscarLancamentoDuplicadoFinanceiro(registro);
+            if (duplicadoRegistro) {
+                duplicados.push({ nome: fila.nomeArquivo || file.name, duplicado: duplicadoRegistro });
+                continue;
+            }
+            assinaturasRegistro.forEach(chave => assinaturasDoLote.add(chave));
             lista.push(registro);
             await salvarFinanceiroNuvem(registro);
             importados++;
@@ -1702,7 +1928,9 @@ window.renderFinanceiro = function() {
     const filtroStatus = document.getElementById('financeiroFiltroStatus')?.value || 'TODOS';
     const ordenacao = document.getElementById('financeiroOrdenacao')?.value || 'VENCIMENTO_ASC';
     const busca = normalizarTexto(document.getElementById('financeiroBusca')?.value);
-    let lista = obterLancamentosFinanceiros().filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
+    const listaCompleta = obterLancamentosFinanceiros();
+    const idsDuplicados = obterIdsDuplicadosFinanceiro(listaCompleta);
+    let lista = listaCompleta.filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
 
     if (filtroStatus === 'PAGO') lista = lista.filter(item => item.pago);
     if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago);
@@ -1735,6 +1963,7 @@ window.renderFinanceiro = function() {
 
     tbody.innerHTML = lista.map(item => {
         const status = obterStatusItem(item);
+        const duplicado = idsDuplicados.has(item.id);
         const anexos = normalizarDocumentosVinculadosFinanceiro(item).map(doc => {
             const meta = FINANCEIRO_DOC_CATEGORIAS[doc.categoria] || FINANCEIRO_DOC_CATEGORIAS.outro;
             return `<button type="button" class="financeiro-doc-chip" style="--doc-color:${meta.cor};" onclick="window.abrirAnexoFinanceiro('${escapeJsStringFinanceiro(item.id)}', 'vinculado', '${escapeJsStringFinanceiro(doc.id)}')" title="Abrir ${escapeHtmlFinanceiro(meta.label)}: ${escapeHtmlFinanceiro(doc.nome || 'documento')}"><i class="fa-solid ${meta.icone}"></i><span>${escapeHtmlFinanceiro(meta.label)}</span></button>`;
@@ -1744,10 +1973,10 @@ window.renderFinanceiro = function() {
         const tooltipLancamento = `Lançado no sistema em: ${criadoEm}${atualizadoEm !== criadoEm ? ` | Última alteração: ${atualizadoEm}` : ''}`;
 
         return `
-            <tr class="financeiro-row" title="${tooltipLancamento}" onclick="window.toggleFinanceiroLinha('${escapeJsStringFinanceiro(item.id)}', event)">
+            <tr class="financeiro-row ${duplicado ? 'financeiro-row-duplicado' : ''}" title="${tooltipLancamento}" onclick="window.toggleFinanceiroLinha('${escapeJsStringFinanceiro(item.id)}', event)">
                 <td><input type="checkbox" class="financeiro-check" value="${item.id}" onchange="window.atualizarSelecaoFinanceiro()"></td>
                 <td><span class="financeiro-tipo-pill">${escapeHtmlFinanceiro(item.tipo || 'Documento')}</span></td>
-                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
+                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
                 <td>${dataBR(item.vencimento)}</td>
                 <td><strong>${formatarMoeda(item.valor)}</strong></td>
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
@@ -1812,12 +2041,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             if (!silencioso) alert('Não foi possível identificar os dados deste documento.');
             return false;
         }
-        item.tipo = normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO');
-        item.descricao = normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA');
-        item.vencimento = dados.vencimento || item.vencimento || '';
-        item.valor = Number(dados.valor || item.valor || 0);
-        item.conferenciaStatus = leituraFinanceiraIncompleta(dados) ? 'pendente' : 'conferido';
-        item.ia = usouIA ? {
+        const dadosIA = usouIA ? {
             confianca: dados.confiancaIA || 'media',
             fornecedor: dados.fornecedor || '',
             cnpj: dados.cnpj || '',
@@ -1825,6 +2049,28 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             produtos: dados.produtos || [],
             observacao: dados.observacaoIA || ''
         } : item.ia || null;
+        const atualizado = {
+            ...item,
+            tipo: normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO'),
+            descricao: normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA'),
+            vencimento: dados.vencimento || item.vencimento || '',
+            valor: Number(dados.valor || item.valor || 0),
+            conferenciaStatus: leituraFinanceiraIncompleta(dados) ? 'pendente' : 'conferido',
+            ia: dadosIA,
+            atualizadoEm: new Date().toISOString()
+        };
+        const duplicado = buscarLancamentoDuplicadoFinanceiro(atualizado, id);
+        if (duplicado) {
+            if (silencioso) {
+                const restantes = obterLancamentosFinanceiros().filter(reg => reg.id !== id);
+                salvarLancamentosFinanceiros(restantes);
+                await excluirFinanceiroNuvem(id).catch(() => false);
+                return false;
+            }
+            alert(mensagemLancamentoDuplicadoFinanceiro(atualizado, duplicado));
+            return false;
+        }
+        Object.assign(item, atualizado);
         item.atualizadoEm = new Date().toISOString();
         salvarLancamentosFinanceiros(lista);
         await salvarFinanceiroNuvem(item);
@@ -2103,6 +2349,12 @@ async function salvarFinanceiroSubmit(event) {
         criadoEm: existente?.criadoEm || new Date().toISOString()
     };
 
+    const duplicadoLancamento = buscarLancamentoDuplicadoFinanceiro(registro, id);
+    if (duplicadoLancamento) {
+        alert(mensagemLancamentoDuplicadoFinanceiro(registro, duplicadoLancamento));
+        return;
+    }
+
     const index = lista.findIndex(item => item.id === id);
     if (index >= 0) lista[index] = registro;
     else lista.push(registro);
@@ -2281,12 +2533,15 @@ function injetarEstilosFinanceiro() {
         .financeiro-table tbody tr.financeiro-row-selected td:first-child { box-shadow:inset 3px 0 0 #0f8fa6; }
         .financeiro-table tbody tr.financeiro-row-selected td:not(:first-child) { border-left-color:transparent; }
         .financeiro-table tbody tr.financeiro-row-selected:hover td { background:#e7f3f3 !important; }
+        .financeiro-table tbody tr.financeiro-row-duplicado td { background:#fff7ed !important; }
+        .financeiro-table tbody tr.financeiro-row-duplicado td:first-child { box-shadow:inset 3px 0 0 #f97316; }
         .financeiro-table td small { display:block; color:var(--fin-muted); margin-top:4px; max-width:360px; }
         .financeiro-tipo-pill { display:inline-flex; align-items:center; justify-content:center; min-height:24px; max-width:116px; padding:3px 8px; border-radius:999px; background:#eef3f4; color:#172033; border:1px solid #cddfe3; font-size:.72rem; font-weight:900; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .financeiro-descricao-cell strong { display:block; color:#152033; font-size:.88rem; font-weight:850; line-height:1.25; max-width:390px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .financeiro-descricao-cell small { font-size:.73rem; line-height:1.3; }
         .financeiro-descricao-cell small:empty { display:none; }
         .financeiro-ia-line { color:#806a4a !important; font-weight:800; }
+        .financeiro-duplicado-badge { display:inline-flex; align-items:center; gap:5px; width:max-content; margin:5px 0 0; padding:3px 7px; border-radius:999px; background:#ffedd5; color:#9a3412; border:1px solid #fdba74; font-size:.68rem; font-weight:900; }
         .financeiro-status-badge { border-radius:999px; padding:5px 10px; font-size:0.78rem; font-weight:900; white-space:nowrap; }
         .financeiro-status-badge.pago { color:var(--fin-success); background:#e7f4ec; }
         .financeiro-status-badge.aberto { color:var(--fin-warn); background:#f7eddc; }
