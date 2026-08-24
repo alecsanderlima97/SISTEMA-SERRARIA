@@ -109,6 +109,18 @@ function normalizeRole(role) {
     return normalized;
 }
 
+function getRoleClassToken(role) {
+    const normalized = normalizeRole(role);
+    const token = normalized
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    return token || 'pendente';
+}
+
 function getDefaultRolePermissions(role) {
     const key = normalizeRole(role);
     return ROLE_PERMISSIONS[key] || ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.PENDENTE;
@@ -1238,7 +1250,7 @@ const App = {
                         Array.from(document.body.classList).forEach(classe => {
                             if (classe.startsWith('role-')) document.body.classList.remove(classe);
                         });
-                        document.body.classList.add(`role-${normalizeRole(this.userRole)}`);
+                        document.body.classList.add(`role-${getRoleClassToken(this.userRole)}`);
                         
                         // Atualizar nome e cargo nos cabeçalhos da página
                         const nameHeader = document.getElementById('userNameHeader');
