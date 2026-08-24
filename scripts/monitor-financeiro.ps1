@@ -96,6 +96,7 @@ function New-FinanceiroQueueItem {
     Move-Item -LiteralPath $File.FullName -Destination $destino
 
     $movedFile = Get-Item -LiteralPath $destino
+    $fileHash = (Get-FileHash -LiteralPath $movedFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $id = "fila_{0}_{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 8))
     $jsonPath = Join-Path $FilaDir "$id.json"
 
@@ -111,6 +112,7 @@ function New-FinanceiroQueueItem {
         nomeArquivo = $movedFile.Name
         extensao = $movedFile.Extension.ToLowerInvariant()
         tamanho = $movedFile.Length
+        hashArquivo = $fileHash
         sugestao = [ordered]@{
             aba = "caixa-financeira"
             tipo = $classe.Tipo
@@ -128,6 +130,8 @@ function New-FinanceiroQueueItem {
             localUrl = "http://127.0.0.1:8765/arquivo?path=$([uri]::EscapeDataString($movedFile.FullName))"
             dados = Convert-FileToBase64DataUrl $movedFile.FullName
             storage = "LOCAL"
+            tamanho = $movedFile.Length
+            hashArquivo = $fileHash
         }
     }
     $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8

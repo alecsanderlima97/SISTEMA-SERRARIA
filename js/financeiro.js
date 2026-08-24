@@ -151,10 +151,88 @@ function criarDocumentoVinculadoFinanceiro(anexo, categoria = 'outro', origem = 
     };
 }
 
+function normalizarAssinaturaFinanceira(valor) {
+    return String(valor || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\\/g, '/')
+        .replace(/\s+/g, ' ');
+}
+
+function obterAssinaturasDocumentoFinanceiro(doc = {}) {
+    const assinaturas = [];
+    const hash = doc.hashArquivo || doc.sha256 || doc.documentoHash || doc.assinaturaHash;
+    const nome = normalizarAssinaturaFinanceira(doc.nome || doc.name || '');
+    const tamanho = Number(doc.tamanho || doc.size || 0);
+    const localPath = normalizarAssinaturaFinanceira(doc.localPath || doc.arquivoLocal || '');
+    const localUrl = normalizarAssinaturaFinanceira(doc.localUrl || '');
+
+    if (hash) assinaturas.push(`hash:${normalizarAssinaturaFinanceira(hash)}`);
+    if (localPath) assinaturas.push(`path:${localPath}`);
+    if (localUrl) assinaturas.push(`url:${localUrl}`);
+    if (nome && tamanho > 0) assinaturas.push(`name-size:${nome}|${tamanho}`);
+    if (nome) assinaturas.push(`name:${nome}`);
+
+    return assinaturas;
+}
+
+function obterDocumentosIndexadosFinanceiro(item = {}) {
+    return normalizarDocumentosVinculadosFinanceiro(item)
+        .concat([item.documento, item.comprovante])
+        .filter(Boolean);
+}
+
+function buscarDocumentoDuplicadoFinanceiro(anexo, ignorarRegistroId = '') {
+    const assinaturas = new Set(obterAssinaturasDocumentoFinanceiro(anexo));
+    if (!assinaturas.size) return null;
+
+    for (const item of obterLancamentosFinanceiros()) {
+        if (ignorarRegistroId && item.id === ignorarRegistroId) continue;
+        for (const doc of obterDocumentosIndexadosFinanceiro(item)) {
+            const docAssinaturas = obterAssinaturasDocumentoFinanceiro(doc);
+            const assinaturaComum = docAssinaturas.find(chave => assinaturas.has(chave));
+            if (assinaturaComum) {
+                return {
+                    item,
+                    documento: doc,
+                    assinatura: assinaturaComum
+                };
+            }
+        }
+    }
+    return null;
+}
+
+function mensagemDocumentoDuplicadoFinanceiro(anexo, duplicado) {
+    const item = duplicado?.item || {};
+    const nome = anexo?.nome || duplicado?.documento?.nome || 'documento';
+    const quando = dataHoraBR(item.criadoEm || item.atualizadoEm);
+    return [
+        `Documento duplicado: ${nome}`,
+        `Ele já foi importado e salvo na lista financeira${quando !== '-' ? ` em ${quando}` : ''}.`,
+        `Registro encontrado: ${item.descricao || item.tipo || 'Documento financeiro'}${item.vencimento ? ` - venc. ${dataBR(item.vencimento)}` : ''}${Number(item.valor || 0) ? ` - ${formatarMoeda(item.valor)}` : ''}.`,
+        'A importação foi cancelada para evitar lançamento repetido.'
+    ].join('\n');
+}
+
+async function calcularHashArquivoFinanceiro(file) {
+    try {
+        if (!file?.arrayBuffer || !window.crypto?.subtle) return '';
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(byte => byte.toString(16).padStart(2, '0'))
+            .join('');
+    } catch (error) {
+        console.warn('Não foi possível calcular assinatura do arquivo financeiro.', error);
+        return '';
+    }
+}
+
 function chaveDocumentoFinanceiro(doc = {}) {
     return [
         doc.categoria || 'outro',
-        doc.localPath || doc.localUrl || doc.nome || '',
+        doc.hashArquivo || doc.localPath || doc.localUrl || doc.nome || '',
         doc.tipo || ''
     ].join('|').toLowerCase();
 }
@@ -506,18 +584,36 @@ function atualizarCategoriaDocumentoFinanceiro(anexo, dados = {}) {
     if (categoria !== 'outro') select.value = categoria;
 }
 
-function lerArquivoFinanceiro(file, tipo) {
+async function lerArquivoFinanceiro(file, tipo) {
     if (!file) {
         financeiroAnexosTemp[tipo] = null;
         preencherNomeArquivo(tipo, null);
         return;
     }
 
+    const hashArquivo = await calcularHashArquivoFinanceiro(file);
+    const anexoPreliminar = {
+        nome: file.name,
+        tipo: file.type || 'application/octet-stream',
+        tamanho: file.size || 0,
+        ultimaModificacao: file.lastModified || null,
+        hashArquivo
+    };
+    const idAtual = document.getElementById('financeiroId')?.value || '';
+    const duplicado = buscarDocumentoDuplicadoFinanceiro(anexoPreliminar, idAtual);
+    if (duplicado) {
+        financeiroAnexosTemp[tipo] = null;
+        preencherNomeArquivo(tipo, null);
+        const input = document.getElementById(tipo === 'documento' ? 'financeiroDocumento' : 'financeiroComprovante');
+        if (input) input.value = '';
+        alert(mensagemDocumentoDuplicadoFinanceiro(anexoPreliminar, duplicado));
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
         financeiroAnexosTemp[tipo] = {
-            nome: file.name,
-            tipo: file.type || 'application/octet-stream',
+            ...anexoPreliminar,
             dados: reader.result
         };
         preencherNomeArquivo(tipo, file);
@@ -1288,13 +1384,30 @@ window.importarPastaFinanceira = async function(files) {
     }
     const lista = obterLancamentosFinanceiros();
     const importados = [];
+    const duplicados = [];
+    const assinaturasDoLote = new Set();
     for (const file of listaArquivos) {
         try {
+            const hashArquivo = await calcularHashArquivoFinanceiro(file);
             const anexo = {
                 nome: file.name,
                 tipo: file.type || (file.name.toLowerCase().endsWith('.xml') ? 'application/xml' : 'application/octet-stream'),
+                tamanho: file.size || 0,
+                ultimaModificacao: file.lastModified || null,
+                hashArquivo,
                 dados: await lerArquivoComoDataUrl(file)
             };
+            const assinaturasArquivo = obterAssinaturasDocumentoFinanceiro(anexo);
+            if (assinaturasArquivo.some(chave => assinaturasDoLote.has(chave))) {
+                duplicados.push({ nome: file.name, duplicado: null });
+                continue;
+            }
+            const duplicado = buscarDocumentoDuplicadoFinanceiro(anexo);
+            if (duplicado) {
+                duplicados.push({ nome: file.name, duplicado });
+                continue;
+            }
+            assinaturasArquivo.forEach(chave => assinaturasDoLote.add(chave));
             const anexoLocal = await salvarArquivoFinanceiroLocal(anexo);
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoLocal, {});
@@ -1333,7 +1446,12 @@ window.importarPastaFinanceira = async function(files) {
     if (importados.length) {
         setTimeout(() => analisarFinanceiroImportados(importados.map(item => item.id)), 250);
     }
-    alert(`${importados.length} documento(s) importado(s) rapidamente.\nA leitura automatica vai continuar em segundo plano e atualizar a lista conforme encontrar valor, vencimento e fornecedor.`);
+    const msg = [
+        `${importados.length} documento(s) novo(s) importado(s) rapidamente.`,
+        duplicados.length ? `${duplicados.length} duplicado(s) ignorado(s), pois já estavam salvos na lista financeira.` : '',
+        importados.length ? 'A leitura automatica vai continuar em segundo plano e atualizar a lista conforme encontrar valor, vencimento e fornecedor.' : ''
+    ].filter(Boolean).join('\n');
+    alert(msg || 'Nenhum documento novo foi importado.');
 };
 
 window.importarFilaMonitorFinanceiro = async function(files) {
@@ -1344,6 +1462,8 @@ window.importarFilaMonitorFinanceiro = async function(files) {
     }
     const lista = obterLancamentosFinanceiros();
     let importados = 0;
+    const duplicados = [];
+    const assinaturasDoLote = new Set();
     for (const file of arquivos) {
         try {
             const texto = await lerArquivoComoTexto(file);
@@ -1360,8 +1480,22 @@ window.importarFilaMonitorFinanceiro = async function(files) {
                 localPath: fila.anexo.localPath,
                 localFolder: fila.anexo.localFolder || fila.pastaLocal || '',
                 localUrl: fila.anexo.localUrl || '',
+                tamanho: Number(fila.anexo.tamanho || fila.tamanho || 0),
+                hashArquivo: fila.anexo.hashArquivo || fila.hashArquivo || fila.sha256 || '',
                 storage: 'LOCAL'
             } : null;
+            const anexoComparacao = anexoLocal || fila.anexo || { nome: fila.nomeArquivo || file.name, tamanho: fila.tamanho || 0, hashArquivo: fila.hashArquivo || fila.sha256 || '' };
+            const assinaturasArquivo = obterAssinaturasDocumentoFinanceiro(anexoComparacao);
+            if (assinaturasArquivo.some(chave => assinaturasDoLote.has(chave))) {
+                duplicados.push({ nome: fila.nomeArquivo || file.name, duplicado: null });
+                continue;
+            }
+            const duplicado = buscarDocumentoDuplicadoFinanceiro(anexoComparacao);
+            if (duplicado) {
+                duplicados.push({ nome: fila.nomeArquivo || file.name, duplicado });
+                continue;
+            }
+            assinaturasArquivo.forEach(chave => assinaturasDoLote.add(chave));
             const sugestaoDescricao = normalizarTexto(sugestao.descricao || '');
             const descricaoFinal = !descricaoFinanceiraRuim(sugestaoDescricao) ? sugestaoDescricao : normalizarTexto(fila.nomeArquivo || file.name.replace(/\.json$/i, ''));
             const valorSugestao = Number(sugestao.valor || 0);
@@ -1404,7 +1538,10 @@ window.importarFilaMonitorFinanceiro = async function(files) {
     document.querySelectorAll('.btn-tab-financeiro').forEach(btn => btn.classList.toggle('active', btn.dataset.finTab === 'caixa-financeira'));
     document.getElementById('financeiroTituloLista').textContent = FINANCEIRO_ABAS['caixa-financeira'].titulo;
     renderFinanceiro();
-        alert(`${importados} item(ns) da fila importado(s) para a Caixa financeira.`);
+    alert([
+        `${importados} item(ns) novo(s) da fila importado(s) para a Caixa financeira.`,
+        duplicados.length ? `${duplicados.length} duplicado(s) ignorado(s), pois já estavam salvos na lista financeira.` : ''
+    ].filter(Boolean).join('\n'));
 };
 
 function calcularKpisFinanceiro() {
@@ -1918,6 +2055,16 @@ async function salvarFinanceiroSubmit(event) {
     const id = document.getElementById('financeiroId').value || `fin_${Date.now()}`;
     const lista = obterLancamentosFinanceiros();
     const existente = lista.find(item => item.id === id);
+    const duplicadoDocumento = financeiroAnexosTemp.documento ? buscarDocumentoDuplicadoFinanceiro(financeiroAnexosTemp.documento, id) : null;
+    if (duplicadoDocumento) {
+        alert(mensagemDocumentoDuplicadoFinanceiro(financeiroAnexosTemp.documento, duplicadoDocumento));
+        return;
+    }
+    const duplicadoComprovante = financeiroAnexosTemp.comprovante ? buscarDocumentoDuplicadoFinanceiro(financeiroAnexosTemp.comprovante, id) : null;
+    if (duplicadoComprovante) {
+        alert(mensagemDocumentoDuplicadoFinanceiro(financeiroAnexosTemp.comprovante, duplicadoComprovante));
+        return;
+    }
     const categoriaSelecionada = document.getElementById('financeiroDocumentoCategoria')?.value || 'AUTO';
     const categoriaDocumento = categoriaSelecionada === 'AUTO'
         ? detectarCategoriaDocumentoFinanceiro(financeiroAnexosTemp.documento, { tipo, descricao })
