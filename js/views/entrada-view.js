@@ -100,6 +100,13 @@
                                     <select id="entMatoSelect" style="display: none;"></select>
                                     <input type="text" id="entMato" class="text-uppercase-input" placeholder="Ex: Mato Santa Rita">
                                 </div>
+                                <div class="input-group">
+                                    <label for="entMapaMatoId">Local cadastrado no Mapa</label>
+                                    <select id="entMapaMatoId">
+                                        <option value="">Sem vínculo com o Mapa</option>
+                                    </select>
+                                    <small id="entMapaMatoInfo">Vincule a carga para acompanhar volume, custos e saldo do mato.</small>
+                                </div>
                                 <div class="input-group" id="grupoValorAvulso" style="display:none;">
                                     <label for="entValorAvulso">Valor compra avulsa (R$ / m³)</label>
                                     <input type="text" id="entValorAvulso" placeholder="R$ 0,00">

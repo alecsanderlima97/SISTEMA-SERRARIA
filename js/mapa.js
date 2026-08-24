@@ -1,4 +1,4 @@
-import { db, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from './firebase-init.js';
+import { db, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from './firebase-init.js';
 
 const MAPA_KEY = 'orquestra_mapa_matos';
 const MAPA_COLLECTION = 'mapa_matos';
@@ -6,6 +6,7 @@ const MAPA_DB_NAME = 'orquestra_mapa_arquivos';
 const MAPA_STORE = 'contratos';
 
 let mapaMatos = [];
+let mapaEntradas = [];
 let mapaContratoTemp = null;
 let minhaLocalizacao = null;
 let localizacaoSolicitada = false;
@@ -32,8 +33,18 @@ function moedaNumero(valor) {
     return Number.isFinite(n) ? n : 0;
 }
 
-function coordenadasValidas(item = {}) {
-    return Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
+function coordenadasValidas(item) {
+    if (!item || typeof item !== 'object') return false;
+    if (item.latitude === '' || item.latitude === null || item.latitude === undefined) return false;
+    if (item.longitude === '' || item.longitude === null || item.longitude === undefined) return false;
+    const latitude = Number(item.latitude);
+    const longitude = Number(item.longitude);
+    return Number.isFinite(latitude)
+        && Number.isFinite(longitude)
+        && latitude >= -90
+        && latitude <= 90
+        && longitude >= -180
+        && longitude <= 180;
 }
 
 function calcularDistanciaKm(origem, destino) {
@@ -53,6 +64,60 @@ function formatarDistancia(valor) {
     return valor < 10
         ? `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`
         : `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} km`;
+}
+
+function formatarNumero(valor, casas = 2) {
+    return Number(valor || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: casas,
+        maximumFractionDigits: casas
+    });
+}
+
+function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function areaEmHectares(item = {}) {
+    const valor = Number(item.areaValor || 0);
+    if (!valor) return null;
+    const fatores = {
+        hectares: 1,
+        alqueire_paulista: 2.42,
+        alqueire_mineiro: 4.84,
+        m2: 0.0001,
+        km2: 100
+    };
+    const fator = fatores[item.areaUnidade];
+    return fator ? valor * fator : null;
+}
+
+function resumoConversaoArea(item = {}) {
+    const hectares = areaEmHectares(item);
+    if (!Number.isFinite(hectares)) return 'Esta unidade nao possui conversao automatica de area.';
+    return `${formatarNumero(hectares)} ha | ${formatarNumero(hectares / 2.42)} alq. paulista | ${formatarNumero(hectares / 4.84)} alq. mineiro`;
+}
+
+function entradaPertenceAoMato(entrada = {}, mato = {}) {
+    if (entrada.mapaMatoId && mato.id) return String(entrada.mapaMatoId) === String(mato.id);
+    return normalizarTexto(entrada.mato || entrada.mapaMatoNome) === normalizarTexto(mato.nome);
+}
+
+function indicadoresDoMato(mato = {}) {
+    const entradas = mapaEntradas.filter(item => entradaPertenceAoMato(item, mato));
+    const volumeExtraido = entradas.reduce((total, item) => total + Number(item.volume || 0), 0);
+    const custoExtracao = entradas.reduce((total, item) => total + Number(item.totalEmpreiteiro || 0), 0);
+    const estimado = Number(mato.volumeEstimado || 0);
+    const saldoEstimado = estimado > 0 ? Math.max(0, estimado - volumeExtraido) : null;
+    return { cargas: entradas.length, volumeExtraido, custoExtracao, saldoEstimado };
+}
+
+function atualizarConversaoArea() {
+    const painel = document.getElementById('mapaConversaoArea');
+    if (!painel) return;
+    const item = getFormData();
+    painel.innerHTML = item.areaValor
+        ? `<i class="fa-solid fa-ruler-combined"></i><span>${escapeHtml(resumoConversaoArea(item))}</span>`
+        : '<span>Informe a medida para visualizar as conversoes de area.</span>';
 }
 
 function atualizarStatusMinhaLocalizacao(estado = 'idle', texto = '') {
@@ -179,6 +244,7 @@ function getFormData() {
     const areaValor = moedaNumero(document.getElementById('mapaAreaValor')?.value);
     const volumeEstimado = moedaNumero(document.getElementById('mapaVolumeEstimado')?.value);
     const distanciaKm = moedaNumero(document.getElementById('mapaDistanciaKm')?.value);
+    const custoKm = moedaNumero(document.getElementById('mapaCustoKm')?.value);
     const latitudeValue = document.getElementById('mapaLatitude')?.value;
     const longitudeValue = document.getElementById('mapaLongitude')?.value;
     const latitude = latitudeValue === '' ? null : Number(latitudeValue);
@@ -198,6 +264,7 @@ function getFormData() {
         areaUnidade: document.getElementById('mapaAreaUnidade')?.value || 'hectares',
         volumeEstimado,
         distanciaKm,
+        custoKm,
         observacoes: document.getElementById('mapaObservacoes')?.value.trim() || '',
         contratoNome: mapaContratoTemp?.name || document.getElementById('mapaContratoNome')?.dataset.nome || '',
         atualizadoEm: new Date().toISOString()
@@ -218,6 +285,7 @@ function preencherForm(item = {}) {
     document.getElementById('mapaAreaUnidade').value = item.areaUnidade || 'hectares';
     document.getElementById('mapaVolumeEstimado').value = item.volumeEstimado || '';
     document.getElementById('mapaDistanciaKm').value = item.distanciaKm || '';
+    document.getElementById('mapaCustoKm').value = item.custoKm || '';
     document.getElementById('mapaObservacoes').value = item.observacoes || '';
     const contrato = document.getElementById('mapaContratoNome');
     if (contrato) {
@@ -225,6 +293,7 @@ function preencherForm(item = {}) {
         contrato.dataset.nome = item.contratoNome || '';
     }
     mapaContratoTemp = null;
+    atualizarConversaoArea();
     atualizarPreviewMapa();
 }
 
@@ -275,6 +344,7 @@ function statusLabel(status) {
         EM_ANALISE: 'Em analise',
         NEGOCIANDO: 'Negociando',
         CONTRATADO: 'Contratado',
+        EM_CORTE: 'Em corte',
         FINALIZADO: 'Finalizado'
     }[status] || status || 'Em analise';
 }
@@ -285,15 +355,15 @@ function distanciaDaLocalizacaoAtual(item) {
 }
 
 async function carregarMapaMatos() {
-    mapaMatos = lerLocal();
+    mapaMatos = lerLocal().map(item => ({ ...item, sincronizado: item.sincronizado === true }));
     renderMapaMatos();
 
     try {
-        const snap = await getDocs(query(collection(db, MAPA_COLLECTION), orderBy('atualizadoEm', 'desc')));
+        const snap = await getDocs(collection(db, MAPA_COLLECTION));
         const nuvem = snap.docs.map(d => {
             const data = d.data() || {};
-            return { ...data, id: data.id || d.id, cloudId: d.id };
-        });
+            return { ...data, id: data.id || d.id, cloudId: d.id, sincronizado: true };
+        }).sort((a, b) => String(b.atualizadoEm || '').localeCompare(String(a.atualizadoEm || '')));
         if (nuvem.length) {
             mapaMatos = nuvem;
             salvarLocal();
@@ -302,6 +372,16 @@ async function carregarMapaMatos() {
     } catch (error) {
         console.warn('Mapa: usando dados locais. Nuvem indisponivel:', error);
     }
+
+    try {
+        mapaEntradas = window.FS?.getCollection
+            ? await window.FS.getCollection('entradas')
+            : (await getDocs(collection(db, 'entradas'))).docs.map(item => ({ id: item.id, ...item.data() }));
+    } catch (error) {
+        mapaEntradas = [];
+        console.warn('Mapa: nao foi possivel carregar os indicadores das entradas.', error);
+    }
+    renderMapaMatos();
 }
 
 async function salvarMapaMato(event) {
@@ -317,6 +397,7 @@ async function salvarMapaMato(event) {
     const payload = {
         ...original,
         ...data,
+        sincronizado: false,
         criadoEm: original?.criadoEm || new Date().toISOString()
     };
 
@@ -338,21 +419,49 @@ async function salvarMapaMato(event) {
     try {
         if (original?.cloudId || !String(payload.id).startsWith('mato_')) {
             const docId = original?.cloudId || payload.id;
-            await updateDoc(doc(db, MAPA_COLLECTION, docId), payload);
+            if (window.FS?.updateDoc) await window.FS.updateDoc(MAPA_COLLECTION, docId, payload);
+            else await updateDoc(doc(db, MAPA_COLLECTION, docId), payload);
             payload.cloudId = docId;
         } else {
-            const ref = await addDoc(collection(db, MAPA_COLLECTION), payload);
-            payload.cloudId = ref.id;
+            const refId = window.FS?.setDoc
+                ? (await window.FS.setDoc(MAPA_COLLECTION, payload.id, payload), payload.id)
+                : (await addDoc(collection(db, MAPA_COLLECTION), payload)).id;
+            payload.cloudId = refId;
             const localIndex = mapaMatos.findIndex(item => item.id === data.id);
             if (localIndex >= 0) mapaMatos[localIndex] = payload;
             salvarLocal();
         }
+        payload.sincronizado = true;
+        salvarLocal();
+        renderMapaMatos();
     } catch (error) {
         console.warn('Mapa salvo localmente, mas nao sincronizou com a nuvem:', error);
+        alert('O mato foi guardado neste computador, mas ainda nao sincronizou com a nuvem. Verifique a internet e sua permissao de edicao no Mapa.');
     }
 
     limparMapaMato();
     renderMapaMatos();
+    document.dispatchEvent(new CustomEvent('mapa:updated'));
+}
+
+function renderResumoOperacional() {
+    const painel = document.getElementById('mapaResumoOperacional');
+    if (!painel) return;
+    const ativos = mapaMatos.filter(item => !['FINALIZADO'].includes(item.status)).length;
+    const emCorte = mapaMatos.filter(item => item.status === 'EM_CORTE').length;
+    const entradasVinculadas = mapaEntradas.filter(entrada => mapaMatos.some(mato => entradaPertenceAoMato(entrada, mato)));
+    const volumeExtraido = entradasVinculadas.reduce((total, item) => total + Number(item.volume || 0), 0);
+    const custoExtracao = entradasVinculadas.reduce((total, item) => total + Number(item.totalEmpreiteiro || 0), 0);
+    const volumeEstimado = mapaMatos.reduce((total, item) => total + Number(item.volumeEstimado || 0), 0);
+    const saldoEstimado = Math.max(0, volumeEstimado - volumeExtraido);
+    painel.innerHTML = `
+        <article><i class="fa-solid fa-map-location-dot"></i><span><strong>${ativos}</strong><small>Matos ativos</small></span></article>
+        <article><i class="fa-solid fa-tree"></i><span><strong>${emCorte}</strong><small>Em corte</small></span></article>
+        <article><i class="fa-solid fa-truck-ramp-box"></i><span><strong>${entradasVinculadas.length}</strong><small>Cargas vinculadas</small></span></article>
+        <article><i class="fa-solid fa-cubes-stacked"></i><span><strong>${formatarNumero(volumeExtraido)} m³</strong><small>Volume extraido</small></span></article>
+        <article><i class="fa-solid fa-chart-line"></i><span><strong>${formatarNumero(saldoEstimado)} m³</strong><small>Saldo estimado</small></span></article>
+        <article><i class="fa-solid fa-coins"></i><span><strong>${formatarMoeda(custoExtracao)}</strong><small>Custo de extracao</small></span></article>
+    `;
 }
 
 function renderMapaMatos() {
@@ -371,21 +480,36 @@ function renderMapaMatos() {
         .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
 
     if (resumo) resumo.textContent = `${filtrados.length} local(is) cadastrado(s).`;
+    renderResumoOperacional();
 
-    lista.innerHTML = filtrados.length ? filtrados.map(item => `
+    lista.innerHTML = filtrados.length ? filtrados.map(item => {
+        const indicadores = indicadoresDoMato(item);
+        const custoRota = Number(item.distanciaKm || 0) * Number(item.custoKm || 0);
+        return `
         <article class="mapa-mato-card" data-status="${escapeHtml(item.status || 'EM_ANALISE')}">
             <div class="mapa-mato-top">
                 <span class="mapa-status">${escapeHtml(statusLabel(item.status))}</span>
                 <strong>${escapeHtml(item.nome || '-')}</strong>
+                <span class="mapa-sync-state ${item.sincronizado === false ? 'is-local' : 'is-cloud'}" title="${item.sincronizado === false ? 'Salvo somente neste computador' : 'Sincronizado com a nuvem'}">
+                    <i class="fa-solid ${item.sincronizado === false ? 'fa-cloud-arrow-up' : 'fa-cloud'}"></i>
+                </span>
             </div>
             <div class="mapa-mato-info">
                 <span><i class="fa-solid fa-user"></i> ${escapeHtml(item.proprietario || '-')}</span>
                 <span><i class="fa-solid fa-phone"></i> ${escapeHtml(item.telefone || '-')}</span>
                 <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.endereco || '-')}</span>
                 <span><i class="fa-solid fa-ruler-combined"></i> ${escapeHtml(formatarArea(item))}</span>
+                <span><i class="fa-solid fa-arrows-left-right"></i> ${escapeHtml(resumoConversaoArea(item))}</span>
                 <span><i class="fa-solid fa-route"></i> ${escapeHtml(item.distanciaKm ? `${Number(item.distanciaKm).toLocaleString('pt-BR')} km` : 'Distancia nao informada')}</span>
                 ${distanciaDaLocalizacaoAtual(item) ? `<span class="mapa-live-distance"><i class="fa-solid fa-location-arrow"></i> ${escapeHtml(distanciaDaLocalizacaoAtual(item))} da sua localizacao</span>` : ''}
                 <span><i class="fa-solid fa-cubes-stacked"></i> ${escapeHtml(item.volumeEstimado ? `${Number(item.volumeEstimado).toLocaleString('pt-BR')} estimado` : 'Volume nao informado')}</span>
+                ${custoRota > 0 ? `<span><i class="fa-solid fa-road"></i> ${escapeHtml(formatarMoeda(custoRota))} por trajeto estimado</span>` : ''}
+            </div>
+            <div class="mapa-mato-operational">
+                <span><strong>${indicadores.cargas}</strong><small>Cargas</small></span>
+                <span><strong>${formatarNumero(indicadores.volumeExtraido)} m³</strong><small>Extraido</small></span>
+                <span><strong>${indicadores.saldoEstimado === null ? '-' : `${formatarNumero(indicadores.saldoEstimado)} m³`}</strong><small>Saldo estimado</small></span>
+                <span><strong>${formatarMoeda(indicadores.custoExtracao)}</strong><small>Custo extracao</small></span>
             </div>
             ${item.observacoes ? `<p>${escapeHtml(item.observacoes)}</p>` : ''}
             <div class="mapa-mato-actions">
@@ -396,8 +520,8 @@ function renderMapaMatos() {
                 <button type="button" class="btn-secondary" onclick="window.abrirContratoMapa('${escapeHtml(item.id)}')" ${item.contratoNome ? '' : 'disabled'}><i class="fa-solid fa-file-contract"></i> Contrato</button>
                 <button type="button" class="btn-danger" onclick="window.excluirMapaMato('${escapeHtml(item.id)}')"><i class="fa-solid fa-trash"></i></button>
             </div>
-        </article>
-    `).join('') : '<div class="mapa-empty">Nenhum mato cadastrado ainda.</div>';
+        </article>`;
+    }).join('') : '<div class="mapa-empty">Nenhum mato cadastrado ainda.</div>';
 }
 
 function atualizarPreviewMapa() {
@@ -443,6 +567,7 @@ function limparMapaMato() {
         contrato.dataset.nome = '';
     }
     mapaContratoTemp = null;
+    atualizarConversaoArea();
     atualizarPreviewMapa();
 }
 
@@ -459,13 +584,19 @@ async function excluirMapaMato(id) {
         : confirm('Excluir este mato cadastrado?');
     if (!podeExcluir) return;
     const item = mapaMatos.find(mato => mato.id === id);
-    mapaMatos = mapaMatos.filter(mato => mato.id !== id);
-    salvarLocal();
-    renderMapaMatos();
     try {
-        if (item?.cloudId || !String(id).startsWith('mato_')) await deleteDoc(doc(db, MAPA_COLLECTION, item?.cloudId || id));
+        if (item?.cloudId || !String(id).startsWith('mato_')) {
+            const docId = item?.cloudId || id;
+            if (window.FS?.deleteDoc) await window.FS.deleteDoc(MAPA_COLLECTION, docId);
+            else await deleteDoc(doc(db, MAPA_COLLECTION, docId));
+        }
+        mapaMatos = mapaMatos.filter(mato => mato.id !== id);
+        salvarLocal();
+        renderMapaMatos();
+        document.dispatchEvent(new CustomEvent('mapa:updated'));
     } catch (error) {
         console.warn('Nao foi possivel excluir na nuvem agora:', error);
+        alert('Nao foi possivel excluir na nuvem. O cadastro foi mantido para evitar divergencia.');
     }
 }
 
@@ -533,6 +664,10 @@ function bindMapa() {
     ['mapaEndereco', 'mapaLatitude', 'mapaLongitude', 'mapaNomeMato'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', atualizarPreviewMapa);
     });
+    ['mapaAreaValor', 'mapaAreaUnidade'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', atualizarConversaoArea);
+        document.getElementById(id)?.addEventListener('change', atualizarConversaoArea);
+    });
 }
 
 window.renderMapaMatos = renderMapaMatos;
@@ -550,10 +685,14 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMapa();
     carregarMapaMatos();
     atualizarPreviewMapa();
+    atualizarConversaoArea();
     document.querySelectorAll('[data-target="view-mapa"]').forEach(link => {
         link.addEventListener('click', () => {
             if (localizacaoSolicitada || minhaLocalizacao) return;
             setTimeout(() => obterMinhaLocalizacao({ silencioso: true }), 250);
         });
+    });
+    document.addEventListener('app:section-change', event => {
+        if (event.detail?.id === 'view-mapa') carregarMapaMatos();
     });
 });

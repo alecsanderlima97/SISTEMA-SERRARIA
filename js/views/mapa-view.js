@@ -24,6 +24,7 @@
                                     <option value="EM_ANALISE">Em analise</option>
                                     <option value="NEGOCIANDO">Negociando</option>
                                     <option value="CONTRATADO">Contratado</option>
+                                    <option value="EM_CORTE">Em corte</option>
                                     <option value="FINALIZADO">Finalizado</option>
                                 </select>
                             </div>
@@ -78,6 +79,13 @@
                                 <label for="mapaDistanciaKm">Distancia</label>
                                 <input type="number" id="mapaDistanciaKm" inputmode="decimal" step="any" placeholder="Km ate a serraria">
                             </div>
+                            <div class="input-group">
+                                <label for="mapaCustoKm">Custo estimado por km</label>
+                                <input type="number" id="mapaCustoKm" inputmode="decimal" step="any" placeholder="R$ por km">
+                            </div>
+                            <div class="mapa-conversion-summary" id="mapaConversaoArea">
+                                Informe a medida para visualizar as conversoes de area.
+                            </div>
 
                             <div class="input-group mapa-contrato">
                                 <label for="mapaContrato">Contrato / documento</label>
@@ -127,6 +135,8 @@
                     </div>
                 </div>
 
+                <div id="mapaResumoOperacional" class="mapa-operational-summary" aria-live="polite"></div>
+
                 <div class="glass-panel mapa-list-card">
                     <div class="mapa-list-head">
                         <div>
@@ -140,6 +150,7 @@
                                 <option value="EM_ANALISE">Em analise</option>
                                 <option value="NEGOCIANDO">Negociando</option>
                                 <option value="CONTRATADO">Contratado</option>
+                                <option value="EM_CORTE">Em corte</option>
                                 <option value="FINALIZADO">Finalizado</option>
                             </select>
                         </div>

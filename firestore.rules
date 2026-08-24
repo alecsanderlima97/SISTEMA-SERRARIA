@@ -73,6 +73,7 @@ service cloud.firestore {
         || ((collection in ['historico', 'romaneios', 'vendas_subprodutos']) && 'view-historico' in sections)
         || ((collection in ['transportes']) && 'view-transportes' in sections)
         || ((collection in ['empreiteiros', 'entradas', 'fechamentos_salvos']) && 'view-entrada' in sections)
+        || ((collection in ['mapa_matos']) && 'view-mapa' in sections)
         || ((collection in ['produtos']) && 'view-produtos' in sections)
         || ((collection in ['estoque', 'estoque_movimentacoes']) && 'view-estoque' in sections)
         || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']) && 'view-frotas' in sections)
@@ -324,6 +325,15 @@ service cloud.firestore {
       allow read: if isBackupOperator() && sameEmpresaOnRead();
       allow create: if isApprovedUser() && sameEmpresaOnWrite();
       allow update, delete: if false;
+    }
+
+    match /mapa_matos/{document} {
+      allow read: if (isAdmin() || isBootstrapAdmin() || canReadByCustomPermission('mapa_matos'))
+        && sameEmpresaOnRead();
+      allow create, update: if (isAdmin() || isBootstrapAdmin() || canWriteByCustomPermission('mapa_matos'))
+        && sameEmpresaOnWrite();
+      allow delete: if (isAdmin() || isBootstrapAdmin() || canDeleteByCustomPermission('mapa_matos'))
+        && sameEmpresaOnRead();
     }
 
     match /{collection}/{document} {

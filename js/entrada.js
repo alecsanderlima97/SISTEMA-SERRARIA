@@ -491,11 +491,86 @@ let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtr
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
+let mapaMatosEntrada = [];
 let entradasSelecionadas = new Set();
 let descargasSelecionadas = new Set();
 let entradasUnsubscribe = null;
 const FECHAMENTOS_SALVOS_KEY = 'orquestra_fechamentos_salvos';
 let fechamentosSalvosExtracao = [];
+
+function lerMatosMapaLocalEntrada() {
+    try {
+        return JSON.parse(localStorage.getItem('orquestra_mapa_matos') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function obterMapaMatoSelecionadoEntrada() {
+    const select = document.getElementById('entMapaMatoId');
+    if (!select?.value) return null;
+    return mapaMatosEntrada.find(item => String(item.id) === String(select.value)) || null;
+}
+
+function atualizarInfoMapaMatoEntrada() {
+    const info = document.getElementById('entMapaMatoInfo');
+    const item = obterMapaMatoSelecionadoEntrada();
+    if (!info) return;
+    if (!item) {
+        info.textContent = 'Vincule a carga para acompanhar volume, custos e saldo do mato.';
+        return;
+    }
+    const partes = [item.proprietario, item.endereco].filter(Boolean);
+    info.textContent = partes.length ? partes.join(' | ') : 'Local vinculado ao controle operacional do Mapa.';
+}
+
+function renderizarMatosMapaEntrada(valorSelecionado = '') {
+    const select = document.getElementById('entMapaMatoId');
+    if (!select) return;
+    const atual = valorSelecionado || select.value;
+    select.innerHTML = '<option value="">Sem vínculo com o Mapa</option>';
+    mapaMatosEntrada
+        .filter(item => item && item.status !== 'FINALIZADO')
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+        .forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `${item.nome || 'Mato sem nome'}${item.proprietario ? ` - ${item.proprietario}` : ''}`;
+            select.appendChild(option);
+        });
+    if (atual && [...select.options].some(option => option.value === atual)) select.value = atual;
+    atualizarInfoMapaMatoEntrada();
+}
+
+async function carregarMatosMapaEntrada(valorSelecionado = '') {
+    mapaMatosEntrada = lerMatosMapaLocalEntrada();
+    renderizarMatosMapaEntrada(valorSelecionado);
+    try {
+        const nuvem = window.FS?.getCollection
+            ? await window.FS.getCollection('mapa_matos')
+            : (await getDocs(collection(db, 'mapa_matos'))).docs.map(item => ({ id: item.id, ...item.data() }));
+        if (nuvem.length) {
+            mapaMatosEntrada = nuvem.map(item => ({ ...item, id: item.id || item.cloudId }));
+            renderizarMatosMapaEntrada(valorSelecionado);
+        }
+    } catch (error) {
+        console.warn('Entrada: usando os matos salvos localmente.', error);
+    }
+}
+
+function aplicarMapaMatoSelecionadoEntrada() {
+    const item = obterMapaMatoSelecionadoEntrada();
+    atualizarInfoMapaMatoEntrada();
+    if (!item) return;
+    const nome = String(item.nome || '').toUpperCase().trim();
+    const entMatoSelect = document.getElementById('entMatoSelect');
+    if (entMatoSelect?.style.display !== 'none') {
+        const option = [...entMatoSelect.options].find(opt => normalizarNomeMato(opt.value) === normalizarNomeMato(nome));
+        if (option) entMatoSelect.value = option.value;
+    }
+    if (entMato) entMato.value = nome;
+    calcularVolumeAtual();
+}
 
 function atualizarEstadoEdicaoEntrada() {
     const btnSalvar = formEntrada?.querySelector('button[type="submit"]');
@@ -531,6 +606,9 @@ function resetarMedidasEntrada() {
 
 function resetarFormularioEntradaCompleto() {
     formEntrada?.reset();
+    const mapaSelect = document.getElementById('entMapaMatoId');
+    if (mapaSelect) mapaSelect.value = '';
+    atualizarInfoMapaMatoEntrada();
     if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
     aplicarDataHoraAtualEntrada();
     atualizarOrigemToraEntrada();
@@ -1683,6 +1761,7 @@ function configurarSubmitEntrada() {
         const fornecedorAvulso = (document.getElementById('entFornecedorAvulso')?.value || '').toUpperCase().trim();
         const empreiteiroNome = compraAvulsa ? fornecedorAvulso : selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
         const usuarioAuditoria = getUsuarioAtualAuditoria();
+        const mapaMato = obterMapaMatoSelecionadoEntrada();
         
         const novaEntrada = {
             data: document.getElementById('entData').value,
@@ -1692,7 +1771,11 @@ function configurarSubmitEntrada() {
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
             fornecedor: empreiteiroNome,
-            mato: ((document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
+            mato: (mapaMato?.nome || (document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
+            mapaMatoId: mapaMato?.id || null,
+            mapaMatoNome: mapaMato?.nome || null,
+            mapaMatoProprietario: mapaMato?.proprietario || null,
+            mapaMatoEndereco: mapaMato?.endereco || null,
             produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
             observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
@@ -1845,6 +1928,12 @@ window.alterarEntrada = function(id) {
         entMatoSelect.value = en.mato || '';
     }
     if(entMato) entMato.value = en.mato || '';
+    const mapaMatoSelect = document.getElementById('entMapaMatoId');
+    if (mapaMatoSelect) {
+        renderizarMatosMapaEntrada(en.mapaMatoId || '');
+        mapaMatoSelect.value = en.mapaMatoId || '';
+        atualizarInfoMapaMatoEntrada();
+    }
     const produtoCargaInput = document.getElementById('entProdutoCarga');
     if (produtoCargaInput) produtoCargaInput.value = en.produtoCarga || '';
     const observacaoCargaInput = document.getElementById('entObservacaoCarga');
@@ -2149,6 +2238,8 @@ function inicializarModuloEntrada() {
             calcularVolumeAtual();
         });
     }
+    const entMapaMatoId = document.getElementById('entMapaMatoId');
+    if (entMapaMatoId) entMapaMatoId.addEventListener('change', aplicarMapaMatoSelecionadoEntrada);
     if(entValorDescarga) {
         entValorDescarga.addEventListener('input', window.formatCurrencyInput);
         entValorDescarga.addEventListener('input', calcularVolumeAtual);
@@ -2166,6 +2257,9 @@ function inicializarModuloEntrada() {
     }
     const entProdutoCarga = document.getElementById('entProdutoCarga');
     if (entProdutoCarga) entProdutoCarga.addEventListener('change', calcularVolumeAtual);
+
+    carregarMatosMapaEntrada();
+    document.addEventListener('mapa:updated', () => carregarMatosMapaEntrada(document.getElementById('entMapaMatoId')?.value || ''));
 
     // Eventos de Busca e Filtro de Entradas
     if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
