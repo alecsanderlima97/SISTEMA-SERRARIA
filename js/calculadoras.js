@@ -7,7 +7,7 @@ const btnCalcCub = document.getElementById('btnCalcCub');
 const resultadoCub = document.getElementById('resultadoCub');
 
 // Forçar letras maiúsculas em tempo real nos campos de subprodutos (Cavaco/Pó)
-['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'subCliNome', 'subCliIE', 'subCliLogradouro', 'subCliCidadeEstado', 'subCliCaminhao', 'subCliPlacaCaminhao', 'subCliPlacaCarreta', 'calcCavRomaneioCliente', 'calcCavCaminhao', 'calcCavPlacaCaminhao', 'calcCavPlacaCarreta'].forEach(id => {
+['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'subCliNome', 'subCliIE', 'subCliLogradouro', 'subCliCidadeEstado', 'subCliPrazoPagamento', 'subCliCaminhao', 'subCliPlacaCaminhao', 'subCliPlacaCarreta', 'calcCavRomaneioCliente', 'calcCavCaminhao', 'calcCavPlacaCaminhao', 'calcCavPlacaCarreta'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         input.addEventListener('input', window.forceUppercaseInput);
@@ -82,6 +82,10 @@ function normalizarTipoSubproduto(tipo) {
     const chave = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
     if (chave === 'PO DE SERRA') return 'Po de Serra';
     return texto;
+}
+
+function normalizarTextoReceberSubproduto(valor) {
+    return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
 
 function ordenarSubprodutosRelatorio(a, b) {
@@ -271,7 +275,8 @@ async function carregarClientesSubprodutos() {
                 <td style="padding: 10px 8px; font-weight: bold; color: var(--text-color);">${cli.nome}</td>
                 <td style="padding: 10px 8px; color: var(--accent-color); font-size: 0.8rem; line-height: 1.4;">
                     Cavaco: R$ ${cli.valorCavaco.toLocaleString('pt-BR', {minimumFractionDigits:2})}<br>
-                    Pó: R$ ${cli.valorPo.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                    Pó: R$ ${cli.valorPo.toLocaleString('pt-BR', {minimumFractionDigits:2})}<br>
+                    <span style="color:var(--text-muted);">Pagamento: ${cli.formaPagamento || '-'} ${cli.prazoPagamento ? `(${cli.prazoPagamento})` : ''}</span>
                 </td>
                 <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
                     <button type="button" class="btn-icon" style="color: var(--primary-color); font-size:1rem; margin-right: 8px;" onclick="window.editarClienteSub('${cli.id}')" title="Editar">
@@ -304,6 +309,9 @@ window.editarClienteSub = (id) => {
     document.getElementById('subCliIE').value = cli.ie || 'ISENTO';
     document.getElementById('subCliLogradouro').value = cli.logradouro || '';
     document.getElementById('subCliCidadeEstado').value = cli.cidadeEstado || '';
+    document.getElementById('subCliWhatsappCobranca').value = cli.whatsappCobranca || cli.whatsapp || '';
+    document.getElementById('subCliFormaPagamento').value = cli.formaPagamento || '';
+    document.getElementById('subCliPrazoPagamento').value = cli.prazoPagamento || '';
     
     document.getElementById('subCliValorCavaco').value = window.formatCurrencyValue(cli.valorCavaco);
     document.getElementById('subCliValorPo').value = window.formatCurrencyValue(cli.valorPo);
@@ -359,6 +367,9 @@ if (formCliSub) {
         const ie = document.getElementById('subCliIE').value.toUpperCase().trim() || 'ISENTO';
         const logradouro = document.getElementById('subCliLogradouro').value.toUpperCase().trim();
         const cidadeEstado = document.getElementById('subCliCidadeEstado').value.toUpperCase().trim();
+        const whatsappCobranca = document.getElementById('subCliWhatsappCobranca')?.value.trim() || '';
+        const formaPagamento = document.getElementById('subCliFormaPagamento')?.value || '';
+        const prazoPagamento = document.getElementById('subCliPrazoPagamento')?.value.toUpperCase().trim() || '';
         
         const valorCavaco = window.parseCurrencyValue(document.getElementById('subCliValorCavaco').value);
         const valorPo = window.parseCurrencyValue(document.getElementById('subCliValorPo').value);
@@ -394,6 +405,9 @@ if (formCliSub) {
             ie,
             logradouro,
             cidadeEstado,
+            whatsappCobranca,
+            formaPagamento,
+            prazoPagamento,
             valorCavaco,
             valorPo,
             valorCavacoParticular,
@@ -943,6 +957,10 @@ if (btnCalcCavaco) {
         const romaneio = document.getElementById('calcCavRomaneio').value || '---';
         const romaneioCliente = document.getElementById('calcCavRomaneioCliente').value || '---';
         const cliente = document.getElementById('calcCavCliente').value || '---';
+        const clienteSubprodutoId = document.getElementById('calcCavSelectCliente')?.value || '';
+        const clienteSubprodutoObj = clientesSubprodutosCache.find(x => x.id === clienteSubprodutoId)
+            || clientesSubprodutosCache.find(x => normalizarTextoReceberSubproduto(x.nome) === normalizarTextoReceberSubproduto(cliente))
+            || {};
         const docCli = document.getElementById('calcCavDoc').value || '---';
         const ieCli = document.getElementById('calcCavIE').value || '---';
         const logradouro = document.getElementById('calcCavLogradouro').value || '---';
@@ -1005,6 +1023,10 @@ if (btnCalcCavaco) {
                 quantidade: qtd,
                 valorUnitario: valorUni,
                 total: total,
+                clienteSubprodutoId,
+                formaPagamento: clienteSubprodutoObj.formaPagamento || '',
+                prazoPagamento: clienteSubprodutoObj.prazoPagamento || '',
+                whatsappCobranca: clienteSubprodutoObj.whatsappCobranca || clienteSubprodutoObj.whatsapp || '',
                 statusPagamento: vendaAnterior?.statusPagamento || 'PENDENTE',
                 pagamento: vendaAnterior?.pagamento || null,
                 criadoEm: vendaAnterior?.criadoEm || new Date().toISOString(),
@@ -1019,6 +1041,19 @@ if (btnCalcCavaco) {
                 novaVenda.id = await window.FS.addDoc('vendas_subprodutos', novaVenda);
             }
             console.log("Calculadoras: Venda de subproduto salva no Firebase");
+            await window.ContasReceber?.salvarCobranca?.({
+                origem: 'subprodutos',
+                origemId: novaVenda.id,
+                codigo: novaVenda.romaneio,
+                clienteId: clienteSubprodutoId,
+                cliente: novaVenda.cliente,
+                produto: novaVenda.tipo,
+                data: novaVenda.data,
+                valor: novaVenda.total,
+                formaPagamento: novaVenda.formaPagamento,
+                prazoPagamento: novaVenda.prazoPagamento,
+                whatsapp: novaVenda.whatsappCobranca
+            });
             document.dispatchEvent(new Event('historicoUpdated'));
 
             let medidasStr = '---';

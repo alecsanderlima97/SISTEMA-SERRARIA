@@ -1599,6 +1599,10 @@ window.carregarRomaneioParaEdicao = function(r) {
 window.finalizarRomaneioV2 = async () => {
     const cliente = document.getElementById('v2-cliente').value.toUpperCase().trim();
     if (!cliente || romaneioAtual.pacotes.length === 0) { alert("Dados incompletos."); return; }
+    const clienteIdSelecionado = document.getElementById('v2-select-cliente')?.value || '';
+    const clienteObjCobranca = clientesDisponiveis.find(c => c.id === clienteIdSelecionado)
+        || clientesDisponiveis.find(c => String(c.nome || '').toUpperCase().trim() === cliente)
+        || {};
     
     // Atualizar dados de logística e observações redundantes em maiúsculo
     romaneioAtual.logistica.dataCarregamento = document.getElementById('v2-data-carreg')?.value || '';
@@ -1656,16 +1660,42 @@ window.finalizarRomaneioV2 = async () => {
                 dataEdicao: new Date().toISOString(),
                 status: 'finalizado'
             });
+            await window.ContasReceber?.salvarCobranca?.({
+                origem: 'romaneio',
+                origemId: romaneioAtual.idFirebase,
+                codigo: romaneioAtual.numero,
+                clienteId: clienteIdSelecionado,
+                cliente,
+                produto: 'Madeira serrada',
+                data: romaneioAtual.logistica.dataCarregamento || romaneioAtual.logistica.dataDescarregamento || '',
+                valor: romaneioAtual.financeiro.totalGeral,
+                formaPagamento: romaneioAtual.formaPagamento || clienteObjCobranca.formaPagamento || '',
+                prazoPagamento: romaneioAtual.prazoPagamento || clienteObjCobranca.prazoPagamento || '',
+                whatsapp: clienteObjCobranca.contato || clienteObjCobranca.telefone || clienteObjCobranca.whatsapp || ''
+            });
             
             alert(`Carga ${romaneioAtual.numero} atualizada com sucesso no Firebase!`);
         } else {
             // --- Criação de Carga Nova ---
             await validarSaldoPatioRomaneio(romaneioAtual.pacotes);
-            await window.FS.addDoc('romaneios', {
+            const novoRomaneioId = await window.FS.addDoc('romaneios', {
                 ...romaneioAtual,
                 cliente,
                 dataCriacao: new Date().toISOString(),
                 status: 'finalizado'
+            });
+            await window.ContasReceber?.salvarCobranca?.({
+                origem: 'romaneio',
+                origemId: novoRomaneioId,
+                codigo: romaneioAtual.numero,
+                clienteId: clienteIdSelecionado,
+                cliente,
+                produto: 'Madeira serrada',
+                data: romaneioAtual.logistica.dataCarregamento || romaneioAtual.logistica.dataDescarregamento || '',
+                valor: romaneioAtual.financeiro.totalGeral,
+                formaPagamento: romaneioAtual.formaPagamento || clienteObjCobranca.formaPagamento || '',
+                prazoPagamento: romaneioAtual.prazoPagamento || clienteObjCobranca.prazoPagamento || '',
+                whatsapp: clienteObjCobranca.contato || clienteObjCobranca.telefone || clienteObjCobranca.whatsapp || ''
             });
             
             for (const p of romaneioAtual.pacotes) {

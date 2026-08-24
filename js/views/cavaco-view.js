@@ -50,6 +50,28 @@
                                 <label>Cidade / Estado</label>
                                 <input type="text" id="subCliCidadeEstado" class="text-uppercase-input" placeholder="Ex: Curitiba / PR">
                             </div>
+                            <div class="section-title" style="grid-column:1 / -1; margin: 8px 0 6px 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
+                                <h3 style="font-size: 0.9rem; margin: 0; color: var(--accent-color);"><i class="fa-solid fa-hand-holding-dollar"></i> Dados de Cobrança</h3>
+                            </div>
+                            <div class="input-group" style="margin-bottom:10px;">
+                                <label>WhatsApp Financeiro</label>
+                                <input type="tel" id="subCliWhatsappCobranca" inputmode="tel" placeholder="Ex: (15) 99999-9999">
+                            </div>
+                            <div class="input-group" style="margin-bottom:10px;">
+                                <label>Forma de Pagamento</label>
+                                <select id="subCliFormaPagamento">
+                                    <option value="">Selecione...</option>
+                                    <option value="A Vista">A Vista</option>
+                                    <option value="Pix">Pix</option>
+                                    <option value="Boleto">Boleto</option>
+                                    <option value="Cheque">Cheque</option>
+                                    <option value="A Prazo">A Prazo</option>
+                                </select>
+                            </div>
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                                <label>Prazo de Pagamento</label>
+                                <input type="text" id="subCliPrazoPagamento" class="text-uppercase-input" placeholder="Ex: 30 dias via Pix">
+                            </div>
                             
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>R\$ m³ Cavaco *</label>
