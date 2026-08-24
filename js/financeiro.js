@@ -2583,18 +2583,20 @@ function injetarEstilosFinanceiro() {
         .financeiro-lembrete-topo {
             position:fixed; top:10px; left:50%; transform:translateX(-50%);
             z-index:9998; width:min(980px, calc(100vw - 28px)); display:flex; align-items:center; gap:8px;
-            padding:8px; border-radius:10px; border:1px solid rgba(245,158,11,.5);
-            background:rgba(17,24,39,.96); color:#fff7ed; box-shadow:0 18px 50px rgba(0,0,0,.45);
-            animation: financeiroPulse 1.35s ease-in-out infinite;
+            padding:7px 8px; border-radius:12px; border:0;
+            background:linear-gradient(90deg, rgba(17,24,39,.58), rgba(17,24,39,.44));
+            color:#fff7ed; box-shadow:0 14px 34px rgba(15,23,42,.22);
+            backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+            animation: financeiroPulse 3.8s ease-in-out infinite;
         }
         .financeiro-lembrete-main { flex:1; min-width:0; border:0; background:transparent; color:inherit; display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer; font-weight:800; }
         .financeiro-lembrete-main span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; animation: financeiroTicker 18s linear infinite; }
         .financeiro-lembrete-main i { color:#f59e0b; font-size:1rem; }
-        .financeiro-lembrete-doc, .financeiro-lembrete-close { border:1px solid rgba(245,158,11,.38); background:rgba(245,158,11,.14); color:#fff7ed; border-radius:8px; min-height:34px; padding:0 10px; font-weight:900; cursor:pointer; white-space:nowrap; }
+        .financeiro-lembrete-doc, .financeiro-lembrete-close { border:0; background:rgba(255,255,255,.12); color:#fff7ed; border-radius:8px; min-height:34px; padding:0 10px; font-weight:900; cursor:pointer; white-space:nowrap; }
         .financeiro-lembrete-close { width:34px; padding:0; display:grid; place-items:center; }
         .financeiro-menu-alerta { position:relative; animation:none !important; }
         .financeiro-menu-alerta::after { content:''; width:9px; height:9px; min-width:9px; border-radius:999px; background:#f5b843; box-shadow:0 0 0 4px rgba(245,184,67,.12), 0 0 16px rgba(245,184,67,.65); margin-left:auto; animation: financeiroMenuDotPulse 1.45s ease-in-out infinite; }
-        @keyframes financeiroPulse { 0%,100% { box-shadow:0 18px 50px rgba(0,0,0,.45), 0 0 0 rgba(245,158,11,0); } 50% { box-shadow:0 18px 50px rgba(0,0,0,.45), 0 0 22px rgba(245,158,11,.42); } }
+        @keyframes financeiroPulse { 0%,100% { box-shadow:0 14px 34px rgba(15,23,42,.22), 0 0 0 rgba(245,158,11,0); } 50% { box-shadow:0 16px 38px rgba(15,23,42,.25), 0 0 14px rgba(245,158,11,.18); } }
         @keyframes financeiroMenuGlow { 0%,100% { filter:none; } 50% { filter:brightness(1.35); } }
         @keyframes financeiroMenuDotPulse { 0%,100% { transform:scale(1); opacity:.9; } 50% { transform:scale(1.25); opacity:1; } }
         @keyframes financeiroTicker { 0%,12% { transform:translateX(0); } 88%,100% { transform:translateX(-12%); } }

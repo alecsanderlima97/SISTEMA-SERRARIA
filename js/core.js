@@ -12,7 +12,7 @@ const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com', 'escritoriovan
 
 const ROLE_PERMISSIONS = {
     'gerente': {
-        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
         readOnly: false
     },
     'patrao': {
@@ -53,6 +53,7 @@ const SECTION_PERMISSIONS = [
     { id: 'view-clientes', label: 'Clientes' },
     { id: 'view-transportes', label: 'Transportadoras' },
     { id: 'view-entrada', label: 'Conferencia de Cargas' },
+    { id: 'view-mapa', label: 'Mapa' },
     { id: 'view-cavaco', label: 'Venda de Subprodutos' },
     { id: 'view-produtos', label: 'Gestao de Madeira' },
     { id: 'view-estoque', label: 'Controle de Estoque' },

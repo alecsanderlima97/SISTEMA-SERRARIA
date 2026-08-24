@@ -16,8 +16,8 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css?v=assistant-fix-1">
     <link rel="stylesheet" href="romaneio-v2.css">
-    <link rel="stylesheet" href="ui-polish.css?v=versao-rodape-1">
-    <link rel="stylesheet" href="orquestra-theme.css?v=orquestra-theme-10">
+    <link rel="stylesheet" href="ui-polish.css?v=fundo-fluido-2">
+    <link rel="stylesheet" href="orquestra-theme.css?v=kpi-ilustrado-1">
     <!-- Chart.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -60,6 +60,7 @@
                     <li><a href="#" data-target="view-clientes" title="Cadastrar e gerenciar clientes compradores de madeira."><i class="fa-solid fa-address-book"></i> Clientes</a></li>
                     <li><a href="#" data-target="view-transportes" title="Cadastrar transportadoras, motoristas e veículos de frete."><i class="fa-solid fa-truck-fast"></i> Transportadoras</a></li>
                     <li><a href="#" data-target="view-entrada" title="Conferir cargas de toras recebidas e descarregamentos."><i class="fa-solid fa-clipboard-list"></i> Conferência de Cargas</a></li>
+                    <li><a href="#" data-target="view-mapa" title="Cadastrar matos de eucalipto, contratos, donos e atalhos do Google Maps."><i class="fa-solid fa-map-location-dot"></i> Mapa</a></li>
                     <li><a href="#" data-target="view-produtos" title="Gerenciar madeiras, medidas, estilos e preços usados nos romaneios."><i class="fa-solid fa-tree"></i> Gestão de Madeira</a></li>
                     <li><a href="#" data-target="view-estoque" title="Controlar estoque de peças, diesel, filtros, lubrificantes e almoxarifado."><i class="fa-solid fa-warehouse"></i> Controle de Estoque</a></li>
                     <li><a href="#" data-target="view-frotas" title="Acompanhar máquinas, abastecimentos, manutenções e relatos da frota."><i class="fa-solid fa-tractor"></i> Controle de Frota</a></li>
@@ -85,23 +86,29 @@
                         <input type="text" id="assistantHomeInput" placeholder="Pergunte ao assistente">
                         <button type="button" id="btnAssistantHomeSubmit" title="Perguntar"><i class="fa-solid fa-arrow-right"></i></button>
                     </div>
-                <div class="header-user-group">
-                    <div class="header-user-text">
-                        <div class="header-date-time" id="headerDateTime" aria-live="polite"></div>
-                        <div class="header-user-name" id="userNameHeader">Administrador</div>
-                        <div class="header-user-role">Serraria</div>
-                    </div>
-                    <div class="header-avatar">
-                        <img id="imgHeaderAvatar" src="" alt="Avatar">
-                        <i id="iconHeaderAvatar" class="fa-solid fa-user"></i>
-                    </div>
+                <div class="header-actions-group">
+                    <button type="button" id="btnHeaderRefresh" class="header-refresh-button hide-on-print" title="Atualizar o sistema e buscar a versão mais recente publicada">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Atualizar</span>
+                    </button>
+                    <div class="header-user-group">
+                        <div class="header-user-text">
+                            <div class="header-date-time" id="headerDateTime" aria-live="polite"></div>
+                            <div class="header-user-name" id="userNameHeader">Administrador</div>
+                            <div class="header-user-role">Serraria</div>
+                        </div>
+                        <div class="header-avatar">
+                            <img id="imgHeaderAvatar" src="" alt="Avatar">
+                            <i id="iconHeaderAvatar" class="fa-solid fa-user"></i>
+                        </div>
 
-                    <div id="profile-dropdown" class="profile-dropdown">
-                        <a href="#" class="dropdown-item" data-target="view-configuracoes"><i class="fa-solid fa-gear"></i> Configurações</a>
-                        <a href="#" id="btnProfileBackup" class="dropdown-item"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
-                        <a href="#" id="btnProfileRefresh" class="dropdown-item"><i class="fa-solid fa-rotate-right"></i> Atualizar Sistema</a>
-                        <div class="profile-dropdown-divider"></div>
-                        <a href="#" id="btnLogout" data-target="logout" class="dropdown-item dropdown-item-danger"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair do Sistema</a>
+                        <div id="profile-dropdown" class="profile-dropdown">
+                            <a href="#" class="dropdown-item" data-target="view-configuracoes"><i class="fa-solid fa-gear"></i> Configurações</a>
+                            <a href="#" id="btnProfileBackup" class="dropdown-item"><i class="fa-solid fa-floppy-disk"></i> Salvar e Backup</a>
+                            <a href="#" id="btnProfileRefresh" class="dropdown-item"><i class="fa-solid fa-rotate-right"></i> Atualizar Sistema</a>
+                            <div class="profile-dropdown-divider"></div>
+                            <a href="#" id="btnLogout" data-target="logout" class="dropdown-item dropdown-item-danger"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair do Sistema</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -122,12 +129,13 @@
             <script src="js/views/agenda-view.js"></script>
 
             <script src="js/views/entrada-view.js?v=valores-materia-prima-1"></script>
+            <script src="js/views/mapa-view.js?v=mapa-matos-1"></script>
 
             <script src="js/views/cavaco-view.js?v=cobranca-clientes-1"></script>
 
             <script src="js/views/romaneio-v2-view.js?v=baixa-patio-romaneio-1"></script>
 
-            <script src="js/views/configuracoes-view.js?v=theme-toggle-1"></script>
+            <script src="js/views/configuracoes-view.js?v=assistente-preferencias-1"></script>
 
 
         </main>
@@ -135,7 +143,7 @@
 
     <div id="appVersionFooter" class="app-version-footer hide-on-print" title="Identificação da atualização publicada">
         <i class="fa-solid fa-circle-check"></i>
-        <span>Atualização: verificacao-rodape-1 | 24/08/2026 13:44</span>
+        <span>Atualização: kpi-ilustrado-1 | 24/08/2026 15:10</span>
     </div>
 
     <script src="js/modals/rh-modals.js?v=he-calculo-horas-2"></script>
@@ -148,7 +156,7 @@
 
     <script src="js/modals/usuario-modals.js"></script>
 
-    <script src="js/widgets/assistant-widget.js?v=assistant-floating-3"></script>
+    <script src="js/widgets/assistant-widget.js?v=assistente-visual-1"></script>
     <script src="js/print-utils.js?v=pdf-render-3"></script>
     <script src="js/section-loader.js?v=performance-1"></script>
 
@@ -160,25 +168,26 @@
     <script type="module" src="js/core.js?v=role-class-fix-1"></script>
     <script type="module" src="js/clientes.js?v=performance-geral-1"></script>
     <script type="module" src="js/produtos.js?v=performance-geral-1"></script>
-    <script type="module" src="js/contas-receber.js?v=cobranca-clientes-1"></script>
+    <script type="module" src="js/contas-receber.js?v=aviso-suave-1"></script>
     <script type="module" src="js/calculadoras.js?v=cobranca-clientes-1"></script>
     <script type="module" src="js/transportes.js?v=performance-geral-1"></script>
-    <script type="module" src="js/assistente.js?v=openai-api-7"></script>
+    <script type="module" src="js/assistente.js?v=assistente-preferencias-1"></script>
     <script type="module" src="js/entrada.js?v=continuar-empreiteiro-1"></script>
+    <script type="module" src="js/mapa.js?v=mapa-matos-1"></script>
     <script type="module" src="js/estoque.js?v=lubrificantes-galoes-2"></script>
     <script type="module" src="js/romaneio_v2.js?v=cobranca-clientes-1"></script>
     <script type="module" src="js/historico.js?v=performance-geral-1"></script>
     <script type="module" src="js/patio.js?v=uso-romaneio-temporario-1"></script>
     <script type="module" src="js/rh.js?v=he-calculo-horas-2"></script>
     <script type="module" src="js/frotas.js?v=frota-foto-card-1"></script>
-    <script type="module" src="js/financeiro.js?v=duplicidade-documento-3"></script>
+    <script type="module" src="js/financeiro.js?v=aviso-suave-1"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js?v=performance-geral-1"></script>
     <script type="module" src="dashboard.js?v=theme-toggle-1"></script>
     <script src="js/widgets/scroll-helper-widget.js"></script>
 
     <script src="js/ui-helpers.js?v=atalhos-campos-1"></script>
-    <script src="js/shell-events.js"></script>
+    <script src="js/shell-events.js?v=assistente-preferencias-1"></script>
 </body>
 
 </html>

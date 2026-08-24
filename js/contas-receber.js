@@ -275,11 +275,11 @@ function injetarEstilosReceber() {
     const style = document.createElement('style');
     style.id = 'contasReceberStyles';
     style.textContent = `
-        .receber-lembrete-topo { position:fixed; top:58px; left:50%; transform:translateX(-50%); z-index:9997; width:min(980px, calc(100vw - 28px)); display:flex; align-items:center; gap:8px; padding:8px; border-radius:10px; border:1px solid rgba(34,197,94,.48); background:rgba(15,23,42,.96); color:#ecfdf5; box-shadow:0 18px 50px rgba(0,0,0,.34); animation:receberPulse 1.55s ease-in-out infinite; }
+        .receber-lembrete-topo { position:fixed; top:58px; left:50%; transform:translateX(-50%); z-index:9997; width:min(980px, calc(100vw - 28px)); display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:12px; border:0; background:linear-gradient(90deg, rgba(17,24,39,.56), rgba(17,24,39,.42)); color:#ecfdf5; box-shadow:0 14px 34px rgba(15,23,42,.22); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:receberPulse 4s ease-in-out infinite; }
         .receber-lembrete-main { flex:1; min-width:0; border:0; background:transparent; color:inherit; display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer; font-weight:800; }
         .receber-lembrete-main span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .receber-lembrete-main i { color:#22c55e; }
-        .receber-lembrete-doc, .receber-lembrete-close, .receber-mini-btn { border:1px solid rgba(34,197,94,.38); background:rgba(34,197,94,.14); color:#ecfdf5; border-radius:8px; min-height:34px; padding:0 10px; font-weight:900; cursor:pointer; white-space:nowrap; }
+        .receber-lembrete-doc, .receber-lembrete-close, .receber-mini-btn { border:0; background:rgba(255,255,255,.12); color:#ecfdf5; border-radius:8px; min-height:34px; padding:0 10px; font-weight:900; cursor:pointer; white-space:nowrap; }
         .receber-mini-btn { color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
         .receber-lembrete-close { width:34px; padding:0; display:grid; place-items:center; }
         .receber-menu-alerta { position:relative; }
@@ -292,7 +292,7 @@ function injetarEstilosReceber() {
         .receber-modal-head button { width:36px; height:36px; border-radius:8px; border:1px solid var(--panel-border, rgba(255,255,255,.16)); background:transparent; color:inherit; cursor:pointer; }
         .receber-table { width:100%; border-collapse:collapse; font-size:.88rem; }
         .receber-table th, .receber-table td { padding:10px; border-bottom:1px solid var(--panel-border, rgba(255,255,255,.12)); text-align:left; }
-        @keyframes receberPulse { 0%,100% { box-shadow:0 18px 50px rgba(0,0,0,.34), 0 0 0 rgba(34,197,94,0); } 50% { box-shadow:0 18px 50px rgba(0,0,0,.34), 0 0 20px rgba(34,197,94,.38); } }
+        @keyframes receberPulse { 0%,100% { box-shadow:0 14px 34px rgba(15,23,42,.22), 0 0 0 rgba(34,197,94,0); } 50% { box-shadow:0 16px 38px rgba(15,23,42,.25), 0 0 14px rgba(34,197,94,.16); } }
         @media (max-width:680px) { .receber-lembrete-topo { top:74px; align-items:stretch; flex-direction:column; } .receber-lembrete-main span { white-space:normal; } }
     `;
     document.head.appendChild(style);

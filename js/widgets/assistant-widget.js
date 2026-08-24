@@ -1,6 +1,19 @@
 ﻿(function() {
     const html = `    <button type="button" id="assistantFloatButton" class="assistant-float-button hide-on-print" onclick="window.toggleAssistenteIA()" title="Assistente IA">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span class="assistant-orquestra-avatar" aria-hidden="true">
+            <span class="assistant-orquestra-orb">O</span>
+            <span class="assistant-orquestra-baton"></span>
+        </span>
+    </button>
+
+    <button type="button" id="assistantCompanion" class="assistant-companion hide-on-print" onclick="window.mostrarGuiaDaTelaAtual && window.mostrarGuiaDaTelaAtual(true)" title="Abrir guia da tela atual">
+        <span class="assistant-companion-avatar" aria-hidden="true">
+            <span>O</span>
+        </span>
+        <span class="assistant-companion-text">
+            <strong id="assistantCompanionTitle">Guia da tela</strong>
+            <small id="assistantCompanionHint">Clique para ver orientações rápidas.</small>
+        </span>
     </button>
 
     <aside id="assistantPanel" class="assistant-panel hide-on-print" aria-hidden="true">

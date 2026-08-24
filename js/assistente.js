@@ -8,7 +8,33 @@ const KEYS_ASSISTENTE = {
 };
 const ASSISTANT_USAGE_KEY = 'orquestra_assistente_openai_usage';
 const ASSISTANT_BUDGET_KEY = 'orquestra_assistente_openai_budget';
-let guiaAssistenteOculta = false;
+const ASSISTANT_HELP_ENABLED_KEY = 'orquestra_help_enabled';
+const ASSISTANT_SCREEN_GUIDE_KEY = 'orquestra_screen_guide_enabled';
+const ASSISTANT_FLOAT_ENABLED_KEY = 'orquestra_assistant_float_enabled';
+const ASSISTANT_COMPANION_ENABLED_KEY = 'orquestra_assistant_companion_enabled';
+let guiaAssistenteOculta = localStorage.getItem(ASSISTANT_SCREEN_GUIDE_KEY) === 'false';
+
+function preferenciaLigada(key, defaultValue = true) {
+    const value = localStorage.getItem(key);
+    if (value === null) return defaultValue;
+    return value !== 'false';
+}
+
+function ajudaAssistenteAtiva() {
+    return preferenciaLigada(ASSISTANT_HELP_ENABLED_KEY, true);
+}
+
+function guiaAssistenteAtivo() {
+    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_SCREEN_GUIDE_KEY, true);
+}
+
+function assistenteFlutuanteAtivo() {
+    return preferenciaLigada(ASSISTANT_FLOAT_ENABLED_KEY, true);
+}
+
+function companionAssistenteAtivo() {
+    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_COMPANION_ENABLED_KEY, true);
+}
 
 const GUIAS_TELA = {
     'view-dashboard': {
@@ -41,6 +67,14 @@ const GUIAS_TELA = {
             'Registre a entrada com fornecedor/empreiteiro, mato, produto e romaneio.',
             'Confira os valores de tora, lenha, outros e corte/remocao antes de salvar.',
             'Use Descarregamento para montar fechamentos por periodo.'
+        ]
+    },
+    'view-mapa': {
+        titulo: 'Mapa',
+        passos: [
+            'Cadastre cada mato com dono, contato, endereco ou coordenadas.',
+            'Informe a unidade de medida negociada, como hectare, alqueire, m2, km ou pe.',
+            'Use os atalhos do Google Maps e Earth para abrir o local e anexe contratos quando existir.'
         ]
     },
     'view-produtos': {
@@ -424,7 +458,8 @@ function renderizarGuiaAssistente(sectionId = obterTelaAtivaAssistente()) {
         <div class="assistant-guide-title">${guia.titulo}</div>
         <ol>${guia.passos.map(passo => `<li>${passo}</li>`).join('')}</ol>
     `;
-    if (card) card.classList.toggle('is-hidden', guiaAssistenteOculta);
+    if (card) card.classList.toggle('is-hidden', guiaAssistenteOculta || !guiaAssistenteAtivo());
+    atualizarCompanionAssistente(sectionId);
 }
 
 function injetarEstilosGuiaAssistente() {
@@ -445,6 +480,7 @@ function injetarEstilosGuiaAssistente() {
 }
 
 window.mostrarGuiaDaTelaAtual = function(abrirPainel = false) {
+    if (!guiaAssistenteAtivo()) return;
     guiaAssistenteOculta = false;
     renderizarGuiaAssistente();
     if (abrirPainel) window.toggleAssistenteIA(true);
@@ -455,13 +491,41 @@ window.fecharGuiaAssistente = function() {
     document.getElementById('assistantGuideCard')?.classList.add('is-hidden');
 };
 
+function atualizarCompanionAssistente(sectionId = obterTelaAtivaAssistente()) {
+    const guia = GUIAS_TELA[sectionId] || GUIAS_TELA['view-dashboard'];
+    const companion = document.getElementById('assistantCompanion');
+    const titulo = document.getElementById('assistantCompanionTitle');
+    const dica = document.getElementById('assistantCompanionHint');
+    if (!companion) return;
+    if (titulo) titulo.textContent = guia?.titulo || 'Guia da tela';
+    if (dica) dica.textContent = guia?.passos?.[0] || 'Clique para ver orientações rápidas.';
+    companion.classList.toggle('is-hidden', !companionAssistenteAtivo());
+}
+
+window.atualizarPreferenciasAssistente = function() {
+    document.body.classList.toggle('assistant-help-disabled', !ajudaAssistenteAtiva());
+    document.body.classList.toggle('assistant-guide-disabled', !guiaAssistenteAtivo());
+    document.body.classList.toggle('assistant-float-disabled', !assistenteFlutuanteAtivo());
+    document.body.classList.toggle('assistant-companion-disabled', !companionAssistenteAtivo());
+
+    const panel = document.getElementById('assistantPanel');
+    if (panel && !assistenteFlutuanteAtivo()) window.toggleAssistenteIA(false);
+
+    renderizarGuiaAssistente();
+    atualizarCompanionAssistente();
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     injetarEstilosGuiaAssistente();
     inicializarAssistenteArrastavel();
     atualizarPainelUsoAssistente();
+    window.atualizarPreferenciasAssistente();
     renderizarGuiaAssistente();
     document.querySelectorAll('.sidebar a[data-target], .profile-dropdown a[data-target]').forEach(link => {
-        link.addEventListener('click', () => setTimeout(() => renderizarGuiaAssistente(link.dataset.target), 180));
+        link.addEventListener('click', () => setTimeout(() => {
+            renderizarGuiaAssistente(link.dataset.target);
+            atualizarCompanionAssistente(link.dataset.target);
+        }, 180));
     });
     document.getElementById('assistantBudgetInput')?.addEventListener('change', (event) => {
         const valor = Math.max(0, Number(event.target.value || 0));

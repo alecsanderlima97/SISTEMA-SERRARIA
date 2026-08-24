@@ -63,6 +63,7 @@ const CLOUD_SNAPSHOT_COLLECTIONS = [
     'romaneios',
     'entradas',
     'empreiteiros',
+    'mapa_matos',
     'vendas_subprodutos',
     'estoque',
     'estoque_movimentacoes',

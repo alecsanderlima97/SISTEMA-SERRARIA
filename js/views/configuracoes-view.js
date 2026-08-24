@@ -90,6 +90,47 @@
                             </button>
                         </div>
                     </div>
+
+                    <div class="glass-panel config-preferences-panel">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                            <i class="fa-solid fa-sliders" style="font-size: 24px; color: var(--accent-color);"></i>
+                            <div>
+                                <h2 style="margin: 0; font-size: 20px;">Preferencias do Sistema</h2>
+                                <p style="margin:4px 0 0; color:var(--text-muted); font-size:12px;">Ajustes salvos neste navegador para deixar o uso mais confortavel.</p>
+                            </div>
+                        </div>
+
+                        <div class="config-preferences-grid">
+                            <label class="config-pref-toggle" for="configAjudaVisual">
+                                <span><i class="fa-solid fa-circle-question"></i><strong>Ajuda ao passar o mouse</strong><small>Mostra explicacoes em botoes, indicadores e menus.</small></span>
+                                <input type="checkbox" id="configAjudaVisual" data-pref-key="orquestra_help_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configGuiaAutomatico">
+                                <span><i class="fa-solid fa-route"></i><strong>Guia da tela</strong><small>Exibe orientacoes rapidas conforme a aba aberta.</small></span>
+                                <input type="checkbox" id="configGuiaAutomatico" data-pref-key="orquestra_screen_guide_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configAssistenteFlutuante">
+                                <span><i class="fa-solid fa-brain"></i><strong>Assistente flutuante</strong><small>Mantem o botao de IA disponivel no sistema.</small></span>
+                                <input type="checkbox" id="configAssistenteFlutuante" data-pref-key="orquestra_assistant_float_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configAssistenteCompanion">
+                                <span><i class="fa-solid fa-compass"></i><strong>Acompanhante de tela</strong><small>Mostra um lembrete discreto da tela atual.</small></span>
+                                <input type="checkbox" id="configAssistenteCompanion" data-pref-key="orquestra_assistant_companion_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configMovimentoFundo">
+                                <span><i class="fa-solid fa-water"></i><strong>Movimento no fundo</strong><small>Ativa a animacao sutil de fluidez visual.</small></span>
+                                <input type="checkbox" id="configMovimentoFundo" data-pref-key="orquestra_background_motion_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configModoCompacto">
+                                <span><i class="fa-solid fa-compress"></i><strong>Modo compacto</strong><small>Reduz um pouco campos, cards e botoes neste navegador.</small></span>
+                                <input type="checkbox" id="configModoCompacto" data-pref-key="orquestra_compact_mode_enabled">
+                            </label>
+                        </div>
+
+                        <button type="button" class="btn-secondary config-pref-reset" onclick="window.restaurarPreferenciasInterfacePadrao && window.restaurarPreferenciasInterfacePadrao()">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Restaurar preferencias padrao
+                        </button>
+                    </div>
                     
                     <div class="glass-panel">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
