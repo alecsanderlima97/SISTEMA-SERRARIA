@@ -461,10 +461,18 @@ window.formatDecimalInput = function(e) {
 };
 
 window.forceUppercaseInput = function(e) {
-    let start = e.target.selectionStart;
-    let end = e.target.selectionEnd;
-    e.target.value = e.target.value.toUpperCase();
-    e.target.setSelectionRange(start, end);
+    const campo = e?.target;
+    if (!campo || typeof campo.value !== 'string') return;
+
+    const suportaSelecao = ['text', 'search', 'tel', 'url', 'password'].includes(String(campo.type || 'text').toLowerCase())
+        || campo.tagName === 'TEXTAREA';
+    const inicio = suportaSelecao ? campo.selectionStart : null;
+    const fim = suportaSelecao ? campo.selectionEnd : null;
+    campo.value = campo.value.toUpperCase();
+
+    if (suportaSelecao && Number.isInteger(inicio) && Number.isInteger(fim)) {
+        campo.setSelectionRange(inicio, fim);
+    }
 };
 
 function atualizarBotoesTemaAtivo(themeName) {

@@ -241,7 +241,7 @@ async function carregarClientes() {
 // Inicializar Módulo de Clientes de forma robusta
 function inicializarModuloClientes() {
     // Forçar letras maiúsculas em tempo real nos campos de clientes
-    ['cliNome', 'cliLogradouro', 'cliPrazoPagamento', 'cliNomeMadeiraExtra'].forEach(id => {
+    ['cliNome', 'cliLogradouro', 'cliNomeMadeiraExtra'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);
