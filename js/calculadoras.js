@@ -453,61 +453,6 @@ if (formCliSub) {
     });
 }
 
-// Busca automática de CNPJ no cadastro de clientes de subprodutos
-const subCliDocInput = document.getElementById('subCliDoc');
-if (subCliDocInput) {
-    subCliDocInput.addEventListener('input', function(e) {
-        let v = e.target.value.replace(/\D/g, "");
-        if (v.length > 11) {
-            v = v.substring(0, 14);
-            v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-        } else {
-            v = v.substring(0, 11);
-            v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-        }
-        e.target.value = v;
-    });
-
-    subCliDocInput.addEventListener('blur', async function() {
-        let docClean = this.value.replace(/\D/g, '');
-        if (docClean.length === 14) {
-            const nomeInput = document.getElementById('subCliNome');
-            const logradouroInput = document.getElementById('subCliLogradouro');
-            const cidadeEstadoInput = document.getElementById('subCliCidadeEstado');
-
-            if (nomeInput) nomeInput.placeholder = "Buscando dados do CNPJ...";
-            
-            try {
-                const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${docClean}`);
-                const data = await res.json();
-                if (data.razao_social) {
-                    if (nomeInput && !nomeInput.value) nomeInput.value = data.razao_social.toUpperCase();
-                    
-                    let log = (data.logradouro || '').toUpperCase();
-                    if (data.numero) log += `, ${data.numero}`;
-                    if (data.complemento) log += ` - ${data.complemento.toUpperCase()}`;
-                    if (data.bairro) log += ` - ${data.bairro.toUpperCase()}`;
-                    
-                    if (logradouroInput && !logradouroInput.value) logradouroInput.value = log;
-                    
-                    let cidEst = "";
-                    if (data.municipio) cidEst += data.municipio.toUpperCase();
-                    if (data.uf) cidEst += ` / ${data.uf.toUpperCase()}`;
-                    
-                    if (cidadeEstadoInput && !cidadeEstadoInput.value) cidadeEstadoInput.value = cidEst;
-                    
-                    const ieInput = document.getElementById('subCliIE');
-                    if (ieInput && !ieInput.value) ieInput.value = "ISENTO";
-                }
-            } catch (e) {
-                console.error("Erro ao consultar CNPJ via BrasilAPI:", e);
-            } finally {
-                if (nomeInput) nomeInput.placeholder = "Nome / Razão Social *";
-            }
-        }
-    });
-}
-
 // --- Automação do Emissor de Recibo de Vendas de Subprodutos ---
 
 const selectCavCli = document.getElementById('calcCavSelectCliente');

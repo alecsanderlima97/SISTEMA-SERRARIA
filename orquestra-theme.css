@@ -1403,6 +1403,63 @@ body.orquestra-theme #secao-romaneio-v2 .finance-footer * {
     color: #f8fafc;
 }
 
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action {
+    width: 46px;
+    min-width: 46px;
+    height: 44px;
+    padding: 0 !important;
+    display: inline-grid;
+    place-items: center;
+    font-size: 1rem;
+}
+
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action-preview {
+    background: #d99a22 !important;
+    color: #172033 !important;
+    border-color: #e9b94f !important;
+}
+
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action-pdf {
+    background: #0f766e !important;
+    color: #ffffff !important;
+    border-color: #2a988d !important;
+}
+
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action-whatsapp {
+    background: #168a52 !important;
+    color: #ffffff !important;
+    border-color: #35a96e !important;
+}
+
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action-finalize {
+    width: 178px;
+    min-width: 178px;
+    padding: 0 14px !important;
+    display: inline-flex;
+    justify-content: center;
+    gap: 8px;
+    background: #18b96f !important;
+    color: #071a13 !important;
+    border-color: #39d58a !important;
+    box-shadow: 0 8px 20px rgba(24, 185, 111, 0.24) !important;
+}
+
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action i {
+    color: inherit !important;
+}
+
+@media (max-width: 760px) {
+    body.orquestra-theme #secao-romaneio-v2 .finance-footer > div {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 18px !important;
+    }
+
+    body.orquestra-theme #secao-romaneio-v2 .romaneio-summary-actions {
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+}
+
 body.orquestra-theme .package-entry-total {
     background: #e8f8ef !important;
     border-color: #abd8bf !important;

@@ -36,7 +36,12 @@
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>CPF / CNPJ *</label>
-                                <input type="text" id="subCliDoc" required placeholder="Digite CPF ou CNPJ">
+                                <input type="text" id="subCliDoc" required inputmode="numeric" autocomplete="off" placeholder="Digite CPF ou CNPJ"
+                                    data-cnpj-autofill="true"
+                                    data-cnpj-name="subCliNome"
+                                    data-cnpj-ie="subCliIE"
+                                    data-cnpj-full-address="subCliLogradouro"
+                                    data-cnpj-city="subCliCidadeEstado">
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">
                                 <label>Inscrição Estadual (IE)</label>
@@ -181,7 +186,12 @@
                                     <div class="input-group"><label>Data da Venda *</label><input type="date" id="calcCavData" required></div>
                                     <div class="input-group"><label>Selecionar Cliente Cadastrado</label><select id="calcCavSelectCliente" style="width: 100%;"><option value="">Preenchimento Manual / Cliente Avulso</option></select></div>
                                     <div class="input-group span-2"><label>Cliente / Empresa Compradora *</label><input type="text" id="calcCavCliente" class="text-uppercase-input" required placeholder="Ex: Moveis Silva Ltda"></div>
-                                    <div class="input-group"><label>CPF / CNPJ</label><input type="text" id="calcCavDoc" placeholder="CPF/CNPJ Comprador"></div>
+                                    <div class="input-group"><label>CPF / CNPJ</label><input type="text" id="calcCavDoc" inputmode="numeric" autocomplete="off" placeholder="CPF/CNPJ Comprador"
+                                        data-cnpj-autofill="true"
+                                        data-cnpj-name="calcCavCliente"
+                                        data-cnpj-ie="calcCavIE"
+                                        data-cnpj-full-address="calcCavLogradouro"
+                                        data-cnpj-city="calcCavCidadeEstado"></div>
                                     <div class="input-group"><label>Inscricao Estadual (IE)</label><input type="text" id="calcCavIE" class="text-uppercase-input" placeholder="IE do Comprador"></div>
                                     <div class="input-group"><label>Logradouro / Endereco</label><input type="text" id="calcCavLogradouro" class="text-uppercase-input" placeholder="Logradouro"></div>
                                     <div class="input-group"><label>Cidade / Estado</label><input type="text" id="calcCavCidadeEstado" class="text-uppercase-input" placeholder="Cidade / UF"></div>

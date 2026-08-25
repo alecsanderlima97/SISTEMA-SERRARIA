@@ -1264,44 +1264,135 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
 
 function gerarHtmlDocumentoRomaneio(payload) {
     const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
+    const formatarDataDocumento = valor => {
+        const partes = String(valor || '').split('-');
+        return partes.length === 3 && partes[0].length === 4 ? `${partes[2]}/${partes[1]}/${partes[0]}` : (valor || '-');
+    };
     const linhasFinanceiroClasse = agruparFinanceiroPorClasse(pacotes).map(grupo => {
-        return `<div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0; border-bottom:1px solid #e2e8f0;"><span>${grupo.classe}: ${formatarM3Baixo(grupo.m3)} m3 × R$ ${Number(grupo.precoM3 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><b>R$ ${arredondarParaBaixo(grupo.valor, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`;
+        return `<div class="rom-doc-value-row"><span><b>${grupo.classe}</b> · ${formatarM3Baixo(grupo.m3)} m³ × R$ ${Number(grupo.precoM3 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><strong>R$ ${arredondarParaBaixo(grupo.valor, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>`;
     }).join('');
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
     const adicionalFrete = Number(r.logistica?.adicionalFrete || 0);
+    const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + adicionalMadeira, 2);
+    const diferencaCubagem = arredondarParaBaixo(totalM3Madeira - totalM3Frete, 3);
+    const dataEmissao = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     const pacotesHtml = `
-        <table class="doc-table">
-            <thead><tr><th>Classificacao</th><th>Madeira</th><th>Pcts</th><th>Config</th><th>Pcs/Pct</th><th>Total Pecas</th><th>m3 Venda</th><th>V. Unit.</th><th>Total</th></tr></thead>
+        <table class="rom-doc-table">
+            <colgroup><col style="width:10%"><col style="width:23%"><col style="width:7%"><col style="width:15%"><col style="width:9%"><col style="width:10%"><col style="width:12%"><col style="width:14%"></colgroup>
+            <thead><tr><th>Classe</th><th>Madeira / medida</th><th class="rom-doc-center">Pcts</th><th>Configuração</th><th class="rom-doc-center">Total pç</th><th class="rom-doc-right">m³ venda</th><th class="rom-doc-right">R$/m³</th><th class="rom-doc-right">Subtotal</th></tr></thead>
             <tbody>
                 ${pacotes.map(p => {
-                    const cor = getCorPorQualidade(p.qualidade || 'PADRAO');
+                    const classeNumero = numeroClasseRomaneio(p.qualidade || p.classe);
+                    const cor = classeNumero === 1 ? '#047857' : classeNumero === 2 ? '#b45309' : classeNumero === 3 ? '#b91c1c' : '#475569';
                     const totalPecas = Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
-                    const valorUnit = totalPecas ? (Number(p.valorTotalWood || 0) / totalPecas) : 0;
-                    return `<tr><td><span style="display:inline-block; padding:5px 10px; border-radius:999px; background:${cor}22; color:${cor}; font-weight:800; border:1px solid ${cor}66;">${p.qualidade || 'PADRAO'}</span></td><td><strong>${p.produtoNome || '-'}</strong><br><span class="doc-muted">${medidaRealPacoteRomaneio(p)}${pacoteCubadoDiferenteRomaneio(p) ? `<br><b style="color:#d97706;">Cubado como ${medidaVendaPacoteRomaneio(p)}</b>` : ''}</span></td><td>${p.qtdPacotes || 0}</td><td>${p.configPct || '-'}</td><td>${p.pecasPorPacote || 0}</td><td><strong>${totalPecas}</strong></td><td class="doc-total">${formatarM3Baixo(p.m3VendaTotal || 0)}</td><td>R$ ${arredondarParaBaixo(valorUnit, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="doc-money">R$ ${arredondarParaBaixo(p.valorTotalWood || 0, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+                    return `<tr>
+                        <td><span class="rom-doc-class" style="background:${cor}14; color:${cor}; border-color:${cor}55;">${p.qualidade || p.classe || 'Padrão'}</span></td>
+                        <td><strong>${p.produtoNome || '-'}</strong><small>${medidaRealPacoteRomaneio(p)}</small>${pacoteCubadoDiferenteRomaneio(p) ? `<small class="rom-doc-cubado">Cubado como ${medidaVendaPacoteRomaneio(p)}</small>` : ''}</td>
+                        <td class="rom-doc-center"><strong>${p.qtdPacotes || 0}</strong></td>
+                        <td><strong>${p.configPct || '-'}</strong><small>${p.pecasPorPacote || 0} pç/pct</small></td>
+                        <td class="rom-doc-center"><strong>${totalPecas}</strong></td>
+                        <td class="rom-doc-right rom-doc-volume">${formatarM3Baixo(p.m3VendaTotal || 0)}</td>
+                        <td class="rom-doc-right">R$ ${Number(p.precoM3 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="rom-doc-right rom-doc-money">R$ ${arredondarParaBaixo(p.valorTotalWood || 0, 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    </tr>`;
                 }).join('')}
             </tbody>
         </table>`;
     return `
-        <div class="doc-header"><div><img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong><br>${emitente.cnpj ? `CNPJ: ${emitente.cnpj}<br>` : ''}${(emitente.logradouro || '')} ${(emitente.numero || '')}<br>${emitente.cidade || ''}</div></div><div class="doc-title"><h1>${r.cliente || 'Comprador'} - Carga ${r.numero || r.numeroCarga || '-'}</h1><p><strong>Romaneio de Carga</strong></p><p>Emitido em ${new Date().toLocaleString('pt-BR')}</p></div></div>
-        <div style="display:grid; grid-template-columns:1.15fr .85fr; gap:8px; margin-bottom:10px; font-size:12px;">
-            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:9px 11px;"><strong style="color:#0f766e;">COMPRADOR</strong><div style="margin-top:5px;"><b>${r.cliente || '-'}</b> | ${clienteObj.cnpj || clienteObj.cpf || '-'} | ${clienteObj.cidade || '-'}</div>${r.formaPagamento ? `<div>Pagamento: ${r.formaPagamento} ${r.prazoPagamento ? `(${r.prazoPagamento})` : ''}</div>` : ''}${r.observacaoCliente ? `<div>Obs.: ${r.observacaoCliente}</div>` : ''}</div>
-            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:9px 11px;"><strong style="color:#1d4ed8;">LOGISTICA</strong><div style="margin-top:5px;">Carreg.: ${r.logistica?.dataCarregamento || '-'} | Descarreg.: ${r.logistica?.dataDescarregamento || '-'}</div><div>${r.logistica?.motorista || '-'} | ${r.logistica?.caminhao || '-'} | ${r.logistica?.placa || '-'}</div><div>Transporte: ${r.logistica?.responsavelFrete || '-'}</div></div>
-        </div>
-        ${pacotesHtml}
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;"><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PACOTES</small><strong style="display:block; font-size:22px;">${totalPcts}</strong></div><div style="padding:11px; border-radius:6px; background:#f1f5f9; text-align:center;"><small>PECAS</small><strong style="display:block; font-size:22px;">${totalPcs}</strong></div><div style="padding:11px; border-radius:6px; background:#ecfdf5; text-align:center;"><small>VOLUME</small><strong style="display:block; font-size:22px; color:#047857;">${formatarM3Baixo(totalM3Madeira)} m3</strong></div></div>
-        <div style="margin-top:8px; border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; font-size:12px;">
-            <strong style="color:#0f172a;">DETALHAMENTO FINANCEIRO</strong>
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:6px 0; border-bottom:1px solid #e2e8f0; white-space:nowrap;"><span>Total pacotes / pecas / m3 venda</span><b>${totalPcts} pcts / ${totalPcs} pcs / ${formatarM3Baixo(totalM3Madeira)} m3</b></div>
-            <div style="margin-top:7px;">${linhasFinanceiroClasse}</div>
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:6px 0;"><span>Total madeira serrada</span><b>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>
-            ${adicionalMadeira ? `<div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0;"><span>Adicional/Ajuste madeira</span><b>R$ ${adicionalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>` : ''}
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0;"><span>Taxa NF (${taxa}%)${r.financeiro?.baseNF === 'MEIA' ? ` sobre meia carga: R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</span><b>R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0;"><span>Conferencia m3 real (frete)</span><b>${formatarM3Baixo(totalM3Frete)} m3</b></div>
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; padding:5px 0;"><span>Frete: ${formatarM3Baixo(totalM3Frete)} m3 × R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${adicionalFrete ? ` + ajuste R$ ${adicionalFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</span><b style="color:#1d4ed8;">R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>
-            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:6px; padding-top:8px; border-top:2px solid #0f172a;"><span><b>Total madeira + taxa</b></span><b style="color:#047857; font-size:16px;">R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>
-        </div>
-        ${r.observacaoCarga ? `<div class="doc-note"><strong>Observacoes da carga</strong><div style="margin-top:8px; white-space:pre-wrap;">${r.observacaoCarga}</div></div>` : ''}
-        <div class="doc-signatures"><div>Assinatura do Motorista</div><div>Assinatura do Recebedor</div></div>`;
+        <style>
+            .rom-doc { color:#172033; font-size:10.5px; line-height:1.28; }
+            .rom-doc * { box-sizing:border-box; }
+            .rom-doc-header { display:flex; justify-content:space-between; align-items:center; gap:18px; padding-bottom:9px; margin-bottom:8px; border-bottom:2px solid #172033; break-inside:avoid; }
+            .rom-doc-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+            .rom-doc-brand img { width:auto; max-width:132px; max-height:56px; object-fit:contain; }
+            .rom-doc-brand-copy { display:flex; flex-direction:column; gap:2px; color:#475569; }
+            .rom-doc-brand-copy strong { color:#172033; font-size:12px; }
+            .rom-doc-title { text-align:right; }
+            .rom-doc-title h1 { margin:0; color:#172033; font-size:20px; line-height:1.08; }
+            .rom-doc-title strong { display:block; margin-top:3px; color:#047857; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+            .rom-doc-title small { display:block; margin-top:3px; color:#64748b; }
+            .rom-doc-meta { display:grid; grid-template-columns:1.1fr .9fr; gap:7px; margin-bottom:8px; break-inside:avoid; }
+            .rom-doc-meta-card { padding:7px 9px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; }
+            .rom-doc-meta-card > strong { display:block; margin-bottom:3px; color:#047857; font-size:9px; text-transform:uppercase; letter-spacing:.06em; }
+            .rom-doc-meta-card.logistica > strong { color:#1d4ed8; }
+            .rom-doc-meta-line { display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
+            .rom-doc-meta-line b { color:#172033; }
+            .rom-doc-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:9.3px; }
+            .rom-doc-table thead { display:table-header-group; }
+            .rom-doc-table th { padding:6px 5px; background:#172033; color:#fff; text-align:left; font-size:8.5px; text-transform:uppercase; letter-spacing:.02em; }
+            .rom-doc-table td { padding:5px; border-bottom:1px solid #dbe2ea; vertical-align:middle; overflow-wrap:anywhere; }
+            .rom-doc-table tbody tr:nth-child(even) { background:#f8fafc; }
+            .rom-doc-table tr { break-inside:avoid; page-break-inside:avoid; }
+            .rom-doc-table td small { display:block; margin-top:2px; color:#64748b; font-size:8.5px; }
+            .rom-doc-table .rom-doc-cubado { color:#b45309; font-weight:800; }
+            .rom-doc-class { display:inline-block; padding:3px 5px; border:1px solid; border-radius:4px; font-size:8px; font-weight:900; white-space:nowrap; }
+            .rom-doc-center { text-align:center !important; }
+            .rom-doc-right { text-align:right !important; white-space:nowrap; }
+            .rom-doc-volume { color:#047857; font-weight:900; }
+            .rom-doc-money { color:#166534; font-weight:900; }
+            .rom-doc-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; break-inside:avoid; }
+            .rom-doc-kpi { padding:6px 8px; border:1px solid #dbe2ea; border-radius:6px; background:#f8fafc; text-align:center; }
+            .rom-doc-kpi small { display:block; color:#64748b; font-size:8px; font-weight:800; text-transform:uppercase; }
+            .rom-doc-kpi strong { display:block; margin-top:2px; color:#172033; font-size:15px; }
+            .rom-doc-kpi.volume { background:#ecfdf5; border-color:#a7d9c2; }
+            .rom-doc-kpi.volume strong { color:#047857; }
+            .rom-doc-finance { display:grid; grid-template-columns:1.12fr .88fr; gap:7px; margin-top:8px; break-inside:avoid; page-break-inside:avoid; }
+            .rom-doc-finance-card { padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; }
+            .rom-doc-finance-card h3 { margin:0 0 4px; color:#172033; font-size:9px; text-transform:uppercase; letter-spacing:.06em; }
+            .rom-doc-value-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; padding:3px 0; border-bottom:1px solid #e2e8f0; }
+            .rom-doc-value-row:last-child { border-bottom:0; }
+            .rom-doc-value-row span { min-width:0; }
+            .rom-doc-value-row strong { white-space:nowrap; }
+            .rom-doc-value-row.total { margin-top:4px; padding-top:6px; border-top:2px solid #172033; border-bottom:0; font-size:12px; }
+            .rom-doc-value-row.total strong { color:#047857; font-size:15px; }
+            .rom-doc-value-row.tax strong { color:#b91c1c; }
+            .rom-doc-freight { background:#eff6ff; border-color:#bfd4ee; }
+            .rom-doc-freight .freight-total { margin-top:5px; padding:6px 7px; border-radius:5px; background:#dbeafe; color:#1e3a8a; }
+            .rom-doc-freight .freight-total strong { color:#1d4ed8; }
+            .rom-doc-note { margin-top:7px; padding:7px 9px; border:1px solid #dbe2ea; border-radius:6px; background:#fffdf7; break-inside:avoid; }
+            .rom-doc-note strong { color:#172033; text-transform:uppercase; font-size:8.5px; }
+            .rom-doc-note div { margin-top:3px; white-space:pre-wrap; }
+            .rom-doc-signatures { display:grid; grid-template-columns:repeat(2,1fr); gap:36px; margin-top:25px; break-inside:avoid; }
+            .rom-doc-signatures div { padding-top:5px; border-top:1px solid #64748b; color:#475569; text-align:center; font-size:9px; }
+            @media print {
+                .rom-doc { font-size:9.5px; }
+                .rom-doc-header { padding-bottom:6px; margin-bottom:6px; }
+                .rom-doc-brand img { max-height:48px; }
+                .rom-doc-title h1 { font-size:18px; }
+                .rom-doc-meta-card { padding:5px 7px; }
+                .rom-doc-table { font-size:8.7px; }
+                .rom-doc-table th { padding:5px 4px; }
+                .rom-doc-table td { padding:4px; }
+                .rom-doc-kpis, .rom-doc-finance { margin-top:6px; }
+                .rom-doc-signatures { margin-top:20px; }
+            }
+        </style>
+        <div class="rom-doc">
+            <header class="rom-doc-header">
+                <div class="rom-doc-brand">
+                    <img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" onerror="this.style.display='none'">
+                    <div class="rom-doc-brand-copy"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong>${emitente.cnpj ? `<span>CNPJ: ${emitente.cnpj}</span>` : ''}<span>${(emitente.logradouro || '')} ${(emitente.numero || '')}${emitente.cidade ? ` · ${emitente.cidade}` : ''}</span></div>
+                </div>
+                <div class="rom-doc-title"><h1>${r.cliente || 'Comprador'} · Carga ${r.numero || r.numeroCarga || '-'}</h1><strong>Romaneio de madeira serrada</strong><small>Emitido em ${dataEmissao}</small></div>
+            </header>
+            <section class="rom-doc-meta">
+                <div class="rom-doc-meta-card"><strong>Comprador</strong><div class="rom-doc-meta-line"><b>${r.cliente || '-'}</b><span>·</span><span>${clienteObj.cnpj || clienteObj.cpf || '-'}</span><span>·</span><span>${clienteObj.cidade || '-'}</span></div>${r.formaPagamento ? `<div class="rom-doc-meta-line"><span>Pagamento:</span><b>${r.formaPagamento}${r.prazoPagamento ? ` · ${r.prazoPagamento}` : ''}</b></div>` : ''}${r.observacaoCliente ? `<div class="rom-doc-meta-line"><span>Obs.:</span><b>${r.observacaoCliente}</b></div>` : ''}</div>
+                <div class="rom-doc-meta-card logistica"><strong>Transporte e logística</strong><div class="rom-doc-meta-line"><span>Carreg.:</span><b>${formatarDataDocumento(r.logistica?.dataCarregamento)}</b><span>· Descarreg.:</span><b>${formatarDataDocumento(r.logistica?.dataDescarregamento)}</b></div><div class="rom-doc-meta-line"><b>${r.logistica?.motorista || '-'}</b><span>· ${r.logistica?.caminhao || '-'}</span><span>· ${r.logistica?.placa || '-'}</span></div><div class="rom-doc-meta-line"><span>Responsável:</span><b>${r.logistica?.responsavelFrete || '-'}</b></div></div>
+            </section>
+            ${pacotesHtml}
+            <section class="rom-doc-kpis">
+                <div class="rom-doc-kpi"><small>Total de pacotes</small><strong>${totalPcts}</strong></div>
+                <div class="rom-doc-kpi"><small>Total de peças</small><strong>${totalPcs}</strong></div>
+                <div class="rom-doc-kpi volume"><small>Volume de venda</small><strong>${formatarM3Baixo(totalM3Madeira)} m³</strong></div>
+                <div class="rom-doc-kpi"><small>Metragem real / frete</small><strong>${formatarM3Baixo(totalM3Frete)} m³</strong></div>
+            </section>
+            <section class="rom-doc-finance">
+                <div class="rom-doc-finance-card"><h3>Madeira e cobrança</h3>${linhasFinanceiroClasse}<div class="rom-doc-value-row"><span>Total da madeira serrada</span><strong>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>${adicionalMadeira ? `<div class="rom-doc-value-row"><span>Ajuste da madeira</span><strong>${adicionalMadeira > 0 ? '+' : ''} R$ ${adicionalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row"><span>Madeira após ajuste</span><strong>R$ ${totalMadeiraComAjuste.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>` : ''}<div class="rom-doc-value-row tax"><span>Taxa NF (${taxa}%)${r.financeiro?.baseNF === 'MEIA' ? ` · base meia carga R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</span><strong>+ R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row total"><span>Total do romaneio</span><strong>R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div></div>
+                <div class="rom-doc-finance-card rom-doc-freight"><h3>Conferência e frete</h3><div class="rom-doc-value-row"><span>Volume usado na venda</span><strong>${formatarM3Baixo(totalM3Madeira)} m³</strong></div><div class="rom-doc-value-row"><span>Metragem real para o frete</span><strong>${formatarM3Baixo(totalM3Frete)} m³</strong></div><div class="rom-doc-value-row"><span>Diferença de cubagem</span><strong>${diferencaCubagem > 0 ? '+' : ''}${formatarM3Baixo(diferencaCubagem)} m³</strong></div><div class="rom-doc-value-row"><span>${formatarM3Baixo(totalM3Frete)} m³ × R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><strong>R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>${adicionalFrete ? `<div class="rom-doc-value-row"><span>Ajuste do frete</span><strong>${adicionalFrete > 0 ? '+' : ''} R$ ${adicionalFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>` : ''}<div class="rom-doc-value-row freight-total"><span><b>Frete estimado</b></span><strong>R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div></div>
+            </section>
+            ${r.observacaoCarga ? `<section class="rom-doc-note"><strong>Observações da carga</strong><div>${r.observacaoCarga}</div></section>` : ''}
+            <footer class="rom-doc-signatures"><div>Assinatura do motorista</div><div>Assinatura do recebedor</div></footer>
+        </div>`;
 }
 
 function definirDocumentoRomaneioAtual(r, clienteObj = {}) {
@@ -1502,17 +1593,17 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                 <span class="total-label" style="color: var(--text-muted); font-size: 1rem; margin-bottom: 5px;">VALOR TOTAL DO ROMANEIO</span>
                 <div class="total-value" style="font-size: 3rem; line-height: 1;">R$ ${totalComTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 
-                <div style="margin-top: 24px; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: nowrap;">
-                    <button onclick="verPreviaRomaneioV2()" class="btn-v2" title="Prévia" aria-label="Prévia" style="background: #f59e0b; color: #111827; border: 1px solid rgba(245,158,11,0.55); font-weight: 800; width: 46px; min-width: 46px; height: 44px; padding: 0;">
+                <div class="romaneio-summary-actions" style="margin-top: 24px; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: nowrap;">
+                    <button onclick="verPreviaRomaneioV2()" class="btn-v2 romaneio-action romaneio-action-preview" title="Prévia" aria-label="Prévia">
                         <i class="fa-solid fa-eye"></i>
                     </button>
-                    <button onclick="window.romaneioDocActions.pdf()" class="btn-v2" title="Baixar PDF" aria-label="Baixar PDF" style="background: #16a34a; color: white; border: 1px solid rgba(22,163,74,0.55); width: 46px; min-width: 46px; height: 44px; padding: 0;">
+                    <button onclick="window.romaneioDocActions.pdf()" class="btn-v2 romaneio-action romaneio-action-pdf" title="Baixar PDF" aria-label="Baixar PDF">
                         <i class="fa-solid fa-file-pdf"></i>
                     </button>
-                    <button onclick="window.romaneioDocActions.whatsapp()" class="btn-v2" title="Enviar WhatsApp" aria-label="Enviar WhatsApp" style="background: #22c55e; color: white; border: 1px solid rgba(34,197,94,0.55); width: 46px; min-width: 46px; height: 44px; padding: 0;">
+                    <button onclick="window.romaneioDocActions.whatsapp()" class="btn-v2 romaneio-action romaneio-action-whatsapp" title="Enviar WhatsApp" aria-label="Enviar WhatsApp">
                         <i class="fa-brands fa-whatsapp"></i>
                     </button>
-                    <button onclick="finalizarRomaneioV2()" class="btn-v2" title="Finalizar carga" aria-label="Finalizar carga" style="background: #00ff88; color: black; font-weight: 900; width: 168px; min-width: 168px; height: 44px; padding: 0 14px; white-space: nowrap; box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);">
+                    <button onclick="finalizarRomaneioV2()" class="btn-v2 romaneio-action romaneio-action-finalize" title="Finalizar carga" aria-label="Finalizar carga">
                         <i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR CARGA
                     </button>
                 </div>

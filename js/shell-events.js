@@ -82,7 +82,7 @@
 
     function atualizarSistema(event) {
         event?.preventDefault();
-        const botao = event?.currentTarget || document.getElementById('btnHeaderRefresh');
+        const botao = event?.currentTarget || document.getElementById('btnProfileRefresh');
         if (botao) {
             botao.classList.add('is-loading');
             botao.setAttribute('aria-busy', 'true');
@@ -210,11 +210,6 @@
         const refreshLink = document.getElementById('btnProfileRefresh');
         if (refreshLink) {
             refreshLink.addEventListener('click', atualizarSistema);
-        }
-
-        const refreshHeaderButton = document.getElementById('btnHeaderRefresh');
-        if (refreshHeaderButton) {
-            refreshHeaderButton.addEventListener('click', atualizarSistema);
         }
 
         const assistantHomeButton = document.getElementById('btnAssistantHomeSubmit');

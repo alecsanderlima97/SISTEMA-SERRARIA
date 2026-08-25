@@ -40,7 +40,12 @@
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">CNPJ</label>
-                                    <input type="text" id="perfilCnpj" placeholder="00.000.000/0000-00" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                                    <input type="text" id="perfilCnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00"
+                                        data-cnpj-autofill="true"
+                                        data-cnpj-name="perfilNome"
+                                        data-cnpj-phone="perfilTelefone"
+                                        data-cnpj-full-address="perfilEndereco"
+                                        style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase;">Telefone</label>

@@ -32,7 +32,15 @@
                         </div>
                         <div class="input-group">
                             <label for="cliCnpj">CNPJ / CPF</label>
-                            <input type="text" id="cliCnpj" required>
+                            <input type="text" id="cliCnpj" required inputmode="numeric" autocomplete="off"
+                                data-cnpj-autofill="true"
+                                data-cnpj-name="cliNome"
+                                data-cnpj-email="cliEmail"
+                                data-cnpj-phone="cliContato"
+                                data-cnpj-cep="cliCep"
+                                data-cnpj-street="cliLogradouro"
+                                data-cnpj-number="cliNumero"
+                                data-cnpj-city="cliCidade">
                         </div>
                         <div class="input-group">
                             <label for="cliIe">Inscrição Estadual</label>
