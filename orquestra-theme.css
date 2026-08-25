@@ -1431,6 +1431,18 @@ body.orquestra-theme #secao-romaneio-v2 .romaneio-action-whatsapp {
     border-color: #35a96e !important;
 }
 
+body.orquestra-theme #secao-romaneio-v2 .romaneio-action-cancel {
+    width: 46px;
+    min-width: 46px;
+    padding: 0 !important;
+    display: inline-flex;
+    justify-content: center;
+    background: #fff7ed !important;
+    color: #b42318 !important;
+    border-color: #f4a69a !important;
+    box-shadow: none !important;
+}
+
 body.orquestra-theme #secao-romaneio-v2 .romaneio-action-finalize {
     width: 178px;
     min-width: 178px;
@@ -1457,6 +1469,10 @@ body.orquestra-theme #secao-romaneio-v2 .romaneio-action i {
     body.orquestra-theme #secao-romaneio-v2 .romaneio-summary-actions {
         justify-content: flex-start !important;
         flex-wrap: wrap !important;
+    }
+
+    #containerPrazo {
+        grid-template-columns: minmax(0, 1fr) !important;
     }
 }
 

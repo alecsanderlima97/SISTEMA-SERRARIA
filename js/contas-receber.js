@@ -115,6 +115,7 @@ function obterRecebimentosAlertas() {
 
 function montarMensagemCobranca(item = {}) {
     const codigo = item.codigo ? ` n. ${item.codigo}` : '';
+    const parcela = Number(item.totalParcelas || 1) > 1 ? `Parcela: ${item.parcelaAtual}/${item.totalParcelas}` : '';
     return [
         `Ola, tudo bem?`,
         ``,
@@ -123,11 +124,12 @@ function montarMensagemCobranca(item = {}) {
         `Cliente: ${item.cliente || '-'}`,
         `Data da carga: ${dataBRReceber(item.data)}`,
         `Valor: ${formatarMoedaReceber(item.valor)}`,
+        parcela,
         `Forma de pagamento: ${item.metodoPagamento || item.formaPagamento || '-'}`,
         `Vencimento: ${dataBRReceber(item.vencimento)} (${textoVencimentoReceber(item)})`,
         ``,
         `Qualquer duvida fico a disposicao.`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 }
 
 function abrirWhatsAppCobranca(item = {}) {
@@ -146,44 +148,76 @@ function upsertReceberLocal(item) {
 }
 
 async function salvarCobranca(dados = {}) {
-    const chave = chaveReceber(dados);
-    const vencimento = calcularVencimentoReceber(dados.data, dados.formaPagamento, dados.prazoPagamento);
-    const item = {
-        id: chave,
-        chave,
-        origem: dados.origem || 'manual',
-        origemId: dados.origemId || '',
-        codigo: dados.codigo || dados.romaneio || '',
-        clienteId: dados.clienteId || '',
-        cliente: normalizarTextoReceber(dados.cliente || ''),
-        produto: normalizarReceber(dados.produto || ''),
-        data: dados.data || hojeIsoReceber(),
-        valor: Number(dados.valor || 0),
-        formaPagamento: normalizarReceber(dados.formaPagamento || ''),
-        prazoPagamento: normalizarReceber(dados.prazoPagamento || ''),
-        metodoPagamento: obterMetodoPagamentoReceber(dados.formaPagamento, dados.prazoPagamento),
-        vencimento,
-        whatsapp: normalizarReceber(dados.whatsapp || dados.telefone || ''),
-        status: dados.status || 'ABERTO',
-        pago: Boolean(dados.pago),
-        notaFiscal: dados.notaFiscal || null,
-        atualizadoEm: new Date().toISOString(),
-        criadoEm: dados.criadoEm || new Date().toISOString()
-    };
+    const chaveBase = chaveReceber(dados);
+    const quantidadeParcelas = Math.min(60, Math.max(1, Number(dados.quantidadeParcelas || 1)));
+    const prazoPrimeiro = Math.max(0, Number(dados.prazoPrimeiroVencimentoDias ?? obterDiasPrazoReceber(dados.formaPagamento, dados.prazoPagamento)));
+    const intervaloParcelas = Math.max(1, Number(dados.intervaloParcelasDias || 30));
+    const dataBase = dados.data || hojeIsoReceber();
+    const totalCentavos = Math.max(0, Math.round(Number(dados.valor || 0) * 100));
+    const centavosBase = Math.floor(totalCentavos / quantidadeParcelas);
+    const restoCentavos = totalCentavos - (centavosBase * quantidadeParcelas);
+    const existentes = obterContasReceberLocal();
+    const relacionados = existentes.filter(item => item.id === chaveBase || String(item.id || '').startsWith(`${chaveBase}_p`));
+    const mapaExistentes = new Map(relacionados.map(item => [item.id, item]));
+    const agora = new Date().toISOString();
+    const itens = Array.from({ length: quantidadeParcelas }, (_, indice) => {
+        const parcelaAtual = indice + 1;
+        const chave = parcelaAtual === 1 ? chaveBase : `${chaveBase}_p${parcelaAtual}`;
+        const anterior = mapaExistentes.get(chave) || {};
+        const mesmoCliente = !anterior.id || (
+            String(anterior.clienteId || '') === String(dados.clienteId || '')
+            && normalizarTextoReceber(anterior.cliente || '') === normalizarTextoReceber(dados.cliente || '')
+        );
+        const valorCentavos = centavosBase + (indice < restoCentavos ? 1 : 0);
+        return {
+            ...anterior,
+            id: chave,
+            chave,
+            origem: dados.origem || 'manual',
+            origemId: dados.origemId || '',
+            codigo: dados.codigo || dados.romaneio || '',
+            clienteId: dados.clienteId || '',
+            cliente: normalizarTextoReceber(dados.cliente || ''),
+            produto: normalizarReceber(dados.produto || ''),
+            data: dataBase,
+            valor: valorCentavos / 100,
+            valorTotal: totalCentavos / 100,
+            parcelaAtual,
+            totalParcelas: quantidadeParcelas,
+            formaPagamento: normalizarReceber(dados.formaPagamento || ''),
+            prazoPagamento: normalizarReceber(dados.prazoPagamento || ''),
+            metodoPagamento: obterMetodoPagamentoReceber(dados.formaPagamento, dados.prazoPagamento),
+            vencimento: somarDiasIsoReceber(dataBase, prazoPrimeiro + (indice * intervaloParcelas)),
+            whatsapp: normalizarReceber(dados.whatsapp || dados.telefone || ''),
+            status: dados.status || (mesmoCliente ? anterior.status : '') || 'ABERTO',
+            pago: dados.pago === undefined ? (mesmoCliente && Boolean(anterior.pago)) : Boolean(dados.pago),
+            notaFiscal: dados.notaFiscal || anterior.notaFiscal || null,
+            atualizadoEm: agora,
+            criadoEm: anterior.criadoEm || dados.criadoEm || agora
+        };
+    });
 
-    upsertReceberLocal(item);
+    const chavesNovas = new Set(itens.map(item => item.id));
+    const obsoletos = relacionados.filter(item => !chavesNovas.has(item.id));
+    salvarContasReceberLocal([
+        ...itens,
+        ...existentes.filter(item => item.id !== chaveBase && !String(item.id || '').startsWith(`${chaveBase}_p`))
+    ]);
 
     try {
         if (window.FS?.setDoc) {
-            await window.FS.setDoc(CONTAS_RECEBER_COLLECTION, chave, item);
+            await Promise.all(itens.map(item => window.FS.setDoc(CONTAS_RECEBER_COLLECTION, item.id, item)));
+        }
+        if (window.FS?.deleteDoc && obsoletos.length) {
+            await Promise.all(obsoletos.map(item => window.FS.deleteDoc(CONTAS_RECEBER_COLLECTION, item.id)));
         }
     } catch (error) {
         console.warn('Contas a Receber: cobranca salva apenas localmente por falha na nuvem.', error);
     }
 
     mostrarLembretesReceber();
-    document.dispatchEvent(new CustomEvent('contasReceberAtualizadas', { detail: item }));
-    return item;
+    document.dispatchEvent(new CustomEvent('contasReceberAtualizadas', { detail: itens }));
+    return itens[0];
 }
 
 async function carregarContasReceber() {
@@ -210,7 +244,7 @@ function mostrarListaReceber() {
     const linhas = lista.slice(0, 18).map(item => `
         <tr>
             <td>${item.cliente || '-'}</td>
-            <td>${item.codigo || '-'}</td>
+            <td>${item.codigo || '-'}${Number(item.totalParcelas || 1) > 1 ? `<br><small>Parcela ${item.parcelaAtual}/${item.totalParcelas}</small>` : ''}</td>
             <td>${item.produto || '-'}</td>
             <td>${dataBRReceber(item.vencimento)}</td>
             <td>${formatarMoedaReceber(item.valor)}</td>

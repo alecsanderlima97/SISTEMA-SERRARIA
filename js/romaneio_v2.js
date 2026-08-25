@@ -5,9 +5,13 @@ console.log("Romaneio V2: Script carregado");
 // Estado global do romaneio atual
 let romaneioAtual = {
     numero: 0,
+    clienteId: '',
     cliente: '',
     formaPagamento: '',
     prazoPagamento: '',
+    prazoPrimeiroVencimentoDias: 0,
+    quantidadeParcelas: 1,
+    intervaloParcelasDias: 30,
     observacaoCliente: '',
     logistica: {
         dataCarregamento: '',
@@ -659,17 +663,26 @@ async function selecionarClienteCadastrado(e) {
     }
 
     document.getElementById('v2-cliente').value = cli.nome;
+    romaneioAtual.clienteId = cli.id;
+    romaneioAtual.cliente = cli.nome;
     
     // Salvar dados do cliente no romaneio atual para o preview
     romaneioAtual.formaPagamento = cli.formaPagamento || '';
     romaneioAtual.prazoPagamento = cli.prazoPagamento || '';
+    romaneioAtual.prazoPrimeiroVencimentoDias = Math.max(0, Number(cli.prazoPrimeiroVencimentoDias ?? String(cli.prazoPagamento || '').match(/\d{1,3}/)?.[0] ?? 0));
+    romaneioAtual.quantidadeParcelas = Math.min(60, Math.max(1, Number(cli.quantidadeParcelas || 1)));
+    romaneioAtual.intervaloParcelasDias = Math.max(1, Number(cli.intervaloParcelasDias || 30));
     romaneioAtual.observacaoCliente = cli.observacao || '';
     romaneioAtual.financeiro.baseNF = cli.baseNF || 'INTEIRA';
+    reprecificarPacotesParaCliente(cli);
     
     // Atualizar box de informações comerciais
     if (infoBox && infoTexto) {
         let infoHtml = '';
-        if(cli.formaPagamento) infoHtml += `<strong>Pagamento:</strong> ${cli.formaPagamento} ${cli.prazoPagamento ? `(${cli.prazoPagamento})` : ''}<br>`;
+        if(cli.formaPagamento) {
+            const parcelas = romaneioAtual.quantidadeParcelas > 1 ? ` · ${romaneioAtual.quantidadeParcelas} parcelas a cada ${romaneioAtual.intervaloParcelasDias} dias` : '';
+            infoHtml += `<strong>Pagamento:</strong> ${cli.formaPagamento} ${cli.prazoPagamento ? `(${cli.prazoPagamento})` : ''}${parcelas}<br>`;
+        }
         
         let precos = [];
         if(cli.madeira1) precos.push(`1ª: R$ ${cli.madeira1}`);
@@ -690,17 +703,22 @@ async function selecionarClienteCadastrado(e) {
     }
 
     // Preencher campos automáticos (taxa e frete) a partir do cadastro do cliente
-    if (cli.porcentagemNF) {
-        document.getElementById('v2-taxa-nf').value = cli.porcentagemNF;
+    document.getElementById('v2-taxa-nf').value = Number(cli.porcentagemNF || 0);
+    document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(Number(cli.valorFrete || 0));
+    if (pacoteEditandoId) {
+        const pacoteEditando = romaneioAtual.pacotes.find(pacote => pacote.id === pacoteEditandoId);
+        const inputPreco = document.getElementById('v2-preco-m3-item');
+        if (pacoteEditando && inputPreco) inputPreco.value = window.formatCurrencyValue(pacoteEditando.precoM3 || 0);
     }
-    if (cli.valorFrete) {
-        document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(cli.valorFrete);
-    }
+    renderizarTabelaPacotes();
+    atualizarTotalGeral();
 
     try {
         const qCount = query(collection(db, "romaneios"), where("cliente", "==", cli.nome));
         const snapCount = await getDocs(qCount);
-        document.getElementById('v2-numero-ordem').value = snapCount.size + 1;
+        if (!romaneioAtual.idFirebase) {
+            document.getElementById('v2-numero-ordem').value = snapCount.size + 1;
+        }
 
         const q = query(
             collection(db, "romaneios"), 
@@ -710,13 +728,13 @@ async function selecionarClienteCadastrado(e) {
         );
         const snap = await getDocs(q);
 
-        if (!snap.empty) {
+        if (!snap.empty && document.getElementById('v2-select-cliente')?.value === cli.id) {
             const ultimo = snap.docs[0].data();
             // Se não tiver no cadastro do cliente, puxa do último romaneio dele
-            if (!cli.porcentagemNF && ultimo.financeiro && ultimo.financeiro.taxaNF) {
+            if ((cli.porcentagemNF === undefined || cli.porcentagemNF === null || cli.porcentagemNF === '') && ultimo.financeiro && ultimo.financeiro.taxaNF) {
                 document.getElementById('v2-taxa-nf').value = ultimo.financeiro.taxaNF;
             }
-            if (!cli.valorFrete && ultimo.logistica && ultimo.logistica.valorFrete) {
+            if ((cli.valorFrete === undefined || cli.valorFrete === null || cli.valorFrete === '') && ultimo.logistica && ultimo.logistica.valorFrete) {
                 document.getElementById('v2-valor-frete').value = window.formatCurrencyValue(ultimo.logistica.valorFrete);
             }
         }
@@ -878,19 +896,8 @@ function preencherPrecoPorQualidade() {
     const cli = clientesDisponiveis.find(x => x.id === clienteId);
     if (!cli) return;
 
-    let precoAcordado = null;
-
-    if (qualStr.includes('1') || qualStr.includes('1ª') || qualStr.includes('MAD 1') || qualStr === '1A') {
-        precoAcordado = cli.madeira1;
-    } else if (qualStr.includes('2') || qualStr.includes('2ª') || qualStr.includes('MAD 2') || qualStr === '2A') {
-        precoAcordado = cli.madeira2;
-    } else if (qualStr.includes('3') || qualStr.includes('3ª') || qualStr.includes('MAD 3') || qualStr === '3A') {
-        precoAcordado = cli.madeira3;
-    } else if (qualStr.includes('PINUS')) {
-        precoAcordado = cli.madeiraPinus;
-    } else if (cli.nomeMadeiraExtra && qualStr.includes(cli.nomeMadeiraExtra.toUpperCase())) {
-        precoAcordado = cli.valorMadeiraExtra;
-    }
+    const especie = document.getElementById('v2-especie')?.value || '';
+    const precoAcordado = obterPrecoClientePorMadeira(cli, qualStr, especie);
 
     if (precoAcordado && precoAcordado > 0) {
         const inputPreco = document.getElementById('v2-preco-m3-item');
@@ -905,6 +912,28 @@ function preencherPrecoPorQualidade() {
             }, 2000);
         }
     }
+}
+
+function obterPrecoClientePorMadeira(cliente = {}, classe = '', especie = '') {
+    const classeTexto = String(classe || '').toUpperCase();
+    const especieTexto = String(especie || '').toUpperCase();
+    if (especieTexto.includes('PINUS') || classeTexto.includes('PINUS')) return parseNumeroBR(cliente.madeiraPinus || 0);
+    if (classeTexto.includes('1') || classeTexto.includes('1ª') || classeTexto.includes('MAD 1') || classeTexto === '1A') return parseNumeroBR(cliente.madeira1 || 0);
+    if (classeTexto.includes('2') || classeTexto.includes('2ª') || classeTexto.includes('MAD 2') || classeTexto === '2A') return parseNumeroBR(cliente.madeira2 || 0);
+    if (classeTexto.includes('3') || classeTexto.includes('3ª') || classeTexto.includes('MAD 3') || classeTexto === '3A') return parseNumeroBR(cliente.madeira3 || 0);
+    if (cliente.nomeMadeiraExtra && classeTexto.includes(String(cliente.nomeMadeiraExtra).toUpperCase())) return parseNumeroBR(cliente.valorMadeiraExtra || 0);
+    return 0;
+}
+
+function reprecificarPacotesParaCliente(cliente = {}) {
+    romaneioAtual.pacotes = romaneioAtual.pacotes.map(pacote => {
+        const precoM3 = obterPrecoClientePorMadeira(cliente, pacote.qualidade || pacote.classe, pacote.especie);
+        return {
+            ...pacote,
+            precoM3,
+            valorTotalWood: arredondarParaBaixo(Number(pacote.m3VendaTotal || 0) * precoM3, 2)
+        };
+    });
 }
 
 // Atualiza o preview de volume em tempo real no card de adicionar pacotes
@@ -1603,8 +1632,12 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                     <button onclick="window.romaneioDocActions.whatsapp()" class="btn-v2 romaneio-action romaneio-action-whatsapp" title="Enviar WhatsApp" aria-label="Enviar WhatsApp">
                         <i class="fa-brands fa-whatsapp"></i>
                     </button>
+                    ${romaneioAtual.idFirebase ? `
+                    <button onclick="cancelarEdicaoRomaneioV2()" class="btn-v2 romaneio-action romaneio-action-cancel" title="Cancelar edição e descartar alterações" aria-label="Cancelar edição">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>` : ''}
                     <button onclick="finalizarRomaneioV2()" class="btn-v2 romaneio-action romaneio-action-finalize" title="Finalizar carga" aria-label="Finalizar carga">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR CARGA
+                        <i class="fa-solid ${romaneioAtual.idFirebase ? 'fa-floppy-disk' : 'fa-cloud-arrow-up'}"></i> ${romaneioAtual.idFirebase ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR CARGA'}
                     </button>
                 </div>
             </div>
@@ -1626,9 +1659,13 @@ window.carregarRomaneioParaEdicao = function(r) {
     romaneioAtual = {
         idFirebase: r.id, // Guardamos o ID do Firebase para usar no updateDoc depois
         numero: r.numero || r.numeroCarga,
+        clienteId: r.clienteId || '',
         cliente: r.cliente,
         formaPagamento: r.formaPagamento || '',
         prazoPagamento: r.prazoPagamento || '',
+        prazoPrimeiroVencimentoDias: Number(r.prazoPrimeiroVencimentoDias || 0),
+        quantidadeParcelas: Math.max(1, Number(r.quantidadeParcelas || 1)),
+        intervaloParcelasDias: Math.max(1, Number(r.intervaloParcelasDias || 30)),
         observacaoCliente: r.observacaoCliente || '',
         logistica: { ...r.logistica },
         pacotes: [ ...r.pacotes ],
@@ -1638,8 +1675,10 @@ window.carregarRomaneioParaEdicao = function(r) {
     // 2. Preencher os inputs na tela
     const selectCli = document.getElementById('v2-select-cliente');
     if (selectCli) {
-        const clienteObj = clientesDisponiveis.find(c => c.nome === r.cliente);
+        const clienteObj = clientesDisponiveis.find(c => c.id === r.clienteId)
+            || clientesDisponiveis.find(c => String(c.nome || '').toUpperCase().trim() === String(r.cliente || '').toUpperCase().trim());
         selectCli.value = clienteObj ? clienteObj.id : '';
+        if (clienteObj) romaneioAtual.clienteId = clienteObj.id;
     }
     
     if (document.getElementById('v2-cliente')) document.getElementById('v2-cliente').value = r.cliente;
@@ -1670,21 +1709,65 @@ window.carregarRomaneioParaEdicao = function(r) {
     atualizarTotalGeral();
     renderizarTabelaPacotes();
     
-    // Mudar estilo do botão de finalizar para indicar edição
-    const btnFinalizar = document.querySelector('button[onclick="finalizarRomaneioV2()"]');
-    if (btnFinalizar) {
-        btnFinalizar.innerHTML = '<i class="fa-solid fa-save"></i> SALVAR ALTERAÇÕES DA CARGA';
-        btnFinalizar.style.background = '#f59e0b'; // Cor Laranja/Alerta
-        btnFinalizar.style.color = 'black';
-    }
-    
     // 4. Mudar para a aba de Gerar Romaneio
     const linkRomaneio = document.querySelector('.sidebar nav ul li a[data-target="view-romaneio-v2"]');
     if (linkRomaneio) {
         linkRomaneio.click();
     }
     
-    alert(`Carga ${r.numero || r.numeroCarga} carregada no editor! Edite o que for necessário e clique em "SALVAR ALTERAÇÕES DA CARGA" no final.`);
+    alert(`Carga ${r.numero || r.numeroCarga} carregada no editor. Edite o necessário e clique em "SALVAR ALTERAÇÕES". Para desistir, use o botão X ao lado das ações.`);
+};
+
+window.cancelarEdicaoRomaneioV2 = function() {
+    if (!romaneioAtual.idFirebase) return;
+    if (!confirm('Cancelar a edição desta carga? As alterações não salvas serão descartadas e o romaneio original permanecerá intacto.')) return;
+
+    const hoje = new Date();
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+    romaneioAtual = {
+        numero: 0,
+        clienteId: '',
+        cliente: '',
+        formaPagamento: '',
+        prazoPagamento: '',
+        prazoPrimeiroVencimentoDias: 0,
+        quantidadeParcelas: 1,
+        intervaloParcelasDias: 30,
+        observacaoCliente: '',
+        logistica: {
+            dataCarregamento: hoje.toISOString().split('T')[0],
+            dataDescarregamento: amanha.toISOString().split('T')[0],
+            motorista: '', caminhao: '', placa: '', responsavelFrete: '', valorFrete: 0,
+            adicionalFrete: 0, obsFrete: ''
+        },
+        pacotes: [],
+        financeiro: { taxaNF: 0, totalGeral: 0, adicionalMadeira: 0, baseNF: 'INTEIRA', obsMadeira: '' }
+    };
+    pacoteEditandoId = null;
+
+    const valores = {
+        'v2-select-cliente': '', 'v2-cliente': '', 'v2-numero-ordem': '0',
+        'v2-select-transporte': '', 'v2-motorista': '', 'v2-caminhao': '', 'v2-placa': '',
+        'v2-valor-frete': window.formatCurrencyValue(0), 'v2-adicional-frete': window.formatCurrencyValue(0),
+        'v2-adicional-madeira': window.formatCurrencyValue(0), 'v2-taxa-nf': '0',
+        'v2-obs-madeira': '', 'v2-obs-frete': '', 'v2-obs-carga': ''
+    };
+    Object.entries(valores).forEach(([id, valor]) => {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = valor;
+    });
+    const dataCarregamento = document.getElementById('v2-data-carreg');
+    const dataDescarregamento = document.getElementById('v2-data-descarreg');
+    if (dataCarregamento) dataCarregamento.value = romaneioAtual.logistica.dataCarregamento;
+    if (dataDescarregamento) dataDescarregamento.value = romaneioAtual.logistica.dataDescarregamento;
+    const infoBox = document.getElementById('v2-info-cliente-box');
+    if (infoBox) infoBox.style.display = 'none';
+
+    limparCamposPacote();
+    renderizarTabelaPacotes();
+    atualizarTotalGeral();
+    carregarPatioParaRomaneio();
 };
 
 window.finalizarRomaneioV2 = async () => {
@@ -1694,6 +1777,8 @@ window.finalizarRomaneioV2 = async () => {
     const clienteObjCobranca = clientesDisponiveis.find(c => c.id === clienteIdSelecionado)
         || clientesDisponiveis.find(c => String(c.nome || '').toUpperCase().trim() === cliente)
         || {};
+    romaneioAtual.clienteId = clienteIdSelecionado || romaneioAtual.clienteId || '';
+    romaneioAtual.cliente = cliente;
     
     // Atualizar dados de logística e observações redundantes em maiúsculo
     romaneioAtual.logistica.dataCarregamento = document.getElementById('v2-data-carreg')?.value || '';
@@ -1762,6 +1847,9 @@ window.finalizarRomaneioV2 = async () => {
                 valor: romaneioAtual.financeiro.totalGeral,
                 formaPagamento: romaneioAtual.formaPagamento || clienteObjCobranca.formaPagamento || '',
                 prazoPagamento: romaneioAtual.prazoPagamento || clienteObjCobranca.prazoPagamento || '',
+                prazoPrimeiroVencimentoDias: Number(romaneioAtual.prazoPrimeiroVencimentoDias ?? clienteObjCobranca.prazoPrimeiroVencimentoDias ?? 0),
+                quantidadeParcelas: Number(romaneioAtual.quantidadeParcelas || clienteObjCobranca.quantidadeParcelas || 1),
+                intervaloParcelasDias: Number(romaneioAtual.intervaloParcelasDias || clienteObjCobranca.intervaloParcelasDias || 30),
                 whatsapp: clienteObjCobranca.contato || clienteObjCobranca.telefone || clienteObjCobranca.whatsapp || ''
             });
             
@@ -1786,6 +1874,9 @@ window.finalizarRomaneioV2 = async () => {
                 valor: romaneioAtual.financeiro.totalGeral,
                 formaPagamento: romaneioAtual.formaPagamento || clienteObjCobranca.formaPagamento || '',
                 prazoPagamento: romaneioAtual.prazoPagamento || clienteObjCobranca.prazoPagamento || '',
+                prazoPrimeiroVencimentoDias: Number(romaneioAtual.prazoPrimeiroVencimentoDias ?? clienteObjCobranca.prazoPrimeiroVencimentoDias ?? 0),
+                quantidadeParcelas: Number(romaneioAtual.quantidadeParcelas || clienteObjCobranca.quantidadeParcelas || 1),
+                intervaloParcelasDias: Number(romaneioAtual.intervaloParcelasDias || clienteObjCobranca.intervaloParcelasDias || 30),
                 whatsapp: clienteObjCobranca.contato || clienteObjCobranca.telefone || clienteObjCobranca.whatsapp || ''
             });
             

@@ -15,12 +15,27 @@ let clientesAtuais = [];
 
 let clienteEditandoId = null;
 
+function extrairDiasPrazoCliente(valor) {
+    const numero = String(valor || '').match(/\d{1,3}/)?.[0];
+    return numero ? Number(numero) : 0;
+}
+
+window.atualizarCamposPagamentoCliente = function(formaPagamento = '') {
+    const container = document.getElementById('containerPrazo');
+    if (!container) return;
+    const exibir = ['BOLETO', 'CHEQUE', 'A PRAZO', 'PIX'].includes(String(formaPagamento).toUpperCase());
+    container.style.display = exibir ? 'grid' : 'none';
+};
+
 // Salvar Cliente
 if (formCliente) {
     formCliente.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Objeto Cliente
+        const prazoPrimeiroVencimentoDias = Math.max(0, parseInt(document.getElementById('cliPrazoPagamento')?.value, 10) || 0);
+        const quantidadeParcelas = Math.min(60, Math.max(1, parseInt(document.getElementById('cliQuantidadeParcelas')?.value, 10) || 1));
+        const intervaloParcelasDias = Math.max(1, parseInt(document.getElementById('cliIntervaloParcelas')?.value, 10) || 30);
         const dadosCliente = {
             nome: document.getElementById('cliNome').value.toUpperCase().trim(),
             cnpj: document.getElementById('cliCnpj').value,
@@ -35,7 +50,10 @@ if (formCliente) {
             porcentagemNF: parseFloat(document.getElementById('cliPorcentagemNF').value) || 0,
             baseNF: document.getElementById('cliBaseNF')?.value || 'INTEIRA',
             formaPagamento: document.getElementById('cliFormaPagamento').value,
-            prazoPagamento: document.getElementById('cliPrazoPagamento').value.toUpperCase().trim(),
+            prazoPagamento: prazoPrimeiroVencimentoDias > 0 ? `${prazoPrimeiroVencimentoDias} DIAS` : '',
+            prazoPrimeiroVencimentoDias,
+            quantidadeParcelas,
+            intervaloParcelasDias,
             madeira1: window.parseCurrencyValue(document.getElementById('cliMadeira1').value),
             madeira2: window.parseCurrencyValue(document.getElementById('cliMadeira2').value),
             madeira3: window.parseCurrencyValue(document.getElementById('cliMadeira3').value),
@@ -68,6 +86,7 @@ if (formCliente) {
             }
 
             formCliente.reset();
+            window.atualizarCamposPagamentoCliente('');
             await carregarClientes(); // Recarrega da nuvem
             
             // Dispara evento para o combo do romaneio se recarregar
@@ -87,7 +106,10 @@ if (formCliente) {
 window.verCliente = function(id) {
     let c = clientesAtuais.find(x => x.id === id);
     if(c) {
-        alert(`=== FICHA DO CLIENTE ===\nNome: ${c.nome}\nCNPJ/CPF: ${c.cnpj}\nIE: ${c.ie || 'Isento'}\nContato: ${c.contato}\nE-mail: ${c.email || 'Não inf.'}\nCEP: ${c.cep}\nLogradouro: ${c.logradouro || 'Não inf.'}, Nº ${c.numero || 'S/N'}\nCidade: ${c.cidade}`);
+        const primeiroVencimento = Number(c.prazoPrimeiroVencimentoDias ?? extrairDiasPrazoCliente(c.prazoPagamento) ?? 0);
+        const parcelas = Math.max(1, Number(c.quantidadeParcelas || 1));
+        const intervalo = Math.max(1, Number(c.intervaloParcelasDias || 30));
+        alert(`=== FICHA DO CLIENTE ===\nNome: ${c.nome}\nCNPJ/CPF: ${c.cnpj}\nIE: ${c.ie || 'Isento'}\nContato: ${c.contato}\nE-mail: ${c.email || 'Não inf.'}\nCEP: ${c.cep}\nLogradouro: ${c.logradouro || 'Não inf.'}, Nº ${c.numero || 'S/N'}\nCidade: ${c.cidade}\n\nPagamento: ${c.formaPagamento || 'Não informado'}\nPrimeiro vencimento: ${primeiroVencimento} dia(s) após a carga\nParcelas: ${parcelas}\nIntervalo: ${intervalo} dia(s)`);
     }
 }
 
@@ -108,12 +130,10 @@ window.editarCliente = function(id) {
         if (document.getElementById('cliBaseNF')) document.getElementById('cliBaseNF').value = c.baseNF || 'INTEIRA';
         document.getElementById('cliFormaPagamento').value = c.formaPagamento || '';
         
-        const containerPrazo = document.getElementById('containerPrazo');
-        if (containerPrazo) {
-            containerPrazo.style.display = c.formaPagamento === 'A Prazo' ? 'flex' : 'none';
-        }
-        
-        document.getElementById('cliPrazoPagamento').value = c.prazoPagamento || '';
+        window.atualizarCamposPagamentoCliente(c.formaPagamento || '');
+        document.getElementById('cliPrazoPagamento').value = Number(c.prazoPrimeiroVencimentoDias ?? extrairDiasPrazoCliente(c.prazoPagamento) ?? 0);
+        document.getElementById('cliQuantidadeParcelas').value = Math.max(1, Number(c.quantidadeParcelas || 1));
+        document.getElementById('cliIntervaloParcelas').value = Math.max(1, Number(c.intervaloParcelasDias || 30));
         document.getElementById('cliMadeira1').value = window.formatCurrencyValue(c.madeira1);
         document.getElementById('cliMadeira2').value = window.formatCurrencyValue(c.madeira2);
         document.getElementById('cliMadeira3').value = window.formatCurrencyValue(c.madeira3);
@@ -298,6 +318,7 @@ window.switchTabClientes = function(tabName, isEditing = false) {
 
         if (!isEditing) {
             formCliente.reset();
+            window.atualizarCamposPagamentoCliente('');
             clienteEditandoId = null;
             const submitBtn = formCliente.querySelector('button[type="submit"]');
             if (submitBtn) {

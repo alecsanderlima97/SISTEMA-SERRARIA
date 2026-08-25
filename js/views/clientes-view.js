@@ -97,17 +97,28 @@
                         </div>
                         <div class="input-group">
                             <label for="cliFormaPagamento">Forma de Pagamento</label>
-                            <select id="cliFormaPagamento" onchange="document.getElementById('containerPrazo').style.display = this.value === 'A Prazo' ? 'flex' : 'none'">
+                            <select id="cliFormaPagamento" onchange="window.atualizarCamposPagamentoCliente?.(this.value)">
                                 <option value="">Selecione...</option>
                                 <option value="A Vista">A Vista</option>
+                                <option value="Pix">Pix</option>
                                 <option value="Cheque">Cheque</option>
                                 <option value="Boleto">Boleto</option>
                                 <option value="A Prazo">A Prazo</option>
                             </select>
                         </div>
-                        <div class="input-group" id="containerPrazo" style="display: none;">
-                            <label for="cliPrazoPagamento">Prazo (Ex: 15 dias)</label>
-                            <input type="text" id="cliPrazoPagamento" class="text-uppercase-input" placeholder="Ex: 15 dias">
+                        <div id="containerPrazo" style="display: none; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 15px;">
+                            <div class="input-group">
+                                <label for="cliPrazoPagamento">Primeiro vencimento (dias após a carga)</label>
+                                <input type="number" id="cliPrazoPagamento" min="0" max="365" step="1" inputmode="numeric" value="30" placeholder="Ex: 30">
+                            </div>
+                            <div class="input-group">
+                                <label for="cliQuantidadeParcelas">Quantidade de parcelas</label>
+                                <input type="number" id="cliQuantidadeParcelas" min="1" max="60" step="1" inputmode="numeric" value="1">
+                            </div>
+                            <div class="input-group">
+                                <label for="cliIntervaloParcelas">Intervalo entre parcelas (dias)</label>
+                                <input type="number" id="cliIntervaloParcelas" min="1" max="365" step="1" inputmode="numeric" value="30">
+                            </div>
                         </div>
                         <div class="input-group">
                             <label for="cliMadeira1">Madeira de 1ª (R\$ / m³)</label>
