@@ -94,6 +94,17 @@
                                 <span>Modo Claro (Clean)</span>
                             </button>
                         </div>
+
+                        <div class="config-background-section">
+                            <div class="config-background-heading">
+                                <div>
+                                    <strong>Imagem de fundo</strong>
+                                    <small>Escolha uma paisagem sem alterar as cores do tema.</small>
+                                </div>
+                                <span>12 opcoes</span>
+                            </div>
+                            <div id="configBackgroundGallery" class="config-background-gallery" aria-label="Imagens de fundo do sistema"></div>
+                        </div>
                     </div>
 
                     <div class="glass-panel config-preferences-panel">
@@ -123,8 +134,12 @@
                                 <input type="checkbox" id="configAssistenteCompanion" data-pref-key="orquestra_assistant_companion_enabled" checked>
                             </label>
                             <label class="config-pref-toggle" for="configMovimentoFundo">
-                                <span><i class="fa-solid fa-water"></i><strong>Movimento no fundo</strong><small>Ativa a animacao sutil de fluidez visual.</small></span>
+                                <span><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Movimento suave</strong><small>Aplica um movimento discreto na imagem escolhida.</small></span>
                                 <input type="checkbox" id="configMovimentoFundo" data-pref-key="orquestra_background_motion_enabled" checked>
+                            </label>
+                            <label class="config-pref-toggle" for="configImagemFundo">
+                                <span><i class="fa-solid fa-image"></i><strong>Imagem de fundo</strong><small>Mostra ou oculta a imagem selecionada na galeria.</small></span>
+                                <input type="checkbox" id="configImagemFundo" data-pref-key="orquestra_background_image_enabled" checked>
                             </label>
                             <label class="config-pref-toggle" for="configModoCompacto">
                                 <span><i class="fa-solid fa-compress"></i><strong>Modo compacto</strong><small>Reduz um pouco campos, cards e botoes neste navegador.</small></span>

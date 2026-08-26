@@ -406,6 +406,7 @@ window.toggleAssistenteIA = function(force) {
 window.perguntarAssistente = async function(pergunta) {
     if (!pergunta) return;
     window.toggleAssistenteIA(true);
+    window.switchCommunicationTab?.('ai');
     adicionarMensagem(pergunta, 'user');
     adicionarMensagem('Pensando com IA...', 'bot');
     atualizarStatusAssistente('Consultando OpenAI...', 'loading');
@@ -437,7 +438,11 @@ window.perguntarAssistente = async function(pergunta) {
 window.enviarPerguntaAssistenteHome = function() {
     const input = document.getElementById('assistantHomeInput');
     const pergunta = input?.value.trim();
-    if (!pergunta) return;
+    if (!pergunta) {
+        window.toggleAssistenteIA(true);
+        window.switchCommunicationTab?.('messages');
+        return;
+    }
     input.value = '';
     window.perguntarAssistente(pergunta);
 };
@@ -483,7 +488,10 @@ window.mostrarGuiaDaTelaAtual = function(abrirPainel = false) {
     if (!guiaAssistenteAtivo()) return;
     guiaAssistenteOculta = false;
     renderizarGuiaAssistente();
-    if (abrirPainel) window.toggleAssistenteIA(true);
+    if (abrirPainel) {
+        window.toggleAssistenteIA(true);
+        window.switchCommunicationTab?.('ai');
+    }
 };
 
 window.fecharGuiaAssistente = function() {

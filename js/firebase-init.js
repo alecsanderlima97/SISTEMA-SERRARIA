@@ -135,17 +135,19 @@ function prepararResumoAuditoria(data = {}) {
 }
 
 function removerDadosPesadosFirestore(valor, profundidade = 0) {
-    if (valor === null || valor === undefined) return valor;
+    if (valor === null) return valor;
+    if (valor === undefined) return null;
     if (typeof valor === 'string') {
         if (valor.startsWith('data:') || valor.length > 200000) return `[anexo-removido:${valor.length}]`;
         return valor;
     }
     if (typeof valor !== 'object') return valor;
     if (profundidade > 8) return '[objeto-profundo]';
-    if (Array.isArray(valor)) return valor.map(item => removerDadosPesadosFirestore(item, profundidade + 1));
+    if (Array.isArray(valor)) return valor.map(item => item === undefined ? null : removerDadosPesadosFirestore(item, profundidade + 1));
 
     const limpo = {};
     Object.entries(valor).forEach(([key, item]) => {
+        if (item === undefined) return;
         if ((key === 'dados' || key === 'base64' || key === 'documentoBase64') && typeof item === 'string') {
             limpo[key] = `[anexo-removido:${item.length}]`;
             limpo.possuiArquivoLocal = true;

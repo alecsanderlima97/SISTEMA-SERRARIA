@@ -681,83 +681,95 @@ function textoVencimentoLembrete(item) {
 }
 
 function mostrarLembretesFinanceiros() {
-    let banner = document.getElementById('financeiroLembreteTopo');
-    const listaEstavaAberta = banner?.classList.contains('is-expanded') || false;
+    document.getElementById('financeiroLembreteTopo')?.remove();
+    const button = document.getElementById('btnHeaderNotifications');
+    const badge = document.getElementById('headerNotificationBadge');
+    const panel = document.getElementById('headerNotificationPanel');
+    const summary = document.getElementById('headerNotificationSummary');
+    const list = document.getElementById('headerNotificationList');
     const linkFinanceiro = document.querySelector('a[data-target="view-financeiro"]');
-    if (!usuarioPodeVerLembreteFinanceiro()) {
-        banner?.remove();
+
+    const clearNotifications = () => {
+        if (badge) badge.hidden = true;
+        if (panel) panel.hidden = true;
+        button?.setAttribute('aria-expanded', 'false');
+        if (summary) summary.textContent = 'Nenhuma pendência no momento.';
+        if (list) list.innerHTML = '<div class="header-notification-empty"><i class="fa-regular fa-circle-check"></i><span>Tudo em ordem por aqui.</span></div>';
         linkFinanceiro?.classList.remove('financeiro-menu-alerta');
         document.body.classList.remove('financeiro-tem-alerta');
+    };
+
+    if (!usuarioPodeVerLembreteFinanceiro()) {
+        clearNotifications();
+        document.querySelector('.header-notification-center')?.classList.add('is-restricted');
         return;
     }
+    document.querySelector('.header-notification-center')?.classList.remove('is-restricted');
+
     const alertas = obterBoletosAVencerFinanceiro();
     if (!alertas.length) {
-        banner?.remove();
-        linkFinanceiro?.classList.remove('financeiro-menu-alerta');
-        document.body.classList.remove('financeiro-tem-alerta');
+        clearNotifications();
         return;
     }
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'financeiroLembreteTopo';
-        banner.className = 'financeiro-lembrete-topo hide-on-print';
-        document.body.appendChild(banner);
-    }
+
     const total = alertas.reduce((acc, item) => acc + Number(item.valor || 0), 0);
     const vencidos = alertas.filter(item => item.diasVencimento < 0).length;
     const hoje = alertas.filter(item => item.diasVencimento === 0).length;
-    const listaAlertas = alertas.map((item, index) => `
-        <button type="button" class="financeiro-lembrete-item" data-financeiro-alerta-indice="${index}" title="${item.documento ? 'Abrir o documento' : 'Ver na Caixa Financeira'}">
-            <span class="financeiro-lembrete-item-ordem">${index + 1}</span>
-            <span class="financeiro-lembrete-item-info">
+    if (badge) {
+        badge.textContent = alertas.length > 99 ? '99+' : String(alertas.length);
+        badge.hidden = false;
+    }
+    if (summary) summary.textContent = `${vencidos ? `${vencidos} vencido(s)` : 'Nenhum vencido'}${hoje ? ` | ${hoje} vence(m) hoje` : ''}`;
+    if (list) {
+        list.innerHTML = `${alertas.map((item, index) => `
+        <button type="button" class="header-notification-item${item.diasVencimento < 0 ? ' overdue' : ''}" data-financeiro-alerta-indice="${index}" title="${item.documento ? 'Abrir documento' : 'Abrir Financeiro'}">
+            <span class="header-notification-item-icon"><i class="fa-solid ${item.diasVencimento < 0 ? 'fa-triangle-exclamation' : 'fa-calendar-day'}"></i></span>
+            <span class="header-notification-item-copy">
                 <strong>${escapeHtmlFinanceiro(item.descricao || item.tipo || 'Documento financeiro')}</strong>
-                <small>${escapeHtmlFinanceiro(textoVencimentoLembrete(item))}${item.vencimento ? ` | ${dataBR(item.vencimento)}` : ''}</small>
+                <small>${escapeHtmlFinanceiro(textoVencimentoLembrete(item))}${item.vencimento ? ` · ${dataBR(item.vencimento)}` : ''}</small>
             </span>
-            <strong class="financeiro-lembrete-item-valor">${formatarMoeda(item.valor)}</strong>
-            <i class="fa-solid ${item.documento ? 'fa-file-arrow-up' : 'fa-arrow-right'}"></i>
+            <strong class="header-notification-item-value">${formatarMoeda(item.valor)}</strong>
         </button>
-    `).join('');
-    banner.innerHTML = `
-        <button type="button" class="financeiro-lembrete-main" onclick="window.alternarListaLembretesFinanceiros()" aria-expanded="false">
-            <i class="fa-solid fa-bell"></i>
-            <span>
-                <strong>${alertas.length} boleto(s)/conta(s) exigem atenção</strong>
-                <small>${vencidos ? `${vencidos} vencido(s)` : 'Nenhum vencido'}${hoje ? ` | ${hoje} vence(m) hoje` : ''} | Total ${formatarMoeda(total)}</small>
-            </span>
-            <i class="fa-solid fa-chevron-down financeiro-lembrete-chevron"></i>
-        </button>
-        <button type="button" class="financeiro-lembrete-doc" onclick="window.irParaFinanceiroAlertas()" title="Abrir a Caixa Financeira"><i class="fa-solid fa-wallet"></i> Financeiro</button>
-        <button type="button" class="financeiro-lembrete-close" onclick="document.getElementById('financeiroLembreteTopo')?.remove()" title="Fechar lembrete"><i class="fa-solid fa-xmark"></i></button>
-        <div class="financeiro-lembrete-lista" hidden>${listaAlertas}</div>
-    `;
-    banner.querySelectorAll('[data-financeiro-alerta-indice]').forEach(botao => {
+        `).join('')}
+        <button type="button" class="header-notification-open-finance" onclick="window.irParaFinanceiroAlertas()"><i class="fa-solid fa-wallet"></i> Abrir controle financeiro <span>${formatarMoeda(total)}</span></button>`;
+    }
+
+    list?.querySelectorAll('[data-financeiro-alerta-indice]').forEach(botao => {
         botao.addEventListener('click', () => {
             const item = alertas[Number(botao.dataset.financeiroAlertaIndice)];
             if (!item) return;
+            if (panel) panel.hidden = true;
+            button?.setAttribute('aria-expanded', 'false');
             if (item.documento) window.abrirAnexoFinanceiro(item.id, 'documento');
             else window.irParaFinanceiroAlertas();
         });
     });
-    if (listaEstavaAberta) {
-        const lista = banner.querySelector('.financeiro-lembrete-lista');
-        const principal = banner.querySelector('.financeiro-lembrete-main');
-        if (lista) lista.hidden = false;
-        banner.classList.add('is-expanded');
-        principal?.setAttribute('aria-expanded', 'true');
+
+    if (button && !button.dataset.notificationsReady) {
+        button.dataset.notificationsReady = 'true';
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            if (!panel) return;
+            panel.hidden = !panel.hidden;
+            button.setAttribute('aria-expanded', String(!panel.hidden));
+        });
+        document.getElementById('btnCloseHeaderNotifications')?.addEventListener('click', event => {
+            event.stopPropagation();
+            if (panel) panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        });
+        document.addEventListener('click', event => {
+            if (!panel || panel.hidden || event.target.closest('.header-notification-center')) return;
+            panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        });
     }
     linkFinanceiro?.classList.add('financeiro-menu-alerta');
     document.body.classList.add('financeiro-tem-alerta');
 }
 
 window.alternarListaLembretesFinanceiros = function() {
-    const banner = document.getElementById('financeiroLembreteTopo');
-    const lista = banner?.querySelector('.financeiro-lembrete-lista');
-    const principal = banner?.querySelector('.financeiro-lembrete-main');
-    if (!lista || !principal) return;
-    const abrir = lista.hidden;
-    lista.hidden = !abrir;
-    banner.classList.toggle('is-expanded', abrir);
-    principal.setAttribute('aria-expanded', String(abrir));
+    document.getElementById('btnHeaderNotifications')?.click();
 };
 
 window.irParaFinanceiroAlertas = function() {

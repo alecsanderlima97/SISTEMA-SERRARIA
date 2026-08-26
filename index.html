@@ -16,8 +16,8 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css?v=assistant-fix-1">
     <link rel="stylesheet" href="romaneio-v2.css">
-    <link rel="stylesheet" href="ui-polish.css?v=cnpj-autofill-1">
-    <link rel="stylesheet" href="orquestra-theme.css?v=romaneio-cliente-parcelas-1">
+    <link rel="stylesheet" href="ui-polish.css?v=central-comunicacao-1">
+    <link rel="stylesheet" href="orquestra-theme.css?v=central-comunicacao-1">
     <!-- Chart.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -28,6 +28,8 @@
     <script>
         try {
             document.body.classList.toggle('orquestra-theme', localStorage.getItem('orquestrasis_theme') === 'premium');
+            document.body.dataset.backgroundTheme = localStorage.getItem('orquestra_background_theme') || 'florestal-1';
+            document.body.classList.toggle('ui-background-image-disabled', localStorage.getItem('orquestra_background_image_enabled') === 'false');
         } catch (error) {}
     </script>
     <!-- Bootstrap, diagnosticos e fallback estrutural -->
@@ -76,15 +78,20 @@
         <main class="main-content">
             <!-- Global Header -->
             <div class="global-header hide-on-print">
-                <!-- BotÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de Recolher Sidebar -->
-                <button type="button" id="btnToggleSidebar" class="sidebar-toggle-button" title="Recolher Menu">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
+                <div class="global-header-left">
+                    <button type="button" id="btnToggleSidebar" class="sidebar-toggle-button" title="Recolher menu">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div class="global-header-context">
+                        <strong id="globalHeaderSectionName">Início</strong>
+                        <small id="globalHeaderSectionHint">Visão geral da operação</small>
+                    </div>
+                </div>
 
-                    <div class="assistant-home-search hide-on-print">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <input type="text" id="assistantHomeInput" placeholder="Pergunte ao assistente">
-                        <button type="button" id="btnAssistantHomeSubmit" title="Perguntar"><i class="fa-solid fa-arrow-right"></i></button>
+                <div class="assistant-home-search hide-on-print">
+                    <i class="fa-solid fa-comments"></i>
+                    <input type="text" id="assistantHomeInput" placeholder="Mensagem ou pergunta para a IA">
+                    <button type="button" id="btnAssistantHomeSubmit" title="Abrir central de comunicação"><i class="fa-solid fa-arrow-right"></i></button>
                 </div>
                 <div class="header-actions-group">
                     <div class="header-weather-widget hide-on-print" id="headerWeatherWidget" data-rain="low">
@@ -115,6 +122,21 @@
                                 <button type="button" id="btnWeatherUseLocation" title="Usar a localização deste aparelho"><i class="fa-solid fa-location-crosshairs"></i> Local atual</button>
                                 <button type="button" id="btnWeatherUseDefault" title="Voltar para Ribeirão Branco"><i class="fa-solid fa-building"></i> Ribeirão Branco</button>
                                 <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" title="Fonte da previsão meteorológica"><i class="fa-solid fa-circle-info"></i> Fonte</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="header-notification-center hide-on-print">
+                        <button type="button" id="btnHeaderNotifications" class="header-notification-button" title="Abrir notificações" aria-expanded="false">
+                            <i class="fa-regular fa-bell"></i>
+                            <span id="headerNotificationBadge" class="header-notification-badge" hidden>0</span>
+                        </button>
+                        <div id="headerNotificationPanel" class="header-notification-panel" hidden>
+                            <div class="header-notification-head">
+                                <div><strong>Notificações</strong><small id="headerNotificationSummary">Nenhuma pendência no momento.</small></div>
+                                <button type="button" id="btnCloseHeaderNotifications" title="Fechar notificações"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div id="headerNotificationList" class="header-notification-list">
+                                <div class="header-notification-empty"><i class="fa-regular fa-circle-check"></i><span>Tudo em ordem por aqui.</span></div>
                             </div>
                         </div>
                     </div>
@@ -162,7 +184,7 @@
 
             <script src="js/views/romaneio-v2-view.js?v=baixa-patio-romaneio-1"></script>
 
-            <script src="js/views/configuracoes-view.js?v=cnpj-autofill-1"></script>
+            <script src="js/views/configuracoes-view.js?v=temas-personalizaveis-1"></script>
 
 
         </main>
@@ -170,7 +192,7 @@
 
     <div id="appVersionFooter" class="app-version-footer hide-on-print" title="Identificação da atualização publicada">
         <i class="fa-solid fa-circle-check"></i>
-        <span>Atualização: mascara-numero-segura-1 | 25/08/2026</span>
+        <span>Atualização local: central-comunicacao-1 | 26/08/2026</span>
     </div>
 
     <script src="js/modals/rh-modals.js?v=he-calculo-horas-2"></script>
@@ -183,13 +205,13 @@
 
     <script src="js/modals/usuario-modals.js"></script>
 
-    <script src="js/widgets/assistant-widget.js?v=assistente-visual-1"></script>
+    <script src="js/widgets/assistant-widget.js?v=central-comunicacao-1"></script>
     <script src="js/print-utils.js?v=pdf-render-3"></script>
     <script src="js/section-loader.js?v=performance-1"></script>
 
     <!-- Firebase Initialization -->
 
-    <script type="module" src="js/firebase-init.js?v=descarga-relatos-frota-1"></script>
+    <script type="module" src="js/firebase-init.js?v=romaneio-salvamento-seguro-2"></script>
 
     <!-- Scripts da aplicaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o -->
     <script type="module" src="js/cnpj-autofill.js?v=cnpj-autofill-1"></script>
@@ -199,16 +221,17 @@
     <script type="module" src="js/contas-receber.js?v=romaneio-cliente-parcelas-1"></script>
     <script type="module" src="js/calculadoras.js?v=cnpj-autofill-1"></script>
     <script type="module" src="js/transportes.js?v=performance-geral-1"></script>
-    <script type="module" src="js/assistente.js?v=assistente-preferencias-1"></script>
+    <script type="module" src="js/assistente.js?v=central-comunicacao-1"></script>
+    <script type="module" src="js/chat-interno.js?v=central-comunicacao-1"></script>
     <script type="module" src="js/entrada.js?v=mapa-operacional-1"></script>
     <script type="module" src="js/mapa.js?v=mapa-operacional-2"></script>
     <script type="module" src="js/estoque.js?v=lubrificantes-galoes-2"></script>
-    <script type="module" src="js/romaneio_v2.js?v=romaneio-cliente-parcelas-1"></script>
+    <script type="module" src="js/romaneio_v2.js?v=romaneio-salvamento-seguro-2"></script>
     <script type="module" src="js/historico.js?v=performance-geral-1"></script>
     <script type="module" src="js/patio.js?v=uso-romaneio-temporario-1"></script>
     <script type="module" src="js/rh.js?v=he-calculo-horas-2"></script>
     <script type="module" src="js/frotas.js?v=frota-foto-card-1"></script>
-    <script type="module" src="js/financeiro.js?v=lembretes-multiplos-1"></script>
+    <script type="module" src="js/financeiro.js?v=notificacoes-cabecalho-1"></script>
     <script src="js/weather-widget.js?v=clima-cabecalho-1"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="calendar.js?v=performance-geral-1"></script>
@@ -216,7 +239,7 @@
     <script src="js/widgets/scroll-helper-widget.js"></script>
 
     <script src="js/ui-helpers.js?v=atalhos-campos-1"></script>
-    <script src="js/shell-events.js?v=cnpj-autofill-1"></script>
+    <script src="js/shell-events.js?v=central-comunicacao-1"></script>
 </body>
 
 </html>

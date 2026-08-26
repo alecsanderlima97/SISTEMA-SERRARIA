@@ -5,8 +5,26 @@
         assistant: 'orquestra_assistant_float_enabled',
         companion: 'orquestra_assistant_companion_enabled',
         motion: 'orquestra_background_motion_enabled',
+        backgroundImage: 'orquestra_background_image_enabled',
         compact: 'orquestra_compact_mode_enabled'
     };
+
+    const BACKGROUND_PREF_KEY = 'orquestra_background_theme';
+    const BACKGROUND_DEFAULT = 'florestal-1';
+    const BACKGROUND_OPTIONS = [
+        { id: 'florestal-1', label: 'Florestal 1', category: 'Florestal' },
+        { id: 'florestal-2', label: 'Florestal 2', category: 'Florestal' },
+        { id: 'florestal-3', label: 'Florestal 3', category: 'Florestal' },
+        { id: 'industrial-1', label: 'Industrial 1', category: 'Industrial' },
+        { id: 'industrial-2', label: 'Industrial 2', category: 'Industrial' },
+        { id: 'industrial-3', label: 'Industrial 3', category: 'Industrial' },
+        { id: 'tecnologico-1', label: 'Tecnologico 1', category: 'Tecnologico' },
+        { id: 'tecnologico-2', label: 'Tecnologico 2', category: 'Tecnologico' },
+        { id: 'tecnologico-3', label: 'Tecnologico 3', category: 'Tecnologico' },
+        { id: 'abstrato-1', label: 'Abstrato 1', category: 'Abstrato' },
+        { id: 'abstrato-2', label: 'Abstrato 2', category: 'Abstrato' },
+        { id: 'abstrato-3', label: 'Abstrato 3', category: 'Abstrato' }
+    ];
 
     function lerPreferencia(key, defaultValue = true) {
         const value = localStorage.getItem(key);
@@ -18,6 +36,46 @@
         localStorage.setItem(key, value ? 'true' : 'false');
     }
 
+    function obterFundoSelecionado() {
+        const salvo = localStorage.getItem(BACKGROUND_PREF_KEY) || BACKGROUND_DEFAULT;
+        return BACKGROUND_OPTIONS.some(item => item.id === salvo) ? salvo : BACKGROUND_DEFAULT;
+    }
+
+    function renderizarGaleriaFundos() {
+        const galeria = document.getElementById('configBackgroundGallery');
+        if (!galeria) return;
+
+        const selecionado = obterFundoSelecionado();
+        galeria.innerHTML = BACKGROUND_OPTIONS.map(item => `
+            <button type="button" class="config-background-option${item.id === selecionado ? ' active' : ''}"
+                data-background-option="${item.id}"
+                onclick="window.selecionarFundoSistema('${item.id}')"
+                aria-pressed="${item.id === selecionado ? 'true' : 'false'}">
+                <span class="config-background-preview" style="background-image:url('assets/themes/${item.id}-thumb.jpg')"></span>
+                <span><strong>${item.label}</strong><small>${item.category}</small></span>
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            </button>
+        `).join('');
+    }
+
+    function aplicarFundoSelecionado() {
+        const selecionado = obterFundoSelecionado();
+        document.body.dataset.backgroundTheme = selecionado;
+        document.querySelectorAll('[data-background-option]').forEach(button => {
+            const ativo = button.dataset.backgroundOption === selecionado;
+            button.classList.toggle('active', ativo);
+            button.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+        });
+    }
+
+    window.selecionarFundoSistema = function(backgroundId) {
+        if (!BACKGROUND_OPTIONS.some(item => item.id === backgroundId)) return;
+        localStorage.setItem(BACKGROUND_PREF_KEY, backgroundId);
+        localStorage.setItem(UI_PREFS.backgroundImage, 'true');
+        renderizarGaleriaFundos();
+        aplicarPreferenciasInterface();
+    };
+
     function sincronizarCamposPreferencias() {
         const mapa = [
             ['configAjudaVisual', UI_PREFS.help],
@@ -25,6 +83,7 @@
             ['configAssistenteFlutuante', UI_PREFS.assistant],
             ['configAssistenteCompanion', UI_PREFS.companion],
             ['configMovimentoFundo', UI_PREFS.motion],
+            ['configImagemFundo', UI_PREFS.backgroundImage],
             ['configModoCompacto', UI_PREFS.compact]
         ];
         mapa.forEach(([id, key]) => {
@@ -39,6 +98,7 @@
         const assistente = lerPreferencia(UI_PREFS.assistant, true);
         const companion = ajuda && lerPreferencia(UI_PREFS.companion, true);
         const movimento = lerPreferencia(UI_PREFS.motion, true);
+        const imagemFundo = lerPreferencia(UI_PREFS.backgroundImage, true);
         const compacto = lerPreferencia(UI_PREFS.compact, false);
 
         document.body.classList.toggle('ui-help-disabled', !ajuda);
@@ -46,7 +106,9 @@
         document.body.classList.toggle('ui-assistant-disabled', !assistente);
         document.body.classList.toggle('ui-companion-disabled', !companion);
         document.body.classList.toggle('ui-motion-disabled', !movimento);
+        document.body.classList.toggle('ui-background-image-disabled', !imagemFundo);
         document.body.classList.toggle('ui-compact-mode', compacto);
+        aplicarFundoSelecionado();
         if (!ajuda) document.getElementById('orquestraTooltip')?.classList.remove('is-visible');
         sincronizarCamposPreferencias();
 
@@ -63,6 +125,8 @@
 
     window.restaurarPreferenciasInterfacePadrao = function() {
         Object.values(UI_PREFS).forEach(key => localStorage.removeItem(key));
+        localStorage.removeItem(BACKGROUND_PREF_KEY);
+        renderizarGaleriaFundos();
         aplicarPreferenciasInterface();
         alert('Preferencias visuais restauradas para o padrao.');
     };
@@ -91,6 +155,70 @@
         const url = new URL(window.location.href);
         url.searchParams.set('v', Date.now().toString());
         window.location.href = url.toString();
+    }
+
+    const SECTION_HINTS = {
+        'view-dashboard': 'Visão geral da operação',
+        'view-romaneio': 'Cargas e madeira serrada',
+        'view-subprodutos': 'Cavaco, pó e outros produtos',
+        'view-historico': 'Vendas e romaneios concluídos',
+        'view-clientes': 'Cadastro e condições comerciais',
+        'view-transportes': 'Transportadoras e veículos',
+        'view-entrada': 'Entradas, descarga e empreiteiros',
+        'view-produtos': 'Classes, medidas e configurações',
+        'view-estoque': 'Itens, tanques e movimentações',
+        'view-frotas': 'Veículos, máquinas e manutenção',
+        'view-financeiro': 'Contas, documentos e vencimentos',
+        'view-rh': 'Funcionários e lançamentos mensais',
+        'view-mapa': 'Matos, contratos e localização',
+        'view-calculadoras': 'Cálculos operacionais',
+        'view-agenda': 'Agenda e compromissos',
+        'view-configuracoes': 'Preferências e controle do sistema'
+    };
+
+    function atualizarContextoCabecalho(targetId) {
+        const link = document.querySelector(`.sidebar a[data-target="${targetId}"]`);
+        const name = document.getElementById('globalHeaderSectionName');
+        const hint = document.getElementById('globalHeaderSectionHint');
+        const label = link?.textContent?.replace(/\s+/g, ' ').trim() || 'Sistema Vanmarte';
+        if (name) name.textContent = label;
+        if (hint) hint.textContent = SECTION_HINTS[targetId] || 'Operação integrada da serraria';
+    }
+
+    window.atualizarContextoCabecalho = atualizarContextoCabecalho;
+
+    function iniciarContextoCabecalho() {
+        const sidebar = document.querySelector('.sidebar');
+        const sync = () => {
+            const active = document.querySelector('.sidebar a[data-target].active');
+            atualizarContextoCabecalho(active?.dataset.target || localStorage.getItem('appActiveSection') || 'view-dashboard');
+        };
+        sync();
+        if (sidebar) new MutationObserver(sync).observe(sidebar, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    }
+
+    function iniciarNotificacoesCabecalho() {
+        const center = document.querySelector('.header-notification-center');
+        const button = document.getElementById('btnHeaderNotifications');
+        const panel = document.getElementById('headerNotificationPanel');
+        const close = document.getElementById('btnCloseHeaderNotifications');
+        if (!center || !button || !panel || button.dataset.notificationsReady) return;
+        button.dataset.notificationsReady = 'true';
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            panel.hidden = !panel.hidden;
+            button.setAttribute('aria-expanded', String(!panel.hidden));
+        });
+        close?.addEventListener('click', event => {
+            event.stopPropagation();
+            panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        });
+        document.addEventListener('click', event => {
+            if (panel.hidden || event.target.closest('.header-notification-center')) return;
+            panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        });
     }
 
     function iniciarTooltipsOrquestra() {
@@ -184,6 +312,7 @@
                 const target = link.getAttribute('data-target');
                 if (target && typeof window.navegarPara === 'function') {
                     window.navegarPara(target);
+                    atualizarContextoCabecalho(target);
                 }
             });
         });
@@ -222,6 +351,9 @@
         }
 
         iniciarTooltipsOrquestra();
+        iniciarContextoCabecalho();
+        iniciarNotificacoesCabecalho();
+        renderizarGaleriaFundos();
         aplicarPreferenciasInterface();
 
         document.addEventListener('change', event => {

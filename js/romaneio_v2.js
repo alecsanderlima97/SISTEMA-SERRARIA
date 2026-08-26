@@ -1,4 +1,4 @@
-﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js';
+﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js?v=romaneio-salvamento-seguro-2';
 
 console.log("Romaneio V2: Script carregado");
 
@@ -1796,20 +1796,25 @@ window.finalizarRomaneioV2 = async () => {
         btn.disabled = true;
     }
 
+    let etapaSalvamento = 'validacao inicial';
     try {
         if (romaneioAtual.idFirebase) {
             // --- Edição de Carga Existente ---
             const docRef = doc(db, "romaneios", romaneioAtual.idFirebase);
             
             // 1. Estornar Estoque dos Pacotes da Carga antiga
+            etapaSalvamento = 'leitura do romaneio original';
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const antigo = docSnap.data();
+                etapaSalvamento = 'validacao do saldo do patio';
                 await validarSaldoPatioRomaneio(romaneioAtual.pacotes, antigo.pacotes || []);
                 if (antigo.pacotes) {
+                    etapaSalvamento = 'estorno dos pacotes antigos';
                     await ajustarPacotesPatioRomaneio(antigo.pacotes, 1);
                     for (const p of antigo.pacotes) {
                         if (p.produtoId) {
+                            etapaSalvamento = 'estorno do estoque antigo';
                             const pecasAntigas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
                             await window.FS.ajustarQuantidadeProduto(p.produtoId, pecasAntigas);
                         }
@@ -1820,22 +1825,26 @@ window.finalizarRomaneioV2 = async () => {
             // 2. Debitar Estoque dos Novos Pacotes
             for (const p of romaneioAtual.pacotes) {
                 if (p.produtoId) {
+                    etapaSalvamento = 'baixa do novo estoque';
                     const pecasNovas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -pecasNovas);
                 }
             }
+            etapaSalvamento = 'baixa dos pacotes no patio';
             await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
             
             // 3. Atualizar o Firestore
             const dadosNovos = { ...romaneioAtual };
             delete dadosNovos.idFirebase; // Remover ID local antes de salvar
             
+            etapaSalvamento = 'atualizacao do romaneio no banco';
             await window.FS.updateDoc('romaneios', romaneioAtual.idFirebase, {
                 ...dadosNovos,
                 cliente,
                 dataEdicao: new Date().toISOString(),
                 status: 'finalizado'
             });
+            etapaSalvamento = 'atualizacao da cobranca';
             await window.ContasReceber?.salvarCobranca?.({
                 origem: 'romaneio',
                 origemId: romaneioAtual.idFirebase,
@@ -1856,13 +1865,16 @@ window.finalizarRomaneioV2 = async () => {
             alert(`Carga ${romaneioAtual.numero} atualizada com sucesso no Firebase!`);
         } else {
             // --- Criação de Carga Nova ---
+            etapaSalvamento = 'validacao do saldo do patio';
             await validarSaldoPatioRomaneio(romaneioAtual.pacotes);
+            etapaSalvamento = 'gravacao do romaneio no banco';
             const novoRomaneioId = await window.FS.addDoc('romaneios', {
                 ...romaneioAtual,
                 cliente,
                 dataCriacao: new Date().toISOString(),
                 status: 'finalizado'
             });
+            etapaSalvamento = 'criacao da cobranca';
             await window.ContasReceber?.salvarCobranca?.({
                 origem: 'romaneio',
                 origemId: novoRomaneioId,
@@ -1882,10 +1894,12 @@ window.finalizarRomaneioV2 = async () => {
             
             for (const p of romaneioAtual.pacotes) {
                 if (p.produtoId) {
+                    etapaSalvamento = 'baixa do estoque';
                     const totalPecasVendidas = (p.pecasPorPacote || 0) * (p.qtdPacotes || 1);
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -totalPecasVendidas);
                 }
             }
+            etapaSalvamento = 'baixa dos pacotes no patio';
             await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
             alert(`Romaneio ${romaneioAtual.numero} salvo com sucesso no Firebase!`);
         }
@@ -1912,11 +1926,13 @@ window.finalizarRomaneioV2 = async () => {
         document.dispatchEvent(new Event('historicoUpdated'));
         
     } catch (e) { 
-        console.error("Erro ao salvar romaneio:", e);
-        alert("Erro ao salvar romaneio. Verifique o console.");
+        console.error(`Erro ao salvar romaneio na etapa: ${etapaSalvamento}`, e);
+        const mensagem = String(e?.message || e?.code || 'Falha desconhecida').replace(/^Firebase:\s*/i, '').trim();
+        alert(`Não foi possível salvar o romaneio.\n\nEtapa: ${etapaSalvamento}\nMotivo: ${mensagem}`);
     } finally {
         if (btn) {
             btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> FINALIZAR CARGA';
         }
     }
 };
