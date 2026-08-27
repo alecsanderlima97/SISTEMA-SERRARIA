@@ -1,5 +1,5 @@
 import {
-    auth, db, collection, addDoc, doc, getDoc, setDoc,
+    auth, db, collection, addDoc, doc, getDoc, getDocs, setDoc,
     query, where, limit, onSnapshot, onAuthStateChanged
 } from './firebase-init.js';
 
@@ -255,6 +255,34 @@ function subscribeToProfiles() {
     });
 }
 
+async function sincronizarPerfisDaListaDeUsuarios() {
+    const cargoAtual = normalizeText(state.profile?.cargo).toUpperCase();
+    const podeSincronizar = cargoAtual.includes('GERENTE') || cargoAtual.includes('ADMIN');
+    if (!podeSincronizar) return;
+
+    try {
+        const snapshot = await getDocs(collection(db, 'usuarios'));
+        const operacoes = [];
+        snapshot.forEach(item => {
+            const data = item.data() || {};
+            const cargo = normalizeText(data.cargo || 'Colaborador');
+            const empresaId = normalizeText(data.empresaId || DEFAULT_EMPRESA_ID);
+            const aprovado = cargo.toUpperCase() !== 'PENDENTE' && normalizeText(data.nome);
+            const jaAcessou = item.id === state.user.uid || Boolean(data.ultimoAcessoEm || data.ultimaAtividadeEm);
+            if (!aprovado || !jaAcessou || empresaId !== state.profile.empresaId) return;
+            operacoes.push(setDoc(doc(db, CHAT_PROFILE_COLLECTION, item.id), {
+                nome: normalizeText(data.nome) || 'Colaborador',
+                cargo,
+                empresaId,
+                atualizadoEm: new Date().toISOString()
+            }, { merge: true }));
+        });
+        await Promise.all(operacoes);
+    } catch (error) {
+        console.warn('A lista do chat continuara usando os perfis ja sincronizados:', error);
+    }
+}
+
 async function initializeForUser(user) {
     const userSnapshot = await getDoc(doc(db, 'usuarios', user.uid));
     const userData = userSnapshot.exists() ? userSnapshot.data() : {};
@@ -275,6 +303,7 @@ async function initializeForUser(user) {
         empresaId: state.profile.empresaId,
         atualizadoEm: new Date().toISOString()
     }, { merge: true });
+    await sincronizarPerfisDaListaDeUsuarios();
     subscribeToProfiles();
     subscribeToMessages();
 }

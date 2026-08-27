@@ -1863,8 +1863,10 @@ window.visualizarEntrada = function(id) {
     
     let alturasStr = "Não gravadas individualmente";
     if (en.alturas && Array.isArray(en.alturas)) {
-        alturasStr = `Esq: [${formatDecimalValue(en.alturas[0])}m, ${formatDecimalValue(en.alturas[1])}m, ${formatDecimalValue(en.alturas[2])}m]
-Dir: [${formatDecimalValue(en.alturas[3])}m, ${formatDecimalValue(en.alturas[4])}m, ${formatDecimalValue(en.alturas[5])}m]`;
+        const metade = en.alturas.length >= 8 ? 4 : 3;
+        const formatarLado = valores => valores.map(valor => `${formatDecimalValue(valor)}m`).join(', ');
+        alturasStr = `Esq: [${formatarLado(en.alturas.slice(0, metade))}]
+Dir: [${formatarLado(en.alturas.slice(metade, metade * 2))}]`;
     }
     const volumeEntrada = Number(en.volume || 0);
     const valorMetroEmpreiteiro = Number(en.valorMetroEmpreiteiro || 0);
@@ -1951,16 +1953,21 @@ window.alterarEntrada = function(id) {
         document.getElementById('entAltEsq1').value = formatDecimalValue(en.alturas[0]) || '';
         document.getElementById('entAltEsq2').value = formatDecimalValue(en.alturas[1]) || '';
         document.getElementById('entAltEsq3').value = formatDecimalValue(en.alturas[2]) || '';
-        document.getElementById('entAltDir1').value = formatDecimalValue(en.alturas[3]) || '';
-        document.getElementById('entAltDir2').value = formatDecimalValue(en.alturas[4]) || '';
-        document.getElementById('entAltDir3').value = formatDecimalValue(en.alturas[5]) || '';
+        document.getElementById('entAltEsq4').value = formatDecimalValue(en.alturas.length >= 8 ? en.alturas[3] : '') || '';
+        const inicioDireita = en.alturas.length >= 8 ? 4 : 3;
+        document.getElementById('entAltDir1').value = formatDecimalValue(en.alturas[inicioDireita]) || '';
+        document.getElementById('entAltDir2').value = formatDecimalValue(en.alturas[inicioDireita + 1]) || '';
+        document.getElementById('entAltDir3').value = formatDecimalValue(en.alturas[inicioDireita + 2]) || '';
+        document.getElementById('entAltDir4').value = formatDecimalValue(en.alturas.length >= 8 ? en.alturas[7] : '') || '';
     } else {
         document.getElementById('entAltEsq1').value = '';
         document.getElementById('entAltEsq2').value = '';
         document.getElementById('entAltEsq3').value = '';
+        document.getElementById('entAltEsq4').value = '';
         document.getElementById('entAltDir1').value = '';
         document.getElementById('entAltDir2').value = '';
         document.getElementById('entAltDir3').value = '';
+        document.getElementById('entAltDir4').value = '';
     }
     
     atualizarEstadoEdicaoEntrada();
@@ -2185,8 +2192,8 @@ function inicializarModuloEntrada() {
     entComp = document.getElementById('entComp');
     entLarg = document.getElementById('entLarg');
     inputsAlt = [
-        document.getElementById('entAltEsq1'), document.getElementById('entAltEsq2'), document.getElementById('entAltEsq3'),
-        document.getElementById('entAltDir1'), document.getElementById('entAltDir2'), document.getElementById('entAltDir3')
+        document.getElementById('entAltEsq1'), document.getElementById('entAltEsq2'), document.getElementById('entAltEsq3'), document.getElementById('entAltEsq4'),
+        document.getElementById('entAltDir1'), document.getElementById('entAltDir2'), document.getElementById('entAltDir3'), document.getElementById('entAltDir4')
     ];
     resVolume = document.getElementById('entResultadoVolume');
     resInfo = document.getElementById('entInfoMedia');

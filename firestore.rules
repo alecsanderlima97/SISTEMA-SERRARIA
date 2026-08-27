@@ -340,10 +340,22 @@ service cloud.firestore {
     match /chat_perfis/{userId} {
       allow read: if isApprovedUser() && sameEmpresaOnRead();
       allow create, update: if isApprovedUser()
-        && userId == request.auth.uid
         && sameEmpresaOnWrite()
-        && request.resource.data.nome == userDoc().data.nome
-        && request.resource.data.cargo == userDoc().data.cargo
+        && (
+          (
+            userId == request.auth.uid
+            && request.resource.data.nome == userDoc().data.nome
+            && request.resource.data.cargo == userDoc().data.cargo
+          )
+          ||
+          (
+            (isAdmin() || isBootstrapAdmin())
+            && exists(/databases/$(database)/documents/usuarios/$(userId))
+            && request.resource.data.nome == get(/databases/$(database)/documents/usuarios/$(userId)).data.nome
+            && request.resource.data.cargo == get(/databases/$(database)/documents/usuarios/$(userId)).data.cargo
+            && request.resource.data.empresaId == get(/databases/$(database)/documents/usuarios/$(userId)).data.empresaId
+          )
+        )
         && request.resource.data.keys().hasOnly(['nome', 'cargo', 'empresaId', 'atualizadoEm']);
       allow delete: if isAdmin() || isBootstrapAdmin() || (isApprovedUser() && userId == request.auth.uid);
     }

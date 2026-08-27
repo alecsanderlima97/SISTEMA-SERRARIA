@@ -141,6 +141,10 @@
                                 <span><i class="fa-solid fa-image"></i><strong>Imagem de fundo</strong><small>Mostra ou oculta a imagem selecionada na galeria.</small></span>
                                 <input type="checkbox" id="configImagemFundo" data-pref-key="orquestra_background_image_enabled" checked>
                             </label>
+                            <label class="config-pref-toggle" for="configCarrosselFundo">
+                                <span><i class="fa-solid fa-images"></i><strong>Carrossel de fundos</strong><small>Troca automaticamente a paisagem a cada 1 hora.</small></span>
+                                <input type="checkbox" id="configCarrosselFundo" data-pref-key="orquestra_background_carousel_enabled">
+                            </label>
                             <label class="config-pref-toggle" for="configModoCompacto">
                                 <span><i class="fa-solid fa-compress"></i><strong>Modo compacto</strong><small>Reduz um pouco campos, cards e botoes neste navegador.</small></span>
                                 <input type="checkbox" id="configModoCompacto" data-pref-key="orquestra_compact_mode_enabled">

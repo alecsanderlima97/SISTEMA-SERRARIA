@@ -466,9 +466,10 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
     const porRelatorio = new Map();
     vinculados.forEach(p => {
         const chave = `${p.patioRelatorioId}|${p.patioItemId}`;
-        const atual = porRelatorio.get(chave) || { qtd: 0, itemIds: [] };
+        const atual = porRelatorio.get(chave) || { qtd: 0, itemIds: [], modelo: p };
         atual.qtd += Number(p.patioQtdPacotes || p.qtdPacotes || 0);
         atual.itemIds = p.patioItemIds?.length ? p.patioItemIds : [p.patioItemId];
+        atual.modelo = atual.modelo || p;
         porRelatorio.set(chave, atual);
     });
 
@@ -500,17 +501,17 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
                     pacotes: novoTotal,
                     totalPecas: novoTotal * pecasPacote,
                     volume: arredondarParaBaixo(novoTotal * volumeUnidade, 3),
-                    movimentacoesPatio: sinal < 0 ? [
+                    movimentacoesPatio: [
                         ...(Array.isArray(itens[idx].movimentacoesPatio) ? itens[idx].movimentacoesPatio : []),
                         {
-                            tipo: 'SAIDA_ROMANEIO',
+                            tipo: sinal < 0 ? 'SAIDA_ROMANEIO' : 'ESTORNO_ROMANEIO',
                             romaneio: contexto.numero || '-',
                             cliente: contexto.cliente || '-',
                             pacotes: delta,
                             saldo: novoTotal,
                             dataHora: new Date().toISOString()
                         }
-                    ].slice(-20) : (itens[idx].movimentacoesPatio || []),
+                    ].slice(-20),
                     ultimoUsoRomaneio: sinal < 0 ? {
                         romaneio: contexto.numero || '-', cliente: contexto.cliente || '-', pacotes: delta,
                         saldo: novoTotal, dataHora: new Date().toISOString()
@@ -518,20 +519,44 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
                 };
                 restante -= delta;
             }
-            if (restante > 0 && sinal < 0) throw new Error('Saldo insuficiente no patio para finalizar o romaneio.');
+            if (restante > 0) {
+                throw new Error(sinal < 0
+                    ? 'Saldo insuficiente no patio para finalizar o romaneio.'
+                    : 'Nao foi possivel localizar o pacote original para devolver ao patio.');
+            }
         }
 
         await updateDoc(ref, {
             itens,
             totais: recalcularTotaisPatioItens(itens),
             atualizadoEm: new Date().toISOString(),
-            ultimaAlteracaoPatio: sinal < 0 ? {
-                acao: `Baixa de pacotes no romaneio ${contexto.numero || '-'}`,
-                usuario: contexto.cliente || 'Romaneio',
+            ultimaAlteracaoPatio: {
+                acao: sinal < 0
+                    ? `Baixa de pacotes no romaneio ${contexto.numero || '-'}`
+                    : `Pacotes devolvidos pela exclusao do romaneio ${contexto.numero || '-'}`,
+                usuario: contexto.usuario || contexto.cliente || 'Romaneio',
                 dataHora: new Date().toISOString()
-            } : dados.ultimaAlteracaoPatio
+            }
         });
     }
+}
+
+window.estornarPacotesPatioRomaneio = async function(pacotes, contexto = {}) {
+    return ajustarPacotesPatioRomaneio(pacotes, 1, contexto);
+};
+
+function assinaturaVinculoPatio(pacotes = []) {
+    return pacotes
+        .filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId)
+        .map(p => {
+            const ids = (p.patioItemIds?.length ? p.patioItemIds : [p.patioItemId])
+                .map(String)
+                .sort()
+                .join(',');
+            return `${p.patioRelatorioId}|${p.patioItemId}|${ids}|${Number(p.patioQtdPacotes || p.qtdPacotes || 0)}`;
+        })
+        .sort()
+        .join('::');
 }
 
 async function validarSaldoPatioRomaneio(pacotes, pacotesEstorno = []) {
@@ -1807,11 +1832,16 @@ window.finalizarRomaneioV2 = async () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const antigo = docSnap.data();
-                etapaSalvamento = 'validacao do saldo do patio';
-                await validarSaldoPatioRomaneio(romaneioAtual.pacotes, antigo.pacotes || []);
+                const vinculoPatioAlterado = assinaturaVinculoPatio(romaneioAtual.pacotes) !== assinaturaVinculoPatio(antigo.pacotes || []);
+                if (vinculoPatioAlterado) {
+                    etapaSalvamento = 'validacao do saldo do patio';
+                    await validarSaldoPatioRomaneio(romaneioAtual.pacotes, antigo.pacotes || []);
+                }
                 if (antigo.pacotes) {
-                    etapaSalvamento = 'estorno dos pacotes antigos';
-                    await ajustarPacotesPatioRomaneio(antigo.pacotes, 1);
+                    if (vinculoPatioAlterado) {
+                        etapaSalvamento = 'estorno dos pacotes antigos';
+                        await ajustarPacotesPatioRomaneio(antigo.pacotes, 1, { numero: romaneioAtual.numero, cliente: antigo.cliente || cliente });
+                    }
                     for (const p of antigo.pacotes) {
                         if (p.produtoId) {
                             etapaSalvamento = 'estorno do estoque antigo';
@@ -1830,8 +1860,10 @@ window.finalizarRomaneioV2 = async () => {
                     await window.FS.ajustarQuantidadeProduto(p.produtoId, -pecasNovas);
                 }
             }
-            etapaSalvamento = 'baixa dos pacotes no patio';
-            await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
+            if (assinaturaVinculoPatio(romaneioAtual.pacotes) !== assinaturaVinculoPatio(docSnap.exists() ? (docSnap.data().pacotes || []) : [])) {
+                etapaSalvamento = 'baixa dos pacotes no patio';
+                await ajustarPacotesPatioRomaneio(romaneioAtual.pacotes, -1, { numero: romaneioAtual.numero, cliente });
+            }
             
             // 3. Atualizar o Firestore
             const dadosNovos = { ...romaneioAtual };

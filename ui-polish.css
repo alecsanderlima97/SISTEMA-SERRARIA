@@ -1177,6 +1177,12 @@ body.orquestra-theme .assistant-companion-text small {
     display: block;
 }
 
+@media (max-width: 760px) {
+    .entrada-alturas-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
 body.orquestra-theme .config-pref-toggle {
     background: rgba(255, 255, 255, 0.45);
     border-color: var(--oq-line);

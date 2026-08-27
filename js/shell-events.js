@@ -6,11 +6,15 @@
         companion: 'orquestra_assistant_companion_enabled',
         motion: 'orquestra_background_motion_enabled',
         backgroundImage: 'orquestra_background_image_enabled',
+        backgroundCarousel: 'orquestra_background_carousel_enabled',
         compact: 'orquestra_compact_mode_enabled'
     };
 
     const BACKGROUND_PREF_KEY = 'orquestra_background_theme';
     const BACKGROUND_DEFAULT = 'florestal-1';
+    const BACKGROUND_CAROUSEL_LAST_KEY = 'orquestra_background_carousel_last_at';
+    const BACKGROUND_CAROUSEL_INTERVAL = 60 * 60 * 1000;
+    let backgroundCarouselTimer = null;
     const BACKGROUND_OPTIONS = [
         { id: 'florestal-1', label: 'Florestal 1', category: 'Florestal' },
         { id: 'florestal-2', label: 'Florestal 2', category: 'Florestal' },
@@ -72,24 +76,54 @@
         if (!BACKGROUND_OPTIONS.some(item => item.id === backgroundId)) return;
         localStorage.setItem(BACKGROUND_PREF_KEY, backgroundId);
         localStorage.setItem(UI_PREFS.backgroundImage, 'true');
+        localStorage.setItem(BACKGROUND_CAROUSEL_LAST_KEY, String(Date.now()));
         renderizarGaleriaFundos();
         aplicarPreferenciasInterface();
     };
 
     function sincronizarCamposPreferencias() {
         const mapa = [
-            ['configAjudaVisual', UI_PREFS.help],
-            ['configGuiaAutomatico', UI_PREFS.guide],
-            ['configAssistenteFlutuante', UI_PREFS.assistant],
-            ['configAssistenteCompanion', UI_PREFS.companion],
-            ['configMovimentoFundo', UI_PREFS.motion],
-            ['configImagemFundo', UI_PREFS.backgroundImage],
-            ['configModoCompacto', UI_PREFS.compact]
+            ['configAjudaVisual', UI_PREFS.help, true],
+            ['configGuiaAutomatico', UI_PREFS.guide, true],
+            ['configAssistenteFlutuante', UI_PREFS.assistant, true],
+            ['configAssistenteCompanion', UI_PREFS.companion, true],
+            ['configMovimentoFundo', UI_PREFS.motion, true],
+            ['configImagemFundo', UI_PREFS.backgroundImage, true],
+            ['configCarrosselFundo', UI_PREFS.backgroundCarousel, false],
+            ['configModoCompacto', UI_PREFS.compact, false]
         ];
-        mapa.forEach(([id, key]) => {
+        mapa.forEach(([id, key, defaultValue]) => {
             const campo = document.getElementById(id);
-            if (campo) campo.checked = lerPreferencia(key, true);
+            if (campo) campo.checked = lerPreferencia(key, defaultValue);
         });
+    }
+
+    function avancarFundoCarrossel() {
+        const atual = obterFundoSelecionado();
+        const indice = BACKGROUND_OPTIONS.findIndex(item => item.id === atual);
+        const proximo = BACKGROUND_OPTIONS[(indice + 1) % BACKGROUND_OPTIONS.length];
+        localStorage.setItem(BACKGROUND_PREF_KEY, proximo.id);
+        localStorage.setItem(BACKGROUND_CAROUSEL_LAST_KEY, String(Date.now()));
+        aplicarFundoSelecionado();
+        renderizarGaleriaFundos();
+    }
+
+    function iniciarCarrosselFundos() {
+        if (backgroundCarouselTimer) clearTimeout(backgroundCarouselTimer);
+        backgroundCarouselTimer = null;
+        if (!lerPreferencia(UI_PREFS.backgroundCarousel, false) || !lerPreferencia(UI_PREFS.backgroundImage, true)) return;
+
+        const ultimaTroca = Number(localStorage.getItem(BACKGROUND_CAROUSEL_LAST_KEY) || Date.now());
+        const decorrido = Math.max(0, Date.now() - ultimaTroca);
+        if (!localStorage.getItem(BACKGROUND_CAROUSEL_LAST_KEY)) {
+            localStorage.setItem(BACKGROUND_CAROUSEL_LAST_KEY, String(Date.now()));
+        }
+        if (decorrido >= BACKGROUND_CAROUSEL_INTERVAL) avancarFundoCarrossel();
+        const espera = Math.max(1000, BACKGROUND_CAROUSEL_INTERVAL - Math.min(decorrido, BACKGROUND_CAROUSEL_INTERVAL));
+        backgroundCarouselTimer = setTimeout(() => {
+            avancarFundoCarrossel();
+            iniciarCarrosselFundos();
+        }, espera);
     }
 
     function aplicarPreferenciasInterface() {
@@ -109,6 +143,7 @@
         document.body.classList.toggle('ui-background-image-disabled', !imagemFundo);
         document.body.classList.toggle('ui-compact-mode', compacto);
         aplicarFundoSelecionado();
+        iniciarCarrosselFundos();
         if (!ajuda) document.getElementById('orquestraTooltip')?.classList.remove('is-visible');
         sincronizarCamposPreferencias();
 
@@ -126,6 +161,7 @@
     window.restaurarPreferenciasInterfacePadrao = function() {
         Object.values(UI_PREFS).forEach(key => localStorage.removeItem(key));
         localStorage.removeItem(BACKGROUND_PREF_KEY);
+        localStorage.removeItem(BACKGROUND_CAROUSEL_LAST_KEY);
         renderizarGaleriaFundos();
         aplicarPreferenciasInterface();
         alert('Preferencias visuais restauradas para o padrao.');

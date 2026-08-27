@@ -697,6 +697,22 @@ function inicializarModuloHistorico() {
                     } else {
                         const r = romaneiosCache.find(x => x.id === cargaPendenteId);
                         if (r) {
+                            const pacotesPatio = (r.pacotes || []).filter(p => p.origemPatio && p.patioRelatorioId && p.patioItemId);
+                            const devolverAoPatio = pacotesPatio.length > 0 && confirm(
+                                `Esta carga utilizou ${pacotesPatio.reduce((total, p) => total + Number(p.patioQtdPacotes || p.qtdPacotes || 0), 0)} pacote(s) do patio.\n\nDeseja devolver esses pacotes para a lista do patio?`
+                            );
+
+                            if (devolverAoPatio) {
+                                if (typeof window.estornarPacotesPatioRomaneio !== 'function') {
+                                    throw new Error('Modulo de devolucao ao patio indisponivel. Atualize o sistema e tente novamente.');
+                                }
+                                await window.estornarPacotesPatioRomaneio(pacotesPatio, {
+                                    numero: r.numero || r.numeroCarga || '-',
+                                    cliente: r.cliente || '-',
+                                    usuario: window.AppUserContext?.nome || auth.currentUser?.email || 'Usuario'
+                                });
+                            }
+
                             // 1. Estornar Estoque das Madeiras do Romaneio antes de deletar
                             if (r.pacotes) {
                                 for (const p of r.pacotes) {
@@ -711,7 +727,9 @@ function inicializarModuloHistorico() {
                             const docRef = doc(db, "romaneios", cargaPendenteId);
                             await deleteDoc(docRef);
 
-                            alert(`Carga ${r.numero || r.numeroCarga} excluída e estoque estornado com sucesso!`);
+                            alert(devolverAoPatio
+                                ? `Carga ${r.numero || r.numeroCarga} excluída e pacotes devolvidos ao patio com sucesso!`
+                                : `Carga ${r.numero || r.numeroCarga} excluída. Os pacotes não foram devolvidos ao patio.`);
                             window.fecharModalSeguranca();
                             await renderizarHistorico(); // Atualizar tabela de histórico
                             
