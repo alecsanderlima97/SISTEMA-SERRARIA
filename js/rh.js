@@ -8,6 +8,7 @@ let funcionarioEditandoId = null;
 let horaExtraEditandoId = null;
 let anexosAtestadoAtual = [];
 let anexosCatAtual = [];
+let fotoFuncionarioAtual = '';
 let mesIndicadoresRH = 'aberto';
 
 // Elementos do DOM
@@ -69,6 +70,14 @@ function injetarEstiloMobileRH() {
     const style = document.createElement('style');
     style.id = 'rh-mobile-style';
     style.textContent = `
+        .rh-photo-group { grid-column: span 2; }
+        .rh-photo-picker { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--panel-border); border-radius:10px; background:rgba(255,255,255,0.03); }
+        .rh-photo-preview { width:64px; height:64px; border-radius:50%; border:1px solid var(--accent-color); background:rgba(0,255,136,0.08); color:var(--accent-color); display:grid; place-items:center; overflow:hidden; cursor:pointer; flex:0 0 64px; }
+        .rh-photo-preview img, .rh-avatar-img { width:100%; height:100%; object-fit:cover; display:block; }
+        .rh-photo-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+        .rh-photo-actions .btn-secondary { min-height:34px; padding:8px 10px; white-space:nowrap; }
+        #rh-foto-nome { flex-basis:100%; color:var(--text-muted); font-size:.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .rh-avatar { width:38px; height:38px; border-radius:50%; background:rgba(0,255,136,0.1); border:1px solid var(--accent-color); display:flex; align-items:center; justify-content:center; color:var(--accent-color); font-weight:bold; overflow:hidden; flex:0 0 38px; }
         @media (max-width: 760px) {
             #panelListaRH > div[style*="overflow-x"] { overflow-x: visible !important; }
             #panelListaRH .package-table { min-width: 0 !important; border-collapse: separate !important; border-spacing: 0 12px !important; }
@@ -85,6 +94,7 @@ function injetarEstiloMobileRH() {
             #cardFormRH { max-width: none !important; padding: 16px !important; }
             #formFuncionario .grid-form { grid-template-columns: 1fr !important; }
             #formFuncionario .input-group { grid-column: auto !important; }
+            .rh-photo-group { grid-column: auto; }
         }
     `;
     document.head.appendChild(style);
@@ -101,6 +111,19 @@ function configurarTogglesRH() {
     }
     const ordenarFuncionarios = document.getElementById('ordenarFuncionarios');
     if (ordenarFuncionarios) ordenarFuncionarios.addEventListener('change', filtrarFuncionarios);
+    document.getElementById('rh-foto')?.addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            fotoFuncionarioAtual = await redimensionarFotoRH(file);
+            atualizarPreviewFotoRH(fotoFuncionarioAtual, file.name);
+        } catch (error) {
+            console.error('Erro ao preparar foto do funcionario:', error);
+            alert('Não foi possível preparar esta foto. Tente outra imagem.');
+        } finally {
+            event.target.value = '';
+        }
+    });
 }
 
 window.switchTabRH = function(tabName, isEditing = false) {
@@ -132,6 +155,8 @@ window.switchTabRH = function(tabName, isEditing = false) {
             if (titEl) titEl.innerHTML = `<i class="fa-solid fa-user-plus"></i> Novo Funcionário`;
             const lblTab = document.getElementById('lblTabRHForm');
             if (lblTab) lblTab.textContent = 'Cadastrar Funcionário';
+            fotoFuncionarioAtual = '';
+            atualizarPreviewFotoRH('', '');
         }
     } else {
         tabForm.style.display = 'none';
@@ -171,6 +196,8 @@ function abrirFormularioRH(func = null) {
         document.getElementById('rh-ferias-dias').value = func.feriasDias || 0;
         document.getElementById('rh-ferias-inicio').value = func.feriasInicio || '';
         document.getElementById('rh-ferias-fim').value = func.feriasFim || '';
+        fotoFuncionarioAtual = func.foto || '';
+        atualizarPreviewFotoRH(fotoFuncionarioAtual, func.foto ? 'Foto cadastrada' : '');
         anexosAtestadoAtual = normalizarAnexosRH(func, 'atestado');
         anexosCatAtual = normalizarAnexosRH(func, 'cat');
         atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
@@ -179,6 +206,8 @@ function abrirFormularioRH(func = null) {
         window.switchTabRH('form', false);
         anexosAtestadoAtual = [];
         anexosCatAtual = [];
+        fotoFuncionarioAtual = '';
+        atualizarPreviewFotoRH('', '');
         atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
         atualizarNomeAnexoRH('cat', anexosCatAtual);
     }
@@ -189,9 +218,59 @@ function fecharFormularioRH() {
     if (formFuncionario) formFuncionario.reset();
     funcionarioEditandoId = null;
     anexosAtestadoAtual = [];
-        anexosCatAtual = [];
-        atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
-        atualizarNomeAnexoRH('cat', anexosCatAtual);
+    anexosCatAtual = [];
+    fotoFuncionarioAtual = '';
+    atualizarPreviewFotoRH('', '');
+    atualizarNomeAnexoRH('atestado', anexosAtestadoAtual);
+    atualizarNomeAnexoRH('cat', anexosCatAtual);
+}
+
+function fotoValidaRH(foto) {
+    const valor = (foto || '').toString().trim();
+    return /^(data:image\/|https?:\/\/|blob:)/i.test(valor);
+}
+
+function atualizarPreviewFotoRH(foto, nome = '') {
+    const preview = document.getElementById('rhFotoPreview');
+    const label = document.getElementById('rh-foto-nome');
+    const fotoOk = fotoValidaRH(foto);
+    if (preview) {
+        preview.innerHTML = fotoOk
+            ? `<img src="${foto}" alt="Foto do funcionário" onerror="this.closest('button').innerHTML='<i class=&quot;fa-solid fa-camera&quot;></i>'">`
+            : '<i class="fa-solid fa-camera"></i>';
+    }
+    if (label) {
+        label.textContent = fotoOk ? (nome || 'Foto cadastrada') : 'Nenhuma foto selecionada';
+        label.style.color = fotoOk ? 'var(--accent-color)' : 'var(--text-muted)';
+    }
+}
+
+window.removerFotoRH = function() {
+    fotoFuncionarioAtual = '';
+    atualizarPreviewFotoRH('', '');
+};
+
+function redimensionarFotoRH(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const max = 220;
+                const escala = Math.min(max / img.width, max / img.height, 1);
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * escala));
+                canvas.height = Math.max(1, Math.round(img.height * escala));
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.68));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function normalizarAnexosRH(func, tipo) {
@@ -364,6 +443,12 @@ async function carregarFuncionarios() {
         snap.forEach(docSnap => {
             funcionariosAtuais.push({ id: docSnap.id, ...docSnap.data() });
         });
+        localStorage.setItem('orquestra_funcionarios', JSON.stringify(funcionariosAtuais.map(f => ({
+            id: f.id,
+            nome: f.nome,
+            funcao: f.funcao,
+            foto: f.foto || ''
+        }))));
         
         preencherFiltroMesIndicadoresRH();
         atualizarKPIsRH();
@@ -537,12 +622,14 @@ function renderizarFuncionarios(lista) {
             }
         }
 
+        const fotoOk = fotoValidaRH(f.foto);
+        const inicial = (f.nome || 'F').charAt(0);
         return `
             <tr>
                 <td data-label="Funcionário">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:36px; height:36px; border-radius:50%; background:rgba(0,255,136,0.1); border:1px solid var(--accent-color); display:flex; align-items:center; justify-content:center; color:var(--accent-color); font-weight:bold;">
-                            ${(f.nome || 'F').charAt(0)}
+                        <div class="rh-avatar">
+                            ${fotoOk ? `<img src="${f.foto}" alt="Foto de ${f.nome || 'funcionário'}" class="rh-avatar-img" onerror="this.parentElement.textContent='${inicial}'">` : inicial}
                         </div>
                         <div>
                             <strong style="color:white; font-size:0.95rem;">${f.nome}</strong><br>
@@ -670,6 +757,7 @@ async function salvarFuncionario() {
             valorHeNormal: parseFloat(valorHeNormal) || 0,
             valorHeEspecial: parseFloat(valorHeEspecial) || 0,
             formaPagamento, dadosBancarios, observacao, feriasDias, feriasInicio, feriasFim,
+            foto: fotoFuncionarioAtual || '',
             atestados: anexosAtestadoAtual,
             cats: anexosCatAtual,
             atestado: anexosAtestadoAtual[0] || null,

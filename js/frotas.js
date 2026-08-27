@@ -30,24 +30,57 @@ function tipoAbastecimentoLabel(tipo) {
     return tipo || '-';
 }
 
+function obterUsuarioOperacaoFrota() {
+    const authUser = window.auth?.currentUser || {};
+    const appUser = window.App?.userData || {};
+    const meta = window.AppTenant?.getCurrentUserMeta?.() || {};
+    return {
+        uid: meta.uid || authUser.uid || '',
+        nome: appUser.nome || appUser.displayName || authUser.displayName || authUser.email || 'USUARIO DO SISTEMA',
+        email: appUser.email || authUser.email || ''
+    };
+}
+
+function aplicarAuditoriaFrota(item = {}, novo = false) {
+    const usuario = obterUsuarioOperacaoFrota();
+    const agora = new Date().toISOString();
+    return {
+        ...item,
+        atualizadoEm: agora,
+        atualizadoPorUid: usuario.uid,
+        atualizadoPorNome: usuario.nome,
+        atualizadoPorEmail: usuario.email,
+        ...(novo ? {
+            criadoEm: item.criadoEm || agora,
+            criadoPorUid: usuario.uid,
+            criadoPorNome: usuario.nome,
+            criadoPorEmail: usuario.email
+        } : {})
+    };
+}
+
+function textoAutorFrota(item = {}) {
+    const nome = item.atualizadoPorNome || item.criadoPorNome || item.autorNome || '';
+    return nome ? `<br><small style="color:#94a3b8;"><i class="fa-solid fa-user-check"></i> ${nome}</small>` : '';
+}
+
 async function registrarDespesaAbastecimentoPosto(abastecimento, veiculo) {
-    const lancamento = {
+    const usuario = obterUsuarioOperacaoFrota();
+    const lancamento = aplicarAuditoriaFrota({
         id: abastecimento.financeiroId || `fin_frota_${abastecimento.id}`,
         aba: 'despesas-gerais',
         tipo: 'DIESEL POSTO',
         descricao: `ABASTECIMENTO POSTO - ${veiculo ? `${veiculo.modelo} ${veiculo.placa}` : 'FROTA'}`,
         vencimento: abastecimento.data,
         valor: abastecimento.total,
-        observacao: `Gerado automaticamente pelo modulo de frotas. Requisicao: ${abastecimento.requisicao || '-'} | Litros: ${Number(abastecimento.qtd || 0).toLocaleString('pt-BR')} | Horimetro/KM: ${abastecimento.horimetro || '-'}`,
+        observacao: `Gerado automaticamente pelo modulo de frotas. Requisicao: ${abastecimento.requisicao || '-'} | Litros: ${Number(abastecimento.qtd || 0).toLocaleString('pt-BR')} | Horimetro/KM: ${abastecimento.horimetro || '-'} | Lancado por: ${usuario.nome}`,
         pago: false,
         pagoEm: null,
         documento: null,
         comprovante: null,
         origem: 'FROTAS_ABASTECIMENTO_POSTO',
-        abastecimentoId: abastecimento.id,
-        criadoEm: new Date().toISOString(),
-        atualizadoEm: new Date().toISOString()
-    };
+        abastecimentoId: abastecimento.id
+    }, true);
 
     const lista = JSON.parse(localStorage.getItem(FINANCEIRO_FROTAS_KEY) || '[]');
     const index = lista.findIndex(item => item.id === lancamento.id);
@@ -336,7 +369,7 @@ window.trocarFotoFrota = function(id) {
             let veiculoAtualizado = null;
             frota = frota.map(v => {
                 if (v.id !== id) return v;
-                veiculoAtualizado = { ...v, foto, fotoTipo: 'real', atualizadoEm: new Date().toISOString() };
+                veiculoAtualizado = aplicarAuditoriaFrota({ ...v, foto, fotoTipo: 'real' });
                 return veiculoAtualizado;
             });
             if (!veiculoAtualizado) return;
@@ -367,12 +400,12 @@ async function salvarVeiculo() {
         // Editar existente
         frota = frota.map(v => {
             if (v.id !== id) return v;
-            registroSalvo = { ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, statusOperacional, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome, atualizadoEm: new Date().toISOString() };
+            registroSalvo = aplicarAuditoriaFrota({ ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, statusOperacional, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome });
             return registroSalvo;
         });
     } else {
         // Novo veículo
-        const novo = {
+        const novo = aplicarAuditoriaFrota({
             id: 'v_' + new Date().getTime(),
             modelo,
             codigo: codigoInput || gerarCodigoFrota(grupo),
@@ -381,10 +414,8 @@ async function salvarVeiculo() {
             statusOperacional,
             ano,
             documento,
-            documentoNome: documento ? documentoNome : 'Sem Anexo',
-            criadoEm: new Date().toISOString(),
-            atualizadoEm: new Date().toISOString()
-        };
+            documentoNome: documento ? documentoNome : 'Sem Anexo'
+        }, true);
         frota.push(novo);
         registroSalvo = novo;
     }
@@ -972,7 +1003,8 @@ async function salvarAbastecimento() {
         return;
     }
 
-    const novo = {
+    const usuario = obterUsuarioOperacaoFrota();
+    const novo = aplicarAuditoriaFrota({
         id: 'ab_' + new Date().getTime(),
         veiculoId,
         data,
@@ -983,7 +1015,7 @@ async function salvarAbastecimento() {
         preco,
         total: qtd * preco,
         horimetro
-    };
+    }, true);
 
     if (tipo === 'DIESEL') {
         if (window.registrarSaidaEstoqueFrota) {
@@ -995,7 +1027,7 @@ async function salvarAbastecimento() {
                 frotaId: veiculoId,
                 frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
                 destino: `Consumo Frota: ${v ? v.modelo : 'Veiculo'}`,
-                observacao: `Abastecimento diesel serraria. Horimetro/KM: ${horimetro}`
+                observacao: `Abastecimento diesel serraria. Horimetro/KM: ${horimetro}. Lancado por: ${usuario.nome}`
             });
             if (!itemAtualizado) return;
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
@@ -1016,7 +1048,7 @@ async function salvarAbastecimento() {
                 frotaId: veiculoId,
                 frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
                 destino: `Consumo Frota: ${v ? v.modelo : 'Veiculo'}`,
-                observacao: `Lancamento de lubrificante. Horimetro/KM: ${horimetro}`
+                observacao: `Lancamento de lubrificante. Horimetro/KM: ${horimetro}. Lancado por: ${usuario.nome}`
             });
             if (!itemAtualizado) return;
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
@@ -1060,7 +1092,7 @@ function renderizarAbastecimentosVeiculo(veiculoId) {
     tbody.innerHTML = filtrados.map(a => `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
             <td style="padding: 8px 6px; color: white;">${new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-            <td style="padding: 8px 6px;"><span style="font-weight: bold; color: ${a.tipo === 'DIESEL_POSTO' ? '#f59e0b' : '#ef4444'}; font-size: 0.78rem;">${tipoAbastecimentoLabel(a.tipo)}</span>${a.requisicao ? `<br><small style="color:#94a3b8;">Req: ${a.requisicao}</small>` : ''}</td>
+            <td style="padding: 8px 6px;"><span style="font-weight: bold; color: ${a.tipo === 'DIESEL_POSTO' ? '#f59e0b' : '#ef4444'}; font-size: 0.78rem;">${tipoAbastecimentoLabel(a.tipo)}</span>${a.requisicao ? `<br><small style="color:#94a3b8;">Req: ${a.requisicao}</small>` : ''}${textoAutorFrota(a)}</td>
             <td style="padding: 8px 6px; text-align: center; color: white;">${a.qtd.toFixed(1)}</td>
             <td style="padding: 8px 6px; text-align: right; font-weight: bold; color: white;">R$ ${a.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             <td style="padding: 8px 6px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">${a.horimetro}</td>
@@ -1337,7 +1369,8 @@ async function salvarManutencao() {
         }
     });
 
-    const nova = {
+    const usuario = obterUsuarioOperacaoFrota();
+    const nova = aplicarAuditoriaFrota({
         id: 'mn_' + new Date().getTime(),
         veiculoId,
         data,
@@ -1347,7 +1380,7 @@ async function salvarManutencao() {
         pecas: [...pecasManutencaoTemp],
         totalPecas: pecasManutencaoTemp.reduce((acc, p) => acc + p.subtotal, 0),
         observacao: obs || 'MANUTENÇÃO PERIÓDICA REALIZADA'
-    };
+    }, true);
 
     // --- INTEGRAR E DEDUZIR PEÇAS DO ESTOQUE DEFINITIVAMENTE ---
     estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
@@ -1373,7 +1406,7 @@ async function salvarManutencao() {
                     frotaId: veiculoId,
                     frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA',
                     destino: `Manutenção Frota: ${v ? v.modelo : 'Veículo'}`,
-                    observacao: `Peça aplicada na manutenção. OS: ${nova.id}`
+                    observacao: `Peça aplicada na manutenção. OS: ${nova.id}. Lancado por: ${usuario.nome}`
                 });
             }
         }
@@ -1414,7 +1447,7 @@ function renderizarManutencoesVeiculo(veiculoId) {
         return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem;">
                 <td style="padding: 8px 6px; color: white;">${new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                <td style="padding: 8px 6px;"><span style="font-weight: bold; color: var(--accent-color);">${m.tipo}</span></td>
+                <td style="padding: 8px 6px;"><span style="font-weight: bold; color: var(--accent-color);">${m.tipo}</span>${textoAutorFrota(m)}</td>
                 <td style="padding: 8px 6px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted);" title="${checklistStr}">${checklistStr}</td>
                 <td style="padding: 8px 6px; line-height: 1.3; color: white;">${pecasStr}</td>
                 <td style="padding: 8px 6px; text-align: center; color: white;">${m.horimetro}</td>

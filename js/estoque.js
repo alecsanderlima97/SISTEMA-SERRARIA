@@ -10,6 +10,7 @@ const ESTOQUE_KEY = 'orquestra_estoque';
 const MOV_KEY = 'orquestra_estoque_movimentacoes';
 const TANQUE_DIESEL_KEY = 'orquestra_estoque_tanque_diesel';
 const FROTA_KEY = 'orquestra_frota';
+const FUNCIONARIOS_RH_KEY = 'orquestra_funcionarios';
 const ESTOQUE_INICIALIZADO_KEY = 'orquestra_estoque_inicializado';
 
 // Wave and cylinder tank animations for the liquid simulators
@@ -82,6 +83,38 @@ let movimentacoesEstoque = [];
 let estoqueRenderTimer = null;
 let filtroBuscaEstoque = '';
 let categoriaAtiva = 'TODAS';
+
+function obterUsuarioOperacaoEstoque() {
+    const user = auth?.currentUser || window.auth?.currentUser || {};
+    const data = window.App?.userData || {};
+    return {
+        uid: window.AppTenant?.getCurrentUserMeta?.().uid || user.uid || '',
+        nome: data.nome || data.displayName || user.displayName || user.email || 'USUARIO DO SISTEMA',
+        email: data.email || user.email || ''
+    };
+}
+
+async function obterFuncionariosEstoque() {
+    try {
+        const cache = JSON.parse(localStorage.getItem(FUNCIONARIOS_RH_KEY) || '[]');
+        if (cache.length) return cache;
+    } catch {}
+    if (window.FS?.getCollection) {
+        try {
+            const lista = await window.FS.getCollection('funcionarios');
+            localStorage.setItem(FUNCIONARIOS_RH_KEY, JSON.stringify(lista.map(f => ({
+                id: f.id,
+                nome: f.nome,
+                funcao: f.funcao,
+                foto: f.foto || ''
+            }))));
+            return lista;
+        } catch (error) {
+            console.warn('Nao foi possivel carregar funcionarios para vinculo de EPI.', error);
+        }
+    }
+    return [];
+}
 
 function agendarRenderEstoque(delay = 60) {
     clearTimeout(estoqueRenderTimer);
@@ -924,8 +957,11 @@ window.registrarMovimentacaoEstoque = async function({
     frotaPlaca = '',
     destino = '',
     retiradoPor = '',
+    funcionarioId = '',
+    funcionarioNome = '',
     observacao = ''
 }) {
+    const usuario = obterUsuarioOperacaoEstoque();
     // Build movement object
     const nova = {
         id: 'mov_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000),
@@ -942,6 +978,11 @@ window.registrarMovimentacaoEstoque = async function({
         frotaPlaca,
         destino,
         retiradoPor,
+        funcionarioId,
+        funcionarioNome,
+        autorUid: usuario.uid,
+        autorNome: usuario.nome,
+        autorEmail: usuario.email,
         observacao,
         criadoEm: new Date().toISOString()
     };
@@ -1172,8 +1213,11 @@ window.abrirModalNovaMovimentacao = function() {
     document.getElementById('movObs').value = '';
     const retEl = document.getElementById('movRetiradoPor');
     if (retEl) retEl.value = '';
+    const funcEl = document.getElementById('movFuncionarioId');
+    if (funcEl) funcEl.innerHTML = '<option value="">Carregando funcionários...</option>';
 
     popularItensMovimentacaoManual();
+    popularFuncionariosMovimentacaoManual();
 
     // Populate dropdown with vehicles list
     const selectFrota = document.getElementById('movFrotaId');
@@ -1186,6 +1230,18 @@ window.abrirModalNovaMovimentacao = function() {
     window.onChangeMovTipo(); // setup visibility
     document.getElementById('modalNovaMovimentacao').style.display = 'flex';
 };
+
+async function popularFuncionariosMovimentacaoManual() {
+    const select = document.getElementById('movFuncionarioId');
+    if (!select) return;
+    const funcionarios = await obterFuncionariosEstoque();
+    select.innerHTML = '<option value="">-- SELECIONE SE FOR ENTREGA PARA FUNCIONÁRIO --</option>' +
+        funcionarios
+            .filter(f => f?.id && f?.nome)
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+            .map(f => `<option value="${f.id}" data-nome="${String(f.nome || '').replace(/"/g, '&quot;')}">${f.nome}${f.funcao ? ` - ${f.funcao}` : ''}</option>`)
+            .join('');
+}
 
 function itemControladoPorFrota(item) {
     const categoria = (item?.categoria || '').toUpperCase();
@@ -1259,6 +1315,14 @@ window.onChangeMovFrota = function() {
     }
 };
 
+window.onChangeMovFuncionario = function() {
+    const select = document.getElementById('movFuncionarioId');
+    const input = document.getElementById('movRetiradoPor');
+    if (!select || !input) return;
+    const opt = select.options[select.selectedIndex];
+    if (opt?.value) input.value = (opt.dataset.nome || opt.text || '').split(' - ')[0].toUpperCase();
+};
+
 // Form submit event for new manual transaction
 function salvarNovaMovimentacaoManual(e) {
     e.preventDefault();
@@ -1269,6 +1333,11 @@ function salvarNovaMovimentacaoManual(e) {
     const quantidade = parseFloat(document.getElementById('movQtd').value) || 0;
     const unitario = window.parseCurrencyValue(document.getElementById('movUnitario').value) || 0;
     const retiradoPor = (document.getElementById('movRetiradoPor')?.value || '').trim().toUpperCase();
+    const funcionarioSelect = document.getElementById('movFuncionarioId');
+    const funcionarioId = funcionarioSelect?.value || '';
+    const funcionarioNome = funcionarioId
+        ? ((funcionarioSelect.options[funcionarioSelect.selectedIndex]?.dataset.nome || funcionarioSelect.options[funcionarioSelect.selectedIndex]?.text || '').split(' - ')[0].toUpperCase())
+        : '';
     const frotaSelect = document.getElementById('movFrotaId');
     const frotaId = frotaSelect ? frotaSelect.value : '';
     let frotaPlaca = '';
@@ -1327,7 +1396,9 @@ function salvarNovaMovimentacaoManual(e) {
         frotaPlaca,
         destino,
         retiradoPor,
-        observacao: (retiradoPor ? `Responsável: ${retiradoPor}. ` : '') + observacao + ' (Manual)'
+        funcionarioId,
+        funcionarioNome,
+        observacao: (funcionarioNome ? `Funcionário vinculado: ${funcionarioNome}. ` : '') + (retiradoPor ? `Responsável: ${retiradoPor}. ` : '') + observacao + ' (Manual)'
     });
 
     // Close and refresh
@@ -1360,6 +1431,9 @@ window.renderizarMovimentacoesEstoque = function() {
             (m.categoria || '').toUpperCase().includes(query) ||
             (m.destino || '').toUpperCase().includes(query) ||
             (m.frotaPlaca || '').toUpperCase().includes(query) ||
+            (m.funcionarioNome || '').toUpperCase().includes(query) ||
+            (m.autorNome || '').toUpperCase().includes(query) ||
+            (m.autorEmail || '').toUpperCase().includes(query) ||
             (m.observacao || '').toUpperCase().includes(query)
         );
     }
@@ -1403,9 +1477,13 @@ window.renderizarMovimentacoesEstoque = function() {
                 <td style="padding: 10px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${totalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 10px 8px; color: #60a5fa; font-weight: 500; text-align: center; vertical-align: middle; line-height: 1.25;">
                     ${mov.frotaPlaca ? `<i class="fa-solid fa-truck-pickup" style="font-size: 0.75rem;"></i> ${mov.frotaPlaca}` : mov.destino || 'Uso Geral'}
+                    ${mov.funcionarioNome ? `<br><span style="font-size: 0.72rem; color: #4ade80;"><i class="fa-solid fa-id-card-clip"></i> EPI: ${mov.funcionarioNome}</span>` : ''}
                     ${mov.retiradoPor ? `<br><span style="font-size: 0.72rem; color: #a78bfa;"><i class="fa-solid fa-user"></i> ${mov.retiradoPor}</span>` : ''}
                 </td>
-                <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; vertical-align: middle;" title="${mov.observacao}">${mov.observacao}</td>
+                <td style="padding: 10px 8px; color: var(--text-muted); font-size: 0.8rem; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; vertical-align: middle;" title="${mov.observacao || ''}${mov.autorNome ? ` | Lançado por: ${mov.autorNome}` : ''}">
+                    ${mov.observacao || '-'}
+                    ${mov.autorNome ? `<br><span style="font-size:0.7rem; color:#94a3b8;"><i class="fa-solid fa-user-check"></i> ${mov.autorNome}</span>` : ''}
+                </td>
                 <td style="padding: 10px 8px; text-align: center; vertical-align: middle;">
                     <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
                         <button type="button" class="btn-action-card" onclick="window.excluirMovimentacaoEstoque('${mov.id}')" title="Estornar lancamento" style="padding: 6px 10px; color: #f87171;"><i class="fa-solid fa-rotate-left"></i> Estornar</button>

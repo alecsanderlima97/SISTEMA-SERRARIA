@@ -70,7 +70,7 @@
                     </div>
                     <div id="financeiroListaBody" class="table-responsive financeiro-collapsible">
                         <table class="financeiro-table">
-                            <thead><tr><th><input type="checkbox" id="financeiroSelecionarTodos" onchange="window.marcarTodosFinanceiro(this.checked)" title="Selecionar todos"></th><th>Tipo</th><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Anexos</th><th>Ações</th></tr></thead>
+                            <thead><tr><th><input type="checkbox" id="financeiroSelecionarTodos" onchange="window.marcarTodosFinanceiro(this.checked)" title="Selecionar todos"></th><th><button type="button" class="financeiro-sort-btn" onclick="window.ordenarFinanceiroPor('tipo')">Tipo <span data-sort-icon="tipo"></span></button></th><th><button type="button" class="financeiro-sort-btn" onclick="window.ordenarFinanceiroPor('descricao')">Descrição <span data-sort-icon="descricao"></span></button></th><th><button type="button" class="financeiro-sort-btn" onclick="window.ordenarFinanceiroPor('vencimento')">Data <span data-sort-icon="vencimento"></span></button></th><th><button type="button" class="financeiro-sort-btn" onclick="window.ordenarFinanceiroPor('valor')">Valor <span data-sort-icon="valor"></span></button></th><th><button type="button" class="financeiro-sort-btn" onclick="window.ordenarFinanceiroPor('status')">Status <span data-sort-icon="status"></span></button></th><th>Anexos</th><th>Ações</th></tr></thead>
                             <tbody id="financeiroLista"></tbody>
                         </table>
                     </div>

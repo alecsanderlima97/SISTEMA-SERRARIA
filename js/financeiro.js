@@ -60,6 +60,7 @@ let financeiroAbaAtiva = 'todos';
 let financeiroAnexosTemp = { documento: null, comprovante: null };
 let financeiroRelatorioAtual = [];
 let financeiroNuvemCarregada = false;
+let financeiroOrdenacaoTabela = { campo: 'vencimento', direcao: 'asc' };
 
 function obterPastaFinanceiraItem(item = {}) {
     if (item.pastaFinanceira) return item.pastaFinanceira;
@@ -90,6 +91,45 @@ function obterSubpastaFinanceiraItem(item = {}) {
 
 function normalizarTexto(valor) {
     return (valor || '').toString().trim().toUpperCase();
+}
+
+function financeiroEhNotaFiscal(item = {}) {
+    const categoria = normalizarCategoriaDocumentoFinanceiro(item.documento?.categoria || item.categoriaDocumento || '');
+    const texto = normalizarTexto([
+        item.tipo,
+        item.descricao,
+        item.observacao,
+        item.documento?.nome,
+        item.ia?.numeroDocumento
+    ].filter(Boolean).join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return categoria === 'nota_fiscal'
+        || categoria === 'xml'
+        || item.situacaoDocumento === 'AGUARDANDO_BOLETO'
+        || /NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|DOCUMENTO NFE/.test(texto);
+}
+
+function financeiroGeraCobranca(item = {}) {
+    if (item.geraCobranca === false) return false;
+    if (financeiroEhNotaFiscal(item)) return false;
+    return true;
+}
+
+function obterDataFinanceiroExibicao(item = {}) {
+    if (financeiroEhNotaFiscal(item)) return item.dataEmissao || item.emissao || '';
+    return item.vencimento || item.dataEmissao || '';
+}
+
+function obterDataFinanceiroOrdenacao(item = {}) {
+    return obterDataFinanceiroExibicao(item) || item.criadoEm || item.atualizadoEm || '';
+}
+
+function obterStatusOrdemFinanceiro(item = {}) {
+    if (estaVencido(item)) return 0;
+    if (item.conferenciaStatus === 'pendente') return 1;
+    if (!item.pago && financeiroGeraCobranca(item)) return 2;
+    if (financeiroEhNotaFiscal(item)) return 3;
+    if (item.pago) return 4;
+    return 5;
 }
 
 function obterLancamentosFinanceiros() {
@@ -639,14 +679,14 @@ function dataHoraBR(dataIso) {
 }
 
 function estaVencido(item) {
-    if (item.pago || !item.vencimento) return false;
+    if (item.pago || !item.vencimento || !financeiroGeraCobranca(item)) return false;
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     return new Date(`${item.vencimento}T12:00:00`) < hoje;
 }
 
 function diasAteVencimentoFinanceiro(item) {
-    if (!item.vencimento) return null;
+    if (!item.vencimento || !financeiroGeraCobranca(item)) return null;
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const vencimento = new Date(`${item.vencimento}T00:00:00`);
@@ -656,7 +696,7 @@ function diasAteVencimentoFinanceiro(item) {
 
 function obterBoletosAVencerFinanceiro() {
     return obterLancamentosFinanceiros()
-        .filter(item => !item.pago && item.vencimento)
+        .filter(item => !item.pago && item.vencimento && financeiroGeraCobranca(item))
         .map(item => ({ ...item, diasVencimento: diasAteVencimentoFinanceiro(item) }))
         .filter(item => item.diasVencimento !== null && item.diasVencimento <= 7)
         .sort((a, b) => a.diasVencimento - b.diasVencimento || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR'));
@@ -1015,8 +1055,11 @@ function extrairDadosXmlFinanceiro(texto) {
     return {
         tipo: 'NOTA FISCAL',
         descricao: nome || 'DOCUMENTO XML',
-        vencimento: vencimento || (emissao ? emissao.slice(0, 10) : ''),
-        valor: Number(String(valor || '0').replace(',', '.')) || 0
+        vencimento: '',
+        dataEmissao: emissao ? emissao.slice(0, 10) : '',
+        valor: Number(String(valor || '0').replace(',', '.')) || 0,
+        geraCobranca: false,
+        situacaoDocumento: 'AGUARDANDO_BOLETO'
     };
 }
 
@@ -1107,14 +1150,14 @@ function aplicarRegrasFornecedorFinanceiro(dados, textoBusca, limpo) {
 function leituraFinanceiraIncompleta(dados) {
     if (!dados) return true;
     if (dados.precisaConferencia) return true;
-    if (!dados.vencimento && !dados.emissao) return true;
+    if (!dados.vencimento && !dados.emissao && !dados.dataEmissao) return true;
     if (!Number(dados.valor || 0)) return true;
     if (descricaoFinanceiraRuim(dados.descricao)) return true;
     return false;
 }
 
 function leituraFinanceiraUtil(dados) {
-    return Boolean(dados && Number(dados.valor || 0) > 0 && Boolean(dados.vencimento || dados.emissao) && !descricaoFinanceiraRuim(dados.descricao));
+    return Boolean(dados && Number(dados.valor || 0) > 0 && Boolean(dados.vencimento || dados.emissao || dados.dataEmissao) && !descricaoFinanceiraRuim(dados.descricao));
 }
 
 function comTimeoutFinanceiro(promessa, ms, mensagem = 'Tempo limite na leitura do documento.') {
@@ -1145,12 +1188,15 @@ function normalizarDadosIAFinanceiro(dados = {}) {
     const fornecedor = dados.fornecedor || '';
     const descricao = dados.descricao || fornecedor || dados.tipo || 'PENDENTE DE CONFERENCIA';
     const produtos = Array.isArray(dados.produtos) ? dados.produtos.filter(p => p?.descricao) : [];
+    const tipo = normalizarTexto(dados.tipo || 'DOCUMENTO');
+    const ehNota = /NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|XML/.test(tipo);
     return {
-        tipo: normalizarTexto(dados.tipo || 'DOCUMENTO'),
+        tipo,
         descricao: normalizarTexto(descricao).slice(0, 90),
         fornecedor: normalizarTexto(fornecedor),
         cnpj: dados.cnpj || '',
-        vencimento: dados.vencimento || dados.emissao || '',
+        vencimento: ehNota ? '' : (dados.vencimento || ''),
+        dataEmissao: dados.dataEmissao || dados.emissao || '',
         valor: Number(dados.valor || dados.valorTotal || 0),
         numeroDocumento: dados.numeroDocumento || '',
         produtos,
@@ -1159,7 +1205,9 @@ function normalizarDadosIAFinanceiro(dados = {}) {
         confiancaIA: dados.confianca || 'media',
         observacaoIA: dados.observacao || '',
         analisadoPorIA: true,
-        precisaConferencia: dados.confianca === 'baixa'
+        precisaConferencia: dados.confianca === 'baixa',
+        geraCobranca: !ehNota,
+        situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : (dados.situacaoDocumento || 'A_PAGAR')
     };
 }
 
@@ -1350,9 +1398,12 @@ function extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo) {
         descricao: fornecedor || 'NOTA FISCAL IMPORTADA',
         fornecedor,
         numeroDocumento: numero,
-        vencimento: emissao ? emissao.split(/[\/.-]/).reverse().join('-') : '',
+        vencimento: '',
+        dataEmissao: emissao ? emissao.split(/[\/.-]/).reverse().join('-') : '',
         valor: valorNota || 0,
-        precisaConferencia: !valorNota || descricaoFinanceiraRuim(fornecedor)
+        precisaConferencia: !valorNota || descricaoFinanceiraRuim(fornecedor),
+        geraCobranca: false,
+        situacaoDocumento: 'AGUARDANDO_BOLETO'
     };
 }
 
@@ -1482,9 +1533,11 @@ window.lerDocumentoFinanceiroAutomaticamente = async function() {
     }
     preencherCampoFinanceiro('financeiroTipo', dados.tipo, true);
     preencherCampoFinanceiro('financeiroDescricao', dados.descricao, true);
-    preencherCampoFinanceiro('financeiroVencimento', dados.vencimento, true);
+    preencherCampoFinanceiro('financeiroVencimento', financeiroEhNotaFiscal(dados) ? (dados.dataEmissao || dados.emissao || '') : dados.vencimento, true);
     if (dados.valor > 0) preencherCampoFinanceiro('financeiroValor', formatarMoeda(dados.valor), true);
     atualizarCategoriaDocumentoFinanceiro(anexo, dados);
+    const situacao = document.getElementById('financeiroSituacaoDocumento');
+    if (situacao && financeiroEhNotaFiscal(dados)) situacao.value = 'AGUARDANDO_BOLETO';
     const obs = usouIA
         ? `IMPORTADO DO DOCUMENTO COM APOIO DA IA: ${anexo.nome}`
         : `IMPORTADO DO DOCUMENTO: ${anexo.nome}`;
@@ -1530,9 +1583,11 @@ async function extrairDadosAnexoFinanceiro(anexo) {
 
 function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
     return new Promise(resolve => {
-        const pendente = dados?.precisaConferencia || !dados?.valor || !dados?.vencimento;
+        const ehNota = financeiroEhNotaFiscal(dados);
+        const pendente = dados?.precisaConferencia || !dados?.valor || (!ehNota && !dados?.vencimento);
         const nomeSeguro = escapeHtmlFinanceiro(anexo?.nome || origemArquivo || 'Documento');
         const origemSegura = escapeHtmlFinanceiro(origemArquivo || anexo?.nome || '');
+        const dataImportacao = ehNota ? (dados?.dataEmissao || dados?.emissao || '') : (dados?.vencimento || '');
         const podeVisualizar = Boolean(anexo?.dados || anexo?.localUrl || anexo?.localPath);
         const overlay = document.createElement('div');
         overlay.className = 'financeiro-import-modal';
@@ -1552,7 +1607,7 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
                 <div class="financeiro-import-grid">
                     <label>Tipo<input id="importFinTipo" value="${escapeHtmlFinanceiro(normalizarTexto(dados?.tipo || 'DOCUMENTO'))}"></label>
                     <label>Descrição<input id="importFinDescricao" value="${escapeHtmlFinanceiro(normalizarTexto(dados?.descricao || 'PENDENTE DE CONFERENCIA'))}"></label>
-                    <label>Vencimento<input id="importFinVencimento" type="date" value="${escapeHtmlFinanceiro(dados?.vencimento || '')}"></label>
+                    <label>${ehNota ? 'Emissão' : 'Vencimento'}<input id="importFinVencimento" type="date" value="${escapeHtmlFinanceiro(dataImportacao)}"></label>
                     <label>Valor<input id="importFinValor" value="${escapeHtmlFinanceiro(dados?.valor ? formatarMoeda(dados.valor) : '')}" placeholder="R$ 0,00"></label>
                     <label class="span-2">Observacao<textarea id="importFinObservacao" rows="2">IMPORTADO: ${origemSegura}${pendente ? ' | CONFERIR MANUALMENTE' : ''}</textarea></label>
                 </div>
@@ -1592,10 +1647,13 @@ function confirmarImportacaoFinanceira(anexo, dados, origemArquivo) {
                 resolve({
                     tipo: tipo || 'DOCUMENTO',
                     descricao: descricao || 'PENDENTE DE CONFERENCIA',
-                    vencimento,
+                    vencimento: ehNota ? '' : vencimento,
+                    dataEmissao: ehNota ? vencimento : '',
                     valor,
                     observacao,
-                    precisaConferencia: !vencimento || valor <= 0
+                    precisaConferencia: (!ehNota && !vencimento) || valor <= 0,
+                    geraCobranca: !ehNota,
+                    situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : 'A_PAGAR'
                 });
             });
         });
@@ -1678,19 +1736,22 @@ window.importarPastaFinanceira = async function(files) {
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoLocal, {});
             const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexoLocal, categoriaDocumento, 'importacao_pasta');
+            const ehNotaImportada = categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml';
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: categoriaDocumento === 'boleto' ? 'BOLETO' : (categoriaDocumento === 'xml' || categoriaDocumento === 'nota_fiscal' ? 'NOTA FISCAL' : 'DOCUMENTO'),
+                tipo: categoriaDocumento === 'boleto' ? 'BOLETO' : (ehNotaImportada ? 'NOTA FISCAL' : 'DOCUMENTO'),
                 descricao: normalizarTexto(file.name.replace(/\.(pdf|xml)$/i, '').replace(/[-_]+/g, ' ')) || 'PENDENTE DE CONFERENCIA',
                 vencimento: '',
+                dataEmissao: '',
                 valor: 0,
                 observacao: `IMPORTADO RAPIDO DA PASTA FINANCEIRA: ${file.webkitRelativePath || file.name}`,
                 conferenciaStatus: 'pendente',
                 ia: null,
                 pago: false,
                 pagoEm: null,
-                situacaoDocumento: categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml' ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
+                geraCobranca: !ehNotaImportada,
+                situacaoDocumento: ehNotaImportada ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
                 documentosVinculados: [documentoVinculado],
                 documento: documentoVinculado,
                 comprovante: null,
@@ -1775,22 +1836,25 @@ window.importarFilaMonitorFinanceiro = async function(files) {
             const tipoFinal = sugestao.tipo || 'DOCUMENTO';
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const anexoPrincipal = anexoLocal || fila.anexo || null;
-            const precisaConferencia = !valorFinal || !vencimentoFinal || descricaoFinanceiraRuim(descricaoFinal);
             const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoPrincipal || { nome: fila.nomeArquivo || file.name }, { tipo: tipoFinal, descricao: descricaoFinal });
+            const ehNotaFila = categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml' || financeiroEhNotaFiscal({ tipo: tipoFinal, descricao: descricaoFinal, documento: anexoPrincipal });
+            const precisaConferencia = !valorFinal || (!ehNotaFila && !vencimentoFinal) || descricaoFinanceiraRuim(descricaoFinal);
             const documentoVinculado = anexoPrincipal ? criarDocumentoVinculadoFinanceiro(anexoPrincipal, categoriaDocumento, 'fila_monitor') : null;
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: normalizarTexto(tipoFinal),
+                tipo: ehNotaFila ? 'NOTA FISCAL' : normalizarTexto(tipoFinal),
                 descricao: descricaoFinal || 'PENDENTE DE CONFERENCIA',
-                vencimento: vencimentoFinal,
+                vencimento: ehNotaFila ? '' : vencimentoFinal,
+                dataEmissao: ehNotaFila ? (sugestao.dataEmissao || sugestao.emissao || vencimentoFinal || '') : '',
                 valor: Number(valorFinal || 0),
                 observacao: sugestao.observacao || `IMPORTADO RAPIDO DA FILA DO MONITOR: ${fila.nomeArquivo || file.name}`,
                 pago: false,
                 pagoEm: null,
                 conferenciaStatus: precisaConferencia ? 'pendente' : 'conferido',
                 ia: null,
-                situacaoDocumento: categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml' ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
+                geraCobranca: !ehNotaFila,
+                situacaoDocumento: ehNotaFila ? 'AGUARDANDO_BOLETO' : 'A_PAGAR',
                 documentosVinculados: documentoVinculado ? [documentoVinculado] : [],
                 documento: documentoVinculado,
                 comprovante: null,
@@ -1832,8 +1896,9 @@ function calcularKpisFinanceiro() {
     const mes = agora.getMonth();
     const ano = agora.getFullYear();
 
-    const vencidos = lista.filter(estaVencido).reduce((acc, item) => acc + Number(item.valor || 0), 0);
-    const aberto = lista.filter(item => !item.pago).reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const cobrancas = lista.filter(financeiroGeraCobranca);
+    const vencidos = cobrancas.filter(estaVencido).reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const aberto = cobrancas.filter(item => !item.pago).reduce((acc, item) => acc + Number(item.valor || 0), 0);
     const pagoMes = lista.filter(item => {
         if (!item.pago || !item.pagoEm) return false;
         const dt = new Date(item.pagoEm);
@@ -1861,12 +1926,12 @@ function fimMesAtual() {
 
 function totalDespesasPorPeriodo(inicio, fim) {
     return obterLancamentosFinanceiros()
-        .filter(item => (!inicio || item.vencimento >= inicio) && (!fim || item.vencimento <= fim))
+        .filter(item => financeiroGeraCobranca(item) && (!inicio || item.vencimento >= inicio) && (!fim || item.vencimento <= fim))
         .reduce((acc, item) => acc + Number(item.valor || 0), 0);
 }
 
 window.obterResumoFinanceiroLocal = function(inicio = inicioMesAtual(), fim = fimMesAtual()) {
-    const lista = obterLancamentosFinanceiros().filter(item => (!inicio || item.vencimento >= inicio) && (!fim || item.vencimento <= fim));
+    const lista = obterLancamentosFinanceiros().filter(item => financeiroGeraCobranca(item) && (!inicio || item.vencimento >= inicio) && (!fim || item.vencimento <= fim));
     return {
         inicio,
         fim,
@@ -1989,18 +2054,38 @@ window.renderFinanceiro = function() {
     let lista = listaCompleta.filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
 
     if (filtroStatus === 'PAGO') lista = lista.filter(item => item.pago);
-    if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago);
+    if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago && financeiroGeraCobranca(item));
     if (filtroStatus === 'PENDENTE') lista = lista.filter(item => item.conferenciaStatus === 'pendente');
     if (filtroStatus === 'VENCIDO') lista = lista.filter(estaVencido);
     if (busca) {
-        lista = lista.filter(item => [item.tipo, item.descricao, item.observacao].some(valor => normalizarTexto(valor).includes(busca)));
+        lista = lista.filter(item => [
+            item.tipo,
+            item.descricao,
+            item.observacao,
+            item.vencimento,
+            item.dataEmissao,
+            item.ia?.numeroDocumento,
+            item.documento?.nome,
+            formatarMoeda(item.valor)
+        ].some(valor => normalizarTexto(valor).includes(busca)));
     }
 
     lista.sort((a, b) => {
+        const dir = financeiroOrdenacaoTabela.direcao === 'desc' ? -1 : 1;
+        if (financeiroOrdenacaoTabela.campo === 'tipo') return dir * String(a.tipo || '').localeCompare(String(b.tipo || ''), 'pt-BR');
+        if (financeiroOrdenacaoTabela.campo === 'descricao') return dir * String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR');
+        if (financeiroOrdenacaoTabela.campo === 'valor') return dir * (Number(a.valor || 0) - Number(b.valor || 0));
+        if (financeiroOrdenacaoTabela.campo === 'status') return dir * (obterStatusOrdemFinanceiro(a) - obterStatusOrdemFinanceiro(b));
+        if (financeiroOrdenacaoTabela.campo === 'vencimento') return dir * obterDataFinanceiroOrdenacao(a).localeCompare(obterDataFinanceiroOrdenacao(b));
         if (ordenacao === 'VENCIMENTO_DESC') return (b.vencimento || '').localeCompare(a.vencimento || '');
         if (ordenacao === 'CRIADO_DESC') return (b.criadoEm || b.atualizadoEm || '').localeCompare(a.criadoEm || a.atualizadoEm || '');
         if (ordenacao === 'CRIADO_ASC') return (a.criadoEm || a.atualizadoEm || '').localeCompare(b.criadoEm || b.atualizadoEm || '');
         return (a.vencimento || '').localeCompare(b.vencimento || '');
+    });
+    document.querySelectorAll('[data-sort-icon]').forEach(span => {
+        span.textContent = span.dataset.sortIcon === financeiroOrdenacaoTabela.campo
+            ? (financeiroOrdenacaoTabela.direcao === 'asc' ? '↑' : '↓')
+            : '';
     });
     document.getElementById('financeiroResumoLista').textContent = `${lista.length} registro(s) encontrado(s)`;
     const selecionarTodos = document.getElementById('financeiroSelecionarTodos');
@@ -2027,13 +2112,15 @@ window.renderFinanceiro = function() {
         const criadoEm = dataHoraBR(item.criadoEm);
         const atualizadoEm = dataHoraBR(item.atualizadoEm);
         const tooltipLancamento = `Lançado no sistema em: ${criadoEm}${atualizadoEm !== criadoEm ? ` | Última alteração: ${atualizadoEm}` : ''}`;
+        const ehNota = financeiroEhNotaFiscal(item);
+        const dataExibicao = obterDataFinanceiroExibicao(item);
 
         return `
             <tr class="financeiro-row ${duplicado ? 'financeiro-row-duplicado' : ''}" title="${tooltipLancamento}" onclick="window.toggleFinanceiroLinha('${escapeJsStringFinanceiro(item.id)}', event)">
                 <td><input type="checkbox" class="financeiro-check" value="${item.id}" onchange="window.atualizarSelecaoFinanceiro()"></td>
                 <td><span class="financeiro-tipo-pill">${escapeHtmlFinanceiro(item.tipo || 'Documento')}</span></td>
                 <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
-                <td>${dataBR(item.vencimento)}</td>
+                <td>${dataBR(dataExibicao)}${ehNota ? '<small>Emissão fiscal</small>' : ''}</td>
                 <td><strong>${formatarMoeda(item.valor)}</strong></td>
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
                 <td>${anexos || '<span style="color:var(--text-muted);">-</span>'}</td>
@@ -2082,6 +2169,18 @@ window.marcarTodosFinanceiro = function(checked) {
     window.atualizarSelecaoFinanceiro();
 };
 
+window.ordenarFinanceiroPor = function(campo) {
+    if (financeiroOrdenacaoTabela.campo === campo) {
+        financeiroOrdenacaoTabela.direcao = financeiroOrdenacaoTabela.direcao === 'asc' ? 'desc' : 'asc';
+    } else {
+        financeiroOrdenacaoTabela = {
+            campo,
+            direcao: ['valor', 'status'].includes(campo) ? 'desc' : 'asc'
+        };
+    }
+    window.renderFinanceiro();
+};
+
 window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
@@ -2105,13 +2204,17 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             produtos: dados.produtos || [],
             observacao: dados.observacaoIA || ''
         } : item.ia || null;
+        const ehNota = financeiroEhNotaFiscal(dados);
         const atualizado = {
             ...item,
-            tipo: normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO'),
+            tipo: ehNota ? 'NOTA FISCAL' : normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO'),
             descricao: normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA'),
-            vencimento: dados.vencimento || item.vencimento || '',
+            vencimento: ehNota ? '' : (dados.vencimento || item.vencimento || ''),
+            dataEmissao: ehNota ? (dados.dataEmissao || dados.emissao || item.dataEmissao || '') : (item.dataEmissao || ''),
             valor: Number(dados.valor || item.valor || 0),
             conferenciaStatus: leituraFinanceiraIncompleta(dados) ? 'pendente' : 'conferido',
+            geraCobranca: !ehNota,
+            situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : (item.situacaoDocumento || 'A_PAGAR'),
             ia: dadosIA,
             atualizadoEm: new Date().toISOString()
         };
@@ -2371,6 +2474,9 @@ async function salvarFinanceiroSubmit(event) {
     const categoriaDocumento = categoriaSelecionada === 'AUTO'
         ? detectarCategoriaDocumentoFinanceiro(financeiroAnexosTemp.documento, { tipo, descricao })
         : categoriaSelecionada;
+    const ehNotaFiscalManual = categoriaDocumento === 'nota_fiscal'
+        || categoriaDocumento === 'xml'
+        || financeiroEhNotaFiscal({ tipo, descricao, situacaoDocumento, documento: financeiroAnexosTemp.documento });
     const documentoTemp = financeiroAnexosTemp.documento ? await salvarArquivoFinanceiroLocal(financeiroAnexosTemp.documento) : null;
     const comprovanteTemp = financeiroAnexosTemp.comprovante ? await salvarArquivoFinanceiroLocal(financeiroAnexosTemp.comprovante) : null;
     const novoDocumento = financeiroAnexosTemp.documento
@@ -2384,6 +2490,8 @@ async function salvarFinanceiroSubmit(event) {
     const comprovantePrincipal = novoComprovante || documentosVinculados.find(doc => doc.categoria === 'comprovante') || null;
     const pago = situacaoDocumento === 'PAGO_A_VISTA' ? true : document.getElementById('financeiroPago').checked;
     const conferenciaPendente = ['AGUARDANDO_BOLETO', 'AGUARDANDO_NOTA'].includes(situacaoDocumento);
+    const vencimentoFinal = ehNotaFiscalManual ? '' : vencimento;
+    const dataEmissaoFinal = ehNotaFiscalManual ? (vencimento || existente?.dataEmissao || '') : (existente?.dataEmissao || '');
     const registro = {
         id,
         aba: financeiroAbaAtiva === 'todos' ? 'caixa-financeira' : financeiroAbaAtiva,
@@ -2391,11 +2499,13 @@ async function salvarFinanceiroSubmit(event) {
         subpastaFinanceira: normalizarTexto(document.getElementById('financeiroSubpasta')?.value || ''),
         tipo,
         descricao,
-        vencimento,
+        vencimento: vencimentoFinal,
+        dataEmissao: dataEmissaoFinal,
         valor,
         observacao: document.getElementById('financeiroObservacao').value.trim(),
         situacaoDocumento,
         conferenciaStatus: conferenciaPendente ? 'pendente' : 'conferido',
+        geraCobranca: !ehNotaFiscalManual,
         pago,
         pagoEm: pago ? (existente?.pagoEm || new Date().toISOString()) : null,
         documentosVinculados,
@@ -2666,6 +2776,9 @@ function injetarEstilosFinanceiro() {
         .financeiro-lembrete-item-valor { white-space:nowrap; }
         .financeiro-menu-alerta { position:relative; animation:none !important; }
         .financeiro-menu-alerta::after { content:''; width:9px; height:9px; min-width:9px; border-radius:999px; background:#f5b843; box-shadow:0 0 0 4px rgba(245,184,67,.12), 0 0 16px rgba(245,184,67,.65); margin-left:auto; animation: financeiroMenuDotPulse 1.45s ease-in-out infinite; }
+        .financeiro-sort-btn { appearance:none; border:0; background:transparent; color:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; margin:0; font:inherit; font-weight:900; text-transform:inherit; cursor:pointer; }
+        .financeiro-sort-btn:hover { color:#0f8fa6; }
+        .financeiro-sort-btn span { min-width:10px; color:#0f8fa6; font-weight:900; }
         @keyframes financeiroPulse { 0%,100% { box-shadow:0 14px 34px rgba(15,23,42,.22), 0 0 0 rgba(245,158,11,0); } 50% { box-shadow:0 16px 38px rgba(15,23,42,.25), 0 0 14px rgba(245,158,11,.18); } }
         @keyframes financeiroMenuGlow { 0%,100% { filter:none; } 50% { filter:brightness(1.35); } }
         @keyframes financeiroMenuDotPulse { 0%,100% { transform:scale(1); opacity:.9; } 50% { transform:scale(1.25); opacity:1; } }

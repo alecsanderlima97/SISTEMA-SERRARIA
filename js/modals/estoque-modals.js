@@ -23,6 +23,12 @@
                     </select>
                 </div>
                 <div style="grid-column: span 3; margin-bottom: 0;">
+                    <label for="movFuncionarioId" style="font-size: 0.8rem; margin-bottom: 4px; display: block; color: #86efac;"><i class="fa-solid fa-id-card-clip"></i> Funcionário vinculado ao EPI / retirada</label>
+                    <select id="movFuncionarioId" onchange="window.onChangeMovFuncionario?.()" style="width: 100%; border-radius: 6px; border: 1px solid rgba(34,197,94,0.35); background: rgba(34,197,94,0.07); color: white; padding: 8px 10px; font-size: 0.85rem;">
+                        <option value="">-- SELECIONE SE FOR ENTREGA PARA FUNCIONÁRIO --</option>
+                    </select>
+                </div>
+                <div style="grid-column: span 3; margin-bottom: 0;">
                     <label for="movRetiradoPor" style="font-size: 0.8rem; margin-bottom: 4px; display: block; color: #a78bfa;"><i class="fa-solid fa-user"></i> Retirado por / Responsável</label>
                     <input type="text" id="movRetiradoPor" class="text-uppercase-input" placeholder="Ex: JOÃO DA SILVA" style="width: 100%; border-radius: 6px; border: 1px solid rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: white; padding: 8px 10px; font-size: 0.85rem;">
                 </div>

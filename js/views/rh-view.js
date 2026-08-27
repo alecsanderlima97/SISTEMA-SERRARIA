@@ -29,6 +29,20 @@
                             <i class="fa-solid fa-user"></i> Informações Pessoais
                         </h3>
                         <div class="grid-form" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="input-group rh-photo-group">
+                                <label>Foto do funcionário</label>
+                                <div class="rh-photo-picker">
+                                    <button type="button" id="rhFotoPreview" class="rh-photo-preview" onclick="document.getElementById('rh-foto')?.click()" title="Adicionar ou trocar foto">
+                                        <i class="fa-solid fa-camera"></i>
+                                    </button>
+                                    <div class="rh-photo-actions">
+                                        <input type="file" id="rh-foto" accept="image/*" style="display:none;">
+                                        <button type="button" class="btn-secondary" onclick="document.getElementById('rh-foto')?.click()"><i class="fa-solid fa-image"></i> Escolher foto</button>
+                                        <button type="button" class="btn-secondary" onclick="window.removerFotoRH?.()"><i class="fa-solid fa-xmark"></i> Remover</button>
+                                        <small id="rh-foto-nome">Nenhuma foto selecionada</small>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="input-group">
                                 <label>Nome Completo *</label>
                                 <input type="text" id="rh-nome" class="text-uppercase-input" required placeholder="Ex: JOÃO DA SILVA">
