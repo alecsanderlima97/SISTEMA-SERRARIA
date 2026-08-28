@@ -333,7 +333,7 @@ function renderizarListaVisualPatioRomaneio() {
                 </div>
                 <div class="v2-patio-saldo" style="text-align:center; font-weight:900; font-size:.68rem; color:#334155; text-transform:uppercase;">Saldo<br><span style="font-size:1rem; color:#0f172a;">${saldo}</span></div>
                 <input class="v2-patio-qtd" type="number" min="1" max="${saldo}" value="${saldo > 0 ? 1 : 0}" ${desabilitado ? 'disabled' : ''} id="v2-patio-qtd-${item.id}" style="width:100%; min-width:0; padding:8px; border-radius:8px; border:1px solid #94a3b8; text-align:center; font-weight:900; background:#fffdf7; color:#0f172a;">
-                <button type="button" ${desabilitado ? 'disabled' : ''} onclick="window.adicionarItemPatioDiretoRomaneio('${item.id}')" class="btn-v2 btn-primary-v2 v2-patio-add" style="padding:8px 10px; min-width:0; white-space:nowrap; opacity:${desabilitado ? '.45' : '1'};">
+                <button type="button" ${desabilitado ? 'disabled' : ''} onclick="window.adicionarItemPatioDiretoRomaneio('${item.id}', this)" class="btn-v2 btn-primary-v2 v2-patio-add" style="padding:8px 10px; min-width:0; white-space:nowrap; opacity:${desabilitado ? '.45' : '1'};">
                     <i class="fa-solid fa-plus"></i> Adicionar
                 </button>
             </div>
@@ -383,9 +383,11 @@ window.usarItemPatioRomaneio = function(id) {
     destacarCamposPacoteRomaneio();
 };
 
-window.adicionarItemPatioDiretoRomaneio = function(id) {
+window.adicionarItemPatioDiretoRomaneio = function(id, origemBotao = null) {
     const item = patioItensDisponiveis.find(i => i.id === id);
     if (!item) return;
+    const origem = origemBotao || document.querySelector(`[data-patio-id="${id}"]`);
+    const origemRect = origem?.getBoundingClientRect?.();
 
     const saldo = saldoItemPatioRomaneio(item);
     const qtdEl = document.getElementById(`v2-patio-qtd-${id}`);
@@ -399,8 +401,7 @@ window.adicionarItemPatioDiretoRomaneio = function(id) {
     const qtdPacotes = document.getElementById('v2-qtd-pacotes');
     if (qtdPacotes) qtdPacotes.value = qtd;
     atualizarVolumePreview();
-    const origem = document.querySelector(`[data-patio-id="${id}"]`);
-    adicionarPacote({ pularConfirmacao: true, manterListaPatioAberta: true, origemAnimacao: origem });
+    adicionarPacote({ pularConfirmacao: true, manterListaPatioAberta: true, origemAnimacao: origemRect || origem });
 };
 
 async function carregarPatioParaRomaneio() {
@@ -1053,18 +1054,20 @@ function destacarCamposPacoteRomaneio() {
 }
 
 function animarPacoteParaRomaneio(origem) {
-    if (!origem) return;
+    const origemRect = origem?.left !== undefined ? origem : origem?.getBoundingClientRect?.();
+    if (!origemRect) return;
     const destino = document.getElementById('v2-lista-classes') || document.getElementById('btn-add-pacote-v2');
     if (!destino) return;
-    const origemRect = origem.getBoundingClientRect();
     const destinoRect = destino.getBoundingClientRect();
     const ghost = document.createElement('div');
     ghost.className = 'romaneio-package-ghost hide-on-print';
     ghost.innerHTML = '<i class="fa-solid fa-box"></i><span>Adicionado</span>';
     ghost.style.left = `${origemRect.left + origemRect.width / 2 - 64}px`;
     ghost.style.top = `${origemRect.top + origemRect.height / 2 - 18}px`;
-    ghost.style.setProperty('--move-x', `${destinoRect.left + destinoRect.width * 0.22 - origemRect.left}px`);
-    ghost.style.setProperty('--move-y', `${destinoRect.top + 20 - origemRect.top}px`);
+    const centroOrigemX = origemRect.left + (origemRect.width / 2);
+    const centroOrigemY = origemRect.top + (origemRect.height / 2);
+    ghost.style.setProperty('--move-x', `${destinoRect.left + destinoRect.width * 0.22 - centroOrigemX}px`);
+    ghost.style.setProperty('--move-y', `${destinoRect.top + 20 - centroOrigemY}px`);
     document.body.appendChild(ghost);
     setTimeout(() => ghost.remove(), 900);
 }

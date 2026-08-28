@@ -72,10 +72,18 @@
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
+                    <div class="fluxo-patio-selection-bar" id="fluxoPatioSelectionBar">
+                        <label class="fluxo-patio-select-all"><input type="checkbox" id="fluxoPatioSelecionarTodos" onchange="window.selecionarTodosFluxoPatio(this.checked)"> Selecionar todos</label>
+                        <span id="fluxoPatioSelecaoResumo">Nenhum lote selecionado</span>
+                        <div class="fluxo-patio-selection-actions">
+                            <button type="button" class="btn-secondary" id="btnExcluirSelecionadosFluxoPatio" onclick="window.excluirSelecionadosFluxoPatio()" disabled><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
+                            <button type="button" class="btn-danger" id="btnLimparTudoFluxoPatio" onclick="window.limparTudoFluxoPatio()"><i class="fa-solid fa-trash-can-arrow-up"></i> Limpar tudo</button>
+                        </div>
+                    </div>
                     <div class="table-container">
                         <table>
-                            <thead class="fluxo-patio-head"><tr><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th><th>Acoes</th></tr></thead>
-                            <tbody id="producaoPatioLista"><tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
+                            <thead class="fluxo-patio-head"><tr><th class="hide-on-print">Sel.</th><th>Classe</th><th>Cubagem</th><th>Pacotes</th><th>Volume</th><th>Acoes</th></tr></thead>
+                            <tbody id="producaoPatioLista"><tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
                         </table>
                     </div>
                 </div>

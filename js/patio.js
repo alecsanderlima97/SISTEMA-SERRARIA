@@ -16,6 +16,7 @@ let romaneiosPatioCacheEm = 0;
 let romaneiosPatioPromise = null;
 let resumoProducaoPatioIndice = 0;
 let itensPatioSelecionados = new Set();
+let itensFluxoPatioSelecionados = new Set();
 let itemPatioEditandoId = null;
 const CACHE_PATIO_MS = 30000;
 
@@ -578,7 +579,7 @@ async function renderizarProducaoPatio(options = {}) {
     if (!tbody) return;
 
     if (recarregar) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px;"><span class="saw-loader" aria-hidden="true"></span> Carregando producao do patio...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px;"><span class="saw-loader" aria-hidden="true"></span> Carregando producao do patio...</td></tr>';
     }
 
     try {
@@ -587,13 +588,14 @@ async function renderizarProducaoPatio(options = {}) {
         }
         const atual = producaoPatioRelatorioAtual;
         if (!atual) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Nenhum controle de producao salvo ainda.</td></tr>';
             if (info) info.textContent = 'Faca a primeira contagem no Controle de Producao.';
             atualizarStatusProducaoPatio(null);
             return;
         }
 
         atual.itens = ordenarItensPatio(Array.isArray(atual.itens) ? atual.itens : []);
+        itensFluxoPatioSelecionados = new Set([...itensFluxoPatioSelecionados].filter(id => atual.itens.some(item => item.id === id)));
         instalarListenersProducaoPatio();
         atualizarResumoNovaCubagemProducaoPatio();
         if (serrandoInput) serrandoInput.value = atual.serrando || '';
@@ -615,7 +617,8 @@ async function renderizarProducaoPatio(options = {}) {
                    <small style="display:block; margin-top:3px; color:#334155; font-size:0.74rem; font-weight:800;">* ${formatarResumoPacoteProducao(item)}</small>`
                 : `<small style="display:block; color:#334155; font-size:0.78rem; font-weight:900;">* ${formatarResumoPacoteProducao(item)}</small>`;
             return `
-            <tr class="fluxo-patio-row-areia">
+            <tr class="fluxo-patio-row-areia ${itensFluxoPatioSelecionados.has(item.id) ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
+                <td class="hide-on-print fluxo-patio-selection-cell"><input type="checkbox" ${itensFluxoPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" title="Selecionar lote"></td>
                 <td>${classeHtml}</td>
                 <td class="fluxo-patio-cubagem">
                     ${cubagemHtml}
@@ -623,8 +626,8 @@ async function renderizarProducaoPatio(options = {}) {
                 <td class="fluxo-patio-numero" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
                 <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m3</td>
                 <td style="text-align:center;">
-                    ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1)`, 'Diminuir')}
-                    ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1)`, 'Adicionar')}
+                    ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1, this)`, 'Diminuir')}
+                    ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1, this)`, 'Adicionar')}
                     <button type="button" class="btn-fluxo-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')" title="Editar cubagem">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
@@ -633,17 +636,104 @@ async function renderizarProducaoPatio(options = {}) {
                     </button>
                 </td>
             </tr>
-        `}).join('') : '<tr><td colspan="5" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
+        `}).join('') : '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
+        atualizarResumoSelecaoFluxoPatio();
         await atualizarResumoFluxoPatioCompleto();
     } catch (error) {
         console.error('Erro na producao do patio:', error);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar producao do patio.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 18px; color:#ef4444;">Erro ao carregar producao do patio.</td></tr>';
     }
 }
 
-window.alterarPacotesProducaoPatio = async function(id, delta) {
+function animarAlteracaoFluxoPatio(origem, id, tipo) {
+    const origemRect = origem?.left !== undefined ? origem : origem?.getBoundingClientRect?.();
+    if (!origemRect) return;
+    const destino = document.querySelector(`[data-fluxo-patio-id="${id}"]`);
+    if (!destino) return;
+    const destinoRect = destino.getBoundingClientRect();
+    const centroOrigemX = origemRect.left + (origemRect.width / 2);
+    const centroOrigemY = origemRect.top + (origemRect.height / 2);
+    const centroDestinoX = destinoRect.left + (destinoRect.width * .58);
+    const centroDestinoY = destinoRect.top + (destinoRect.height / 2);
+    const ghost = document.createElement('div');
+    ghost.className = `fluxo-patio-package-ghost is-${tipo}`;
+    ghost.innerHTML = `<i class="fa-solid fa-${tipo === 'add' ? 'box' : 'box-open'}"></i><span>${tipo === 'add' ? 'Adicionado' : 'Removido'}</span>`;
+    ghost.style.left = `${centroOrigemX - 58}px`;
+    ghost.style.top = `${centroOrigemY - 16}px`;
+    ghost.style.setProperty('--move-x', `${centroDestinoX - centroOrigemX}px`);
+    ghost.style.setProperty('--move-y', `${centroDestinoY - centroOrigemY}px`);
+    document.body.appendChild(ghost);
+    destino.classList.remove('fluxo-patio-row-flash');
+    void destino.offsetWidth;
+    destino.classList.add('fluxo-patio-row-flash');
+    setTimeout(() => ghost.remove(), 860);
+}
+
+function atualizarResumoSelecaoFluxoPatio() {
+    const itens = (producaoPatioRelatorioAtual?.itens || []).filter(item => itensFluxoPatioSelecionados.has(item.id));
+    const resumo = itens.reduce((acc, item) => {
+        acc.lotes += 1;
+        acc.pacotes += Number(item.pacotes) || 0;
+        acc.volume += Number(item.volume) || 0;
+        return acc;
+    }, { lotes: 0, pacotes: 0, volume: 0 });
+    const label = document.getElementById('fluxoPatioSelecaoResumo');
+    const selecionarTodos = document.getElementById('fluxoPatioSelecionarTodos');
+    const excluir = document.getElementById('btnExcluirSelecionadosFluxoPatio');
+    const totalItens = producaoPatioRelatorioAtual?.itens?.length || 0;
+    if (label) label.textContent = resumo.lotes
+        ? `${resumo.lotes} lote(s) | ${resumo.pacotes} pacote(s) | ${formatDecimalMockup(resumo.volume)} m³`
+        : 'Nenhum lote selecionado';
+    if (selecionarTodos) {
+        selecionarTodos.checked = totalItens > 0 && resumo.lotes === totalItens;
+        selecionarTodos.indeterminate = resumo.lotes > 0 && resumo.lotes < totalItens;
+    }
+    if (excluir) excluir.disabled = resumo.lotes === 0;
+}
+
+window.toggleSelecionarItemFluxoPatio = function(id, checked) {
+    if (checked) itensFluxoPatioSelecionados.add(id);
+    else itensFluxoPatioSelecionados.delete(id);
+    const linha = document.querySelector(`[data-fluxo-patio-id="${id}"]`);
+    if (linha) linha.classList.toggle('is-selected', checked);
+    atualizarResumoSelecaoFluxoPatio();
+};
+
+window.selecionarTodosFluxoPatio = function(checked) {
+    const itens = producaoPatioRelatorioAtual?.itens || [];
+    itensFluxoPatioSelecionados = checked ? new Set(itens.map(item => item.id)) : new Set();
+    renderizarProducaoPatio({ recarregar: false });
+};
+
+window.excluirSelecionadosFluxoPatio = async function() {
+    const itens = producaoPatioRelatorioAtual?.itens || [];
+    const ids = new Set([...itensFluxoPatioSelecionados].filter(id => itens.some(item => item.id === id)));
+    if (!ids.size) return;
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${ids.size} lote(s) selecionado(s) do Fluxo do Patio?`);
+    if (!autorizado) return;
+    producaoPatioRelatorioAtual.itens = itens.filter(item => !ids.has(item.id));
+    itensFluxoPatioSelecionados.clear();
+    producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu ${ids.size} lote(s) selecionado(s) do Fluxo do Patio`);
+    await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+    await renderizarProducaoPatio({ recarregar: false });
+};
+
+window.limparTudoFluxoPatio = async function() {
+    const itens = producaoPatioRelatorioAtual?.itens || [];
+    if (!itens.length) return;
+    const autorizado = await window.confirmarExclusaoComSenha('Deseja limpar todos os lotes do Fluxo do Patio? Esta acao nao pode ser desfeita.');
+    if (!autorizado) return;
+    producaoPatioRelatorioAtual.itens = [];
+    itensFluxoPatioSelecionados.clear();
+    producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Limpou todos os lotes do Fluxo do Patio');
+    await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+    await renderizarProducaoPatio({ recarregar: false });
+};
+
+window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
     if (window.__salvandoFluxoPatio) return;
     if (!producaoPatioRelatorioAtual) return;
+    const origemRect = origem?.getBoundingClientRect?.();
     const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
     if (!item) return;
 
@@ -656,6 +746,7 @@ window.alterarPacotesProducaoPatio = async function(id, delta) {
         producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${delta > 0 ? 'Adicionou' : 'Removeu'} pacote em ${formatCubagemFluxo(item)}`);
         await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
         await renderizarProducaoPatio({ recarregar: false });
+        animarAlteracaoFluxoPatio(origemRect || origem, id, delta > 0 ? 'add' : 'remove');
     } catch (error) {
         console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
         alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');

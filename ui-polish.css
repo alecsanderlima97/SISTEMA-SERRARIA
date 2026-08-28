@@ -537,6 +537,66 @@ table td {
     }
 }
 
+.fluxo-patio-selection-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-height: 44px;
+    padding: 8px 10px;
+    margin: 0 0 10px;
+    border: 1px solid rgba(109, 84, 47, .22);
+    border-radius: 8px;
+    background: rgba(255, 253, 247, .76);
+    color: #334155;
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.fluxo-patio-select-all { display:inline-flex; align-items:center; gap:7px; cursor:pointer; }
+.fluxo-patio-select-all input,
+.fluxo-patio-selection-cell input { width:17px; height:17px; accent-color:#15803d; cursor:pointer; }
+.fluxo-patio-selection-actions { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.fluxo-patio-selection-actions button { min-height:34px; padding:6px 10px; font-size:.75rem; }
+.fluxo-patio-selection-actions button:disabled { opacity:.48; cursor:not-allowed; }
+#producaoPatioLista .fluxo-patio-row-areia.is-selected { background:#e2f3e7 !important; box-shadow: inset 3px 0 0 #15803d; }
+#producaoPatioLista .fluxo-patio-row-flash { animation: fluxoPatioRowFlash .9s ease both; }
+
+.fluxo-patio-package-ghost {
+    position: fixed;
+    z-index: 100000;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: 116px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 900;
+    pointer-events: none;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, .25);
+    animation: fluxoPatioPacoteMove .82s cubic-bezier(.2,.75,.2,1) forwards;
+}
+.fluxo-patio-package-ghost.is-add { background:#15803d; border:1px solid #4ade80; }
+.fluxo-patio-package-ghost.is-remove { background:#b91c1c; border:1px solid #fca5a5; }
+
+@keyframes fluxoPatioPacoteMove {
+    0% { opacity:0; transform:translate3d(0,0,0) scale(.9); }
+    18% { opacity:1; }
+    100% { opacity:0; transform:translate3d(var(--move-x),var(--move-y),0) scale(.72); }
+}
+@keyframes fluxoPatioRowFlash {
+    0% { filter:brightness(1.15); box-shadow:inset 0 0 0 999px rgba(22,163,74,.17); }
+    100% { filter:none; box-shadow:none; }
+}
+
+@media (max-width: 720px) {
+    .fluxo-patio-selection-actions { width:100%; margin-left:0; }
+    .fluxo-patio-selection-actions button { flex:1; justify-content:center; }
+}
+
 .app-version-footer {
     position: fixed;
     left: 260px;
