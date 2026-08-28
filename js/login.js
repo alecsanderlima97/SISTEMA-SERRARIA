@@ -39,12 +39,6 @@ function redirecionarLocalhostAutorizadoSeNecessario() {
     return true;
 }
 
-function deveUsarRedirectGoogle() {
-    const hostname = window.location.hostname.toLowerCase();
-    const isLocalAutorizado = hostname === 'localhost';
-    return !isLocalAutorizado;
-}
-
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(String(email || '').toLowerCase().trim())) {
         return 'gerente';
@@ -217,10 +211,6 @@ if (btnGoogleLogin) {
         provider.setCustomParameters({ prompt: 'select_account' });
         btnGoogleLogin.disabled = true;
         try {
-            if (deveUsarRedirectGoogle()) {
-                await signInWithRedirect(auth, provider);
-                return;
-            }
             const result = await signInWithPopup(auth, provider);
             await prepararUsuarioGoogle(result.user);
             goToSystemWithEntranceSound();
