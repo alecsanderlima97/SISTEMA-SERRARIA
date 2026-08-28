@@ -16,6 +16,28 @@ const ADMIN_EMAILS = [
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const LOGIN_SOUND_PATH = 'assets/audio/login_sound.mp3';
 const MIN_LOGIN_SOUND_MS = 3500;
+const LOCAL_GOOGLE_AUTH_HOST = 'localhost:5500';
+
+function isHostLocalAlternativo() {
+    const hostname = window.location.hostname.toLowerCase();
+    return hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.endsWith('.localhost');
+}
+
+function getLoginUrlAutorizadaGoogle() {
+    const url = new URL(window.location.href);
+    url.protocol = 'http:';
+    url.host = LOCAL_GOOGLE_AUTH_HOST;
+    url.pathname = url.pathname.endsWith('/login.html') ? url.pathname : '/login.html';
+    return url.toString();
+}
+
+function redirecionarLocalhostAutorizadoSeNecessario() {
+    const host = window.location.host.toLowerCase();
+    if (!isHostLocalAlternativo() || host === LOCAL_GOOGLE_AUTH_HOST) return false;
+
+    window.location.replace(getLoginUrlAutorizadaGoogle());
+    return true;
+}
 
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(String(email || '').toLowerCase().trim())) {
@@ -26,7 +48,10 @@ function getCargoInicial(email) {
 
 function mensagemErroGoogle(error) {
     if (error?.code === 'auth/unauthorized-domain') {
-        return 'Este endereço local não está autorizado pelo Google. Abra pelo link http://localhost:5500/login.html e tente novamente.';
+        if (isHostLocalAlternativo()) {
+            return `Este endereço local não está autorizado pelo Google. Abra pelo link ${getLoginUrlAutorizadaGoogle()} e tente novamente.`;
+        }
+        return `O domínio ${window.location.hostname} ainda não está autorizado no Firebase/Google. Adicione este domínio em Authentication > Settings > Authorized domains e tente novamente.`;
     }
     if (error?.code === 'auth/popup-closed-by-user') {
         return 'Login com Google cancelado antes de concluir.';
@@ -179,6 +204,8 @@ checkGoogleRedirectResult();
 
 if (btnGoogleLogin) {
     btnGoogleLogin.addEventListener('click', async () => {
+        if (redirecionarLocalhostAutorizadoSeNecessario()) return;
+
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         btnGoogleLogin.disabled = true;
@@ -328,10 +355,15 @@ if (registerForm) {
 
 // 5. FUNÇÕES AUXILIARES DE EXIBIÇÃO DE ERRO
 function showError(msg) {
-    errorMsg.textContent = msg;
+    if (String(msg).includes('http://localhost:5500/login.html')) {
+        const url = getLoginUrlAutorizadaGoogle();
+        errorMsg.innerHTML = `Este endereço local não está autorizado pelo Google. <a href="${url}" style="color:#fff; font-weight:900; text-decoration:underline;">Abrir localhost autorizado</a>.`;
+    } else {
+        errorMsg.textContent = msg;
+    }
     errorMsg.style.display = 'block';
     passwordInput.value = '';
-    setTimeout(() => { errorMsg.style.display = 'none'; }, 6000);
+    setTimeout(() => { errorMsg.style.display = 'none'; }, 10000);
 }
 
 function showRegisterError(msg) {
