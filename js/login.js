@@ -39,6 +39,12 @@ function redirecionarLocalhostAutorizadoSeNecessario() {
     return true;
 }
 
+function deveUsarRedirectGoogle() {
+    const hostname = window.location.hostname.toLowerCase();
+    const isLocalAutorizado = hostname === 'localhost';
+    return !isLocalAutorizado;
+}
+
 function getCargoInicial(email) {
     if (ADMIN_EMAILS.includes(String(email || '').toLowerCase().trim())) {
         return 'gerente';
@@ -47,6 +53,7 @@ function getCargoInicial(email) {
 }
 
 function mensagemErroGoogle(error) {
+    const detalhe = error?.code ? ` Código: ${error.code}.` : '';
     if (error?.code === 'auth/unauthorized-domain') {
         if (isHostLocalAlternativo()) {
             return `Este endereço local não está autorizado pelo Google. Abra pelo link ${getLoginUrlAutorizadaGoogle()} e tente novamente.`;
@@ -59,7 +66,7 @@ function mensagemErroGoogle(error) {
     if (error?.code === 'auth/account-exists-with-different-credential') {
         return 'Este e-mail já existe com outro tipo de login. Entre com e-mail e senha ou use a mesma forma cadastrada.';
     }
-    return 'Falha ao acessar com Google. Verifique se pop-ups estão liberados e tente novamente.';
+    return `Falha ao acessar com Google.${detalhe} Tente novamente ou entre com e-mail e senha.`;
 }
 
 function playLoginSound() {
@@ -210,6 +217,10 @@ if (btnGoogleLogin) {
         provider.setCustomParameters({ prompt: 'select_account' });
         btnGoogleLogin.disabled = true;
         try {
+            if (deveUsarRedirectGoogle()) {
+                await signInWithRedirect(auth, provider);
+                return;
+            }
             const result = await signInWithPopup(auth, provider);
             await prepararUsuarioGoogle(result.user);
             goToSystemWithEntranceSound();
