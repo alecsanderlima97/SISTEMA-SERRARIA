@@ -1669,3 +1669,48 @@ body.dashboard-fluxo-patio-exclusivo #view-dashboard > :not(#panelProducaoPatio)
 body.dashboard-fluxo-patio-exclusivo #view-dashboard #panelProducaoPatio {
     margin: 0 !important;
 }
+
+#panelListaClientesSub table,
+#panelLancamentosSub table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+    font-size: 0.78rem !important;
+}
+
+#panelListaClientesSub > div:last-child,
+#panelLancamentosSub > div:last-child {
+    overflow: auto !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    border-radius: 8px !important;
+}
+
+#panelListaClientesSub th,
+#panelLancamentosSub th {
+    white-space: nowrap;
+}
+
+#panelListaClientesSub td,
+#panelLancamentosSub td {
+    vertical-align: middle;
+}
+
+.subproduto-actions-compact {
+    display: inline-flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.subproduto-action {
+    width: 30px;
+    height: 30px;
+    display: inline-grid !important;
+    place-items: center;
+    padding: 0 !important;
+    border-radius: 6px !important;
+    background: rgba(255,255,255,.75) !important;
+    border: 1px solid rgba(148,163,184,.28) !important;
+    color: var(--text-color, #0f172a);
+}

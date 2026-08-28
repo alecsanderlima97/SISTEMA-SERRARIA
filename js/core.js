@@ -639,6 +639,8 @@ function aplicarMascaraTelefone(valor = '') {
 }
 
 function preencherFormularioPerfil(userData = {}, authUser = null) {
+    if (window.__orqPerfilUsuarioEditando) return;
+
     const values = {
         nome: userData.nome || authUser?.displayName || authUser?.email?.split('@')[0] || '',
         email: authUser?.email || userData.email || '',
@@ -665,6 +667,18 @@ function inicializarMascarasPerfil() {
     const cpfInput = document.getElementById(PROFILE_FIELD_IDS.cpf);
     const cnpjInput = document.getElementById(PROFILE_FIELD_IDS.cnpj);
     const telefoneInput = document.getElementById(PROFILE_FIELD_IDS.telefone);
+
+    Object.values(PROFILE_FIELD_IDS).forEach(id => {
+        const input = document.getElementById(id);
+        if (!input || input.dataset.profileDirtyReady) return;
+        input.dataset.profileDirtyReady = 'true';
+        input.addEventListener('input', () => {
+            if (id !== PROFILE_FIELD_IDS.email) window.__orqPerfilUsuarioEditando = true;
+        });
+        input.addEventListener('focus', () => {
+            if (id !== PROFILE_FIELD_IDS.email) window.__orqPerfilUsuarioEditando = true;
+        });
+    });
 
     if (cpfInput && !cpfInput.dataset.maskReady) {
         cpfInput.dataset.maskReady = 'true';
@@ -1720,6 +1734,7 @@ window.salvarPerfilUsuario = async function() {
             App.userName = nome;
             App.userData = { ...(App.userData || {}), ...payload };
         }
+        window.__orqPerfilUsuarioEditando = false;
         preencherFormularioPerfil(payload, authUser);
         const nameHeader = document.getElementById('userNameHeader');
         if (nameHeader) nameHeader.textContent = nome;

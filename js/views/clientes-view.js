@@ -176,7 +176,7 @@
                                 <tr>
                                     <th>Nome</th>
                                     <th>CNPJ</th>
-                                    <th>Cidade/US</th>
+                                    <th>Cidade/UF</th>
                                     <th>Contato</th>
                                     <th>Ações</th>
                                 </tr>

@@ -173,14 +173,26 @@ function normalizarCaminhoesSubproduto(cli = {}) {
         return cli.caminhoes.map(item => ({
             modelo: (item.modelo || '').toUpperCase().trim(),
             placaCaminhao: (item.placaCaminhao || '').toUpperCase().trim(),
-            placaCarreta: (item.placaCarreta || '').toUpperCase().trim()
+            placaCarreta: (item.placaCarreta || '').toUpperCase().trim(),
+            medidas: {
+                alt: Number(item.medidas?.alt || item.alt || 0),
+                larg: Number(item.medidas?.larg || item.larg || 0),
+                comp: Number(item.medidas?.comp || item.comp || 0),
+                cupimAdicional: Number(item.medidas?.cupimAdicional || item.cupimAdicional || 0)
+            }
         })).filter(item => item.modelo || item.placaCaminhao || item.placaCarreta);
     }
 
     const legado = {
         modelo: (cli.caminhao || '').toUpperCase().trim(),
         placaCaminhao: (cli.placaCaminhao || '').toUpperCase().trim(),
-        placaCarreta: (cli.placaCarreta || '').toUpperCase().trim()
+        placaCarreta: (cli.placaCarreta || '').toUpperCase().trim(),
+        medidas: {
+            alt: Number(cli.medidas?.alt || 0),
+            larg: Number(cli.medidas?.larg || 0),
+            comp: Number(cli.medidas?.comp || 0),
+            cupimAdicional: Number(cli.medidas?.cupimAdicional || 0)
+        }
     };
 
     return legado.modelo || legado.placaCaminhao || legado.placaCarreta ? [legado] : [];
@@ -195,24 +207,39 @@ function renderListaCaminhoesSub() {
         return;
     }
 
-    lista.innerHTML = caminhoesSubprodutoForm.map((item, index) => `
+    lista.innerHTML = caminhoesSubprodutoForm.map((item, index) => {
+        const m = item.medidas || {};
+        const volume = ((Number(m.alt) || 0) * (Number(m.larg) || 0) * (Number(m.comp) || 0)) + (Number(m.cupimAdicional) || 0);
+        const medidasTexto = volume > 0
+            ? `${Number(m.alt || 0).toLocaleString('pt-BR')} x ${Number(m.larg || 0).toLocaleString('pt-BR')} x ${Number(m.comp || 0).toLocaleString('pt-BR')} = ${volume.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m³`
+            : 'Medidas nao informadas';
+        return `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(15,23,42,0.35);">
             <div style="font-size:0.85rem; line-height:1.5;">
                 <div><strong>${item.modelo || 'Sem modelo'}</strong></div>
                 <div>Placa cavalo: ${item.placaCaminhao || '-'}</div>
                 <div>Placa carreta: ${item.placaCarreta || '-'}</div>
+                <div style="color:#5eead4; font-weight:800;">${medidasTexto}</div>
             </div>
             <button type="button" class="btn-icon" style="color:var(--danger-color);" onclick="window.removerCaminhaoSub(${index})" title="Remover caminhão">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function preencherCaminhaoSelecionadoSub(caminhao) {
     document.getElementById('calcCavCaminhao').value = caminhao?.modelo || '';
     document.getElementById('calcCavPlacaCaminhao').value = caminhao?.placaCaminhao || '';
     document.getElementById('calcCavPlacaCarreta').value = caminhao?.placaCarreta || '';
+    if (caminhao?.medidas) {
+        document.getElementById('calcCavAlt').value = caminhao.medidas.alt || '';
+        document.getElementById('calcCavLarg').value = caminhao.medidas.larg || '';
+        document.getElementById('calcCavComp').value = caminhao.medidas.comp || '';
+        document.getElementById('calcCavCupimAdicional').value = caminhao.medidas.cupimAdicional || '';
+        calcularCubagemCaminhaoTempoReal();
+    }
 }
 
 function preencherSeletorCaminhoesSub(cli) {
@@ -226,7 +253,9 @@ function preencherSeletorCaminhoesSub(cli) {
         const option = document.createElement('option');
         option.value = String(index);
         const partes = [item.modelo, item.placaCaminhao, item.placaCarreta].filter(Boolean);
-        option.textContent = partes.join(' | ') || `Caminhão ${index + 1}`;
+        const m = item.medidas || {};
+        const volume = ((Number(m.alt) || 0) * (Number(m.larg) || 0) * (Number(m.comp) || 0)) + (Number(m.cupimAdicional) || 0);
+        option.textContent = `${partes.join(' | ') || `Caminhão ${index + 1}`}${volume > 0 ? ` - ${volume.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m³` : ''}`;
         select.appendChild(option);
     });
 
@@ -389,12 +418,14 @@ if (formCliSub) {
             return;
         }
         
+        const medidasAtuais = { alt, larg, comp, cupimAdicional: 0 };
         const caminhoes = [
             ...caminhoesSubprodutoForm,
             ...(caminhao || placaCaminhao || placaCarreta ? [{
                 modelo: caminhao,
                 placaCaminhao,
-                placaCarreta
+                placaCarreta,
+                medidas: medidasAtuais
             }] : [])
         ];
         const caminhaoPrincipal = caminhoes[0] || { modelo: '', placaCaminhao: '', placaCarreta: '' };
@@ -583,14 +614,20 @@ if (btnAdicionarCaminhaoSub) {
         const modelo = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
         const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
         const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
+        const alt = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliAlt').value) : (parseFloat(document.getElementById('subCliAlt').value) || 0);
+        const larg = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliLarg').value) : (parseFloat(document.getElementById('subCliLarg').value) || 0);
+        const comp = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliComp').value) : (parseFloat(document.getElementById('subCliComp').value) || 0);
         if (!modelo && !placaCaminhao && !placaCarreta) {
             alert('Preencha pelo menos modelo ou placa para adicionar o caminhão.');
             return;
         }
-        caminhoesSubprodutoForm.push({ modelo, placaCaminhao, placaCarreta });
+        caminhoesSubprodutoForm.push({ modelo, placaCaminhao, placaCarreta, medidas: { alt, larg, comp, cupimAdicional: 0 } });
         document.getElementById('subCliCaminhao').value = '';
         document.getElementById('subCliPlacaCaminhao').value = '';
         document.getElementById('subCliPlacaCarreta').value = '';
+        document.getElementById('subCliAlt').value = '';
+        document.getElementById('subCliLarg').value = '';
+        document.getElementById('subCliComp').value = '';
         renderListaCaminhoesSub();
     });
 }
@@ -720,24 +757,21 @@ function seloPagamentoSubproduto(venda = {}) {
 function criarBotoesAcoesSubproduto(id, venda = {}) {
     const pago = String(venda.statusPagamento || 'PENDENTE').toUpperCase() === 'PAGO';
     return `
-        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
-            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:${pago ? '#fbbf24' : '#4ade80'}; border-color:${pago ? 'rgba(251,191,36,0.35)' : 'rgba(74,222,128,0.35)'};" onclick="window.alternarPagamentoSubproduto('${id}')">
-                <i class="fa-solid ${pago ? 'fa-rotate-left' : 'fa-circle-check'}"></i> ${pago ? 'Reabrir' : 'Pago'}
+        <div class="subproduto-actions-compact">
+            <button type="button" class="btn-icon subproduto-action" style="color:${pago ? '#fbbf24' : '#16a34a'};" onclick="window.alternarPagamentoSubproduto('${id}')" title="${pago ? 'Reabrir cobrança' : 'Marcar como pago'}">
+                <i class="fa-solid ${pago ? 'fa-rotate-left' : 'fa-circle-check'}"></i>
             </button>
-            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px;" onclick="window.editarVendaSubproduto('${id}')">
-                <i class="fa-solid fa-pen"></i> Editar
+            <button type="button" class="btn-icon subproduto-action" onclick="window.editarVendaSubproduto('${id}')" title="Editar lancamento">
+                <i class="fa-solid fa-pen"></i>
             </button>
-            <button type="button" class="btn-danger" style="padding:7px 10px; font-size:12px;" onclick="window.excluirVendaSubproduto('${id}')">
-                <i class="fa-solid fa-trash"></i> Excluir
+            <button type="button" class="btn-icon subproduto-action" style="color:var(--danger-color);" onclick="window.excluirVendaSubproduto('${id}')" title="Excluir lancamento">
+                <i class="fa-solid fa-trash"></i>
             </button>
-            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px;" onclick="window.imprimirVendaSubproduto('${id}')">
-                <i class="fa-solid fa-print"></i> Imprimir
+            <button type="button" class="btn-icon subproduto-action" onclick="window.imprimirVendaSubproduto('${id}')" title="Imprimir recibo">
+                <i class="fa-solid fa-print"></i>
             </button>
-            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:#86efac; border-color:rgba(134,239,172,0.35);" onclick="window.pdfVendaSubproduto('${id}')">
-                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
-            </button>
-            <button type="button" class="btn-secondary" style="padding:7px 10px; font-size:12px; color:#4ade80; border-color:rgba(74,222,128,0.35);" onclick="window.whatsappVendaSubproduto('${id}')">
-                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+            <button type="button" class="btn-icon subproduto-action" style="color:#16a34a;" onclick="window.whatsappVendaSubproduto('${id}')" title="Enviar pelo WhatsApp">
+                <i class="fa-brands fa-whatsapp"></i>
             </button>
         </div>
     `;

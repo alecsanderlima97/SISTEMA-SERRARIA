@@ -2175,15 +2175,17 @@ body.role-pendente .global-header {
 }
 
 .brand .brand-orquestra-subtitle {
-    font-size: 10px;
-    color: #666;
-    margin-top: -4px;
+    font-size: 9px;
+    color: rgba(226, 232, 240, 0.76);
+    margin-top: 3px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: 0;
+    line-height: 1.25;
+    max-width: 174px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .global-header {

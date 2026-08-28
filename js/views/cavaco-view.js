@@ -107,18 +107,12 @@
                                 <label>Placa Caminhão</label>
                                 <input type="text" id="subCliPlacaCaminhao" class="text-uppercase-input" placeholder="Ex: ABC-1234">
                             </div>
-                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                            <div class="input-group" style="margin-bottom:10px;">
                                 <label>Placa Carreta / Reboque</label>
                                 <input type="text" id="subCliPlacaCarreta" class="text-uppercase-input" placeholder="Ex: XYZ-9876">
                             </div>
-                            <div class="input-group" style="margin-bottom:10px;">
-                                <button type="button" id="btnAdicionarCaminhaoSub" class="btn-secondary" style="padding: 10px 14px;">
-                                    <i class="fa-solid fa-plus"></i> Adicionar Caminhão
-                                </button>
-                                <div id="subCliListaCaminhoes" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
-                            </div>
                             
-                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                            <div class="col-span-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label style="font-size: 0.75rem; color: #ccc;">Altura (m)</label>
                                     <input type="text" id="subCliAlt" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
@@ -131,6 +125,13 @@
                                     <label style="font-size: 0.75rem; color: #ccc;">Compr. (m)</label>
                                     <input type="text" id="subCliComp" inputmode="decimal" placeholder="m" style="padding: 8px; font-size: 0.85rem;">
                                 </div>
+                            </div>
+                            <div class="input-group col-span-2" style="margin-bottom:10px;">
+                                <button type="button" id="btnAdicionarCaminhaoSub" class="btn-secondary" style="padding: 10px 14px;">
+                                    <i class="fa-solid fa-plus"></i> Vincular placa e medidas
+                                </button>
+                                <small style="display:block; color:var(--text-muted); margin-top:6px;">Ao escolher a placa no recibo, o sistema preenche a cubagem automaticamente.</small>
+                                <div id="subCliListaCaminhoes" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
                             </div>
 
                             <button type="submit" class="btn-primary col-span-2" style="padding: 12px;" id="btnSalvarClienteSub">
@@ -197,7 +198,6 @@
                                     <div class="input-group"><label>Cidade / Estado</label><input type="text" id="calcCavCidadeEstado" class="text-uppercase-input" placeholder="Cidade / UF"></div>
                                 </div>
                             </div>
-
                             <div class="sub-recibo-bloco">
                                 <h3><i class="fa-solid fa-truck"></i> Dados de Transporte</h3>
                                 <div class="sub-recibo-grid">

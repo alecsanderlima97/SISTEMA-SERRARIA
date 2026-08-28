@@ -197,7 +197,7 @@ function tornarTabelaOrdenavel(table) {
     table.classList.add('orq-sortable-table-ready');
     headers.forEach((th, index) => {
         const texto = (th.textContent || '').trim();
-        if (!texto || th.querySelector('input, button, select') || texto.length > 34) return;
+        if (!texto || th.querySelector('input, button, select') || /^(acoes|ações|sel\.?|selecionar)$/i.test(texto)) return;
         th.dataset.orqSortable = 'true';
         th.title = th.title || `Ordenar por ${texto}`;
         th.addEventListener('click', (event) => {
@@ -246,6 +246,13 @@ function inicializarTabelasOrdenaveis() {
     const observer = new MutationObserver(() => aplicar());
     observer.observe(document.body, { childList: true, subtree: true });
 }
+
+window.reinicializarTabelasOrdenaveis = function() {
+    document.querySelectorAll('table').forEach(table => {
+        table.dataset.orqSortableReady = '';
+        tornarTabelaOrdenavel(table);
+    });
+};
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
