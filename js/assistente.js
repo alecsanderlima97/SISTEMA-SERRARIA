@@ -526,6 +526,7 @@ window.atualizarPreferenciasAssistente = function() {
 document.addEventListener('DOMContentLoaded', () => {
     injetarEstilosGuiaAssistente();
     inicializarAssistenteArrastavel();
+    inicializarBotaoAssistenteArrastavel();
     atualizarPainelUsoAssistente();
     window.atualizarPreferenciasAssistente();
     renderizarGuiaAssistente();
@@ -624,4 +625,94 @@ function inicializarAssistenteArrastavel() {
             top: Math.round(rect.top)
         }));
     });
+}
+
+function normalizarPosicaoBotaoAssistente(button) {
+    if (!button || window.innerWidth <= 700) return;
+    const rect = button.getBoundingClientRect();
+    const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+    const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+    const left = Math.max(8, Math.min(maxLeft, rect.left));
+    const top = Math.max(8, Math.min(maxTop, rect.top));
+    button.style.left = `${left}px`;
+    button.style.top = `${top}px`;
+    button.style.right = 'auto';
+    button.style.bottom = 'auto';
+}
+
+function inicializarBotaoAssistenteArrastavel() {
+    const button = document.getElementById('assistantFloatButton');
+    if (!button || button.dataset.dragReady === 'true') return;
+    button.dataset.dragReady = 'true';
+    button.classList.add('assistant-float-draggable');
+
+    const posSalva = JSON.parse(localStorage.getItem('orquestra_assistente_botao_posicao') || 'null');
+    if (posSalva && window.innerWidth > 700) {
+        button.style.left = `${posSalva.left}px`;
+        button.style.top = `${posSalva.top}px`;
+        button.style.right = 'auto';
+        button.style.bottom = 'auto';
+    }
+
+    let dragging = false;
+    let moved = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    let startX = 0;
+    let startY = 0;
+
+    button.addEventListener('pointerdown', (event) => {
+        if (window.innerWidth <= 700 || event.button !== 0) return;
+        dragging = true;
+        moved = false;
+        startX = event.clientX;
+        startY = event.clientY;
+        const rect = button.getBoundingClientRect();
+        offsetX = event.clientX - rect.left;
+        offsetY = event.clientY - rect.top;
+        button.setPointerCapture(event.pointerId);
+        button.classList.add('dragging');
+    });
+
+    button.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        const dx = Math.abs(event.clientX - startX);
+        const dy = Math.abs(event.clientY - startY);
+        if (dx + dy > 5) moved = true;
+
+        const maxLeft = window.innerWidth - button.offsetWidth - 8;
+        const maxTop = window.innerHeight - button.offsetHeight - 8;
+        const left = Math.max(8, Math.min(maxLeft, event.clientX - offsetX));
+        const top = Math.max(8, Math.min(maxTop, event.clientY - offsetY));
+        button.style.left = `${left}px`;
+        button.style.top = `${top}px`;
+        button.style.right = 'auto';
+        button.style.bottom = 'auto';
+    });
+
+    button.addEventListener('pointerup', (event) => {
+        if (!dragging) return;
+        dragging = false;
+        button.classList.remove('dragging');
+        const rect = button.getBoundingClientRect();
+        localStorage.setItem('orquestra_assistente_botao_posicao', JSON.stringify({
+            left: Math.round(rect.left),
+            top: Math.round(rect.top)
+        }));
+        if (moved) {
+            event.preventDefault();
+            event.stopPropagation();
+            button.dataset.skipNextClick = 'true';
+        }
+    });
+
+    button.addEventListener('click', (event) => {
+        if (button.dataset.skipNextClick === 'true') {
+            delete button.dataset.skipNextClick;
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    window.addEventListener('resize', () => normalizarPosicaoBotaoAssistente(button));
 }

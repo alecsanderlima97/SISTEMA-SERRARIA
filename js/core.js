@@ -95,11 +95,19 @@ const SUBSECTION_PERMISSIONS = {
     'view-configuracoes': {
         label: 'Configuracoes',
         items: [
+            { id: 'perfil', label: 'Perfil do usuario' },
+            { id: 'personalizacao', label: 'Personalizacao visual' },
+            { id: 'preferencias', label: 'Preferencias do sistema' },
+            { id: 'seguranca', label: 'Seguranca e senha' },
+            { id: 'backup', label: 'Backup e restauracao' },
+            { id: 'integracao-email', label: 'Integracao de e-mail e automacao' },
             { id: 'auditoria', label: 'Ultimas alteracoes do sistema' },
             { id: 'usuarios', label: 'Controle de usuarios e permissoes' }
         ]
     }
 };
+
+const SAFE_CONFIGURATION_SUBSECTIONS = ['perfil', 'personalizacao', 'preferencias', 'seguranca'];
 
 function normalizeRole(role) {
     const value = (role || '').toString().trim();
@@ -955,10 +963,17 @@ const App = {
     },
 
     canAccessSubsection(sectionId, subId) {
+        if (isCurrentUserAdminManager(this)) return true;
         const permissions = this.getCurrentPermissions();
         const allowed = permissions.allowedSubsections || {};
         if (!SUBSECTION_PERMISSIONS[sectionId]) return true;
-        if (!Object.prototype.hasOwnProperty.call(allowed, sectionId)) return true;
+        // Configuracoes pode conter e-mail corporativo, automacoes, backups e controle de usuarios.
+        // Usuarios antigos sem a nova matriz recebem somente os blocos pessoais e seguros.
+        if (!Object.prototype.hasOwnProperty.call(allowed, sectionId)) {
+            return sectionId === 'view-configuracoes'
+                ? SAFE_CONFIGURATION_SUBSECTIONS.includes(subId)
+                : true;
+        }
         const list = allowed[sectionId];
         return Array.isArray(list) && list.includes(subId);
     },

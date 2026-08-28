@@ -882,6 +882,17 @@ input.cnpj-consulta-erro {
     box-shadow: 0 22px 46px rgba(0, 0, 0, 0.34), 0 0 26px rgba(15, 143, 166, 0.34) !important;
 }
 
+#assistantFloatButton.assistant-float-draggable {
+    touch-action: none;
+    cursor: grab;
+}
+
+#assistantFloatButton.assistant-float-draggable.dragging {
+    cursor: grabbing;
+    transform: scale(1.05);
+    transition: none !important;
+}
+
 .assistant-companion {
     position: fixed;
     right: 18px;
@@ -1589,4 +1600,12 @@ body.orquestra-theme .chat-message.mine { background: #dff1f2; border-color: rgb
     .header-actions-group { gap: 6px; }
     .communication-tabs { padding: 6px; }
     .communication-tab { font-size: .72rem; }
+}
+/* Acesso operacional exclusivo: exibe somente o Fluxo do Patio para o empilhadeirista. */
+body.dashboard-fluxo-patio-exclusivo #view-dashboard > :not(#panelProducaoPatio) {
+    display: none !important;
+}
+
+body.dashboard-fluxo-patio-exclusivo #view-dashboard #panelProducaoPatio {
+    margin: 0 !important;
 }

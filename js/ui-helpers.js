@@ -135,12 +135,126 @@ function inicializarWidgetRolagem() {
     document.body.appendChild(widget);
 }
 
+function normalizarValorTabelaOrdenavel(texto = '') {
+    const valor = String(texto || '').replace(/\s+/g, ' ').trim();
+    const dataMatch = valor.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
+    if (dataMatch) {
+        const [, dia, mes, ano] = dataMatch;
+        return { tipo: 'date', valor: new Date(Number(ano), Number(mes) - 1, Number(dia)).getTime() };
+    }
+
+    const numeroLimpo = valor
+        .replace(/R\$/gi, '')
+        .replace(/m³|m3|pçs?|pcts?|un|l\b/gi, '')
+        .replace(/\./g, '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '');
+    const numero = Number(numeroLimpo);
+    if (numeroLimpo && Number.isFinite(numero)) return { tipo: 'number', valor: numero };
+    return { tipo: 'text', valor: valor.toLocaleLowerCase('pt-BR') };
+}
+
+function compararValoresTabela(a, b, direcao) {
+    if (a.tipo === 'number' || b.tipo === 'number' || a.tipo === 'date' || b.tipo === 'date') {
+        const av = Number(a.valor) || 0;
+        const bv = Number(b.valor) || 0;
+        return direcao === 'asc' ? av - bv : bv - av;
+    }
+    return direcao === 'asc'
+        ? String(a.valor).localeCompare(String(b.valor), 'pt-BR')
+        : String(b.valor).localeCompare(String(a.valor), 'pt-BR');
+}
+
+function ordenarTabelaPorColuna(table, index, th) {
+    const tbody = table.tBodies?.[0];
+    if (!tbody) return;
+    const linhas = Array.from(tbody.rows);
+    if (linhas.length < 2) return;
+
+    const direcaoAtual = th.dataset.sortDirection === 'asc' ? 'desc' : 'asc';
+    table.querySelectorAll('th[data-orq-sortable="true"]').forEach(header => {
+        header.dataset.sortDirection = '';
+        header.classList.remove('orq-sort-asc', 'orq-sort-desc');
+    });
+    th.dataset.sortDirection = direcaoAtual;
+    th.classList.add(direcaoAtual === 'asc' ? 'orq-sort-asc' : 'orq-sort-desc');
+
+    linhas
+        .map((row, posicao) => ({
+            row,
+            posicao,
+            valor: normalizarValorTabelaOrdenavel(row.cells[index]?.innerText || row.cells[index]?.textContent || '')
+        }))
+        .sort((a, b) => compararValoresTabela(a.valor, b.valor, direcaoAtual) || a.posicao - b.posicao)
+        .forEach(item => tbody.appendChild(item.row));
+}
+
+function tornarTabelaOrdenavel(table) {
+    if (!table || table.dataset.orqSortableReady === 'true' || table.dataset.noAutoSort === 'true') return;
+    const headers = Array.from(table.querySelectorAll('thead th'));
+    if (!headers.length) return;
+    table.dataset.orqSortableReady = 'true';
+    table.classList.add('orq-sortable-table-ready');
+    headers.forEach((th, index) => {
+        const texto = (th.textContent || '').trim();
+        if (!texto || th.querySelector('input, button, select') || texto.length > 34) return;
+        th.dataset.orqSortable = 'true';
+        th.title = th.title || `Ordenar por ${texto}`;
+        th.addEventListener('click', (event) => {
+            if (event.target.closest('button, input, select, a')) return;
+            ordenarTabelaPorColuna(table, index, th);
+        });
+    });
+}
+
+function injetarEstilosTabelaOrdenavel() {
+    if (document.getElementById('orqTabelaOrdenavelStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'orqTabelaOrdenavelStyle';
+    style.textContent = `
+        table.orq-sortable-table-ready th[data-orq-sortable="true"] {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        table.orq-sortable-table-ready th[data-orq-sortable="true"]::after {
+            content: "\\f0dc";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            margin-left: 6px;
+            opacity: .28;
+            font-size: .68em;
+        }
+        table.orq-sortable-table-ready th.orq-sort-asc::after {
+            content: "\\f0de";
+            opacity: .78;
+        }
+        table.orq-sortable-table-ready th.orq-sort-desc::after {
+            content: "\\f0dd";
+            opacity: .78;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function inicializarTabelasOrdenaveis() {
+    if (window.__orqTabelasOrdenaveisAtivas) return;
+    window.__orqTabelasOrdenaveisAtivas = true;
+    injetarEstilosTabelaOrdenavel();
+    const aplicar = () => document.querySelectorAll('table').forEach(tornarTabelaOrdenavel);
+    aplicar();
+    const observer = new MutationObserver(() => aplicar());
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         inicializarWidgetRolagem();
         inicializarAtalhosCampos();
+        inicializarTabelasOrdenaveis();
     });
 } else {
     inicializarWidgetRolagem();
     inicializarAtalhosCampos();
+    inicializarTabelasOrdenaveis();
 }

@@ -125,6 +125,302 @@
     border-bottom: 1px solid var(--border);
 }
 
+.v2-patio-empty {
+    padding: 14px;
+    color: #cbd5e1;
+    text-align: center;
+}
+
+#v2-patio-lista-panel {
+    position: relative;
+}
+
+#v2-patio-lista {
+    scrollbar-width: thin;
+}
+
+.v2-patio-item {
+    display: grid;
+    grid-template-columns: 48px minmax(190px, 1fr) 62px 72px 112px;
+    gap: 8px;
+    align-items: center;
+    padding: 9px;
+    border: 1px solid rgba(84, 55, 37, .28);
+    border-radius: 10px;
+    background: #f1dfbd;
+    color: #0f172a;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.v2-patio-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .16);
+}
+
+.v2-patio-item.is-disabled {
+    border-color: rgba(148, 163, 184, .22);
+    background: rgba(148, 163, 184, .12);
+    color: #94a3b8;
+    opacity: .72;
+}
+
+.v2-patio-classe {
+    justify-self: center;
+    min-width: 32px;
+    padding: 5px 7px;
+    border: 1px solid var(--classe-border);
+    border-radius: 8px;
+    background: var(--classe-bg);
+    color: var(--classe-cor);
+    text-align: center;
+    font-weight: 900;
+}
+
+.v2-patio-madeira {
+    min-width: 0;
+}
+
+.v2-patio-madeira strong {
+    display: block;
+    overflow: hidden;
+    color: var(--classe-cor);
+    font-size: .88rem;
+    font-weight: 780;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-patio-madeira small {
+    display: block;
+    overflow: hidden;
+    color: #334155;
+    font-size: .72rem;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-patio-saldo {
+    color: #334155;
+    text-align: center;
+    font-size: .66rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.v2-patio-saldo span {
+    display: block;
+    color: #0f172a;
+    font-size: .95rem;
+}
+
+.v2-patio-qtd {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #94a3b8;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 900;
+}
+
+.v2-patio-add {
+    min-width: 0;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+.v2-patio-add:disabled {
+    opacity: .45;
+}
+
+.romaneio-package-name {
+    color: #0f172a;
+}
+
+.romaneio-package-name > strong {
+    color: #111827;
+    font-size: .85rem;
+    letter-spacing: .02em;
+}
+
+.romaneio-package-measure {
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+.romaneio-package-measure-line {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.romaneio-measure-volume {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    border: 1px solid color-mix(in srgb, var(--measure-color) 45%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--measure-color) 12%, transparent);
+    color: var(--measure-color);
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+
+.romaneio-package-config {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    align-items: center;
+    gap: 5px;
+    color: #334155;
+    font-size: .75rem;
+    font-weight: 760;
+    white-space: nowrap;
+}
+
+.romaneio-package-config span:first-child {
+    text-align: center;
+}
+
+.package-manual-contents {
+    display: contents;
+}
+
+.package-manual-contents.is-hidden {
+    display: none;
+}
+
+.romaneio-fold-section {
+    margin-top: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 10px;
+    background: var(--card-bg, rgba(255, 255, 255, .04));
+}
+
+.romaneio-fold-section summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    color: #172033;
+    font-size: .82rem;
+    font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+    text-shadow: none;
+}
+
+.romaneio-fold-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.romaneio-fold-section summary span i {
+    margin-right: 7px;
+    color: #c97807;
+}
+
+.romaneio-fold-icon {
+    color: #475569;
+    transition: transform .18s ease;
+}
+
+.romaneio-fold-section[open] .romaneio-fold-icon {
+    transform: rotate(180deg);
+}
+
+.romaneio-fold-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 15px;
+    padding: 14px;
+    border-top: 1px solid rgba(148, 163, 184, .2);
+}
+
+.romaneio-action-btn {
+    width: 34px;
+    height: 34px;
+    margin-right: 5px;
+    border-radius: 9px;
+    background: rgba(15, 23, 42, .06);
+}
+
+.romaneio-field-flash {
+    animation: romaneioFieldFlash 1.1s ease both;
+}
+
+.romaneio-row-flash {
+    animation: romaneioRowFlash 1.4s ease both;
+}
+
+.romaneio-package-ghost {
+    position: fixed;
+    z-index: 100000;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 128px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgba(16, 185, 129, .5);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .94);
+    color: #ecfdf5;
+    font-size: .72rem;
+    font-weight: 900;
+    pointer-events: none;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, .28);
+    animation: romaneioPackageMove .85s cubic-bezier(.2, .75, .2, 1) forwards;
+}
+
+.romaneio-package-ghost i {
+    color: #10b981;
+}
+
+@keyframes romaneioFieldFlash {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, .6); transform: translateY(0); }
+    28% { box-shadow: 0 0 0 4px rgba(16, 185, 129, .22), 0 0 22px rgba(16, 185, 129, .35); transform: translateY(-1px); }
+    100% { box-shadow: none; transform: translateY(0); }
+}
+
+@keyframes romaneioRowFlash {
+    0% { background: rgba(16, 185, 129, .26); }
+    100% { background: transparent; }
+}
+
+@keyframes romaneioPackageMove {
+    0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.92); }
+    18% { opacity: 1; }
+    78% { opacity: .95; }
+    100% { opacity: 0; transform: translate3d(var(--move-x), var(--move-y), 0) scale(.68); }
+}
+
+@media (max-width: 760px) {
+    .v2-patio-item {
+        grid-template-columns: 42px minmax(130px, 1fr) 58px;
+    }
+
+    .v2-patio-qtd,
+    .v2-patio-add {
+        grid-column: span 1;
+    }
+
+    .v2-patio-add {
+        grid-column: 2 / -1;
+    }
+
+    .romaneio-fold-content {
+        gap: 10px;
+    }
+}
+
 /* Rodapé Financeiro */
 .finance-footer {
     margin-top: 50px;

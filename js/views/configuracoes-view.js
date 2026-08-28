@@ -7,7 +7,7 @@
 
                 <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
                     
-                    <div class="glass-panel">
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:perfil">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-user" style="font-size: 24px; color: var(--accent-color);"></i>
                             <h2 style="margin: 0; font-size: 20px;">Perfil do Usuario</h2>
@@ -68,7 +68,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel">
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:personalizacao">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-palette" style="font-size: 24px; color: var(--accent-color);"></i>
                             <h2 style="margin: 0; font-size: 20px;">Personalizacao</h2>
@@ -107,7 +107,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel config-preferences-panel">
+                    <div class="glass-panel config-preferences-panel" data-subsection-permission="view-configuracoes:preferencias">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
                             <i class="fa-solid fa-sliders" style="font-size: 24px; color: var(--accent-color);"></i>
                             <div>
@@ -156,7 +156,7 @@
                         </button>
                     </div>
                     
-                    <div class="glass-panel">
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:backup">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-database" style="font-size: 24px; color: var(--accent-color);"></i>
                             <h2 style="margin: 0; font-size: 20px;">Backup de Dados</h2>
@@ -183,7 +183,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel">
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:integracao-email">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-envelope-open-text" style="font-size: 24px; color: #60a5fa;"></i>
                             <h2 style="margin: 0; font-size: 20px;">Integracao de E-mail</h2>
@@ -241,7 +241,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel">
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:seguranca">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-shield" style="font-size: 24px; color: #0ea5e9;"></i>
                             <h2 style="margin: 0; font-size: 20px;">Seguranca</h2>

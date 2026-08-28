@@ -313,7 +313,7 @@ function renderizarListaVisualPatioRomaneio() {
     const lista = document.getElementById('v2-patio-lista');
     if (!lista) return;
     if (!patioItensDisponiveis.length) {
-        lista.innerHTML = '<div style="padding:12px; color:#cbd5e1; text-align:center;">Nenhum pacote disponivel no patio.</div>';
+        lista.innerHTML = '<div class="v2-patio-empty">Nenhum pacote disponivel no patio.</div>';
         return;
     }
 
@@ -325,18 +325,43 @@ function renderizarListaVisualPatioRomaneio() {
         const config = `(${Number(item.altura || 0)}x${Number(item.camada || 0)})${Number(item.amarras || 0) > 0 ? `+${Number(item.amarras)}` : ''} = ${Number(item.pecas || 0)} pç`;
         const desabilitado = saldo <= 0;
         return `
-            <div class="v2-patio-item" style="display:grid; grid-template-columns:56px minmax(240px,1fr) 70px 82px 96px; gap:8px; align-items:center; padding:9px; border-radius:10px; background:${desabilitado ? 'rgba(148,163,184,.10)' : '#f1dfbd'}; color:${desabilitado ? '#94a3b8' : '#0f172a'}; border:1px solid ${desabilitado ? 'rgba(148,163,184,.2)' : 'rgba(84,55,37,.28)'};">
-                <span style="justify-self:center; min-width:34px; text-align:center; padding:5px 7px; border-radius:8px; background:${cores.bg}; color:${cores.color}; border:1px solid ${cores.border}; font-weight:900;">${classeNum || '-' }ª</span>
-                <div style="min-width:0;">
-                    <strong style="display:block; font-size:.95rem; color:${cores.color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.tipo || 'MADEIRA'} - ${medida}</strong>
-                    <small style="display:block; font-weight:800; color:#334155;">* ${config} / ${formatarM3Baixo(item.volumeUnidade || 0)} m3</small>
+            <div class="v2-patio-item ${desabilitado ? 'is-disabled' : ''}" data-patio-id="${item.id}" style="--classe-cor:${cores.color}; --classe-bg:${cores.bg}; --classe-border:${cores.border}; display:grid; grid-template-columns:50px minmax(220px,1fr) 68px 76px 122px; gap:8px; align-items:center; padding:9px; border-radius:10px; background:${desabilitado ? 'rgba(148,163,184,.10)' : '#f1dfbd'}; color:${desabilitado ? '#64748b' : '#0f172a'}; border:1px solid ${desabilitado ? 'rgba(148,163,184,.22)' : 'rgba(84,55,37,.28)'};">
+                <span class="v2-patio-classe" style="justify-self:center; min-width:34px; text-align:center; padding:5px 7px; border-radius:8px; background:${cores.bg}; color:${cores.color}; border:1px solid ${cores.border}; font-weight:900;">${classeNum || '-' }ª</span>
+                <div class="v2-patio-madeira" style="min-width:0;">
+                    <strong style="display:block; font-size:.9rem; font-weight:800; color:${cores.color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.tipo || 'MADEIRA'} - ${medida}</strong>
+                    <small style="display:block; font-size:.72rem; font-weight:750; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">* ${config} / ${formatarM3Baixo(item.volumeUnidade || 0)} m3</small>
                 </div>
-                <div style="text-align:center; font-weight:900; font-size:.76rem;">Saldo<br><span style="font-size:1rem;">${saldo}</span></div>
-                <input type="number" min="1" max="${saldo}" value="${saldo > 0 ? 1 : 0}" ${desabilitado ? 'disabled' : ''} id="v2-patio-qtd-${item.id}" style="width:100%; min-width:0; padding:8px; border-radius:8px; border:1px solid #94a3b8; text-align:center; font-weight:900;">
-                <button type="button" ${desabilitado ? 'disabled' : ''} onclick="window.usarItemPatioRomaneio('${item.id}')" class="btn-v2 btn-primary-v2" style="padding:8px 10px; min-width:0; opacity:${desabilitado ? '.45' : '1'};">Usar</button>
+                <div class="v2-patio-saldo" style="text-align:center; font-weight:900; font-size:.68rem; color:#334155; text-transform:uppercase;">Saldo<br><span style="font-size:1rem; color:#0f172a;">${saldo}</span></div>
+                <input class="v2-patio-qtd" type="number" min="1" max="${saldo}" value="${saldo > 0 ? 1 : 0}" ${desabilitado ? 'disabled' : ''} id="v2-patio-qtd-${item.id}" style="width:100%; min-width:0; padding:8px; border-radius:8px; border:1px solid #94a3b8; text-align:center; font-weight:900; background:#fffdf7; color:#0f172a;">
+                <button type="button" ${desabilitado ? 'disabled' : ''} onclick="window.adicionarItemPatioDiretoRomaneio('${item.id}')" class="btn-v2 btn-primary-v2 v2-patio-add" style="padding:8px 10px; min-width:0; white-space:nowrap; opacity:${desabilitado ? '.45' : '1'};">
+                    <i class="fa-solid fa-plus"></i> Adicionar
+                </button>
             </div>
         `;
     }).join('');
+}
+
+function alternarFormularioManualRomaneio(ocultar) {
+    const formManual = document.getElementById('v2-pacote-form-manual');
+    if (!formManual) return;
+    formManual.classList.toggle('is-hidden', Boolean(ocultar));
+}
+
+function abrirListaPatioRomaneio() {
+    const painel = document.getElementById('v2-patio-lista-panel');
+    if (!painel) return;
+    const vaiAbrir = painel.style.display === 'none' || !painel.style.display;
+    painel.style.display = vaiAbrir ? 'block' : 'none';
+    alternarFormularioManualRomaneio(vaiAbrir);
+    renderizarListaVisualPatioRomaneio();
+}
+
+function fecharListaPatioRomaneio() {
+    const painel = document.getElementById('v2-patio-lista-panel');
+    if (painel) painel.style.display = 'none';
+    alternarFormularioManualRomaneio(false);
+    const selectPatio = document.getElementById('v2-select-patio');
+    if (selectPatio) selectPatio.value = '';
 }
 
 window.usarItemPatioRomaneio = function(id) {
@@ -355,6 +380,27 @@ window.usarItemPatioRomaneio = function(id) {
     const qtdPacotes = document.getElementById('v2-qtd-pacotes');
     if (qtdPacotes) qtdPacotes.value = qtd;
     atualizarVolumePreview();
+    destacarCamposPacoteRomaneio();
+};
+
+window.adicionarItemPatioDiretoRomaneio = function(id) {
+    const item = patioItensDisponiveis.find(i => i.id === id);
+    if (!item) return;
+
+    const saldo = saldoItemPatioRomaneio(item);
+    const qtdEl = document.getElementById(`v2-patio-qtd-${id}`);
+    const qtd = Math.max(1, Math.min(parseInt(qtdEl?.value, 10) || 1, saldo));
+    if (saldo <= 0 || qtd > saldo) {
+        alert('Nao ha saldo suficiente deste pacote no patio.');
+        return;
+    }
+
+    window.usarItemPatioRomaneio(id);
+    const qtdPacotes = document.getElementById('v2-qtd-pacotes');
+    if (qtdPacotes) qtdPacotes.value = qtd;
+    atualizarVolumePreview();
+    const origem = document.querySelector(`[data-patio-id="${id}"]`);
+    adicionarPacote({ pularConfirmacao: true, manterListaPatioAberta: true, origemAnimacao: origem });
 };
 
 async function carregarPatioParaRomaneio() {
@@ -614,23 +660,19 @@ function configurarEventos() {
     });
 
     const selectProd = document.getElementById('v2-select-produto');
-    if (selectProd) selectProd.onchange = selecionarMadeiraCadastrada;
+    if (selectProd) selectProd.onchange = (event) => {
+        fecharListaPatioRomaneio();
+        selecionarMadeiraCadastrada(event);
+    };
 
     const selectPatio = document.getElementById('v2-select-patio');
     if (selectPatio) selectPatio.onchange = selecionarPacotePatioRomaneio;
 
     const btnAbrirPatio = document.getElementById('btn-v2-abrir-patio');
-    if (btnAbrirPatio) btnAbrirPatio.onclick = () => {
-        const painel = document.getElementById('v2-patio-lista-panel');
-        if (painel) painel.style.display = painel.style.display === 'none' ? 'block' : 'none';
-        renderizarListaVisualPatioRomaneio();
-    };
+    if (btnAbrirPatio) btnAbrirPatio.onclick = abrirListaPatioRomaneio;
 
     const btnFecharPatio = document.getElementById('btn-v2-fechar-patio');
-    if (btnFecharPatio) btnFecharPatio.onclick = () => {
-        const painel = document.getElementById('v2-patio-lista-panel');
-        if (painel) painel.style.display = 'none';
-    };
+    if (btnFecharPatio) btnFecharPatio.onclick = fecharListaPatioRomaneio;
 
     const selectCli = document.getElementById('v2-select-cliente');
     if (selectCli) selectCli.onchange = selecionarClienteCadastrado;
@@ -987,7 +1029,84 @@ function calcularPecasAutomatico() {
     atualizarVolumePreview();
 }
 
-function adicionarPacote() {
+function destacarCamposPacoteRomaneio() {
+    [
+        'v2-espessura',
+        'v2-largura',
+        'v2-comprimento',
+        'v2-comprimento-real',
+        'v2-altura',
+        'v2-camada',
+        'v2-amarras',
+        'v2-quantidade',
+        'v2-qtd-pacotes',
+        'v2-volume-unit',
+        'v2-volume-total'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('romaneio-field-flash');
+        void el.offsetWidth;
+        el.classList.add('romaneio-field-flash');
+        setTimeout(() => el.classList.remove('romaneio-field-flash'), 1100);
+    });
+}
+
+function animarPacoteParaRomaneio(origem) {
+    if (!origem) return;
+    const destino = document.getElementById('v2-lista-classes') || document.getElementById('btn-add-pacote-v2');
+    if (!destino) return;
+    const origemRect = origem.getBoundingClientRect();
+    const destinoRect = destino.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'romaneio-package-ghost hide-on-print';
+    ghost.innerHTML = '<i class="fa-solid fa-box"></i><span>Adicionado</span>';
+    ghost.style.left = `${origemRect.left + origemRect.width / 2 - 64}px`;
+    ghost.style.top = `${origemRect.top + origemRect.height / 2 - 18}px`;
+    ghost.style.setProperty('--move-x', `${destinoRect.left + destinoRect.width * 0.22 - origemRect.left}px`);
+    ghost.style.setProperty('--move-y', `${destinoRect.top + 20 - origemRect.top}px`);
+    document.body.appendChild(ghost);
+    setTimeout(() => ghost.remove(), 900);
+}
+
+function chaveAgrupamentoPacoteRomaneio(p) {
+    return [
+        String(p.produtoNome || '').trim().toUpperCase(),
+        String(p.qualidade || '').trim().toUpperCase(),
+        String(p.especie || '').trim().toUpperCase(),
+        Number(p.esp || 0).toFixed(3),
+        Number(p.larg || 0).toFixed(3),
+        Number(p.compV || 0).toFixed(3),
+        Number(p.compR || 0).toFixed(3),
+        Number(p.alt || 0),
+        Number(p.cam || 0),
+        Number(p.amarras || 0),
+        Number(p.pecasPorPacote || 0),
+        Number(p.precoM3 || 0).toFixed(2),
+        p.origemPatio ? `PATIO:${p.patioRelatorioId || ''}:${p.patioCubagemKey || ''}` : 'MANUAL'
+    ].join('|');
+}
+
+function somarPacoteAoRomaneio(novoPacote) {
+    const chaveNova = chaveAgrupamentoPacoteRomaneio(novoPacote);
+    const pacoteExistente = romaneioAtual.pacotes.find(p => chaveAgrupamentoPacoteRomaneio(p) === chaveNova);
+
+    if (!pacoteExistente) {
+        romaneioAtual.pacotes.push(novoPacote);
+        return novoPacote.id;
+    }
+
+    pacoteExistente.qtdPacotes = Number(pacoteExistente.qtdPacotes || 0) + Number(novoPacote.qtdPacotes || 0);
+    pacoteExistente.patioQtdPacotes = Number(pacoteExistente.patioQtdPacotes || 0) + Number(novoPacote.patioQtdPacotes || 0);
+    pacoteExistente.patioItemIds = Array.from(new Set([...(pacoteExistente.patioItemIds || []), ...(novoPacote.patioItemIds || [])].filter(Boolean)));
+    pacoteExistente.m3VendaTotal = arredondarParaBaixo(Number(pacoteExistente.m3VendaTotal || 0) + Number(novoPacote.m3VendaTotal || 0), 3);
+    pacoteExistente.m3FreteTotal = arredondarParaBaixo(Number(pacoteExistente.m3FreteTotal || 0) + Number(novoPacote.m3FreteTotal || 0), 3);
+    pacoteExistente.valorTotalWood = arredondarParaBaixo(Number(pacoteExistente.valorTotalWood || 0) + Number(novoPacote.valorTotalWood || 0), 2);
+    pacoteExistente.atualizadoEm = new Date().toISOString();
+    return pacoteExistente.id;
+}
+
+function adicionarPacote(opcoes = {}) {
     const prodId = document.getElementById('v2-select-produto').value;
     const manual = madeiraManualAtiva();
     const qualidade = obterClasseRomaneio();
@@ -1030,7 +1149,7 @@ function adicionarPacote() {
     const m3FreteUnit = ( (esp/100) * (larg/100) * compR ) * pecasPorPacote;
 
     const novoPacote = {
-        id: Date.now(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         produtoId: manual ? null : prodId,
         produtoManual: manual,
         produtoNome: nomeMadeira,
@@ -1054,12 +1173,21 @@ function adicionarPacote() {
         valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
     };
 
-    romaneioAtual.pacotes.push(novoPacote);
+    const idPacoteAfetado = somarPacoteAoRomaneio(novoPacote);
     atualizarTotalGeral();
     renderizarTabelaPacotes();
     renderizarListaVisualPatioRomaneio();
+    destacarCamposPacoteRomaneio();
+    animarPacoteParaRomaneio(opcoes.origemAnimacao);
+    setTimeout(() => {
+        const linha = document.querySelector(`[data-romaneio-pacote-id="${idPacoteAfetado}"]`);
+        if (!linha) return;
+        linha.classList.remove('romaneio-row-flash');
+        void linha.offsetWidth;
+        linha.classList.add('romaneio-row-flash');
+    }, 40);
     
-    if (confirm("Deseja adicionar outro pacote com a mesma cubagem (espessura, largura, comprimento), preço e classe?\n\n[OK] = Mantém os dados para informar nova quantidade\n[Cancelar] = Limpa todos os campos")) {
+    if (!opcoes.pularConfirmacao && confirm("Deseja adicionar outro pacote com a mesma cubagem (espessura, largura, comprimento), preço e classe?\n\n[OK] = Mantém os dados para informar nova quantidade\n[Cancelar] = Limpa todos os campos")) {
         ['v2-altura', 'v2-camada', 'v2-amarras', 'v2-quantidade'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -1068,6 +1196,10 @@ function adicionarPacote() {
         document.getElementById('v2-altura').focus();
     } else {
         limparCamposPacote();
+        if (opcoes.manterListaPatioAberta) {
+            const painel = document.getElementById('v2-patio-lista-panel');
+            if (painel) painel.style.display = 'block';
+        }
     }
 }
 
@@ -1123,6 +1255,7 @@ function destacarEdicaoPacoteRomaneio() {
 
 function salvarEdicaoPacote() {
     if (!pacoteEditandoId) return;
+    const idEditado = pacoteEditandoId;
     const prodId = document.getElementById('v2-select-produto').value;
     const manual = madeiraManualAtiva();
     const qualidade = obterClasseRomaneio().toUpperCase();
@@ -1196,11 +1329,17 @@ function salvarEdicaoPacote() {
             valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
         };
     }
-    pacoteEditandoId = null;
     document.getElementById('btn-add-pacote-v2').style.display = 'block';
     document.getElementById('btn-update-pacote-v2').style.display = 'none';
     atualizarTotalGeral();
     renderizarTabelaPacotes();
+    destacarCamposPacoteRomaneio();
+    const linha = document.querySelector(`[data-romaneio-pacote-id="${idEditado}"]`);
+    if (linha) {
+        linha.classList.add('romaneio-row-flash');
+        setTimeout(() => linha.classList.remove('romaneio-row-flash'), 1400);
+    }
+    pacoteEditandoId = null;
     limparCamposPacote();
 }
 
@@ -1425,7 +1564,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
             <header class="rom-doc-header">
                 <div class="rom-doc-brand">
                     <img src="logo.png" alt="${(emitente.nomeFantasia || 'VANMARTE').toUpperCase()}" onerror="this.style.display='none'">
-                    <div class="rom-doc-brand-copy"><strong>${emitente.nomeFantasia || emitente.nome || 'SERRARIA VANMARTE'}</strong>${emitente.cnpj ? `<span>CNPJ: ${emitente.cnpj}</span>` : ''}<span>${(emitente.logradouro || '')} ${(emitente.numero || '')}${emitente.cidade ? ` · ${emitente.cidade}` : ''}</span></div>
+                    <div class="rom-doc-brand-copy"><strong>${emitente.nome || 'COMERCIO DE MADEIRAS VANMART LTDA'}</strong>${emitente.cnpj ? `<span>CNPJ: ${emitente.cnpj}</span>` : ''}<span>${(emitente.logradouro || '')} ${(emitente.numero || '')}${emitente.cidade ? ` · ${emitente.cidade}` : ''}</span></div>
                 </div>
                 <div class="rom-doc-title"><h1>${r.cliente || 'Comprador'} · Carga ${r.numero || r.numeroCarga || '-'}</h1><strong>Romaneio de madeira serrada</strong><small>Emitido em ${dataEmissao}</small></div>
             </header>
@@ -1490,28 +1629,55 @@ function renderizarTabelaPacotes() {
         if (texto.includes('3')) return 3;
         return 99;
     };
+    const normalizarChaveVisual = (valor) => String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
     const ordenarPorCubagem = (lista) => [...lista].sort((a, b) => {
         return numeroClasseRomaneio(a.qualidade) - numeroClasseRomaneio(b.qualidade)
+            || normalizarChaveVisual(a.produtoNome).localeCompare(normalizarChaveVisual(b.produtoNome), 'pt-BR')
             || (Number(b.compR || b.compV) || 0) - (Number(a.compR || a.compV) || 0)
             || (Number(b.esp) || 0) - (Number(a.esp) || 0)
             || (Number(b.larg) || 0) - (Number(a.larg) || 0)
             || (b.pecasPorPacote || 0) - (a.pecasPorPacote || 0);
     });
-    const montarMedidaRomaneio = (p, primeiraCubagem, cor) => {
+    const montarMedidaRomaneio = (p, primeiraCubagem, cor, volumeCubagem = 0) => {
         const config = `${p.configPct || '-'} = ${p.pecasPorPacote || 0} pç`;
         const configHtml = `
-            <div style="display:grid; grid-template-columns:22px 1fr; align-items:center; gap:6px; margin-top:${primeiraCubagem ? '5px' : '0'}; color:#f8fafc; font-size:0.78rem; font-weight:800; white-space:nowrap;">
-                <span style="text-align:center;">*</span>
+            <div class="romaneio-package-config" style="margin-top:${primeiraCubagem ? '5px' : '0'};">
+                <span>*</span>
                 <span>${config}</span>
             </div>
         `;
         if (!primeiraCubagem) return configHtml;
         return `
-            <div style="font-weight:900; color:${cor}; font-size:0.95rem; white-space:nowrap;">${medidaRealPacoteRomaneio(p)}</div>
+            <div class="romaneio-package-measure-line">
+                <div class="romaneio-package-measure" style="color:${cor};">${medidaRealPacoteRomaneio(p)}</div>
+                <span class="romaneio-measure-volume" style="--measure-color:${cor};">Total da cubagem: ${formatarM3Baixo(volumeCubagem)} m³</span>
+            </div>
             ${detalheCubagemVendaRomaneio(p)}
             ${configHtml}
         `;
     };
+    // A lista deve agrupar madeira do pátio e lançamento manual pela medida física.
+    // Preço, origem e cubagem de venda podem mudar, mas não criam outra cubagem visual.
+    const chaveMedidaResumo = (p) => [
+        normalizarChaveVisual(p.produtoNome),
+        Number(p.esp || 0).toFixed(3),
+        Number(p.larg || 0).toFixed(3),
+        Number(p.compR || p.compV || 0).toFixed(3)
+    ].join('|');
+    const resumosPorMedida = new Map();
+    romaneioAtual.pacotes.forEach(p => {
+        const chave = `${String(p.qualidade || '').trim().toUpperCase()}|${chaveMedidaResumo(p)}`;
+        const atual = resumosPorMedida.get(chave) || { pacotes: 0, pecas: 0, m3: 0 };
+        atual.pacotes += Number(p.qtdPacotes || 0);
+        atual.pecas += Number(p.pecasPorPacote || 0) * Number(p.qtdPacotes || 0);
+        atual.m3 += Number(p.m3VendaTotal || 0);
+        resumosPorMedida.set(chave, atual);
+    });
     const grupos = {};
     romaneioAtual.pacotes.forEach(p => {
         if (!grupos[p.qualidade]) grupos[p.qualidade] = { itens: [], subtotalM3: 0, subtotalValor: 0 };
@@ -1533,7 +1699,7 @@ function renderizarTabelaPacotes() {
                     </span>
                 </div>
                 <div style="overflow-x: auto;">
-                    <table class="package-table">
+                    <table class="package-table orq-sortable-table">
                         <thead>
                             <tr>
                                 <th>Madeira / Medida</th>
@@ -1550,12 +1716,13 @@ function renderizarTabelaPacotes() {
                             ${(() => {
                                 let ultimaCubagem = '';
                                 return ordenarPorCubagem(g.itens).map(p => {
-                                    const cubagemAtual = `${p.produtoNome || ''}|${medidaRealPacoteRomaneio(p)}`;
+                                    const cubagemAtual = chaveMedidaResumo(p);
                                     const primeiraCubagem = cubagemAtual !== ultimaCubagem;
                                     ultimaCubagem = cubagemAtual;
+                                    const resumoCubagem = resumosPorMedida.get(`${String(p.qualidade || '').trim().toUpperCase()}|${cubagemAtual}`);
                                     return `
-                                        <tr class="${p.id === pacoteEditandoId ? 'romaneio-linha-editando' : ''}">
-                                            <td>${primeiraCubagem ? `<strong>${p.produtoNome}</strong><br>` : ''}${montarMedidaRomaneio(p, primeiraCubagem, cor)}</td>
+                                        <tr data-romaneio-pacote-id="${p.id}" class="${p.id === pacoteEditandoId ? 'romaneio-linha-editando' : ''}">
+                                            <td class="romaneio-package-name">${primeiraCubagem ? `<strong>${p.produtoNome}</strong><br>` : ''}${montarMedidaRomaneio(p, primeiraCubagem, cor, resumoCubagem?.m3 || 0)}</td>
                                             <td>${p.qtdPacotes}</td>
                                             <td><strong>${p.pecasPorPacote * p.qtdPacotes}</strong></td>
                                             <td>${formatarM3Baixo(p.m3VendaTotal)}</td>
@@ -1563,8 +1730,8 @@ function renderizarTabelaPacotes() {
                                             <td>R$ ${p.precoM3.toLocaleString('pt-BR')}</td>
                                             <td><strong>R$ ${arredondarParaBaixo(p.valorTotalWood, 2).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
                                             <td class="hide-on-print">
-                                                <button onclick="editarPacoteV2(${p.id})" class="btn-icon text-warning" style="margin-right:10px;"><i class="fa-solid fa-pencil"></i></button>
-                                                <button onclick="removerPacoteV2(${p.id})" class="btn-icon text-danger"><i class="fa-solid fa-trash"></i></button>
+                                                <button onclick="editarPacoteV2(${p.id})" class="btn-icon text-warning romaneio-action-btn" title="Editar pacote"><i class="fa-solid fa-pencil"></i></button>
+                                                <button onclick="removerPacoteV2(${p.id})" class="btn-icon text-danger romaneio-action-btn" title="Excluir pacote"><i class="fa-solid fa-trash"></i></button>
                                             </td>
                                         </tr>
                                     `;

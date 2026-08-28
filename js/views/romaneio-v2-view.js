@@ -93,13 +93,14 @@
                                     <i class="fa-solid fa-boxes-stacked"></i> Abrir lista do patio
                                 </button>
                             </div>
-                            <div id="v2-patio-lista-panel" class="package-entry-wide" style="display:none; grid-column:1 / -1; width:100%; border:1px solid rgba(0,255,136,.22); border-radius:10px; padding:12px; background:rgba(15,23,42,.48);">
+                            <div id="v2-patio-lista-panel" class="package-entry-wide" style="display:none; grid-column:1 / -1; width:100%; border:1px solid rgba(16,185,129,.28); border-radius:10px; padding:12px; background:#172033;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
                                     <strong style="color:var(--accent); text-transform:uppercase; letter-spacing:.04em;">Pacotes disponiveis no patio</strong>
                                     <button type="button" id="btn-v2-fechar-patio" class="btn-v2" style="padding:6px 10px; background:rgba(255,255,255,.08); color:#fff;">Fechar</button>
                                 </div>
                                 <div id="v2-patio-lista" style="display:grid; gap:8px; max-height:430px; overflow:auto; padding-right:4px;"></div>
                             </div>
+                            <div id="v2-pacote-form-manual" class="package-manual-contents">
                             <div class="input-group-v2" id="grupoV2MadeiraManual" style="display:none;">
                                 <label>Nome da madeira</label>
                                 <input type="text" id="v2-produto-manual" class="input-v2 text-uppercase-input" placeholder="Ex: TABUA">
@@ -187,6 +188,7 @@
                                     <i class="fa-solid fa-trash-can"></i> Limpar Tudo
                                 </button>
                             </div>
+                            </div>
                         </div>
                     </div>
 
@@ -197,7 +199,12 @@
                     </div>
 
                     <!-- 4. Resumo Financeiro -->
-                    <div style="margin-top: 40px; background: rgba(245, 158, 11, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2); display: flex; flex-wrap: wrap; align-items: flex-end; gap: 15px;">
+                    <details class="romaneio-fold-section" id="v2-ajustes-section">
+                        <summary>
+                            <span><i class="fa-solid fa-sliders"></i> Ajustes de valores e taxa NF</span>
+                            <i class="fa-solid fa-chevron-down romaneio-fold-icon"></i>
+                        </summary>
+                        <div class="romaneio-fold-content" style="background: rgba(245, 158, 11, 0.05);">
                         <div class="input-group-v2">
                             <label style="color: var(--warning);">Taxa NF (%)</label>
                             <input type="number" id="v2-taxa-nf" class="input-v2" style="width: 90px; border-color: var(--warning);" value="9.3" step="0.1">
@@ -218,15 +225,21 @@
                             <label>Obs. Ajuste Frete</label>
                             <input type="text" id="v2-obs-frete" class="input-v2" placeholder="Motivo do desconto/adicional frete">
                         </div>
-                    </div>
+                        </div>
+                    </details>
 
                     <!-- Observação Geral da Carga -->
-                    <div class="card-v2" style="margin-top: 15px;">
-                        <span class="card-title">Observação da Carga</span>
+                    <details class="romaneio-fold-section" id="v2-observacao-section">
+                        <summary>
+                            <span><i class="fa-solid fa-note-sticky"></i> Observação da Carga</span>
+                            <i class="fa-solid fa-chevron-down romaneio-fold-icon"></i>
+                        </summary>
+                        <div class="romaneio-fold-content">
                         <div class="input-group-v2">
                             <textarea id="v2-obs-carga" class="input-v2" style="width: 100%; min-height: 80px; resize: vertical; padding: 10px;" placeholder="Adicione informações importantes sobre a carga, cliente ou motorista..."></textarea>
                         </div>
-                    </div>
+                        </div>
+                    </details>
 
                     <div class="finance-footer" style="margin-top: 15px;">
                         <!-- O conteúdo detalhado e cálculos são gerados pelo js/romaneio_v2.js -->

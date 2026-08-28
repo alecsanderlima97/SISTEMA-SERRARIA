@@ -409,6 +409,16 @@ function aplicarPermissoesDashboardPatio() {
     document.querySelectorAll('#view-dashboard .kpi-card, #view-dashboard .dashboard-card, #view-dashboard canvas, #view-dashboard [data-dashboard-view]').forEach(el => {
         el.style.display = podeIndicadores ? '' : 'none';
     });
+
+    const somenteFluxoPatio = usuarioPodeAcessarDashboardItem('fluxo-patio')
+        && !usuarioPodeAcessarDashboardItem('controle-producao')
+        && !podeIndicadores;
+    document.body.classList.toggle('dashboard-fluxo-patio-exclusivo', somenteFluxoPatio);
+
+    if (somenteFluxoPatio) {
+        // O operador inicia direto no seu fluxo, sem o painel gerencial ficar visível ao fundo.
+        setTimeout(() => window.abrirProducaoPatio?.(), 0);
+    }
 }
 
 window.atualizarPermissoesDashboardPatio = aplicarPermissoesDashboardPatio;
