@@ -15,6 +15,10 @@ let romaneiosPatioCache = [];
 let romaneiosPatioCacheEm = 0;
 let romaneiosPatioPromise = null;
 let resumoProducaoPatioIndice = 0;
+let configuracoesMadeiraPatioCache = [];
+let configuracoesMadeiraPatioCacheEm = 0;
+let configuracoesMadeiraPatioPromise = null;
+let sugestoesConfiguracaoPatio = {};
 let itensPatioSelecionados = new Set();
 let itensFluxoPatioSelecionados = new Set();
 let itemPatioEditandoId = null;
@@ -55,9 +59,46 @@ async function carregarRomaneiosPatioCache(force = false) {
     return romaneiosPatioPromise;
 }
 
+async function carregarConfiguracoesMadeiraPatio(force = false) {
+    if (!force && configuracoesMadeiraPatioCacheEm && Date.now() - configuracoesMadeiraPatioCacheEm < CACHE_PATIO_MS) {
+        return configuracoesMadeiraPatioCache;
+    }
+    if (configuracoesMadeiraPatioPromise) return configuracoesMadeiraPatioPromise;
+    configuracoesMadeiraPatioPromise = getDocs(collection(db, 'produtos')).then(snap => {
+        const lista = [];
+        snap.forEach(docSnap => {
+            const item = { id: docSnap.id, ...docSnap.data() };
+            const alturas = Number(item.alturas || 0);
+            const larguraPacote = Number(item.larguraPacote || item.camada || 0);
+            const amarras = Number(item.amarras || 0);
+            const pecasPorPacote = Number(item.pecasPorPacote || ((alturas > 0 && larguraPacote > 0) ? alturas * larguraPacote + amarras : 0));
+            if (Number(item.espessura) > 0 && Number(item.largura) > 0 && Number(item.comprimentoVenda || item.comprimento) > 0 && pecasPorPacote > 0) {
+                lista.push({
+                    ...item,
+                    alturas,
+                    larguraPacote,
+                    amarras,
+                    pecasPorPacote,
+                    comprimentoReferencia: Number(item.comprimentoVenda || item.comprimento || 0)
+                });
+            }
+        });
+        configuracoesMadeiraPatioCache = lista;
+        configuracoesMadeiraPatioCacheEm = Date.now();
+        return lista;
+    }).finally(() => {
+        configuracoesMadeiraPatioPromise = null;
+    });
+    return configuracoesMadeiraPatioPromise;
+}
+
 document.addEventListener('historicoUpdated', () => {
     romaneiosPatioCacheEm = 0;
     resumoRomaneiosPatioCache = null;
+});
+
+document.addEventListener('produtosUpdated', () => {
+    configuracoesMadeiraPatioCacheEm = 0;
 });
 
 // UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
@@ -94,6 +135,35 @@ function horaAtualPatio() {
     return `${hh}:${min}`;
 }
 
+function instalarSugestoesConfiguracaoPatio() {
+    const grupos = [
+        { origem: 'producao', ids: ['prodPatioEsp', 'prodPatioLarg', 'prodPatioComp'] },
+        { origem: 'controle', ids: ['patioItemEsp', 'patioItemLarg', 'patioItemComp'] }
+    ];
+
+    grupos.forEach(grupo => {
+        grupo.ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.configSugestaoListener === '1') return;
+            el.dataset.configSugestaoListener = '1';
+            el.addEventListener('input', () => {
+                window.clearTimeout(el._configSugestaoTimer);
+                el._configSugestaoTimer = window.setTimeout(() => sugerirConfiguracaoMadeiraPatio(grupo.origem), 180);
+            });
+            el.addEventListener('blur', () => sugerirConfiguracaoMadeiraPatio(grupo.origem));
+        });
+    });
+
+    ['prodPatioAlturas', 'prodPatioLarguraPacote', 'prodPatioAmarras', 'patioItemAltura', 'patioItemCamada', 'patioItemAmarras'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.configManualListener === '1') return;
+        el.dataset.configManualListener = '1';
+        el.addEventListener('input', () => {
+            if (document.activeElement === el) delete el.dataset.configAuto;
+        });
+    });
+}
+
 // Inicializar Eventos Safely (Independente do momento do carregamento do mÃ³dulo ES)
 function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
@@ -110,6 +180,7 @@ function inicializarPatioListeners() {
     const btnSalvar = document.getElementById('btnSalvarRelatorioPatio');
     const btnResumo = document.getElementById('btnResumoProducaoPatio');
     const btnImportarFluxo = document.getElementById('btnImportarFluxoPatio');
+    instalarSugestoesConfiguracaoPatio();
 
     if (btnAbrir) {
         btnAbrir.addEventListener('click', abrirModalPatio);
@@ -399,7 +470,7 @@ async function renderizarFluxoPatio() {
 
         tbody.innerHTML = itens.length ? itens.map(item => `
             <tr>
-                <td>${badgeClasseFluxo(item.classe)}</td>
+                <td>${badgeClasseFluxo(obterClasseItemFluxo(item))}</td>
                 <td style="font-weight:700; color:white;">${formatCubagemFluxo(item)}</td>
                 <td style="font-weight:800;">${item.pacotes || 0}</td>
                 <td style="font-weight:bold; color:var(--accent-color);">${formatDecimalMockup(item.volume || 0)} m³</td>
@@ -415,20 +486,24 @@ async function renderizarFluxoPatio() {
 
 function calcularTotaisFluxoPatio(itens) {
     return itens.reduce((acc, item) => {
-        const classe = formatarClasseFluxo(item.classe);
+        const classeNumero = obterNumeroClasse(obterClasseItemFluxo(item));
+        const classe = classeNumero ? formatarClasseFluxo(classeNumero) : '-';
         if (!acc.porClasse[classe]) acc.porClasse[classe] = { volume: 0, pacotes: 0 };
+        if (!acc.porClasseNumero[classeNumero]) acc.porClasseNumero[classeNumero] = { volume: 0, pacotes: 0 };
         acc.pacotes += Number(item.pacotes) || 0;
         acc.pecas += Number(item.totalPecas) || Number(item.pecas) || 0;
         acc.volume += Number(item.volume) || 0;
         acc.porClasse[classe].volume += Number(item.volume) || 0;
         acc.porClasse[classe].pacotes += Number(item.pacotes) || 0;
+        acc.porClasseNumero[classeNumero].volume += Number(item.volume) || 0;
+        acc.porClasseNumero[classeNumero].pacotes += Number(item.pacotes) || 0;
         return acc;
-    }, { pacotes: 0, pecas: 0, volume: 0, porClasse: {} });
+    }, { pacotes: 0, pecas: 0, volume: 0, porClasse: {}, porClasseNumero: {} });
 }
 
 function cardFluxoPatio(label, value, classe = null) {
     const colors = coresClasseFluxo(classe);
-    const valueColor = classe ? colors.color : 'white';
+    const valueColor = classe ? colors.color : 'var(--text-color, #111827)';
     return `
         <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; min-height: 82px;">
             <div style="font-size: 0.78rem; color: ${valueColor}; text-transform: uppercase; font-weight: 800;">${label}</div>
@@ -532,7 +607,96 @@ function atualizarResumoNovaCubagemProducaoPatio() {
     if (totalVolume) totalVolume.textContent = `${formatDecimalMockup(resumo.volume || 0)} m3`;
 }
 
+function obterCamposConfiguracaoPatio(origem = 'producao') {
+    const prefixo = origem === 'controle' ? 'patioItem' : 'prodPatio';
+    return {
+        esp: document.getElementById(`${prefixo}${origem === 'controle' ? 'Esp' : 'Esp'}`),
+        larg: document.getElementById(`${prefixo}${origem === 'controle' ? 'Larg' : 'Larg'}`),
+        comp: document.getElementById(`${prefixo}${origem === 'controle' ? 'Comp' : 'Comp'}`),
+        alturas: document.getElementById(origem === 'controle' ? 'patioItemAltura' : 'prodPatioAlturas'),
+        larguraPacote: document.getElementById(origem === 'controle' ? 'patioItemCamada' : 'prodPatioLarguraPacote'),
+        amarras: document.getElementById(origem === 'controle' ? 'patioItemAmarras' : 'prodPatioAmarras'),
+        pecas: document.getElementById(origem === 'controle' ? 'patioItemPecas' : 'prodPatioTotalPecas'),
+        sugestao: document.getElementById(origem === 'controle' ? 'patioItemConfigSugestao' : 'prodPatioConfigSugestao')
+    };
+}
+
+function chaveCubagemConfiguracao(esp, larg, comp) {
+    return [
+        Number(esp || 0).toFixed(1),
+        Number(larg || 0).toFixed(1),
+        Number(comp || 0).toFixed(2)
+    ].join('|');
+}
+
+function camposConfiguracaoVazios(campos) {
+    return !Number(campos.alturas?.value || 0)
+        && !Number(campos.larguraPacote?.value || 0)
+        && !Number(campos.amarras?.value || 0);
+}
+
+function formatarConfiguracaoPadrao(config) {
+    return `${config.alturas} x ${config.larguraPacote} + ${config.amarras || 0} = ${config.pecasPorPacote} pecas`;
+}
+
+function aplicarConfiguracaoPadraoPatio(origem, config) {
+    const campos = obterCamposConfiguracaoPatio(origem);
+    if (!campos.alturas || !campos.larguraPacote || !campos.amarras) return;
+    campos.alturas.value = config.alturas || '';
+    campos.larguraPacote.value = config.larguraPacote || '';
+    campos.amarras.value = config.amarras || 0;
+    campos.alturas.dataset.configAuto = '1';
+    campos.larguraPacote.dataset.configAuto = '1';
+    campos.amarras.dataset.configAuto = '1';
+    if (origem === 'controle') calcularPecasPatio();
+    else atualizarResumoNovaCubagemProducaoPatio();
+}
+
+window.usarConfiguracaoPadraoPatio = function(origem) {
+    const config = sugestoesConfiguracaoPatio[origem];
+    if (!config) return;
+    aplicarConfiguracaoPadraoPatio(origem, config);
+};
+
+async function sugerirConfiguracaoMadeiraPatio(origem = 'producao') {
+    const campos = obterCamposConfiguracaoPatio(origem);
+    if (!campos.esp || !campos.larg || !campos.comp || !campos.sugestao) return;
+    const esp = parseDecimal(campos.esp.value);
+    const larg = parseDecimal(campos.larg.value);
+    const comp = parseDecimal(campos.comp.value);
+    if (esp <= 0 || larg <= 0 || comp <= 0) {
+        campos.sugestao.innerHTML = '';
+        campos.sugestao.hidden = true;
+        return;
+    }
+
+    const chave = chaveCubagemConfiguracao(esp, larg, comp);
+    const configuracoes = await carregarConfiguracoesMadeiraPatio();
+    const encontrada = configuracoes.find(item => chaveCubagemConfiguracao(item.espessura, item.largura, item.comprimentoReferencia) === chave);
+
+    if (!encontrada) {
+        campos.sugestao.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>Nenhuma configuracao padrao encontrada na Gestao de Madeira para esta cubagem.</span>';
+        campos.sugestao.hidden = false;
+        delete sugestoesConfiguracaoPatio[origem];
+        return;
+    }
+
+    sugestoesConfiguracaoPatio[origem] = encontrada;
+    const texto = formatarConfiguracaoPadrao(encontrada);
+    campos.sugestao.innerHTML = `
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Padrao encontrado: <strong>${texto}</strong></span>
+        <button type="button" onclick="window.usarConfiguracaoPadraoPatio('${origem}')">Usar</button>
+    `;
+    campos.sugestao.hidden = false;
+
+    if (camposConfiguracaoVazios(campos) || campos.alturas.dataset.configAuto === '1') {
+        aplicarConfiguracaoPadraoPatio(origem, encontrada);
+    }
+}
+
 function instalarListenersProducaoPatio() {
+    instalarSugestoesConfiguracaoPatio();
     ['prodPatioEsp', 'prodPatioLarg', 'prodPatioComp', 'prodPatioPacotes', 'prodPatioAlturas', 'prodPatioLarguraPacote', 'prodPatioAmarras'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.producaoListener) {
@@ -578,10 +742,18 @@ async function atualizarResumoFluxoPatioCompleto() {
     const container = document.getElementById('resumoProducaoPatioClasses');
     if (!container || !producaoPatioRelatorioAtual) return;
     const totais = calcularTotaisFluxoPatio(producaoPatioRelatorioAtual.itens || []);
+    const numerosClasse = Array.from(new Set([
+        1,
+        2,
+        3,
+        ...Object.keys(totais.porClasseNumero).map(Number).filter(Boolean)
+    ])).sort((a, b) => a - b);
     const cards = [
         cardFluxoPatio('Total no patio', `${totais.pacotes || 0} pacotes | ${formatDecimalMockup(totais.volume || 0)} m3`),
-        cardFluxoPatio('1a Classe patio', `${totais.porClasse[1]?.pacotes || 0} pacotes | ${formatDecimalMockup(totais.porClasse[1]?.volume || 0)} m3`, '1a CLASSE'),
-        cardFluxoPatio('2a Classe patio', `${totais.porClasse[2]?.pacotes || 0} pacotes | ${formatDecimalMockup(totais.porClasse[2]?.volume || 0)} m3`, '2a CLASSE')
+        ...numerosClasse.map(numero => {
+            const total = totais.porClasseNumero[numero] || { pacotes: 0, volume: 0 };
+            return cardFluxoPatio(`${numero}a Classe patio`, `${total.pacotes || 0} pacotes | ${formatDecimalMockup(total.volume || 0)} m3`, `${numero}a CLASSE`);
+        })
     ];
     container.innerHTML = cards.join('');
 }
@@ -654,12 +826,13 @@ async function renderizarProducaoPatio(options = {}) {
 
         let ultimaChaveCubagemFluxo = '';
         tbody.innerHTML = atual.itens.length ? atual.itens.map(item => {
-            const corClasse = coresClasseFluxo(item.classe).color;
-            const chaveCubagem = `${obterNumeroClasse(item.classe)}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+            const classeItem = obterClasseItemFluxo(item);
+            const corClasse = coresClasseFluxo(classeItem).color;
+            const chaveCubagem = `${obterNumeroClasse(classeItem)}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
             const primeiraCubagem = chaveCubagem !== ultimaChaveCubagemFluxo;
             ultimaChaveCubagemFluxo = chaveCubagem;
             const classeHtml = primeiraCubagem
-                ? badgeClasseFluxo(item.classe)
+                ? badgeClasseFluxo(classeItem)
                 : '<span style="color:#334155; font-weight:900;">*</span>';
             const cubagemHtml = primeiraCubagem
                 ? `<div style="font-weight:900; color:${corClasse} !important;">${formatCubagemFluxo(item)}</div>
@@ -1200,6 +1373,10 @@ function coresClasseFluxo(classe) {
 
 function formatCubagemFluxo(item) {
     return `${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}m`;
+}
+
+function obterClasseItemFluxo(item) {
+    return item?.classe || item?.classificacao || item?.qualidade || item?.tipoClasse || '';
 }
 
 function formatarConfiguracaoPacote(item) {

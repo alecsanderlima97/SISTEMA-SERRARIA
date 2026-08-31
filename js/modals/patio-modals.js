@@ -221,6 +221,7 @@
                             <input type="text" id="patioItemVolumePreview" placeholder="0,000" readonly style="background: rgba(0,0,0,0.1) !important; color: #4ade80 !important; cursor: not-allowed; padding: 8px 6px !important; text-align: center; max-width: 86px;">
                         </div>
                         </div>
+                        <div id="patioItemConfigSugestao" class="patio-config-suggestion" hidden></div>
                         <div class="btn-add-lote-col" style="margin-bottom: 0;">
                             <button type="submit" class="btn-patio-print" style="padding: 10px; height: 42px; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 1.2rem; border-radius: 8px; background: linear-gradient(135deg, #e67e22 0%, #c8630b 100%) !important;" title="Adicionar Lote">
                                 <i class="fa-solid fa-plus"></i>

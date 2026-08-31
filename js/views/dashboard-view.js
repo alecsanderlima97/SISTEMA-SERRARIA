@@ -69,6 +69,7 @@
                             <span>Volume total</span>
                             <strong id="prodPatioTotalVolume">0,000 m3</strong>
                         </div>
+                        <div id="prodPatioConfigSugestao" class="patio-config-suggestion" hidden></div>
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>

@@ -562,6 +562,36 @@ table td {
 #producaoPatioLista .fluxo-patio-row-areia.is-selected { background:#e2f3e7 !important; box-shadow: inset 3px 0 0 #15803d; }
 #producaoPatioLista .fluxo-patio-row-flash { animation: fluxoPatioRowFlash .9s ease both; }
 
+.patio-config-suggestion {
+    grid-column: 1 / -1;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid rgba(15,143,166,.24);
+    border-radius: 8px;
+    background: rgba(15,143,166,.09);
+    color: #0f766e;
+    font-size: .75rem;
+    font-weight: 800;
+}
+.patio-config-suggestion[hidden] { display: none !important; }
+.patio-config-suggestion strong { color: #0f172a; }
+.patio-config-suggestion button {
+    margin-left: auto;
+    min-height: 28px;
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: #0f8fa6;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+.patio-config-suggestion button:hover { filter: brightness(.95); }
+
 .fluxo-patio-package-ghost {
     position: fixed;
     z-index: 100000;
