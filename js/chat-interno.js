@@ -309,25 +309,38 @@ async function initializeForUser(user) {
 }
 
 window.switchCommunicationTab = function(tab) {
-    const selected = tab === 'ai' ? 'ai' : 'messages';
+    const selected = ['ai', 'agents'].includes(tab) ? tab : 'messages';
     const messagesPanel = document.getElementById('communicationMessagesPanel');
+    const agentsPanel = document.getElementById('communicationAgentsPanel');
     const aiPanel = document.getElementById('communicationAIPanel');
     const messagesTab = document.getElementById('communicationTabMessages');
+    const agentsTab = document.getElementById('communicationTabAgents');
     const aiTab = document.getElementById('communicationTabAI');
+    const isMessages = selected === 'messages';
+    const isAgents = selected === 'agents';
     const isAI = selected === 'ai';
     if (messagesPanel) {
-        messagesPanel.hidden = isAI;
-        messagesPanel.classList.toggle('active', !isAI);
+        messagesPanel.hidden = !isMessages;
+        messagesPanel.classList.toggle('active', isMessages);
+    }
+    if (agentsPanel) {
+        agentsPanel.hidden = !isAgents;
+        agentsPanel.classList.toggle('active', isAgents);
     }
     if (aiPanel) {
         aiPanel.hidden = !isAI;
         aiPanel.classList.toggle('active', isAI);
     }
-    messagesTab?.classList.toggle('active', !isAI);
+    messagesTab?.classList.toggle('active', isMessages);
+    agentsTab?.classList.toggle('active', isAgents);
     aiTab?.classList.toggle('active', isAI);
-    messagesTab?.setAttribute('aria-selected', String(!isAI));
+    messagesTab?.setAttribute('aria-selected', String(isMessages));
+    agentsTab?.setAttribute('aria-selected', String(isAgents));
     aiTab?.setAttribute('aria-selected', String(isAI));
-    setTimeout(() => (isAI ? document.getElementById('assistantInput') : document.getElementById('chatInput'))?.focus(), 60);
+    setTimeout(() => {
+        const alvo = isAI ? 'assistantInput' : isAgents ? 'patioAgentCommand' : 'chatInput';
+        document.getElementById(alvo)?.focus();
+    }, 60);
 };
 
 document.addEventListener('DOMContentLoaded', () => {

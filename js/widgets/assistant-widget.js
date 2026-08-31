@@ -18,6 +18,7 @@
 
         <div class="communication-tabs" role="tablist" aria-label="Central de comunicação">
             <button type="button" id="communicationTabMessages" class="communication-tab active" role="tab" aria-selected="true" onclick="window.switchCommunicationTab('messages')"><i class="fa-solid fa-comments"></i><span>Mensagens</span><span id="chatUnreadBadge" class="communication-tab-badge" hidden>0</span></button>
+            <button type="button" id="communicationTabAgents" class="communication-tab" role="tab" aria-selected="false" onclick="window.switchCommunicationTab('agents')"><i class="fa-solid fa-robot"></i><span>Agentes</span></button>
             <button type="button" id="communicationTabAI" class="communication-tab" role="tab" aria-selected="false" onclick="window.switchCommunicationTab('ai')"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Assistente IA</span></button>
         </div>
 
@@ -37,6 +38,32 @@
                     </div>
                     <div id="chatMessages" class="chat-messages"><div class="chat-empty-state"><i class="fa-regular fa-comments"></i><strong>Comece uma conversa</strong><span>Escolha uma pessoa da equipe para trocar mensagens.</span></div></div>
                     <form id="chatForm" class="chat-input-row"><input id="chatInput" type="text" maxlength="1500" placeholder="Escreva uma mensagem" autocomplete="off" disabled><button type="submit" title="Enviar mensagem" disabled><i class="fa-solid fa-paper-plane"></i></button></form>
+                </div>
+            </div>
+        </section>
+
+        <section id="communicationAgentsPanel" class="communication-panel" role="tabpanel" hidden>
+            <div class="agent-center">
+                <div class="agent-card">
+                    <div class="agent-card-head">
+                        <span class="agent-icon"><i class="fa-solid fa-truck-ramp-box"></i></span>
+                        <div>
+                            <strong>Agente de Produção do Pátio</strong>
+                            <small>Lance cubagens por comando escrito. A confirmação vem antes de salvar.</small>
+                        </div>
+                    </div>
+                    <form id="patioAgentForm" class="agent-command-form">
+                        <textarea id="patioAgentCommand" rows="4" placeholder="Ex: controle de produção do pátio, 1ª classe, cubagem 1,7/8,5/1,20, pacote 50 por 14 + 16 amarras"></textarea>
+                        <div class="agent-command-actions">
+                            <button type="button" id="patioAgentVoiceButton" class="agent-voice-button"><i class="fa-solid fa-microphone"></i> Falar lançamento</button>
+                            <button type="submit"><i class="fa-solid fa-bolt"></i> Interpretar e lançar</button>
+                        </div>
+                    </form>
+                    <div class="agent-examples">
+                        <button type="button" data-agent-example="Controle de produção do pátio, 1ª classe, cubagem 1,7/8,5/1,20, pacote 50 por 14 + 16 amarras.">1ª classe padrão</button>
+                        <button type="button" data-agent-example="Fluxo do pátio, segunda classe, cubagem 1,7/8,5/1,20, 2 pacotes com 50 por 14 mais 16 amarras.">2 pacotes 2ª</button>
+                    </div>
+                    <div id="patioAgentResult" class="agent-result">Digite um comando para o agente montar o lançamento.</div>
                 </div>
             </div>
         </section>

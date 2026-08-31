@@ -303,6 +303,30 @@ async function carregarRelatorioPatioAtual() {
     return relatorios[0] || null;
 }
 
+async function garantirRelatorioProducaoPatioAtual() {
+    if (producaoPatioRelatorioAtual?.id) return producaoPatioRelatorioAtual;
+
+    producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
+    if (producaoPatioRelatorioAtual?.id) return producaoPatioRelatorioAtual;
+
+    const dataHoje = dataAtualPatio();
+    const novoRelatorio = {
+        data: dataHoje,
+        horario: horaAtualPatio(),
+        periodo: 'Atualizacao do dia',
+        serrando: '',
+        itens: [],
+        totais: { totalVolume: 0, totalPacotes: 0, totalPecas: 0 },
+        ultimaAlteracaoPatio: montarUltimaAlteracaoPatio('Criou controle de producao do patio'),
+        criadoEm: new Date().toISOString(),
+        atualizadoEm: new Date().toISOString()
+    };
+    const ref = await addDoc(collection(db, 'patio_relatorios'), novoRelatorio);
+    producaoPatioRelatorioAtual = { id: ref.id, ...novoRelatorio };
+    patioRelatoriosCacheEm = 0;
+    return producaoPatioRelatorioAtual;
+}
+
 function selecionarClassePatio(selectClasse, classe) {
     if (!selectClasse) return;
     const numero = obterNumeroClasse(classe) || 1;
@@ -436,6 +460,7 @@ window.abrirProducaoPatio = async function() {
     setFormProducaoPatioAberto(false);
     aplicarPermissoesDashboardPatio();
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    await garantirRelatorioProducaoPatioAtual();
     await renderizarProducaoPatio();
 };
 
@@ -804,6 +829,181 @@ window.salvarSerrandoProducaoPatio = async function() {
         await renderizarProducaoPatio({ recarregar: false });
 };
 
+function chaveCubagemProducaoPatio(item) {
+    return [
+        obterNumeroClasse(item.classe) || 0,
+        String(item.especie || 'EUCALIPTO').toUpperCase(),
+        Number(item.espessura || 0).toFixed(1),
+        Number(item.largura || 0).toFixed(1),
+        Number(item.comprimento || 0).toFixed(2),
+        String(item.pecasRaw || '').replace(/\s+/g, '').toLowerCase()
+    ].join('|');
+}
+
+function mesclarCubagemProducaoPatio(novoItem) {
+    const itens = producaoPatioRelatorioAtual.itens || [];
+    const chaveNova = chaveCubagemProducaoPatio(novoItem);
+    const existente = itens.find(item => chaveCubagemProducaoPatio(item) === chaveNova);
+    if (!existente) {
+        producaoPatioRelatorioAtual.itens = [...itens, novoItem];
+        return novoItem;
+    }
+
+    existente.pacotes = Number(existente.pacotes || 0) + Number(novoItem.pacotes || 0);
+    existente.totalPecas = existente.pacotes * (Number(existente.pecas) || 0);
+    existente.volumeUnidade = Number(existente.volumeUnidade || novoItem.volumeUnidade || 0);
+    existente.volume = existente.volumeUnidade * existente.pacotes;
+    return existente;
+}
+
+function preencherFormularioProducaoPatio(dados) {
+    const classeNumero = Number(dados.classe || 1);
+    const classeValor = `${classeNumero}a CLASSE`;
+    const campos = {
+        prodPatioClasse: classeValor,
+        prodPatioEsp: formatDecimal(Number(dados.espessura || 0), 1),
+        prodPatioLarg: formatDecimal(Number(dados.largura || 0), 1),
+        prodPatioComp: formatDecimal(Number(dados.comprimento || 0), 2),
+        prodPatioPacotes: String(Number(dados.pacotes || 1)),
+        prodPatioAlturas: String(Number(dados.alturas || 0)),
+        prodPatioLarguraPacote: String(Number(dados.larguraPacote || 0)),
+        prodPatioAmarras: String(Number(dados.amarras || 0))
+    };
+
+    Object.entries(campos).forEach(([id, valor]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = valor;
+    });
+    atualizarResumoNovaCubagemProducaoPatio();
+}
+
+function normalizarComandoProducaoPatio(texto) {
+    return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/ª|º/g, 'a')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function extrairDadosComandoProducaoPatio(comando) {
+    const original = String(comando || '').trim();
+    const texto = normalizarComandoProducaoPatio(original);
+    const classe = texto.includes('segunda') || /\b2\s*a?\b/.test(texto)
+        ? 2
+        : texto.includes('terceira') || /\b3\s*a?\b/.test(texto)
+            ? 3
+            : 1;
+
+    const numerosDecimais = original.match(/\d+(?:[,.]\d+)?/g) || [];
+    let espessura = 0;
+    let largura = 0;
+    let comprimento = 0;
+    const cubagemComSeparador = original.match(/(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)/i);
+    if (cubagemComSeparador) {
+        espessura = parseDecimal(cubagemComSeparador[1]);
+        largura = parseDecimal(cubagemComSeparador[2]);
+        comprimento = parseDecimal(cubagemComSeparador[3]);
+    } else if (numerosDecimais.length >= 3) {
+        espessura = parseDecimal(numerosDecimais[0]);
+        largura = parseDecimal(numerosDecimais[1]);
+        comprimento = parseDecimal(numerosDecimais[2]);
+    }
+
+    const textoSemCubagem = cubagemComSeparador
+        ? original.replace(cubagemComSeparador[0], ' ')
+        : original;
+    const config = textoSemCubagem.match(/(\d+)\s*(?:x|por)\s*(\d+)(?:\s*(?:\+|mais)\s*(\d+))?/i);
+    const alturas = config ? parseInt(config[1], 10) : 0;
+    const larguraPacote = config ? parseInt(config[2], 10) : 0;
+    const amarras = config ? parseInt(config[3] || '0', 10) : 0;
+    const pacoteMatch = texto.match(/(\d+)\s*(?:pacote|pacotes|pct|pcts)\b/);
+    const pacotes = pacoteMatch ? Math.max(1, parseInt(pacoteMatch[1], 10) || 1) : 1;
+    const pecas = alturas > 0 && larguraPacote > 0 ? (alturas * larguraPacote) + amarras : 0;
+    const volumeUnidade = espessura > 0 && largura > 0 && comprimento > 0 && pecas > 0
+        ? (espessura / 100) * (largura / 100) * comprimento * pecas
+        : 0;
+
+    return {
+        original,
+        classe,
+        espessura,
+        largura,
+        comprimento,
+        pacotes,
+        alturas,
+        larguraPacote,
+        amarras,
+        pecas,
+        volumeUnidade,
+        volume: volumeUnidade * pacotes
+    };
+}
+
+function validarDadosAgenteProducaoPatio(dados) {
+    const pendentes = [];
+    if (![1, 2, 3].includes(Number(dados.classe))) pendentes.push('classe');
+    if (Number(dados.espessura) <= 0 || Number(dados.largura) <= 0 || Number(dados.comprimento) <= 0) pendentes.push('cubagem');
+    if (Number(dados.alturas) <= 0 || Number(dados.larguraPacote) <= 0) pendentes.push('configuracao do pacote');
+    if (Number(dados.pecas) <= 0) pendentes.push('total de pecas');
+    return pendentes;
+}
+
+function resumoConfirmacaoAgentePatio(dados) {
+    return [
+        'Conferir lancamento do Agente de Producao:',
+        '',
+        `Classe: ${dados.classe}a`,
+        `Cubagem: ${formatDecimal(dados.espessura, 1)} / ${formatDecimal(dados.largura, 1)} / ${formatDecimal(dados.comprimento, 2)}m`,
+        `Pacotes: ${dados.pacotes}`,
+        `Configuracao: (${dados.alturas}x${dados.larguraPacote})+${dados.amarras} = ${dados.pecas} pecas por pacote`,
+        `Volume total: ${formatDecimalMockup(dados.volume)} m3`,
+        '',
+        'Confirmar e salvar no Fluxo do Patio?'
+    ].join('\n');
+}
+
+window.interpretarComandoAgentePatio = function(comando) {
+    const dados = extrairDadosComandoProducaoPatio(comando);
+    const pendentes = validarDadosAgenteProducaoPatio(dados);
+    return { dados, pendentes };
+};
+
+window.executarComandoAgentePatio = async function(comando) {
+    const resultEl = document.getElementById('patioAgentResult');
+    const { dados, pendentes } = window.interpretarComandoAgentePatio(comando);
+
+    if (pendentes.length) {
+        const msg = `Nao consegui identificar: ${pendentes.join(', ')}. Tente informar classe, cubagem e configuracao do pacote.`;
+        if (resultEl) resultEl.textContent = msg;
+        return { ok: false, mensagem: msg };
+    }
+
+    if (resultEl) {
+        resultEl.innerHTML = `
+            <strong>Entendido:</strong>
+            <span>${dados.classe}a classe | ${formatDecimal(dados.espessura, 1)} / ${formatDecimal(dados.largura, 1)} / ${formatDecimal(dados.comprimento, 2)}m</span>
+            <span>${dados.pacotes} pacote(s) | (${dados.alturas}x${dados.larguraPacote})+${dados.amarras} = ${dados.pecas} pecas | ${formatDecimalMockup(dados.volume)} m3</span>
+        `;
+    }
+
+    await window.abrirProducaoPatio?.();
+    setFormProducaoPatioAberto(true);
+    preencherFormularioProducaoPatio(dados);
+
+    const confirmado = confirm(resumoConfirmacaoAgentePatio(dados));
+    if (!confirmado) {
+        if (resultEl) resultEl.textContent = 'Lancamento cancelado. Os campos ficaram preenchidos para ajuste manual.';
+        return { ok: false, mensagem: 'Lancamento cancelado.' };
+    }
+
+    await window.adicionarCubagemProducaoPatio();
+    const msg = `Lancamento salvo: ${dados.pacotes} pacote(s), ${dados.pecas} pecas por pacote, ${formatDecimalMockup(dados.volume)} m3.`;
+    if (resultEl) resultEl.textContent = msg;
+    return { ok: true, mensagem: msg };
+};
+
 window.imprimirListaProducaoPatio = function() {
     const atual = producaoPatioRelatorioAtual;
     if (!atual || !Array.isArray(atual.itens) || atual.itens.length === 0) {
@@ -860,7 +1060,7 @@ window.imprimirListaProducaoPatio = function() {
 };
 
 window.adicionarCubagemProducaoPatio = async function() {
-    if (!producaoPatioRelatorioAtual) return;
+    await garantirRelatorioProducaoPatioAtual();
     const classe = document.getElementById('prodPatioClasse')?.value || '1a CLASSE';
     const esp = parseDecimal(document.getElementById('prodPatioEsp')?.value);
     const larg = parseDecimal(document.getElementById('prodPatioLarg')?.value);
@@ -897,8 +1097,9 @@ window.adicionarCubagemProducaoPatio = async function() {
         volume: volumeUnidade * pacotes
     };
 
-    producaoPatioRelatorioAtual.itens = [...(producaoPatioRelatorioAtual.itens || []), novoItem];
-    producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Adicionou nova cubagem ${formatCubagemFluxo(novoItem)}`);
+    const itemSalvo = mesclarCubagemProducaoPatio(novoItem);
+    const somouExistente = itemSalvo.id !== novoItem.id;
+    producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${somouExistente ? 'Somou pacote em cubagem existente' : 'Adicionou nova cubagem'} ${formatCubagemFluxo(itemSalvo)}`);
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
     ['prodPatioEsp', 'prodPatioLarg', 'prodPatioComp', 'prodPatioAlturas', 'prodPatioLarguraPacote', 'prodPatioAmarras'].forEach(id => {
         const el = document.getElementById(id);

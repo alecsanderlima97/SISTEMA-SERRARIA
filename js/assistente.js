@@ -13,6 +13,8 @@ const ASSISTANT_SCREEN_GUIDE_KEY = 'orquestra_screen_guide_enabled';
 const ASSISTANT_FLOAT_ENABLED_KEY = 'orquestra_assistant_float_enabled';
 const ASSISTANT_COMPANION_ENABLED_KEY = 'orquestra_assistant_companion_enabled';
 let guiaAssistenteOculta = localStorage.getItem(ASSISTANT_SCREEN_GUIDE_KEY) === 'false';
+let reconhecimentoVozPatio = null;
+let gravandoComandoPatio = false;
 
 function preferenciaLigada(key, defaultValue = true) {
     const value = localStorage.getItem(key);
@@ -323,6 +325,12 @@ function responderPergunta(pergunta) {
     return `Resumo geral:\n\n${analisarEstoque(ctx)}\n\n${analisarFrotas(ctx)}\n\n${analisarFinanceiro(ctx)}`;
 }
 
+function pareceComandoAgentePatio(pergunta) {
+    const texto = normalizarTexto(pergunta);
+    return (texto.includes('patio') || texto.includes('producao'))
+        && (texto.includes('cubagem') || texto.includes('pacote') || texto.includes('amarras') || texto.includes('classe'));
+}
+
 async function responderPerguntaOpenAI(pergunta) {
     const response = await fetch('/api/assistente', {
         method: 'POST',
@@ -406,6 +414,15 @@ window.toggleAssistenteIA = function(force) {
 window.perguntarAssistente = async function(pergunta) {
     if (!pergunta) return;
     window.toggleAssistenteIA(true);
+    if (pareceComandoAgentePatio(pergunta) && typeof window.executarComandoAgentePatio === 'function') {
+        window.switchCommunicationTab?.('agents');
+        const inputAgente = document.getElementById('patioAgentCommand');
+        if (inputAgente) inputAgente.value = pergunta;
+        adicionarMensagem(pergunta, 'user');
+        adicionarMensagem('Vou tratar isso pelo Agente de Produção do Pátio.', 'bot');
+        await enviarComandoAgentePatio();
+        return;
+    }
     window.switchCommunicationTab?.('ai');
     adicionarMensagem(pergunta, 'user');
     adicionarMensagem('Pensando com IA...', 'bot');
@@ -446,6 +463,113 @@ window.enviarPerguntaAssistenteHome = function() {
     input.value = '';
     window.perguntarAssistente(pergunta);
 };
+
+async function enviarComandoAgentePatio(event) {
+    event?.preventDefault?.();
+    const input = document.getElementById('patioAgentCommand');
+    const comando = input?.value.trim();
+    if (!comando) return;
+
+    const result = document.getElementById('patioAgentResult');
+    if (result) result.textContent = 'Interpretando comando do pátio...';
+
+    try {
+        if (typeof window.executarComandoAgentePatio !== 'function') {
+            throw new Error('Agente do patio ainda nao carregou.');
+        }
+        const retorno = await window.executarComandoAgentePatio(comando);
+        adicionarMensagem(retorno?.mensagem || 'Comando processado pelo agente do patio.', retorno?.ok ? 'bot' : 'user');
+        if (retorno?.ok && input) input.value = '';
+    } catch (error) {
+        console.error('Erro no agente do patio:', error);
+        const mensagem = 'Nao foi possivel executar o agente do patio agora. Tente novamente ou preencha a cubagem manualmente.';
+        if (result) result.textContent = mensagem;
+        adicionarMensagem(mensagem, 'bot');
+    }
+}
+
+function atualizarEstadoVozPatio(gravando, mensagem = '') {
+    gravandoComandoPatio = gravando;
+    const botao = document.getElementById('patioAgentVoiceButton');
+    const result = document.getElementById('patioAgentResult');
+    if (botao) {
+        botao.classList.toggle('is-listening', gravando);
+        botao.innerHTML = gravando
+            ? '<i class="fa-solid fa-wave-square"></i> Ouvindo...'
+            : '<i class="fa-solid fa-microphone"></i> Falar lançamento';
+    }
+    if (mensagem && result) result.textContent = mensagem;
+}
+
+function iniciarVozAgentePatio() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const input = document.getElementById('patioAgentCommand');
+    if (!SpeechRecognition) {
+        atualizarEstadoVozPatio(false, 'Este navegador nao liberou reconhecimento de voz. Use Chrome ou Edge atualizado.');
+        return;
+    }
+
+    if (gravandoComandoPatio && reconhecimentoVozPatio) {
+        reconhecimentoVozPatio.stop();
+        return;
+    }
+
+    reconhecimentoVozPatio = new SpeechRecognition();
+    reconhecimentoVozPatio.lang = 'pt-BR';
+    reconhecimentoVozPatio.interimResults = true;
+    reconhecimentoVozPatio.continuous = false;
+
+    let textoFinal = '';
+    let teveErro = false;
+    reconhecimentoVozPatio.onstart = () => atualizarEstadoVozPatio(true, 'Pode falar o lançamento do pátio...');
+    reconhecimentoVozPatio.onresult = event => {
+        let parcial = '';
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+            const trecho = event.results[i][0]?.transcript || '';
+            if (event.results[i].isFinal) textoFinal += `${trecho} `;
+            else parcial += trecho;
+        }
+        if (input) input.value = `${textoFinal}${parcial}`.trim();
+    };
+    reconhecimentoVozPatio.onerror = event => {
+        teveErro = true;
+        const mensagens = {
+            'not-allowed': 'Microfone bloqueado. Libere o microfone no navegador e tente novamente.',
+            'no-speech': 'Nao ouvi nenhuma fala. Clique no microfone e fale o lançamento novamente.',
+            network: 'Falha de rede no reconhecimento de voz. Tente novamente.'
+        };
+        atualizarEstadoVozPatio(false, mensagens[event.error] || 'Nao foi possivel captar a voz agora.');
+    };
+    reconhecimentoVozPatio.onend = async () => {
+        if (teveErro) return;
+        atualizarEstadoVozPatio(false, 'Voz captada. Conferindo o comando...');
+        const comando = input?.value.trim();
+        if (comando) await enviarComandoAgentePatio();
+        else atualizarEstadoVozPatio(false, 'Nao consegui capturar o comando. Tente falar mais perto do microfone.');
+    };
+
+    try {
+        reconhecimentoVozPatio.start();
+    } catch (error) {
+        console.error('Erro ao iniciar voz do agente do patio:', error);
+        atualizarEstadoVozPatio(false, 'O reconhecimento de voz ja estava em uso. Aguarde um instante e tente novamente.');
+    }
+}
+
+function instalarAgentePatioAssistente() {
+    document.getElementById('patioAgentForm')?.addEventListener('submit', enviarComandoAgentePatio);
+    document.getElementById('patioAgentVoiceButton')?.addEventListener('click', iniciarVozAgentePatio);
+    document.querySelectorAll('[data-agent-example]').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById('patioAgentCommand');
+            if (input) {
+                input.value = button.dataset.agentExample || '';
+                input.focus();
+            }
+            window.switchCommunicationTab?.('agents');
+        });
+    });
+}
 
 function obterTelaAtivaAssistente() {
     return document.querySelector('.view-section.active-section')?.id || 'view-dashboard';
@@ -552,6 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('assistantHomeInput')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') window.enviarPerguntaAssistenteHome();
     });
+    instalarAgentePatioAssistente();
     window.addEventListener('resize', () => normalizarPosicaoAssistente(document.getElementById('assistantPanel')));
 });
 
