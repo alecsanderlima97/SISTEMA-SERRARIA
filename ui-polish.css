@@ -1556,7 +1556,18 @@ body.orquestra-theme .header-notification-open-finance { background: #f7f1e6; co
 .communication-panel { flex: 1; min-height: 0; }
 .communication-panel[hidden] { display: none !important; }
 #communicationAIPanel { overflow-y: auto; }
-.agent-center { height: 100%; overflow-y: auto; padding: 14px; background: rgba(15,23,42,.025); }
+.agent-center { height: 100%; overflow-y: auto; padding: 14px; background: rgba(15,23,42,.025); display: grid; gap: 12px; align-content: start; }
+.agent-hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid rgba(15,143,166,.18); border-radius: 8px; background: linear-gradient(135deg, rgba(15,143,166,.12), rgba(17,24,39,.05)); }
+.agent-hub-head strong { display: block; color: var(--text-color, #e5e7eb); font-size: .88rem; }
+.agent-hub-head small { display: block; margin-top: 3px; color: var(--text-muted, #94a3b8); font-size: .68rem; line-height: 1.35; }
+.active-agent-badge { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border-radius: 999px; background: #0f8fa6; color: #fff; font-size: .68rem; font-weight: 900; box-shadow: 0 8px 18px rgba(15,143,166,.18); }
+.agent-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.agent-mini-card { min-width: 0; min-height: 72px; display: grid; grid-template-columns: 28px minmax(0,1fr); grid-template-rows: auto auto; align-content: center; gap: 2px 8px; padding: 9px; border: 1px solid rgba(148,163,184,.22); border-radius: 8px; background: rgba(255,255,255,.045); color: var(--text-color, #e5e7eb); text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.agent-mini-card:hover { transform: translateY(-1px); border-color: rgba(15,143,166,.34); background: rgba(15,143,166,.08); }
+.agent-mini-card.active { border-color: rgba(15,143,166,.55); background: rgba(15,143,166,.14); box-shadow: inset 3px 0 0 #0f8fa6; }
+.agent-mini-card i { grid-row: 1 / span 2; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: rgba(15,143,166,.13); color: #0f8fa6; }
+.agent-mini-card span { overflow: hidden; align-self: end; font-size: .72rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.agent-mini-card small { overflow: hidden; align-self: start; color: var(--text-muted, #94a3b8); font-size: .6rem; text-overflow: ellipsis; white-space: nowrap; }
 .agent-card { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(148,163,184,.22); border-radius: 8px; background: rgba(255,255,255,.04); }
 .agent-card-head { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 10px; align-items: center; }
 .agent-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; background: rgba(15,143,166,.14); color: #0f8fa6; font-size: 1.1rem; }
@@ -1644,6 +1655,14 @@ body.orquestra-theme .chat-messages { background: #fbf8f0; }
 body.orquestra-theme .chat-message { background: #f1ece1; color: var(--oq-text); border-color: var(--oq-line); }
 body.orquestra-theme .chat-message.mine { background: #dff1f2; border-color: rgba(15,143,166,.25); }
 body.orquestra-theme .agent-center { background: #fbf8f0; }
+body.orquestra-theme .agent-hub-head { background: linear-gradient(135deg, #e8f5f6, #fffaf1); border-color: var(--oq-line); }
+body.orquestra-theme .agent-hub-head strong,
+body.orquestra-theme .agent-mini-card span { color: var(--oq-text); }
+body.orquestra-theme .agent-hub-head small,
+body.orquestra-theme .agent-mini-card small { color: var(--oq-muted); }
+body.orquestra-theme .agent-mini-card { background: #fffdf7; border-color: var(--oq-line); }
+body.orquestra-theme .agent-mini-card:hover,
+body.orquestra-theme .agent-mini-card.active { background: #e8f5f6; border-color: rgba(15,143,166,.30); }
 body.orquestra-theme .agent-card { background: #fffdf7; border-color: var(--oq-line); }
 body.orquestra-theme .agent-card-head strong,
 body.orquestra-theme .agent-result strong { color: var(--oq-text); }
@@ -1684,6 +1703,8 @@ body.orquestra-theme .agent-result { background: #fff8df; border-color: rgba(217
     .communication-panel.conversation-open .chat-collaborators { transform: translateX(-102%); }
     .communication-panel.conversation-open .chat-conversation { transform: translateX(0); }
     .chat-mobile-back { display: grid; }
+    .agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .agent-hub-head { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 520px) {
@@ -1692,6 +1713,8 @@ body.orquestra-theme .agent-result { background: #fff8df; border-color: rgba(217
     .header-actions-group { gap: 6px; }
     .communication-tabs { padding: 6px; }
     .communication-tab { font-size: .72rem; }
+    .agent-command-actions { grid-template-columns: 1fr; }
+    .agent-mini-card { min-height: 64px; }
 }
 /* Acesso operacional exclusivo: exibe somente o Fluxo do Patio para o empilhadeirista. */
 body.dashboard-fluxo-patio-exclusivo #view-dashboard > :not(#panelProducaoPatio) {

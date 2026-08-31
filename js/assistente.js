@@ -15,6 +15,83 @@ const ASSISTANT_COMPANION_ENABLED_KEY = 'orquestra_assistant_companion_enabled';
 let guiaAssistenteOculta = localStorage.getItem(ASSISTANT_SCREEN_GUIDE_KEY) === 'false';
 let reconhecimentoVozPatio = null;
 let gravandoComandoPatio = false;
+let agenteSelecionado = 'patio';
+
+const AGENTES_ORQUESTRA = {
+    patio: {
+        nome: 'Agente de Producao do Patio',
+        curto: 'Patio',
+        icone: 'fa-truck-ramp-box',
+        secao: 'view-dashboard',
+        status: 'executa',
+        descricao: 'Lanca cubagens por comando escrito ou por voz. A confirmacao vem antes de salvar.',
+        palavras: ['patio', 'producao', 'cubagem', 'amarras', 'pacote'],
+        exemplos: [
+            'Adicionar 5 pacotes de dezessete por oito e meio por um e vinte, com cinquenta por quatorze mais 16 amarras.',
+            'Fluxo do patio, segunda classe, 2 pacotes de 1,7 por 8,5 por 1,20 com 50 por 14 mais 16 amarras.'
+        ]
+    },
+    romaneio: {
+        nome: 'Agente de Romaneio',
+        curto: 'Romaneio',
+        icone: 'fa-file-invoice-dollar',
+        secao: 'view-romaneio-v2',
+        status: 'preparado',
+        descricao: 'Vai montar cargas, conferir cliente, frete, estoque e avisar antes de finalizar.',
+        palavras: ['romaneio', 'carga', 'cliente', 'motorista', 'frete', 'placa'],
+        exemplos: ['Criar romaneio para o cliente X com a placa ABC-1234 usando pacotes do patio.']
+    },
+    financeiro: {
+        nome: 'Agente Financeiro',
+        curto: 'Financeiro',
+        icone: 'fa-wallet',
+        secao: 'view-financeiro',
+        status: 'preparado',
+        descricao: 'Vai analisar boletos, notas, duplicidades, vencimentos e cobrancas.',
+        palavras: ['financeiro', 'boleto', 'nota', 'vencimento', 'despesa', 'cobranca', 'pagamento'],
+        exemplos: ['Verificar boletos vencendo esta semana e avisar duplicidades.']
+    },
+    estoque: {
+        nome: 'Agente de Estoque',
+        curto: 'Estoque',
+        icone: 'fa-boxes-stacked',
+        secao: 'view-estoque',
+        status: 'preparado',
+        descricao: 'Vai registrar entradas, saidas, EPI, pecas e alertas de estoque baixo.',
+        palavras: ['estoque', 'entrada', 'saida', 'epi', 'peca', 'material'],
+        exemplos: ['Dar baixa em um EPI para o funcionario Rafael.']
+    },
+    frota: {
+        nome: 'Agente de Frota',
+        curto: 'Frota',
+        icone: 'fa-truck-front',
+        secao: 'view-frotas',
+        status: 'preparado',
+        descricao: 'Vai registrar diesel, manutencao, lubrificante, pecas e responsavel pelo lancamento.',
+        palavras: ['frota', 'diesel', 'maquina', 'caminhao', 'lubrificante', 'manutencao'],
+        exemplos: ['Lancar 80 litros de diesel para a maquina X pelo funcionario Fabio.']
+    },
+    rh: {
+        nome: 'Agente de RH',
+        curto: 'RH',
+        icone: 'fa-id-card-clip',
+        secao: 'view-rh',
+        status: 'preparado',
+        descricao: 'Vai consultar funcionarios, fotos, EPIs, documentos e vencimentos.',
+        palavras: ['rh', 'funcionario', 'colaborador', 'epi', 'documento', 'treinamento'],
+        exemplos: ['Mostrar EPIs entregues para Adenilson.']
+    },
+    mapa: {
+        nome: 'Agente de Mapa',
+        curto: 'Mapa',
+        icone: 'fa-map-location-dot',
+        secao: 'view-mapa',
+        status: 'preparado',
+        descricao: 'Vai salvar matos, donos, contratos, contatos, medidas e rotas.',
+        palavras: ['mapa', 'mato', 'eucalipto', 'rota', 'fazenda', 'contrato', 'localizacao'],
+        exemplos: ['Salvar um mato de eucalipto com dono, contato e localizacao.']
+    }
+};
 
 function preferenciaLigada(key, defaultValue = true) {
     const value = localStorage.getItem(key);
@@ -331,6 +408,76 @@ function pareceComandoAgentePatio(pergunta) {
         && (texto.includes('cubagem') || texto.includes('pacote') || texto.includes('amarras') || texto.includes('classe'));
 }
 
+function detectarAgentePorComando(comando) {
+    const texto = normalizarTexto(comando);
+    const ranking = Object.entries(AGENTES_ORQUESTRA).map(([id, agente]) => ({
+        id,
+        pontos: agente.palavras.reduce((total, palavra) => total + (texto.includes(palavra) ? 1 : 0), 0)
+    })).sort((a, b) => b.pontos - a.pontos);
+    return ranking[0]?.pontos > 0 ? ranking[0].id : agenteSelecionado;
+}
+
+function pareceComandoOperacional(pergunta) {
+    const texto = normalizarTexto(pergunta);
+    return /\b(adicionar|add|criar|gerar|montar|lancar|registrar|salvar|baixar|dar baixa|entregar|abrir|editar|excluir|remover|traçar|tracar)\b/.test(texto);
+}
+
+function renderizarAgenteSelecionado() {
+    const agente = AGENTES_ORQUESTRA[agenteSelecionado] || AGENTES_ORQUESTRA.patio;
+    const badge = document.getElementById('activeAgentBadge');
+    const icon = document.getElementById('activeAgentIcon');
+    const title = document.getElementById('activeAgentTitle');
+    const desc = document.getElementById('activeAgentDescription');
+    const examples = document.getElementById('agentExamples');
+    const result = document.getElementById('patioAgentResult');
+
+    document.querySelectorAll('[data-agent-card]').forEach(card => {
+        card.classList.toggle('active', card.dataset.agentCard === agenteSelecionado);
+    });
+    if (badge) badge.innerHTML = `<i class="fa-solid ${agente.icone}"></i> ${agente.curto}`;
+    if (icon) icon.innerHTML = `<i class="fa-solid ${agente.icone}"></i>`;
+    if (title) title.textContent = agente.nome;
+    if (desc) desc.textContent = agente.descricao;
+    if (examples) {
+        examples.innerHTML = agente.exemplos.map(exemplo => (
+            `<button type="button" data-agent-example="${exemplo.replace(/"/g, '&quot;')}">${exemplo.length > 42 ? `${exemplo.slice(0, 39)}...` : exemplo}</button>`
+        )).join('');
+        instalarExemplosAgentes();
+    }
+    if (result) {
+        result.innerHTML = agente.status === 'executa'
+            ? '<strong>Pronto para executar.</strong><span>Fale ou digite o lancamento e confira antes de salvar.</span>'
+            : '<strong>Agente preparado para evolucao.</strong><span>Ele ja entende comandos desta area; na proxima etapa ligamos as acoes automaticas com confirmacao.</span>';
+    }
+}
+
+window.selecionarAgenteOrquestra = function(id) {
+    if (!AGENTES_ORQUESTRA[id]) return;
+    agenteSelecionado = id;
+    renderizarAgenteSelecionado();
+    document.getElementById('patioAgentCommand')?.focus();
+};
+
+async function executarComandoAgenteOrquestra(comando) {
+    const agenteId = detectarAgentePorComando(comando);
+    agenteSelecionado = agenteId;
+    renderizarAgenteSelecionado();
+    const agente = AGENTES_ORQUESTRA[agenteId] || AGENTES_ORQUESTRA.patio;
+
+    if (agenteId === 'patio' && typeof window.executarComandoAgentePatio === 'function') {
+        return window.executarComandoAgentePatio(comando);
+    }
+
+    if (agente.secao && typeof window.navegarPara === 'function') {
+        window.navegarPara(agente.secao);
+    }
+
+    return {
+        ok: true,
+        mensagem: `${agente.nome} reconheceu o comando e abriu a area certa.\n\nProxima ligacao segura: validar dados, mostrar resumo e pedir confirmacao antes de salvar qualquer coisa.`
+    };
+}
+
 async function responderPerguntaOpenAI(pergunta) {
     const response = await fetch('/api/assistente', {
         method: 'POST',
@@ -414,12 +561,13 @@ window.toggleAssistenteIA = function(force) {
 window.perguntarAssistente = async function(pergunta) {
     if (!pergunta) return;
     window.toggleAssistenteIA(true);
-    if (pareceComandoAgentePatio(pergunta) && typeof window.executarComandoAgentePatio === 'function') {
+    const agenteDetectado = detectarAgentePorComando(pergunta);
+    if (pareceComandoAgentePatio(pergunta) || pareceComandoOperacional(pergunta)) {
         window.switchCommunicationTab?.('agents');
         const inputAgente = document.getElementById('patioAgentCommand');
         if (inputAgente) inputAgente.value = pergunta;
         adicionarMensagem(pergunta, 'user');
-        adicionarMensagem('Vou tratar isso pelo Agente de Produção do Pátio.', 'bot');
+        adicionarMensagem(`Vou tratar isso pelo ${AGENTES_ORQUESTRA[agenteDetectado]?.nome || 'agente operacional'}.`, 'bot');
         await enviarComandoAgentePatio();
         return;
     }
@@ -474,11 +622,8 @@ async function enviarComandoAgentePatio(event) {
     if (result) result.textContent = 'Interpretando comando do pátio...';
 
     try {
-        if (typeof window.executarComandoAgentePatio !== 'function') {
-            throw new Error('Agente do patio ainda nao carregou.');
-        }
-        const retorno = await window.executarComandoAgentePatio(comando);
-        adicionarMensagem(retorno?.mensagem || 'Comando processado pelo agente do patio.', retorno?.ok ? 'bot' : 'user');
+        const retorno = await executarComandoAgenteOrquestra(comando);
+        adicionarMensagem(retorno?.mensagem || 'Comando processado pelo agente operacional.', retorno?.ok ? 'bot' : 'user');
         if (retorno?.ok && input) input.value = '';
     } catch (error) {
         console.error('Erro no agente do patio:', error);
@@ -496,7 +641,7 @@ function atualizarEstadoVozPatio(gravando, mensagem = '') {
         botao.classList.toggle('is-listening', gravando);
         botao.innerHTML = gravando
             ? '<i class="fa-solid fa-wave-square"></i> Ouvindo...'
-            : '<i class="fa-solid fa-microphone"></i> Falar lançamento';
+            : '<i class="fa-solid fa-microphone"></i> Falar comando';
     }
     if (mensagem && result) result.textContent = mensagem;
 }
@@ -521,7 +666,7 @@ function iniciarVozAgentePatio() {
 
     let textoFinal = '';
     let teveErro = false;
-    reconhecimentoVozPatio.onstart = () => atualizarEstadoVozPatio(true, 'Pode falar o lançamento do pátio...');
+    reconhecimentoVozPatio.onstart = () => atualizarEstadoVozPatio(true, 'Pode falar o comando para o agente...');
     reconhecimentoVozPatio.onresult = event => {
         let parcial = '';
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
@@ -556,10 +701,10 @@ function iniciarVozAgentePatio() {
     }
 }
 
-function instalarAgentePatioAssistente() {
-    document.getElementById('patioAgentForm')?.addEventListener('submit', enviarComandoAgentePatio);
-    document.getElementById('patioAgentVoiceButton')?.addEventListener('click', iniciarVozAgentePatio);
+function instalarExemplosAgentes() {
     document.querySelectorAll('[data-agent-example]').forEach(button => {
+        if (button.dataset.exampleReady === 'true') return;
+        button.dataset.exampleReady = 'true';
         button.addEventListener('click', () => {
             const input = document.getElementById('patioAgentCommand');
             if (input) {
@@ -569,6 +714,16 @@ function instalarAgentePatioAssistente() {
             window.switchCommunicationTab?.('agents');
         });
     });
+}
+
+function instalarAgentePatioAssistente() {
+    document.getElementById('patioAgentForm')?.addEventListener('submit', enviarComandoAgentePatio);
+    document.getElementById('patioAgentVoiceButton')?.addEventListener('click', iniciarVozAgentePatio);
+    document.querySelectorAll('[data-agent-card]').forEach(button => {
+        button.addEventListener('click', () => window.selecionarAgenteOrquestra(button.dataset.agentCard));
+    });
+    instalarExemplosAgentes();
+    renderizarAgenteSelecionado();
 }
 
 function obterTelaAtivaAssistente() {

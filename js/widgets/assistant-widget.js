@@ -44,22 +44,38 @@
 
         <section id="communicationAgentsPanel" class="communication-panel" role="tabpanel" hidden>
             <div class="agent-center">
+                <div class="agent-hub-head">
+                    <div>
+                        <strong>Central de Agentes</strong>
+                        <small>Escolha uma area ou fale o comando. O sistema identifica o agente certo.</small>
+                    </div>
+                    <span id="activeAgentBadge" class="active-agent-badge"><i class="fa-solid fa-truck-ramp-box"></i> Patio</span>
+                </div>
+                <div class="agent-grid" role="list" aria-label="Agentes do sistema">
+                    <button type="button" class="agent-mini-card active" data-agent-card="patio"><i class="fa-solid fa-truck-ramp-box"></i><span>Patio</span><small>Lancar cubagens</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="romaneio"><i class="fa-solid fa-file-invoice-dollar"></i><span>Romaneio</span><small>Montar cargas</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="financeiro"><i class="fa-solid fa-wallet"></i><span>Financeiro</span><small>Boletos e notas</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="estoque"><i class="fa-solid fa-boxes-stacked"></i><span>Estoque</span><small>Entradas e baixas</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="frota"><i class="fa-solid fa-truck-front"></i><span>Frota</span><small>Diesel e pecas</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="rh"><i class="fa-solid fa-id-card-clip"></i><span>RH</span><small>EPI e equipe</small></button>
+                    <button type="button" class="agent-mini-card" data-agent-card="mapa"><i class="fa-solid fa-map-location-dot"></i><span>Mapa</span><small>Matos e rotas</small></button>
+                </div>
                 <div class="agent-card">
                     <div class="agent-card-head">
-                        <span class="agent-icon"><i class="fa-solid fa-truck-ramp-box"></i></span>
+                        <span id="activeAgentIcon" class="agent-icon"><i class="fa-solid fa-truck-ramp-box"></i></span>
                         <div>
-                            <strong>Agente de Produção do Pátio</strong>
-                            <small>Lance cubagens por comando escrito. A confirmação vem antes de salvar.</small>
+                            <strong id="activeAgentTitle">Agente de Produção do Pátio</strong>
+                            <small id="activeAgentDescription">Lance cubagens por comando escrito ou por voz. A confirmação vem antes de salvar.</small>
                         </div>
                     </div>
                     <form id="patioAgentForm" class="agent-command-form">
-                        <textarea id="patioAgentCommand" rows="4" placeholder="Ex: controle de produção do pátio, 1ª classe, cubagem 1,7/8,5/1,20, pacote 50 por 14 + 16 amarras"></textarea>
+                        <textarea id="patioAgentCommand" rows="4" placeholder="Ex: adicionar 5 pacotes de dezessete por oito e meio por um e vinte, com cinquenta por quatorze mais 16 amarras"></textarea>
                         <div class="agent-command-actions">
-                            <button type="button" id="patioAgentVoiceButton" class="agent-voice-button"><i class="fa-solid fa-microphone"></i> Falar lançamento</button>
-                            <button type="submit"><i class="fa-solid fa-bolt"></i> Interpretar e lançar</button>
+                            <button type="button" id="patioAgentVoiceButton" class="agent-voice-button"><i class="fa-solid fa-microphone"></i> Falar comando</button>
+                            <button type="submit"><i class="fa-solid fa-bolt"></i> Interpretar</button>
                         </div>
                     </form>
-                    <div class="agent-examples">
+                    <div id="agentExamples" class="agent-examples">
                         <button type="button" data-agent-example="Controle de produção do pátio, 1ª classe, cubagem 1,7/8,5/1,20, pacote 50 por 14 + 16 amarras.">1ª classe padrão</button>
                         <button type="button" data-agent-example="Fluxo do pátio, segunda classe, cubagem 1,7/8,5/1,20, 2 pacotes com 50 por 14 mais 16 amarras.">2 pacotes 2ª</button>
                     </div>
