@@ -42,7 +42,10 @@
                     <div class="section-title">
                         <h2><i class="fa-solid fa-plus-circle"></i> Nova Madeira / Estilo</h2>
                     </div>
-                    <form id="formProduto" class="package-entry-grid">
+                    <form id="formProduto" class="produto-config-form">
+                        <section class="produto-config-section produto-config-identificacao">
+                            <div class="produto-config-section-head"><span>1</span><div><strong>Identificacao da madeira</strong><small>Defina o material, a classe e a especie.</small></div></div>
+                            <div class="produto-config-fields produto-config-identificacao-fields">
                         <div class="input-group">
                             <label for="prodTipo">Madeira cadastrada</label>
                             <input type="text" id="prodTipo" class="text-uppercase-input" placeholder="Ex: TABUA" required>
@@ -68,6 +71,11 @@
                                 <option value="OUTROS">Outros</option>
                             </select>
                         </div>
+                            </div>
+                        </section>
+                        <section class="produto-config-section produto-config-cubagem">
+                            <div class="produto-config-section-head"><span>2</span><div><strong>Cubagem de venda</strong><small>Essas medidas sao usadas para localizar o padrao no patio.</small></div></div>
+                            <div class="produto-config-fields produto-config-cubagem-fields">
                         <div class="input-group">
                             <label for="prodEspessura">Espessura (cm)</label>
                             <input type="text" id="prodEspessura" inputmode="decimal" required placeholder="Ex: 2,5">
@@ -84,6 +92,11 @@
                             <label for="prodComprimentoReal">Comp. Real/Frete (m)</label>
                             <input type="text" id="prodComprimentoReal" inputmode="decimal" placeholder="Vazio = igual Venda">
                         </div>
+                            </div>
+                        </section>
+                        <section class="produto-config-section produto-config-pacote">
+                            <div class="produto-config-section-head"><span>3</span><div><strong>Configuracao do pacote</strong><small>Informe a montagem padrao que sera sugerida no Fluxo do Patio.</small></div></div>
+                            <div class="produto-config-fields produto-config-pacote-fields">
                         <div class="input-group">
                             <label>Alt x Larg + Am.</label>
                             <div class="package-entry-calc">
@@ -100,9 +113,11 @@
                             <span>Volume por pacote</span>
                             <strong id="prodVolumePacote">0,000 m3</strong>
                         </div>
-                        <div class="input-group" style="justify-content: flex-end;">
+                        <div class="produto-config-save">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
                         </div>
+                            </div>
+                        </section>
                     </form>
                 </div>
             </section>`;

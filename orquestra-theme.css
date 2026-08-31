@@ -680,16 +680,16 @@ body.orquestra-theme .sidebar nav ul li a.financeiro-menu-alerta:not(.active) i 
 }
 
 body.orquestra-theme .sidebar nav ul li a.financeiro-menu-alerta.active {
-    background: rgba(255, 253, 247, 0.075) !important;
-    color: #f5f1e8 !important;
-    border-color: rgba(245, 184, 67, 0.38) !important;
-    box-shadow: inset 3px 0 0 #f5b843, 0 10px 22px rgba(0,0,0,0.16) !important;
+    background: rgba(255,255,255,0.075) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: inset 3px 0 0 #b9852f, 0 8px 18px rgba(0,0,0,0.14) !important;
 }
 
 body.orquestra-theme .sidebar nav ul li a.financeiro-menu-alerta.active i {
-    color: #f5b843 !important;
-    background: rgba(245, 184, 67, 0.14) !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    color: #ffffff !important;
+    background: #b9852f !important;
+    box-shadow: 0 0 14px rgba(185, 133, 47, 0.34) !important;
 }
 
 body.orquestra-theme .sidebar nav ul li a.financeiro-menu-alerta::after {
@@ -1653,6 +1653,27 @@ body.orquestra-theme #patioUltimaAlteracao {
 
 body.orquestra-theme #patioUltimaAlteracao * {
     color: #0f6840 !important;
+}
+
+/* Status operacional: leitura limpa sobre o painel claro. */
+body.orquestra-theme #producaoPatioUltimaAlteracao.fluxo-patio-status {
+    display: inline-flex;
+    max-width: min(100%, 760px);
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid #a7e5bf;
+    border-left: 4px solid #16a05d;
+    border-radius: 8px;
+    background: #f1fbf4;
+    color: #075f36 !important;
+    box-shadow: none !important;
+    font-size: .82rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+body.orquestra-theme #producaoPatioUltimaAlteracao.fluxo-patio-status i {
+    color: #129451 !important;
 }
 
 body.orquestra-theme #modalControleProducao .patio-params-grid,

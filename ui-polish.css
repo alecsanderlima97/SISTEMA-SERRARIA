@@ -217,6 +217,79 @@ table td {
     display: grid !important;
 }
 
+/* Gestao de Madeira: configuracao pensada como uma ficha operacional reutilizavel. */
+.produto-config-form {
+    display: grid;
+    gap: 14px;
+}
+
+.produto-config-section {
+    padding: 14px;
+    border: 1px solid rgba(185, 133, 47, .28);
+    border-radius: 8px;
+    background: rgba(255, 253, 247, .5);
+}
+
+.produto-config-section-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 12px;
+    color: var(--text-color, #172033);
+}
+
+.produto-config-section-head > span {
+    width: 25px;
+    height: 25px;
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 25px;
+    border-radius: 50%;
+    background: #0f8fa6;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 900;
+}
+
+.produto-config-section-head strong,
+.produto-config-section-head small {
+    display: block;
+}
+
+.produto-config-section-head strong { font-size: .88rem; }
+.produto-config-section-head small { margin-top: 2px; color: var(--text-muted); font-size: .75rem; }
+
+.produto-config-fields {
+    display: grid;
+    gap: 10px;
+    align-items: end;
+}
+
+.produto-config-identificacao-fields { grid-template-columns: minmax(160px, 1.4fr) minmax(130px, .9fr) minmax(150px, 1fr) minmax(160px, 1.1fr); }
+.produto-config-cubagem-fields { grid-template-columns: repeat(4, minmax(130px, 1fr)); }
+.produto-config-pacote-fields { grid-template-columns: minmax(260px, 1.45fr) minmax(116px, .7fr) minmax(142px, .85fr) auto; }
+
+.produto-config-section .input-group { margin: 0; min-width: 0; }
+.produto-config-section .package-entry-calc { min-width: 0; }
+.produto-config-section .package-entry-total { min-height: 60px; }
+.produto-config-save { display: flex; align-items: end; min-height: 60px; }
+.produto-config-save button { width: 100%; min-height: 42px; }
+
+@media (max-width: 1080px) {
+    .produto-config-identificacao-fields,
+    .produto-config-cubagem-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .produto-config-pacote-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .produto-config-save { min-height: 42px; }
+}
+
+@media (max-width: 640px) {
+    .produto-config-section { padding: 12px; }
+    .produto-config-identificacao-fields,
+    .produto-config-cubagem-fields,
+    .produto-config-pacote-fields { grid-template-columns: 1fr; }
+    .produto-config-save button { width: 100%; }
+}
+
 .fluxo-patio-toolbar {
     grid-template-columns: minmax(180px, 320px) auto auto auto !important;
 }
