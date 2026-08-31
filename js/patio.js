@@ -423,6 +423,13 @@ function usuarioPodeAcessarDashboardItem(itemId) {
     return window.App.canAccessSubsection('view-dashboard', itemId);
 }
 
+function ehFluxoPatioOperacionalExclusivo() {
+    const podeFluxo = usuarioPodeAcessarDashboardItem('fluxo-patio');
+    const podeControle = usuarioPodeAcessarDashboardItem('controle-producao');
+    const podeIndicadores = usuarioPodeAcessarDashboardItem('indicadores');
+    return podeFluxo && !podeControle && !podeIndicadores;
+}
+
 function aplicarPermissoesDashboardPatio() {
     document.querySelectorAll('[data-dashboard-permission]').forEach(el => {
         if (el.id === 'panelProducaoPatio') return;
@@ -435,9 +442,7 @@ function aplicarPermissoesDashboardPatio() {
         el.style.display = podeIndicadores ? '' : 'none';
     });
 
-    const somenteFluxoPatio = usuarioPodeAcessarDashboardItem('fluxo-patio')
-        && !usuarioPodeAcessarDashboardItem('controle-producao')
-        && !podeIndicadores;
+    const somenteFluxoPatio = ehFluxoPatioOperacionalExclusivo();
     document.body.classList.toggle('dashboard-fluxo-patio-exclusivo', somenteFluxoPatio);
 
     if (somenteFluxoPatio) {
@@ -457,7 +462,7 @@ window.abrirProducaoPatio = async function() {
     const panel = document.getElementById('panelProducaoPatio');
     if (!panel) return;
     panel.style.display = 'block';
-    setFormProducaoPatioAberto(false);
+    setFormProducaoPatioAberto(ehFluxoPatioOperacionalExclusivo());
     aplicarPermissoesDashboardPatio();
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await garantirRelatorioProducaoPatioAtual();
@@ -887,20 +892,61 @@ function normalizarComandoProducaoPatio(texto) {
         .trim();
 }
 
+function prepararComandoFaladoProducaoPatio(comando) {
+    let texto = normalizarComandoProducaoPatio(comando);
+    const substituicoes = [
+        [/\boito\s+e\s+meio\b/g, '8,5'],
+        [/\boito\s+meio\b/g, '8,5'],
+        [/\bum\s+e\s+vinte\b/g, '1,20'],
+        [/\bum\s+e\s+vintes\b/g, '1,20'],
+        [/\bum\s+vinte\b/g, '1,20'],
+        [/\bum\s+e\s+meio\b/g, '1,50'],
+        [/\bdezessete\b/g, '1,7'],
+        [/\bdezesete\b/g, '1,7'],
+        [/\bdezesseis\b/g, '16'],
+        [/\bdezesSeis\b/gi, '16'],
+        [/\bcinquenta\b/g, '50'],
+        [/\bquatorze\b/g, '14'],
+        [/\bcatorze\b/g, '14'],
+        [/\bquinze\b/g, '15'],
+        [/\btreze\b/g, '13'],
+        [/\bdoze\b/g, '12'],
+        [/\bonze\b/g, '11'],
+        [/\bdez\b/g, '10'],
+        [/\bnove\b/g, '9'],
+        [/\boito\b/g, '8'],
+        [/\bsete\b/g, '7'],
+        [/\bseis\b/g, '6'],
+        [/\bcinco\b/g, '5'],
+        [/\bquatro\b/g, '4'],
+        [/\btres\b/g, '3'],
+        [/\bduas\b/g, '2'],
+        [/\bdois\b/g, '2'],
+        [/\buma\b/g, '1'],
+        [/\bum\b/g, '1']
+    ];
+
+    substituicoes.forEach(([regex, valor]) => {
+        texto = texto.replace(regex, valor);
+    });
+
+    return texto.replace(/\s+/g, ' ').trim();
+}
+
 function extrairDadosComandoProducaoPatio(comando) {
     const original = String(comando || '').trim();
-    const texto = normalizarComandoProducaoPatio(original);
-    const classe = texto.includes('segunda') || /\b2\s*a?\b/.test(texto)
+    const texto = prepararComandoFaladoProducaoPatio(original);
+    const classe = texto.includes('segunda') || /\b2\s*a\b/.test(texto) || /\b2\s*classe\b/.test(texto)
         ? 2
-        : texto.includes('terceira') || /\b3\s*a?\b/.test(texto)
+        : texto.includes('terceira') || /\b3\s*a\b/.test(texto) || /\b3\s*classe\b/.test(texto)
             ? 3
             : 1;
 
-    const numerosDecimais = original.match(/\d+(?:[,.]\d+)?/g) || [];
+    const numerosDecimais = texto.match(/\d+(?:[,.]\d+)?/g) || [];
     let espessura = 0;
     let largura = 0;
     let comprimento = 0;
-    const cubagemComSeparador = original.match(/(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)/i);
+    const cubagemComSeparador = texto.match(/(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)\s*(?:\/|x|por)\s*(\d+(?:[,.]\d+)?)/i);
     if (cubagemComSeparador) {
         espessura = parseDecimal(cubagemComSeparador[1]);
         largura = parseDecimal(cubagemComSeparador[2]);
@@ -912,8 +958,8 @@ function extrairDadosComandoProducaoPatio(comando) {
     }
 
     const textoSemCubagem = cubagemComSeparador
-        ? original.replace(cubagemComSeparador[0], ' ')
-        : original;
+        ? texto.replace(cubagemComSeparador[0], ' ')
+        : texto;
     const config = textoSemCubagem.match(/(\d+)\s*(?:x|por)\s*(\d+)(?:\s*(?:\+|mais)\s*(\d+))?/i);
     const alturas = config ? parseInt(config[1], 10) : 0;
     const larguraPacote = config ? parseInt(config[2], 10) : 0;

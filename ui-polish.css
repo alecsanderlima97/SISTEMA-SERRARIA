@@ -1699,7 +1699,50 @@ body.dashboard-fluxo-patio-exclusivo #view-dashboard > :not(#panelProducaoPatio)
 }
 
 body.dashboard-fluxo-patio-exclusivo #view-dashboard #panelProducaoPatio {
+    display: block !important;
     margin: 0 !important;
+}
+
+body.dashboard-fluxo-patio-exclusivo #panelProducaoPatio {
+    width: 100%;
+}
+
+body.dashboard-fluxo-patio-exclusivo #formProducaoPatio {
+    display: grid !important;
+}
+
+@media (max-width: 760px) {
+    body.dashboard-fluxo-patio-exclusivo .main-content {
+        padding-inline: 8px !important;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo #panelProducaoPatio {
+        padding: 12px !important;
+        border-radius: 8px !important;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo .fluxo-patio-toolbar {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo #producaoPatioSerrando {
+        max-width: none !important;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo .fluxo-patio-toolbar button {
+        width: 100% !important;
+        justify-content: center;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo #formProducaoPatio {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo #formProducaoPatio .package-entry-total,
+    body.dashboard-fluxo-patio-exclusivo #formProducaoPatio button {
+        grid-column: 1 / -1;
+    }
 }
 
 #panelListaClientesSub table,
