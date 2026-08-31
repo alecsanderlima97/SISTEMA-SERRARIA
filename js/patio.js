@@ -1,4 +1,4 @@
-﻿import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
 
 // ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
 
@@ -324,6 +324,25 @@ async function garantirRelatorioProducaoPatioAtual() {
     const ref = await addDoc(collection(db, 'patio_relatorios'), novoRelatorio);
     producaoPatioRelatorioAtual = { id: ref.id, ...novoRelatorio };
     patioRelatoriosCacheEm = 0;
+    return producaoPatioRelatorioAtual;
+}
+
+async function sincronizarRelatorioProducaoPatioAtual() {
+    await garantirRelatorioProducaoPatioAtual();
+    if (!producaoPatioRelatorioAtual?.id) return producaoPatioRelatorioAtual;
+
+    try {
+        const snap = await getDoc(doc(db, 'patio_relatorios', producaoPatioRelatorioAtual.id));
+        if (snap.exists()) {
+            producaoPatioRelatorioAtual = { id: snap.id, ...snap.data() };
+        }
+    } catch (error) {
+        console.warn('Nao foi possivel sincronizar o relatorio do patio antes de adicionar.', error);
+    }
+
+    producaoPatioRelatorioAtual.itens = Array.isArray(producaoPatioRelatorioAtual.itens)
+        ? producaoPatioRelatorioAtual.itens
+        : [];
     return producaoPatioRelatorioAtual;
 }
 
@@ -1106,7 +1125,7 @@ window.imprimirListaProducaoPatio = function() {
 };
 
 window.adicionarCubagemProducaoPatio = async function() {
-    await garantirRelatorioProducaoPatioAtual();
+    await sincronizarRelatorioProducaoPatioAtual();
     const classe = document.getElementById('prodPatioClasse')?.value || '1a CLASSE';
     const esp = parseDecimal(document.getElementById('prodPatioEsp')?.value);
     const larg = parseDecimal(document.getElementById('prodPatioLarg')?.value);
