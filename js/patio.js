@@ -261,20 +261,23 @@ function inicializarPatioListeners() {
     // Calculadora de Peças e volume do Pátio (Alt x Cam + Am)
     const calcInputs = document.querySelectorAll('.calc-patio');
     calcInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            const alt = parseInt(document.getElementById('patioItemAltura').value) || 0;
-            const cam = parseInt(document.getElementById('patioItemCamada').value) || 0;
-            const am = parseInt(document.getElementById('patioItemAmarras').value) || 0;
-            const total = (alt * cam) + am;
-            const patioPecas = document.getElementById('patioItemPecas');
-            if (patioPecas) patioPecas.value = total > 0 ? total : '';
-            atualizarPreviewVolumeItemPatio();
-        });
+        input.addEventListener('input', calcularPecasPatio);
     });
     ['patioItemEsp', 'patioItemLarg', 'patioItemComp', 'patioItemPacotes', 'patioItemPecas'].forEach(id => {
         const input = document.getElementById(id);
         if (input) input.addEventListener('input', atualizarPreviewVolumeItemPatio);
     });
+}
+
+// Mantem o calculo reutilizavel para digitacao manual e sugestoes de configuracao.
+function calcularPecasPatio() {
+    const alt = parseInt(document.getElementById('patioItemAltura')?.value, 10) || 0;
+    const cam = parseInt(document.getElementById('patioItemCamada')?.value, 10) || 0;
+    const am = parseInt(document.getElementById('patioItemAmarras')?.value, 10) || 0;
+    const patioPecas = document.getElementById('patioItemPecas');
+    const total = (alt * cam) + am;
+    if (patioPecas) patioPecas.value = total > 0 ? total : '';
+    atualizarPreviewVolumeItemPatio();
 }
 
 function atualizarPreviewVolumeItemPatio() {
