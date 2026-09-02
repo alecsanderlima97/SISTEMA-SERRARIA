@@ -242,6 +242,7 @@
         button.dataset.notificationsReady = 'true';
         button.addEventListener('click', event => {
             event.stopPropagation();
+            if (panel.hidden) window.marcarNotificacoesFinanceirasComoLidas?.();
             panel.hidden = !panel.hidden;
             button.setAttribute('aria-expanded', String(!panel.hidden));
         });

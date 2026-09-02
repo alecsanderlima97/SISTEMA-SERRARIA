@@ -8,6 +8,7 @@ const FINANCEIRO_DB_NAME = 'orquestra_financeiro_arquivos';
 const FINANCEIRO_DB_STORE = 'anexos';
 const FINANCEIRO_COLLECTION = 'financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_COLLECTION = 'financeiro_relatorios_mensais';
+const FINANCEIRO_NOTIFICACOES_LIDAS_KEY = 'orquestra_financeiro_notificacoes_lidas';
 
 const FINANCEIRO_ABAS = {
     'caixa-financeira': {
@@ -720,6 +721,40 @@ function textoVencimentoLembrete(item) {
     return `vence em ${item.diasVencimento} dias`;
 }
 
+function chaveNotificacaoFinanceira(item) {
+    return [
+        item.id || '',
+        item.vencimento || '',
+        Number(item.valor || 0).toFixed(2),
+        item.atualizadoEm || item.criadoEm || ''
+    ].join('|');
+}
+
+function obterNotificacoesFinanceirasLidas() {
+    try {
+        const salvas = JSON.parse(localStorage.getItem(FINANCEIRO_NOTIFICACOES_LIDAS_KEY) || '[]');
+        return Array.isArray(salvas) ? salvas : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function salvarNotificacoesFinanceirasLidas(chaves) {
+    try {
+        localStorage.setItem(FINANCEIRO_NOTIFICACOES_LIDAS_KEY, JSON.stringify([...new Set(chaves)].slice(-400)));
+    } catch (_) {
+        // A lista continua funcional caso o navegador bloqueie armazenamento local.
+    }
+}
+
+window.marcarNotificacoesFinanceirasComoLidas = function() {
+    const chavesAtuais = obterBoletosAVencerFinanceiro().map(chaveNotificacaoFinanceira);
+    if (!chavesAtuais.length) return;
+    salvarNotificacoesFinanceirasLidas([...obterNotificacoesFinanceirasLidas(), ...chavesAtuais]);
+    const badge = document.getElementById('headerNotificationBadge');
+    if (badge) badge.hidden = true;
+};
+
 function mostrarLembretesFinanceiros() {
     document.getElementById('financeiroLembreteTopo')?.remove();
     const button = document.getElementById('btnHeaderNotifications');
@@ -752,12 +787,14 @@ function mostrarLembretesFinanceiros() {
         return;
     }
 
+    const notificacoesLidas = new Set(obterNotificacoesFinanceirasLidas());
+    const alertasNovos = alertas.filter(item => !notificacoesLidas.has(chaveNotificacaoFinanceira(item)));
     const total = alertas.reduce((acc, item) => acc + Number(item.valor || 0), 0);
     const vencidos = alertas.filter(item => item.diasVencimento < 0).length;
     const hoje = alertas.filter(item => item.diasVencimento === 0).length;
     if (badge) {
-        badge.textContent = alertas.length > 99 ? '99+' : String(alertas.length);
-        badge.hidden = false;
+        badge.textContent = alertasNovos.length > 99 ? '99+' : String(alertasNovos.length);
+        badge.hidden = alertasNovos.length === 0;
     }
     if (summary) summary.textContent = `${vencidos ? `${vencidos} vencido(s)` : 'Nenhum vencido'}${hoje ? ` | ${hoje} vence(m) hoje` : ''}`;
     if (list) {
@@ -790,6 +827,7 @@ function mostrarLembretesFinanceiros() {
         button.addEventListener('click', event => {
             event.stopPropagation();
             if (!panel) return;
+            if (panel.hidden) window.marcarNotificacoesFinanceirasComoLidas?.();
             panel.hidden = !panel.hidden;
             button.setAttribute('aria-expanded', String(!panel.hidden));
         });

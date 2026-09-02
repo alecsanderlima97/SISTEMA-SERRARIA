@@ -890,6 +890,39 @@ body.orquestra-theme .main-content::after {
     min-width: 0;
 }
 
+.undo-action-bar {
+    position: fixed;
+    left: max(18px, env(safe-area-inset-left));
+    bottom: max(18px, env(safe-area-inset-bottom));
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    max-width: min(520px, calc(100vw - 36px));
+    min-height: 46px;
+    padding: 7px 8px 7px 12px;
+    border: 1px solid rgba(15, 143, 166, .30);
+    border-radius: 8px;
+    background: #102033;
+    color: #f8fafc;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, .30);
+    font-size: .78rem;
+    font-weight: 750;
+}
+
+.undo-action-bar > i { color: #38bdf8; }
+.undo-action-bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo-action-bar button { min-height: 32px; border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-weight: 900; }
+.undo-action-bar #btnUndoLastAction { padding: 0 10px; background: #0f8fa6; color: #fff; white-space: nowrap; }
+.undo-action-bar #btnUndoLastAction:disabled { opacity: .6; cursor: wait; }
+.undo-action-bar #btnDismissUndoAction { width: 30px; padding: 0; background: transparent; color: #cbd5e1; }
+body.orquestra-theme .undo-action-bar { background: #fffdf7; color: #172033; border-color: var(--oq-line-strong); box-shadow: 0 16px 36px rgba(71, 58, 39, .20); }
+
+@media (max-width: 640px) {
+    .undo-action-bar { left: 10px; bottom: 10px; max-width: calc(100vw - 20px); }
+    .undo-action-bar span { max-width: 145px; }
+}
+
 @keyframes orquestraSpin {
     to {
         transform: rotate(360deg);
@@ -1438,7 +1471,7 @@ body.orquestra-theme.ui-compact-mode .main-header h1 {
 /* Cabeçalho operacional simétrico */
 .global-header {
     display: grid !important;
-    grid-template-columns: minmax(190px, 1fr) minmax(280px, 420px) minmax(360px, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 360px) auto;
     align-items: center;
     gap: 14px;
     min-height: 64px;
@@ -1484,6 +1517,8 @@ body.orquestra-theme.ui-compact-mode .main-header h1 {
 
 .global-header .header-actions-group {
     justify-self: end;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 body.orquestra-theme .global-header-context strong { color: var(--oq-text) !important; }
@@ -1777,8 +1812,9 @@ body.orquestra-theme .agent-examples button { color: var(--oq-text); background:
 body.orquestra-theme .agent-result { background: #fff8df; border-color: rgba(217,119,6,.22); }
 
 @media (max-width: 1120px) {
-    .global-header { grid-template-columns: auto minmax(240px, 360px) auto; }
+    .global-header { grid-template-columns: auto minmax(220px, 1fr) auto; gap: 10px; }
     .global-header-context { display: none; }
+    .header-user-text { display: none; }
 }
 
 @media (max-width: 760px) {

@@ -573,6 +573,35 @@ function setFormProducaoPatioAberto(aberto) {
     form.style.display = aberto ? 'grid' : 'none';
 }
 
+function clonarItensParaDesfazer(itens = []) {
+    return JSON.parse(JSON.stringify(itens));
+}
+
+function registrarDesfazerFluxoPatio(itensAnteriores, descricao) {
+    window.registrarAcaoDesfazivel?.({
+        descricao,
+        desfazer: async () => {
+            if (!producaoPatioRelatorioAtual) return;
+            producaoPatioRelatorioAtual.itens = clonarItensParaDesfazer(itensAnteriores);
+            itensFluxoPatioSelecionados.clear();
+            producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Desfez a ultima alteracao no Fluxo do Patio');
+            await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+            await renderizarProducaoPatio({ recarregar: false });
+        }
+    });
+}
+
+function registrarDesfazerListaPatio(itensAnteriores, descricao) {
+    window.registrarAcaoDesfazivel?.({
+        descricao,
+        desfazer: () => {
+            itensPatioTemp = clonarItensParaDesfazer(itensAnteriores);
+            itemPatioEditandoId = null;
+            renderizarItensPatioTemp();
+        }
+    });
+}
+
 window.fecharProducaoPatio = function() {
     setFormProducaoPatioAberto(false);
     const panel = document.getElementById('panelProducaoPatio');
@@ -936,23 +965,27 @@ window.excluirSelecionadosFluxoPatio = async function() {
     if (!ids.size) return;
     const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${ids.size} lote(s) selecionado(s) do Fluxo do Patio?`);
     if (!autorizado) return;
+    const itensAnteriores = clonarItensParaDesfazer(itens);
     producaoPatioRelatorioAtual.itens = itens.filter(item => !ids.has(item.id));
     itensFluxoPatioSelecionados.clear();
     producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu ${ids.size} lote(s) selecionado(s) do Fluxo do Patio`);
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
     await renderizarProducaoPatio({ recarregar: false });
+    registrarDesfazerFluxoPatio(itensAnteriores, `${ids.size} lote(s) excluido(s) do Fluxo do Patio.`);
 };
 
 window.limparTudoFluxoPatio = async function() {
     const itens = producaoPatioRelatorioAtual?.itens || [];
     if (!itens.length) return;
-    const autorizado = await window.confirmarExclusaoComSenha('Deseja limpar todos os lotes do Fluxo do Patio? Esta acao nao pode ser desfeita.');
+    const autorizado = await window.confirmarExclusaoComSenha('Deseja limpar todos os lotes do Fluxo do Patio? Voce podera desfazer esta acao por alguns segundos.');
     if (!autorizado) return;
+    const itensAnteriores = clonarItensParaDesfazer(itens);
     producaoPatioRelatorioAtual.itens = [];
     itensFluxoPatioSelecionados.clear();
     producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Limpou todos os lotes do Fluxo do Patio');
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
     await renderizarProducaoPatio({ recarregar: false });
+    registrarDesfazerFluxoPatio(itensAnteriores, 'Lista do Fluxo do Patio limpa.');
 };
 
 window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
@@ -961,6 +994,7 @@ window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
     const origemRect = origem?.getBoundingClientRect?.();
     const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
     if (!item) return;
+    const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual.itens || []);
 
     window.__salvandoFluxoPatio = true;
     try {
@@ -972,6 +1006,7 @@ window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
         await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
         await renderizarProducaoPatio({ recarregar: false });
         animarAlteracaoFluxoPatio(origemRect || origem, id, delta > 0 ? 'add' : 'remove');
+        registrarDesfazerFluxoPatio(itensAnteriores, `${delta > 0 ? 'Pacote adicionado' : 'Pacote removido'} no Fluxo do Patio.`);
     } catch (error) {
         console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
         alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
@@ -1010,10 +1045,12 @@ window.excluirCubagemProducaoPatio = async function(id) {
     if (!autorizado) return;
 
     try {
+        const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual.itens || []);
         producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => i.id !== id);
         producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu cubagem ${formatCubagemFluxo(item)}`);
         await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
         await renderizarProducaoPatio({ recarregar: false });
+        registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
     } catch (error) {
         console.error('Erro ao excluir cubagem do fluxo do patio:', error);
         alert('Nao foi possivel excluir esta cubagem agora.');
@@ -1302,6 +1339,7 @@ window.imprimirListaProducaoPatio = function() {
 
 window.adicionarCubagemProducaoPatio = async function() {
     await sincronizarRelatorioProducaoPatioAtual();
+    const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual?.itens || []);
     const classe = document.getElementById('prodPatioClasse')?.value || '1a CLASSE';
     const esp = parseDecimal(document.getElementById('prodPatioEsp')?.value);
     const larg = parseDecimal(document.getElementById('prodPatioLarg')?.value);
@@ -1353,6 +1391,7 @@ window.adicionarCubagemProducaoPatio = async function() {
     atualizarResumoNovaCubagemProducaoPatio();
     setFormProducaoPatioAberto(false);
     await renderizarProducaoPatio({ recarregar: false });
+    registrarDesfazerFluxoPatio(itensAnteriores, `${somouExistente ? 'Pacotes somados na cubagem existente.' : 'Nova cubagem adicionada ao Fluxo do Patio.'}`);
 };
 
 function formatarClasseFluxo(classe) {
@@ -1462,6 +1501,7 @@ function botaoPacotePatio(tipo, onClick, title) {
 }
 
 function adicionarItemAoPatio() {
+    const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
     const tipo = document.getElementById('patioItemTipo').value;
     const classe = document.getElementById('patioItemClasse').value;
     const especie = document.querySelector('input[name="patioItemEspecie"]:checked')?.value || 'EUCALIPTO';
@@ -1536,18 +1576,21 @@ function adicionarItemAoPatio() {
     document.getElementById('patioItemPacotes').focus();
 
     renderizarItensPatioTemp();
+    registrarDesfazerListaPatio(itensAnteriores, 'Lote alterado na lista de Patio.');
 }
 
 // Zerar quantidades de etiquetas
 function zerarEtiquetasPatio() {
     if (itensPatioTemp.length === 0) return;
     if (confirm(" deseja zerar a quantidade de todos os pacotes na lista atual?")) {
+        const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
         itensPatioTemp.forEach(item => {
             item.pacotes = 0;
             item.totalPecas = 0;
             item.volume = 0;
         });
         renderizarItensPatioTemp();
+        registrarDesfazerListaPatio(itensAnteriores, 'Quantidades da lista zeradas.');
     }
 }
 
@@ -1555,8 +1598,10 @@ function zerarEtiquetasPatio() {
 function limparTudoPatio() {
     if (itensPatioTemp.length === 0) return;
     if (confirm(" deseja limpar completamente a lista de pátio atual?")) {
+        const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
         itensPatioTemp = [];
         renderizarItensPatioTemp();
+        registrarDesfazerListaPatio(itensAnteriores, 'Lista de Patio limpa.');
     }
 }
 
@@ -1564,6 +1609,7 @@ function limparTudoPatio() {
 window.alterarPacotesPatio = async function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
+    const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
 
     const novoPacotes = item.pacotes + delta;
     if (novoPacotes < 0) {
@@ -1580,13 +1626,16 @@ window.alterarPacotesPatio = async function(id, delta) {
     }
     
     renderizarItensPatioTemp();
+    registrarDesfazerListaPatio(itensAnteriores, `${delta > 0 ? 'Pacote adicionado' : 'Pacote removido'} da lista de Patio.`);
 };
 
 // Remover linha diretamente pela lixeira
 window.removerLinhaPatio = async function(id) {
     if (await window.confirmarExclusaoComSenha("Deseja remover este lote?")) {
+        const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
         itensPatioTemp = itensPatioTemp.filter(i => i.id !== id);
         renderizarItensPatioTemp();
+        registrarDesfazerListaPatio(itensAnteriores, 'Lote removido da lista de Patio.');
     }
 };
 
