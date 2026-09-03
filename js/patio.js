@@ -542,8 +542,9 @@ function aplicarPermissoesDashboardPatio() {
     const somenteFluxoPatio = ehFluxoPatioOperacionalExclusivo();
     document.body.classList.toggle('dashboard-fluxo-patio-exclusivo', somenteFluxoPatio);
 
-    if (somenteFluxoPatio) {
-        // O operador inicia direto no seu fluxo, sem o painel gerencial ficar visível ao fundo.
+    const painelFluxo = document.getElementById('panelProducaoPatio');
+    if (somenteFluxoPatio && painelFluxo?.style.display !== 'block') {
+        // O operador inicia direto no seu fluxo, sem reabrir o painel a cada renderizacao.
         setTimeout(() => window.abrirProducaoPatio?.(), 0);
     }
 }
@@ -561,7 +562,9 @@ window.abrirProducaoPatio = async function() {
     panel.style.display = 'block';
     setFormProducaoPatioAberto(ehFluxoPatioOperacionalExclusivo());
     aplicarPermissoesDashboardPatio();
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!ehFluxoPatioOperacionalExclusivo()) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     await garantirRelatorioProducaoPatioAtual();
     await renderizarProducaoPatio();
 };
