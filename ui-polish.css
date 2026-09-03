@@ -1920,6 +1920,33 @@ body.dashboard-fluxo-patio-exclusivo #formProducaoPatio {
     display: grid !important;
 }
 
+/* O perfil operacional usa uma unica tela longa: no celular ela precisa rolar no documento inteiro. */
+@media (max-width: 760px) {
+    html:has(body.dashboard-fluxo-patio-exclusivo),
+    body.dashboard-fluxo-patio-exclusivo {
+        height: auto !important;
+        min-height: 100dvh;
+        overflow-y: auto !important;
+        overscroll-behavior-y: auto;
+        touch-action: pan-y;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo .main-content,
+    body.dashboard-fluxo-patio-exclusivo #view-dashboard,
+    body.dashboard-fluxo-patio-exclusivo #panelProducaoPatio {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0;
+        overflow: visible !important;
+        touch-action: pan-y;
+    }
+
+    body.dashboard-fluxo-patio-exclusivo .table-container {
+        overscroll-behavior: auto;
+        touch-action: pan-x pan-y;
+    }
+}
+
 @media (max-width: 760px) {
     body.dashboard-fluxo-patio-exclusivo .main-content {
         padding-inline: 8px !important;
