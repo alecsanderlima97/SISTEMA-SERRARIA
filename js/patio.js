@@ -374,7 +374,11 @@ window.fecharFluxoPatio = function() {
 
 async function carregarRelatorioPatioAtual() {
     const relatorios = await carregarRelatoriosPatioCache();
-    return relatorios[0] || null;
+    // Um relatorio vazio pode existir por abertura anterior da tela. Para o fluxo
+    // operacional, priorizamos a ultima lista que realmente possui pacotes.
+    return relatorios.find(relatorio => Array.isArray(relatorio.itens) && relatorio.itens.length > 0)
+        || relatorios[0]
+        || null;
 }
 
 async function garantirRelatorioProducaoPatioAtual() {
@@ -565,7 +569,10 @@ window.abrirProducaoPatio = async function() {
     if (!ehFluxoPatioOperacionalExclusivo()) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    await garantirRelatorioProducaoPatioAtual();
+    // Apenas abrir o Fluxo nao deve criar uma lista vazia nem substituir a lista ativa.
+    if (!producaoPatioRelatorioAtual?.id) {
+        producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
+    }
     await renderizarProducaoPatio();
 };
 
