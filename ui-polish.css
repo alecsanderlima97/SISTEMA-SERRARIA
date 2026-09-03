@@ -217,6 +217,53 @@ table td {
     display: grid !important;
 }
 
+/* Mantem os comandos operacionais visiveis nas listas largas. */
+table.orq-tabela-acoes-fixas {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+table.orq-tabela-acoes-fixas .orq-coluna-acoes-fixa {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--orq-table-action-bg, #fffdf7);
+    box-shadow: -10px 0 14px -14px rgba(15, 23, 42, 0.72);
+}
+
+table.orq-tabela-acoes-fixas thead .orq-coluna-acoes-fixa {
+    z-index: 4;
+    background: var(--orq-table-action-header-bg, #ead3a5);
+    box-shadow: -10px 0 14px -14px rgba(15, 23, 42, 0.72);
+}
+
+table.orq-tabela-acoes-fixas tbody tr:nth-child(even) .orq-coluna-acoes-fixa {
+    background: var(--orq-table-action-even-bg, #f8f4ea);
+}
+
+table.financeiro-table {
+    --orq-table-action-bg: #fffdf7;
+    --orq-table-action-header-bg: #ead3a5;
+    --orq-table-action-even-bg: #f8f4ea;
+}
+
+@media print {
+    table.orq-tabela-acoes-fixas .orq-coluna-acoes-fixa {
+        position: static;
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 560px) {
+    #modalEdicaoGrupoCubagemPatio .input-group + .input-group {
+        min-width: 0;
+    }
+
+    #modalEdicaoGrupoCubagemPatio [style*="grid-template-columns:repeat(4"] {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
 /* Gestao de Madeira: configuracao pensada como uma ficha operacional reutilizavel. */
 .produto-config-form {
     display: grid;

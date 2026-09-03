@@ -77,6 +77,7 @@
                         <label class="fluxo-patio-select-all"><input type="checkbox" id="fluxoPatioSelecionarTodos" onchange="window.selecionarTodosFluxoPatio(this.checked)"> Selecionar todos</label>
                         <span id="fluxoPatioSelecaoResumo">Nenhum lote selecionado</span>
                         <div class="fluxo-patio-selection-actions">
+                            <button type="button" class="btn-secondary" id="btnEditarSelecionadosFluxoPatio" onclick="window.editarCubagemSelecionadaFluxoPatio()" disabled><i class="fa-solid fa-pen-to-square"></i> Editar cubagem</button>
                             <button type="button" class="btn-secondary" id="btnExcluirSelecionadosFluxoPatio" onclick="window.excluirSelecionadosFluxoPatio()" disabled><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                             <button type="button" class="btn-danger" id="btnLimparTudoFluxoPatio" onclick="window.limparTudoFluxoPatio()"><i class="fa-solid fa-trash-can-arrow-up"></i> Limpar tudo</button>
                         </div>

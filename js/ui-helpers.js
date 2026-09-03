@@ -237,11 +237,45 @@ function injetarEstilosTabelaOrdenavel() {
     document.head.appendChild(style);
 }
 
+function normalizarTituloColuna(texto) {
+    return (texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function fixarColunaAcoesTabela(table) {
+    if (!table || table.closest('.print-area')) return;
+
+    const cabecalhos = Array.from(table.querySelectorAll('thead tr:last-child > th'));
+    const indiceAcoes = cabecalhos.findIndex(cabecalho => {
+        const titulo = normalizarTituloColuna(cabecalho.textContent);
+        return titulo === 'acoes' || titulo === 'acao';
+    });
+
+    if (indiceAcoes < 0) return;
+
+    table.classList.add('orq-tabela-acoes-fixas');
+    table.querySelectorAll('thead tr, tbody tr, tfoot tr').forEach(linha => {
+        const celulas = Array.from(linha.children).filter(celula => /^(TH|TD)$/.test(celula.tagName));
+        const celulaAcao = celulas[indiceAcoes];
+        if (celulaAcao) celulaAcao.classList.add('orq-coluna-acoes-fixa');
+    });
+}
+
+function aplicarColunasAcoesFixas() {
+    document.querySelectorAll('table').forEach(fixarColunaAcoesTabela);
+}
+
 function inicializarTabelasOrdenaveis() {
     if (window.__orqTabelasOrdenaveisAtivas) return;
     window.__orqTabelasOrdenaveisAtivas = true;
     injetarEstilosTabelaOrdenavel();
-    const aplicar = () => document.querySelectorAll('table').forEach(tornarTabelaOrdenavel);
+    const aplicar = () => {
+        document.querySelectorAll('table').forEach(tornarTabelaOrdenavel);
+        aplicarColunasAcoesFixas();
+    };
     aplicar();
     const observer = new MutationObserver(() => aplicar());
     observer.observe(document.body, { childList: true, subtree: true });
@@ -252,7 +286,10 @@ window.reinicializarTabelasOrdenaveis = function() {
         table.dataset.orqSortableReady = '';
         tornarTabelaOrdenavel(table);
     });
+    aplicarColunasAcoesFixas();
 };
+
+window.aplicarColunasAcoesFixas = aplicarColunasAcoesFixas;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

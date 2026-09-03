@@ -247,6 +247,8 @@
                             Selecionar todos
                         </label>
                         <span id="patioSelecaoResumo" style="color:#cbd5e1;">Nenhum item selecionado</span>
+                        <button type="button" id="btnEditarSelecionadosPatio" onclick="window.editarCubagemSelecionadaPatio()" disabled style="margin-left:auto; background:#0f766e; color:#fff; border:none; border-radius:7px; padding:7px 10px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-pen-to-square"></i> Editar cubagem</button>
+                        <button type="button" id="btnExcluirSelecionadosPatio" onclick="window.excluirSelecionadosPatio()" disabled style="background:#b91c1c; color:#fff; border:none; border-radius:7px; padding:7px 10px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                     </div>
 
                     <div class="table-container" style="overflow-x: auto;">
@@ -309,5 +311,25 @@
 
         </div>
     </div>`;
-    document.currentScript.insertAdjacentHTML('beforebegin', html);
+    const modalEdicaoGrupo = `
+        <div id="modalEdicaoGrupoCubagemPatio" class="modal-v2" style="display:none; align-items:center; justify-content:center; padding:18px; z-index:13000;">
+            <div style="width:min(560px, 100%); background:#fffdf7; border:1px solid #d6c2a0; border-radius:10px; box-shadow:0 24px 70px rgba(15,23,42,.35); padding:22px; color:#172033;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:8px;">
+                    <div><h3 style="margin:0; font-size:1.08rem;"><i class="fa-solid fa-pen-ruler" style="color:#0f766e;"></i> Editar cubagem em grupo</h3><p id="edicaoGrupoCubagemResumo" style="margin:6px 0 0; color:#64748b; font-size:.84rem;"></p></div>
+                    <button type="button" onclick="window.fecharEdicaoGrupoCubagemPatio()" title="Fechar" style="border:0; background:transparent; color:#64748b; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p style="margin:0 0 16px; color:#475569; font-size:.82rem; line-height:1.45;">As quantidades e configuracoes de cada ramificacao serao mantidas. Apenas a classe e as medidas serao atualizadas.</p>
+                <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px;">
+                    <div class="input-group" style="margin:0;"><label>Classe</label><select id="edicaoGrupoClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
+                    <div class="input-group" style="margin:0;"><label>Esp.</label><input id="edicaoGrupoEsp" type="text" inputmode="decimal" placeholder="1,7"></div>
+                    <div class="input-group" style="margin:0;"><label>Larg.</label><input id="edicaoGrupoLarg" type="text" inputmode="decimal" placeholder="8,5"></div>
+                    <div class="input-group" style="margin:0;"><label>Comp.</label><input id="edicaoGrupoComp" type="text" inputmode="decimal" placeholder="1,20"></div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                    <button type="button" class="btn-secondary" onclick="window.fecharEdicaoGrupoCubagemPatio()">Cancelar</button>
+                    <button type="button" class="btn-primary" onclick="window.salvarEdicaoGrupoCubagemPatio()"><i class="fa-solid fa-floppy-disk"></i> Salvar cubagem</button>
+                </div>
+            </div>
+        </div>`;
+    document.currentScript.insertAdjacentHTML('beforebegin', html + modalEdicaoGrupo);
 })();

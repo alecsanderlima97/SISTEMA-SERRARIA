@@ -882,7 +882,7 @@ async function renderizarProducaoPatio(options = {}) {
                 <td style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1, this)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1, this)`, 'Adicionar')}
-                    <button type="button" class="btn-fluxo-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')" title="Editar cubagem">
+                    <button type="button" class="btn-fluxo-editar" onclick="window.editarGrupoCubagemPatio('${item.id}', 'fluxo')" title="Editar esta cubagem e todas as ramificacoes">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button type="button" class="btn-fluxo-excluir" onclick="window.excluirCubagemProducaoPatio('${item.id}')" title="Excluir cubagem">
@@ -933,6 +933,7 @@ function atualizarResumoSelecaoFluxoPatio() {
     }, { lotes: 0, pacotes: 0, volume: 0 });
     const label = document.getElementById('fluxoPatioSelecaoResumo');
     const selecionarTodos = document.getElementById('fluxoPatioSelecionarTodos');
+    const editar = document.getElementById('btnEditarSelecionadosFluxoPatio');
     const excluir = document.getElementById('btnExcluirSelecionadosFluxoPatio');
     const totalItens = producaoPatioRelatorioAtual?.itens?.length || 0;
     if (label) label.textContent = resumo.lotes
@@ -941,6 +942,13 @@ function atualizarResumoSelecaoFluxoPatio() {
     if (selecionarTodos) {
         selecionarTodos.checked = totalItens > 0 && resumo.lotes === totalItens;
         selecionarTodos.indeterminate = resumo.lotes > 0 && resumo.lotes < totalItens;
+    }
+    const gruposSelecionados = new Set(itens.map(chaveGrupoCubagemPatio));
+    if (editar) {
+        editar.disabled = resumo.lotes === 0 || gruposSelecionados.size !== 1;
+        editar.title = gruposSelecionados.size > 1
+            ? 'Selecione uma unica cubagem e suas ramificacoes para editar em grupo'
+            : 'Editar a cubagem selecionada';
     }
     if (excluir) excluir.disabled = resumo.lotes === 0;
 }
@@ -1417,6 +1425,132 @@ function formatCubagemFluxo(item) {
     return `${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}m`;
 }
 
+let edicaoGrupoCubagemPatio = null;
+
+function chaveGrupoCubagemPatio(item) {
+    return [
+        obterNumeroClasse(item?.classe) || 0,
+        Number(item?.espessura || 0).toFixed(1),
+        Number(item?.largura || 0).toFixed(1),
+        Number(item?.comprimento || 0).toFixed(2)
+    ].join('|');
+}
+
+function obterItensEscopoEdicaoCubagem(escopo) {
+    return escopo === 'fluxo'
+        ? (producaoPatioRelatorioAtual?.itens || [])
+        : itensPatioTemp;
+}
+
+function abrirEdicaoGrupoCubagemPatio(escopo, ids) {
+    const itens = obterItensEscopoEdicaoCubagem(escopo);
+    const selecionados = itens.filter(item => ids.includes(item.id));
+    if (!selecionados.length) {
+        alert('Selecione ao menos uma cubagem para editar.');
+        return;
+    }
+
+    const chaves = new Set(selecionados.map(chaveGrupoCubagemPatio));
+    if (chaves.size !== 1) {
+        alert('Para editar em grupo, selecione somente uma cubagem e suas ramificacoes.');
+        return;
+    }
+
+    const referencia = selecionados[0];
+    edicaoGrupoCubagemPatio = { escopo, ids: selecionados.map(item => item.id) };
+    document.getElementById('edicaoGrupoClasse').value = referencia.classe || '1a CLASSE';
+    document.getElementById('edicaoGrupoEsp').value = formatDecimal(referencia.espessura, 1);
+    document.getElementById('edicaoGrupoLarg').value = formatDecimal(referencia.largura, 1);
+    document.getElementById('edicaoGrupoComp').value = formatDecimal(referencia.comprimento, 2);
+    document.getElementById('edicaoGrupoCubagemResumo').textContent = `${selecionados.length} configuracao(oes) de pacote serao atualizadas juntas.`;
+    const modal = document.getElementById('modalEdicaoGrupoCubagemPatio');
+    if (modal) modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('edicaoGrupoEsp')?.focus(), 80);
+}
+
+window.fecharEdicaoGrupoCubagemPatio = function() {
+    const modal = document.getElementById('modalEdicaoGrupoCubagemPatio');
+    if (modal) modal.style.display = 'none';
+    edicaoGrupoCubagemPatio = null;
+};
+
+window.editarGrupoCubagemPatio = function(id, escopo = 'fluxo') {
+    const itens = obterItensEscopoEdicaoCubagem(escopo);
+    const referencia = itens.find(item => item.id === id);
+    if (!referencia) return;
+    const chave = chaveGrupoCubagemPatio(referencia);
+    const ids = itens.filter(item => chaveGrupoCubagemPatio(item) === chave).map(item => item.id);
+
+    if (escopo === 'fluxo') {
+        itensFluxoPatioSelecionados = new Set(ids);
+        renderizarProducaoPatio({ recarregar: false });
+    } else {
+        itensPatioSelecionados = new Set(ids);
+        renderizarItensPatioTemp();
+    }
+    abrirEdicaoGrupoCubagemPatio(escopo, ids);
+};
+
+window.editarCubagemSelecionadaFluxoPatio = function() {
+    abrirEdicaoGrupoCubagemPatio('fluxo', [...itensFluxoPatioSelecionados]);
+};
+
+window.editarCubagemSelecionadaPatio = function() {
+    abrirEdicaoGrupoCubagemPatio('controle', [...itensPatioSelecionados]);
+};
+
+window.salvarEdicaoGrupoCubagemPatio = async function() {
+    const contexto = edicaoGrupoCubagemPatio;
+    if (!contexto) return;
+
+    const classe = document.getElementById('edicaoGrupoClasse')?.value || '1a CLASSE';
+    const espessura = parseDecimal(document.getElementById('edicaoGrupoEsp')?.value);
+    const largura = parseDecimal(document.getElementById('edicaoGrupoLarg')?.value);
+    const comprimento = parseDecimal(document.getElementById('edicaoGrupoComp')?.value);
+    if (espessura <= 0 || largura <= 0 || comprimento <= 0) {
+        alert('Informe medidas validas para a cubagem.');
+        return;
+    }
+
+    const itens = obterItensEscopoEdicaoCubagem(contexto.escopo);
+    const anteriores = clonarItensParaDesfazer(itens);
+    const ids = new Set(contexto.ids);
+    const atualizados = itens.map(item => {
+        if (!ids.has(item.id)) return item;
+        const pecas = Number(item.pecas) || 0;
+        const pacotes = Number(item.pacotes) || 0;
+        const volumeUnidade = (espessura / 100) * (largura / 100) * comprimento * pecas;
+        return {
+            ...item,
+            classe,
+            espessura,
+            largura,
+            comprimento,
+            totalPecas: pacotes * pecas,
+            volumeUnidade,
+            volume: volumeUnidade * pacotes
+        };
+    });
+
+    try {
+        if (contexto.escopo === 'fluxo') {
+            producaoPatioRelatorioAtual.itens = atualizados;
+            producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Editou cubagem em ${contexto.ids.length} configuracao(oes) de pacote`);
+            await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+            await renderizarProducaoPatio({ recarregar: false });
+            registrarDesfazerFluxoPatio(anteriores, 'Cubagem e ramificacoes atualizadas no Fluxo do Patio.');
+        } else {
+            itensPatioTemp = atualizados;
+            renderizarItensPatioTemp();
+            registrarDesfazerListaPatio(anteriores, 'Cubagem e ramificacoes atualizadas na lista do Patio.');
+        }
+        window.fecharEdicaoGrupoCubagemPatio();
+    } catch (error) {
+        console.error('Erro ao editar cubagem em grupo:', error);
+        alert('Nao foi possivel salvar a edicao da cubagem agora.');
+    }
+};
+
 function obterClasseItemFluxo(item) {
     return item?.classe || item?.classificacao || item?.qualidade || item?.tipoClasse || '';
 }
@@ -1688,6 +1822,20 @@ function obterItensPatioSelecionadosObrigatorio(lista, mensagem) {
     return lista.filter(item => ids.includes(item.id));
 }
 
+window.excluirSelecionadosPatio = async function() {
+    const ids = obterIdsPatioSelecionados();
+    if (!ids.length) return;
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${ids.length} pacote(s) selecionado(s) da lista do Patio?`);
+    if (!autorizado) return;
+
+    const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
+    const idsParaExcluir = new Set(ids);
+    itensPatioTemp = itensPatioTemp.filter(item => !idsParaExcluir.has(item.id));
+    itensPatioSelecionados.clear();
+    renderizarItensPatioTemp();
+    registrarDesfazerListaPatio(itensAnteriores, `${ids.length} pacote(s) selecionado(s) removido(s) da lista do Patio.`);
+};
+
 function obterResumoPatioSelecionado() {
     const ids = obterIdsPatioSelecionados();
     return itensPatioTemp
@@ -1709,6 +1857,17 @@ function atualizarResumoSelecaoPatio() {
             ? `${resumo.pacotes} pct(s) selecionado(s) | ${formatDecimalMockup(resumo.volume)} m³`
             : 'Nenhum item selecionado';
     }
+    const editar = document.getElementById('btnEditarSelecionadosPatio');
+    const excluir = document.getElementById('btnExcluirSelecionadosPatio');
+    const itensSelecionados = itensPatioTemp.filter(item => itensPatioSelecionados.has(item.id));
+    const gruposSelecionados = new Set(itensSelecionados.map(chaveGrupoCubagemPatio));
+    if (editar) {
+        editar.disabled = resumo.linhas === 0 || gruposSelecionados.size !== 1;
+        editar.title = gruposSelecionados.size > 1
+            ? 'Selecione uma unica cubagem e suas ramificacoes para editar em grupo'
+            : 'Editar a cubagem selecionada';
+    }
+    if (excluir) excluir.disabled = resumo.linhas === 0;
     atualizarConsolidatedStats();
 }
 
@@ -2059,7 +2218,7 @@ function renderizarItensPatioTemp() {
                     <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
                         ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
                         ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
-                        <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar Lote">
+                        <button type="button" onclick="editarGrupoCubagemPatio('${item.id}', 'controle')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar esta cubagem e todas as ramificacoes">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                         <button type="button" onclick="imprimirEtiquetaItemPatio('${item.id}')" style="background:none; border:none; color: #16a34a; cursor:pointer; font-size: 1rem; transition: color 0.15s;" title="Imprimir Etiqueta">

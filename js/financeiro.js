@@ -747,12 +747,18 @@ function salvarNotificacoesFinanceirasLidas(chaves) {
     }
 }
 
-window.marcarNotificacoesFinanceirasComoLidas = function() {
-    const chavesAtuais = obterBoletosAVencerFinanceiro().map(chaveNotificacaoFinanceira);
-    if (!chavesAtuais.length) return;
-    salvarNotificacoesFinanceirasLidas([...obterNotificacoesFinanceirasLidas(), ...chavesAtuais]);
+window.marcarNotificacoesFinanceirasComoLidas = function(alertasVisiveis = null) {
+    const alertas = Array.isArray(alertasVisiveis) ? alertasVisiveis : obterBoletosAVencerFinanceiro();
+    const chavesAtuais = alertas.map(chaveNotificacaoFinanceira);
+    if (chavesAtuais.length) {
+        salvarNotificacoesFinanceirasLidas([...obterNotificacoesFinanceirasLidas(), ...chavesAtuais]);
+    }
     const badge = document.getElementById('headerNotificationBadge');
-    if (badge) badge.hidden = true;
+    if (badge) {
+        badge.textContent = '0';
+        badge.hidden = true;
+    }
+    window.dispatchEvent(new CustomEvent('financeiroNotificacoesLidas'));
 };
 
 function mostrarLembretesFinanceiros() {
@@ -827,7 +833,7 @@ function mostrarLembretesFinanceiros() {
         button.addEventListener('click', event => {
             event.stopPropagation();
             if (!panel) return;
-            if (panel.hidden) window.marcarNotificacoesFinanceirasComoLidas?.();
+            if (panel.hidden) window.marcarNotificacoesFinanceirasComoLidas?.(alertas);
             panel.hidden = !panel.hidden;
             button.setAttribute('aria-expanded', String(!panel.hidden));
         });
