@@ -892,7 +892,7 @@ async function renderizarProducaoPatio(options = {}) {
                 <td style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1, this)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1, this)`, 'Adicionar')}
-                    <button type="button" class="btn-fluxo-editar" onclick="window.editarGrupoCubagemPatio('${item.id}', 'fluxo')" title="Editar esta cubagem e todas as ramificacoes">
+                    <button type="button" class="btn-fluxo-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')" title="Editar este pacote e sua configuracao">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button type="button" class="btn-fluxo-excluir" onclick="window.excluirCubagemProducaoPatio('${item.id}')" title="Excluir cubagem">
@@ -2228,7 +2228,7 @@ function renderizarItensPatioTemp() {
                     <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
                         ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
                         ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
-                        <button type="button" onclick="editarGrupoCubagemPatio('${item.id}', 'controle')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar esta cubagem e todas as ramificacoes">
+                        <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar este pacote e sua configuracao">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                         <button type="button" onclick="imprimirEtiquetaItemPatio('${item.id}')" style="background:none; border:none; color: #16a34a; cursor:pointer; font-size: 1rem; transition: color 0.15s;" title="Imprimir Etiqueta">
