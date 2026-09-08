@@ -494,6 +494,410 @@ window.entradasAtuaisLista = [];
 let mapaMatosEntrada = [];
 let entradasSelecionadas = new Set();
 let descargasSelecionadas = new Set();
+const REGRAS_DESCARGA_PADRAO = {
+    valorM3DiaUtil: 1.30,
+    valorM3Especial: 1.50,
+    diariaFimSemana: 150,
+    meiaDiariaFimSemana: 75,
+    feriados: []
+};
+let regrasPagamentoDescarga = { ...REGRAS_DESCARGA_PADRAO };
+let funcionariosDescarga = [];
+let ultimaDistribuicaoAutomaticaDescarga = true;
+
+function numeroRegraPagamento(valor, fallback = 0) {
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : fallback;
+    const texto = String(valor ?? '').trim().replace(/\./g, '').replace(',', '.');
+    const numero = Number(texto);
+    return Number.isFinite(numero) ? numero : fallback;
+}
+
+function formatarNumeroM3Descarga(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+function obterFeriadosDescarga() {
+    return Array.isArray(regrasPagamentoDescarga.feriados) ? regrasPagamentoDescarga.feriados : [];
+}
+
+function publicarRegrasCalendario() {
+    window.regrasPagamentoDescargaAtual = () => ({ ...regrasPagamentoDescarga });
+    window.dispatchEvent(new CustomEvent('feriados:updated', {
+        detail: { feriados: obterFeriadosDescarga() }
+    }));
+}
+
+function formatarLocalizacaoEmpresa(localizacao = {}) {
+    if (!localizacao?.cidade && !localizacao?.uf) return '';
+    return [localizacao.cidade, localizacao.uf].filter(Boolean).join(' - ');
+}
+
+function classificarDiaDescarga(data) {
+    const dataNormalizada = String(data || '');
+    const feriado = obterFeriadosDescarga().find(item => (typeof item === 'string' ? item : item?.data) === dataNormalizada);
+    if (feriado) return { tipo: 'FERIADO', label: typeof feriado === 'string' ? 'feriado cadastrado' : (feriado.nome || 'feriado cadastrado') };
+    const dataLocal = new Date(`${dataNormalizada}T12:00:00`);
+    if (!Number.isNaN(dataLocal.getTime()) && [0, 6].includes(dataLocal.getDay())) {
+        return { tipo: 'FIM_DE_SEMANA', label: dataLocal.getDay() === 6 ? 'sábado' : 'domingo' };
+    }
+    return { tipo: 'DIA_UTIL', label: 'dia útil' };
+}
+
+function obterValorM3Descarga(data) {
+    const tipoDia = classificarDiaDescarga(data);
+    return tipoDia.tipo === 'DIA_UTIL'
+        ? numeroRegraPagamento(regrasPagamentoDescarga.valorM3DiaUtil, REGRAS_DESCARGA_PADRAO.valorM3DiaUtil)
+        : numeroRegraPagamento(regrasPagamentoDescarga.valorM3Especial, REGRAS_DESCARGA_PADRAO.valorM3Especial);
+}
+
+async function carregarRegrasPagamentoDescarga() {
+    try {
+        const salvas = await window.FS.getDoc('configuracoes_sistema', 'regras_pagamento_descarga');
+        regrasPagamentoDescarga = { ...REGRAS_DESCARGA_PADRAO, ...(salvas || {}) };
+    } catch (error) {
+        console.warn('Usando regras locais de descarga:', error);
+        regrasPagamentoDescarga = { ...REGRAS_DESCARGA_PADRAO };
+    }
+    preencherFormularioRegrasPagamento();
+    publicarRegrasCalendario();
+    calcularVolumeAtual();
+}
+
+function preencherFormularioRegrasPagamento() {
+    const campos = {
+        configDescargaDiaUtil: regrasPagamentoDescarga.valorM3DiaUtil,
+        configDescargaEspecial: regrasPagamentoDescarga.valorM3Especial,
+        configDiariaFimSemana: regrasPagamentoDescarga.diariaFimSemana,
+        configMeiaDiariaFimSemana: regrasPagamentoDescarga.meiaDiariaFimSemana
+    };
+    Object.entries(campos).forEach(([id, valor]) => {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    });
+    const feriados = document.getElementById('configFeriadosDescarga');
+    if (feriados) feriados.value = obterFeriadosDescarga().map(item => {
+        const data = typeof item === 'string' ? item : item?.data;
+        const nome = typeof item === 'string' ? '' : item?.nome;
+        return nome ? `${data} - ${nome}` : data;
+    }).filter(Boolean).join('\n');
+    const localizacao = document.getElementById('configLocalizacaoEmpresa');
+    const localizacaoInfo = document.getElementById('configLocalizacaoEmpresaInfo');
+    if (localizacao) localizacao.value = formatarLocalizacaoEmpresa(regrasPagamentoDescarga.localizacaoEmpresa);
+    if (localizacaoInfo && regrasPagamentoDescarga.localizacaoEmpresa?.atualizadoEm) {
+        localizacaoInfo.textContent = `Referência salva em ${new Date(regrasPagamentoDescarga.localizacaoEmpresa.atualizadoEm).toLocaleDateString('pt-BR')}. Coordenadas não são armazenadas.`;
+    }
+}
+
+function lerFeriadosFormularioDescarga() {
+    return (document.getElementById('configFeriadosDescarga')?.value || '').split(/\r?\n/).map(linha => linha.trim()).filter(Boolean).map(linha => {
+        const resultado = linha.match(/^(\d{4}-\d{2}-\d{2})(?:\s*-\s*(.+))?$/);
+        return resultado ? { data: resultado[1], nome: (resultado[2] || '').trim() } : null;
+    });
+}
+
+window.identificarLocalizacaoEmpresa = function() {
+    const botao = document.getElementById('btnUsarLocalizacaoEmpresa');
+    const info = document.getElementById('configLocalizacaoEmpresaInfo');
+    if (!navigator.geolocation) {
+        if (info) info.textContent = 'Este navegador não oferece localização. Informe a referência manualmente.';
+        return;
+    }
+    if (botao) { botao.disabled = true; botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Identificando...'; }
+    if (info) info.textContent = 'Solicitando sua localização para identificar cidade e estado...';
+    navigator.geolocation.getCurrentPosition(async position => {
+        try {
+            const { latitude, longitude } = position.coords;
+            const resposta = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}&zoom=10&addressdetails=1`, { headers: { Accept: 'application/json' } });
+            if (!resposta.ok) throw new Error('Não foi possível consultar a cidade.');
+            const dados = await resposta.json();
+            const endereco = dados.address || {};
+            const cidade = endereco.city || endereco.town || endereco.village || endereco.municipality || endereco.county || '';
+            const codigoEstado = String(endereco['ISO3166-2-lvl4'] || '').split('-').pop();
+            const uf = /^[A-Z]{2}$/i.test(codigoEstado) ? codigoEstado.toUpperCase() : '';
+            if (!cidade && !uf) throw new Error('A localização não retornou cidade ou estado.');
+            regrasPagamentoDescarga.localizacaoEmpresa = { cidade, uf, atualizadoEm: new Date().toISOString() };
+            preencherFormularioRegrasPagamento();
+            if (info) info.textContent = 'Localização identificada. Clique em “Salvar regras de pagamento” para confirmar esta referência.';
+        } catch (error) {
+            console.error('Erro ao identificar cidade/UF:', error);
+            if (info) info.textContent = 'Não foi possível identificar cidade e estado automaticamente. Mantenha os feriados locais no cadastro manual.';
+        } finally {
+            if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar localização atual'; }
+        }
+    }, error => {
+        if (info) info.textContent = error?.code === 1 ? 'Localização não autorizada. Você pode continuar usando os feriados cadastrados manualmente.' : 'Não foi possível obter a localização atual.';
+        if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar localização atual'; }
+    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+};
+
+window.importarFeriadosNacionais = async function() {
+    const botao = document.getElementById('btnImportarFeriadosNacionais');
+    const ano = new Date().getFullYear();
+    if (botao) { botao.disabled = true; botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Consultando calendário...'; }
+    try {
+        const resposta = await fetch(`https://brasilapi.com.br/api/feriados/v1/${ano}`);
+        if (!resposta.ok) throw new Error('Calendário nacional indisponível.');
+        const nacionais = await resposta.json();
+        if (!Array.isArray(nacionais)) throw new Error('Resposta inválida do calendário nacional.');
+        const locais = obterFeriadosDescarga().filter(item => !String(item?.nome || item).endsWith(' (Nacional)'));
+        const automaticos = nacionais.filter(item => item?.date && item?.name).map(item => ({
+            data: item.date,
+            nome: `${item.name} (Nacional)`
+        }));
+        regrasPagamentoDescarga.feriados = [...locais, ...automaticos].sort((a, b) => String(a.data).localeCompare(String(b.data)));
+        await window.FS.setDoc('configuracoes_sistema', 'regras_pagamento_descarga', regrasPagamentoDescarga);
+        preencherFormularioRegrasPagamento();
+        publicarRegrasCalendario();
+        calcularVolumeAtual();
+        alert(`${automaticos.length} feriado(s) nacional(is) de ${ano} foram atualizados. Feriados estaduais e municipais cadastrados foram preservados.`);
+    } catch (error) {
+        console.error('Erro ao importar feriados nacionais:', error);
+        alert('Não foi possível atualizar os feriados nacionais agora. Seus feriados manuais foram mantidos.');
+    } finally {
+        if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Atualizar feriados nacionais'; }
+    }
+};
+
+window.salvarRegrasPagamentoDescarga = async function() {
+    const btn = document.getElementById('btnSalvarRegrasPagamento');
+    const lerCampo = (id, padrao) => numeroRegraPagamento(document.getElementById(id)?.value, padrao);
+    const feriados = lerFeriadosFormularioDescarga();
+    if (feriados.some(item => !item)) {
+        alert('Revise os feriados: use uma linha por data no formato AAAA-MM-DD - descrição.');
+        return;
+    }
+    const novasRegras = {
+        valorM3DiaUtil: lerCampo('configDescargaDiaUtil', 1.30),
+        valorM3Especial: lerCampo('configDescargaEspecial', 1.50),
+        diariaFimSemana: lerCampo('configDiariaFimSemana', 150),
+        meiaDiariaFimSemana: lerCampo('configMeiaDiariaFimSemana', 75),
+        feriados,
+        localizacaoEmpresa: regrasPagamentoDescarga.localizacaoEmpresa || null
+    };
+    if (Object.values(novasRegras).slice(0, 4).some(valor => valor < 0)) {
+        alert('Os valores de pagamento não podem ser negativos.');
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...'; }
+    try {
+        await window.FS.setDoc('configuracoes_sistema', 'regras_pagamento_descarga', novasRegras);
+        regrasPagamentoDescarga = { ...REGRAS_DESCARGA_PADRAO, ...novasRegras };
+        publicarRegrasCalendario();
+        preencherFormularioRegrasPagamento();
+        calcularVolumeAtual();
+        alert('Regras de pagamento salvas. Novos descarregamentos usarão estes valores.');
+    } catch (error) {
+        console.error('Erro ao salvar regras de pagamento:', error);
+        alert('Não foi possível salvar as regras de pagamento.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar regras de pagamento'; }
+    }
+};
+
+async function carregarFuncionariosParaDescarga(selecionados = []) {
+    const select = document.getElementById('entFuncionariosDescarga');
+    if (!select) return;
+    try {
+        funcionariosDescarga = await window.FS.getCollection('funcionarios');
+        funcionariosDescarga.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+        const ids = new Set(selecionados.map(item => typeof item === 'string' ? item : item?.funcionarioId).filter(Boolean));
+        select.innerHTML = funcionariosDescarga.length
+            ? funcionariosDescarga.map(func => `<option value="${func.id}" ${ids.has(func.id) ? 'selected' : ''}>${func.nome || 'SEM NOME'}${func.funcao ? ` - ${func.funcao}` : ''}</option>`).join('')
+            : '<option value="" disabled>Nenhum funcionário cadastrado no RH.</option>';
+        renderizarSeletorFuncionariosDescarga();
+        atualizarDivisaoDescarga();
+    } catch (error) {
+        console.error('Erro ao carregar funcionários para descarga:', error);
+        select.innerHTML = '<option value="" disabled>Não foi possível carregar os funcionários.</option>';
+        renderizarSeletorFuncionariosDescarga();
+    }
+}
+
+function atualizarResumoFuncionariosDescarga() {
+    const resumo = document.getElementById('entFuncionariosDescargaResumo');
+    if (!resumo) return;
+    const ids = idsFuncionariosSelecionadosDescarga();
+    const nomes = ids.map(id => funcionariosDescarga.find(item => item.id === id)?.nome).filter(Boolean);
+    resumo.textContent = !nomes.length
+        ? 'Selecionar responsáveis'
+        : nomes.length === 1
+            ? nomes[0]
+            : `${nomes.length} funcionários selecionados`;
+}
+
+function renderizarSeletorFuncionariosDescarga() {
+    const lista = document.getElementById('entFuncionariosDescargaLista');
+    const select = document.getElementById('entFuncionariosDescarga');
+    if (!lista || !select) return;
+    lista.innerHTML = '';
+    if (!funcionariosDescarga.length) {
+        lista.textContent = 'Nenhum funcionário disponível.';
+        atualizarResumoFuncionariosDescarga();
+        return;
+    }
+    funcionariosDescarga.forEach(funcionario => {
+        const item = document.createElement('label');
+        item.className = 'descarga-funcionario-item';
+        item.dataset.funcionarioBusca = `${funcionario.nome || ''} ${funcionario.funcao || ''}`.toLowerCase();
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = funcionario.id;
+        checkbox.checked = [...select.selectedOptions].some(option => option.value === funcionario.id);
+        checkbox.addEventListener('change', () => {
+            const option = [...select.options].find(itemOption => itemOption.value === funcionario.id);
+            if (option) option.selected = checkbox.checked;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            atualizarResumoFuncionariosDescarga();
+        });
+        const texto = document.createElement('span');
+        const nome = document.createElement('strong');
+        nome.textContent = funcionario.nome || 'SEM NOME';
+        texto.appendChild(nome);
+        if (funcionario.funcao) {
+            const funcao = document.createElement('small');
+            funcao.textContent = funcionario.funcao;
+            texto.appendChild(funcao);
+        }
+        item.append(checkbox, texto);
+        lista.appendChild(item);
+    });
+    atualizarResumoFuncionariosDescarga();
+}
+
+function configurarSeletorFuncionariosDescarga() {
+    const botao = document.getElementById('btnFuncionariosDescarga');
+    const menu = document.getElementById('entFuncionariosDescargaMenu');
+    const busca = document.getElementById('buscarFuncionariosDescarga');
+    const picker = document.getElementById('entFuncionariosDescargaPicker');
+    if (!botao || !menu || !busca || !picker) return;
+    botao.addEventListener('click', () => {
+        const aberto = !menu.hidden;
+        menu.hidden = aberto;
+        botao.setAttribute('aria-expanded', String(!aberto));
+        if (!aberto) busca.focus();
+    });
+    busca.addEventListener('input', () => {
+        const termo = busca.value.trim().toLowerCase();
+        document.querySelectorAll('#entFuncionariosDescargaLista [data-funcionario-busca]').forEach(item => {
+            item.hidden = Boolean(termo) && !item.dataset.funcionarioBusca.includes(termo);
+        });
+    });
+    document.addEventListener('click', event => {
+        if (picker.contains(event.target)) return;
+        menu.hidden = true;
+        botao.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function idsFuncionariosSelecionadosDescarga() {
+    const select = document.getElementById('entFuncionariosDescarga');
+    return select ? [...select.selectedOptions].map(option => option.value).filter(Boolean) : [];
+}
+
+function distribuirMetrosDescargaIgualmente() {
+    ultimaDistribuicaoAutomaticaDescarga = true;
+    atualizarDivisaoDescarga(true);
+}
+
+function atualizarDivisaoDescarga(forcarDistribuicao = false) {
+    const container = document.getElementById('entDivisaoDescarga');
+    const lista = document.getElementById('entDivisaoDescargaLista');
+    const resumo = document.getElementById('entDivisaoDescargaResumo');
+    const ids = idsFuncionariosSelecionadosDescarga();
+    if (!container || !lista || !resumo) return;
+    if (!ids.length) {
+        container.style.display = 'none';
+        lista.innerHTML = '';
+        return;
+    }
+    const volume = calcularVolumeSemAtualizarTela();
+    const valoresAtuais = new Map([...lista.querySelectorAll('[data-funcionario-volume]')].map(input => [input.dataset.funcionarioVolume, input.value]));
+    const porPessoa = ids.length ? volume / ids.length : 0;
+    container.style.display = 'block';
+    lista.innerHTML = ids.map(id => {
+        const funcionario = funcionariosDescarga.find(item => item.id === id);
+        const valorAtual = forcarDistribuicao || ultimaDistribuicaoAutomaticaDescarga || !valoresAtuais.has(id)
+            ? formatarNumeroM3Descarga(porPessoa)
+            : valoresAtuais.get(id);
+        return `<label style="display:flex; flex-direction:column; gap:5px; font-size:.78rem; color:#334155;"><strong>${funcionario?.nome || 'Funcionário'}</strong><span style="display:flex; align-items:center; gap:6px;"><input type="text" inputmode="decimal" data-funcionario-volume="${id}" value="${valorAtual}" style="margin:0; min-width:0;"><small>m³</small></span></label>`;
+    }).join('');
+    const valorM3 = obterValorM3Descarga(entData?.value);
+    resumo.textContent = `${ids.length} responsável(is). Total informado: ${formatarNumeroM3Descarga(obterTotalMetrosResponsaveisDescarga())} m³ de ${formatarNumeroM3Descarga(volume)} m³. Valor: ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`;
+    lista.querySelectorAll('[data-funcionario-volume]').forEach(input => input.addEventListener('input', () => {
+        ultimaDistribuicaoAutomaticaDescarga = false;
+        atualizarResumoDivisaoDescarga();
+    }));
+}
+
+function calcularVolumeSemAtualizarTela() {
+    const c = parseDecimalValue(entComp?.value) || 0;
+    const l = parseDecimalValue(entLarg?.value) || 0;
+    const alturas = inputsAlt.map(input => parseDecimalValue(input?.value)).filter(valor => valor > 0);
+    if (!c || !l || !alturas.length) return 0;
+    const media = Math.trunc((alturas.reduce((soma, valor) => soma + valor, 0) / alturas.length) * 100) / 100;
+    return c * l * media;
+}
+
+function obterTotalMetrosResponsaveisDescarga() {
+    return [...document.querySelectorAll('[data-funcionario-volume]')].reduce((soma, input) => soma + numeroRegraPagamento(input.value, 0), 0);
+}
+
+function atualizarResumoDivisaoDescarga() {
+    const resumo = document.getElementById('entDivisaoDescargaResumo');
+    if (!resumo) return;
+    const volume = calcularVolumeSemAtualizarTela();
+    const total = obterTotalMetrosResponsaveisDescarga();
+    const diferenca = total - volume;
+    const valorM3 = obterValorM3Descarga(entData?.value);
+    resumo.style.color = Math.abs(diferenca) <= 0.01 ? '#0f766e' : '#b45309';
+    resumo.textContent = Math.abs(diferenca) <= 0.01
+        ? `Distribuição conferida: ${formatarNumeroM3Descarga(total)} m³. Valor: ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`
+        : `Faltam ou sobram ${formatarNumeroM3Descarga(Math.abs(diferenca))} m³ para fechar os ${formatarNumeroM3Descarga(volume)} m³ da carga.`;
+}
+
+function montarResponsaveisDescarga(volume, valorM3) {
+    const ids = idsFuncionariosSelecionadosDescarga();
+    if (!ids.length) return [];
+    const responsaveis = ids.map(id => {
+        const funcionario = funcionariosDescarga.find(item => item.id === id);
+        const campo = document.querySelector(`[data-funcionario-volume="${id}"]`);
+        const metros = numeroRegraPagamento(campo?.value, 0);
+        return { funcionarioId: id, nome: funcionario?.nome || 'FUNCIONÁRIO', volume: metros, valorM3, total: metros * valorM3 };
+    });
+    const totalInformado = responsaveis.reduce((soma, item) => soma + item.volume, 0);
+    if (Math.abs(totalInformado - volume) > 0.01) {
+        throw new Error(`A soma dos metros dos responsáveis (${formatarNumeroM3Descarga(totalInformado)} m³) precisa ser igual ao volume da carga (${formatarNumeroM3Descarga(volume)} m³).`);
+    }
+    return responsaveis;
+}
+
+async function sincronizarCreditosDescargaNoRH(entradaId, dadosEntrada) {
+    const funcionarios = await window.FS.getCollection('funcionarios');
+    const responsaveis = Array.isArray(dadosEntrada?.responsaveisDescarga) ? dadosEntrada.responsaveisDescarga : [];
+    const tipo = dadosEntrada?.tipoDiaDescarga === 'DIA_UTIL' ? 'NORMAL' : 'ESPECIAL';
+    await Promise.all(funcionarios.map(async funcionario => {
+        const anteriores = Array.isArray(funcionario.horasExtras) ? funcionario.horasExtras : [];
+        const semCreditoDestaEntrada = anteriores.filter(item => item.referenciaEntradaId !== entradaId);
+        const responsavel = responsaveis.find(item => item.funcionarioId === funcionario.id);
+        if (responsavel) {
+            semCreditoDestaEntrada.push({
+                id: `descarga-${entradaId}-${funcionario.id}`,
+                data: dadosEntrada.data,
+                horas: 0,
+                tipo,
+                adicional: Number(responsavel.total || 0),
+                observacao: `DESCARREGAMENTO | ${formatarNumeroM3Descarga(responsavel.volume)} M³ x ${Number(responsavel.valorM3 || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/M³ | ROM. ${dadosEntrada.romaneioNum || '-'}`,
+                origem: 'DESCARREGAMENTO',
+                referenciaEntradaId: entradaId,
+                volumeDescarga: responsavel.volume,
+                valorDescargaM3: responsavel.valorM3
+            });
+        }
+        if (responsavel || semCreditoDestaEntrada.length !== anteriores.length) {
+            await window.FS.updateDoc('funcionarios', funcionario.id, { horasExtras: semCreditoDestaEntrada });
+        }
+    }));
+}
 let entradasUnsubscribe = null;
 const FECHAMENTOS_SALVOS_KEY = 'orquestra_fechamentos_salvos';
 let fechamentosSalvosExtracao = [];
@@ -609,7 +1013,11 @@ function resetarFormularioEntradaCompleto() {
     const mapaSelect = document.getElementById('entMapaMatoId');
     if (mapaSelect) mapaSelect.value = '';
     atualizarInfoMapaMatoEntrada();
-    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+    const funcionariosSelect = document.getElementById('entFuncionariosDescarga');
+    if (funcionariosSelect) [...funcionariosSelect.options].forEach(option => { option.selected = false; });
+    renderizarSeletorFuncionariosDescarga();
+    ultimaDistribuicaoAutomaticaDescarga = true;
+    atualizarDivisaoDescarga(true);
     aplicarDataHoraAtualEntrada();
     atualizarOrigemToraEntrada();
     atualizarEstadoEdicaoEntrada();
@@ -828,15 +1236,17 @@ function formatDecimal2Input(e) {
 }
 
 function descargaTemAdicional(horario) {
-    return true;
+    return classificarDiaDescarga(entData?.value).tipo !== 'DIA_UTIL';
 }
 
 function atualizarValorDescargaPorHorario() {
-    const temAdicional = descargaTemAdicional(entHorario?.value || '');
+    const classificacao = classificarDiaDescarga(entData?.value);
+    const valorM3 = obterValorM3Descarga(entData?.value);
     const aviso = document.getElementById('entAvisoDescargaHorario');
+    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valorM3) : valorM3.toFixed(2).replace('.', ',');
     if (aviso) {
-        aviso.style.color = temAdicional ? '#4ade80' : '#f59e0b';
-        aviso.textContent = 'Valor sugerido: R$ 1,12/m³. Você pode alterar quando necessário.';
+        aviso.style.color = classificacao.tipo === 'DIA_UTIL' ? '#0f766e' : '#b45309';
+        aviso.textContent = `Regra aplicada: ${classificacao.label} - ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`;
     }
 }
 
@@ -878,13 +1288,15 @@ function calcularVolumeAtual() {
     }
 
     atualizarValorDescargaPorHorario();
-    const valorDescargaM3 = window.parseCurrencyValue ? window.parseCurrencyValue(entValorDescarga?.value || '0') : 0;
+    const valorDescargaM3 = obterValorM3Descarga(entData?.value);
     const totalDescarga = volume * valorDescargaM3;
     if (resDescarga) resDescarga.textContent = totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoDescarga) {
-        const regra = valorDescargaM3 > 0 ? 'periodo com adicional' : 'periodo sem adicional';
-        infoDescarga.textContent = `Baseado em ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} por m3 (${regra})`;
+        const regra = classificarDiaDescarga(entData?.value);
+        infoDescarga.textContent = `${formatDecimalValue(volume)} m³ x ${valorDescargaM3.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³ (${regra.label})`;
     }
+
+    atualizarDivisaoDescarga();
 
     aplicarVisibilidadeFinanceiraEntrada();
     return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
@@ -1762,6 +2174,16 @@ function configurarSubmitEntrada() {
         const empreiteiroNome = compraAvulsa ? fornecedorAvulso : selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
         const usuarioAuditoria = getUsuarioAtualAuditoria();
         const mapaMato = obterMapaMatoSelecionadoEntrada();
+        let responsaveisDescarga;
+        try {
+            if (!idsFuncionariosSelecionadosDescarga().length) {
+                throw new Error('Selecione ao menos um funcionário responsável pelo descarregamento.');
+            }
+            responsaveisDescarga = montarResponsaveisDescarga(calcData.volume, calcData.valorDescargaM3);
+        } catch (error) {
+            alert(error.message || 'Revise a divisão do descarregamento entre os funcionários.');
+            return;
+        }
         
         const novaEntrada = {
             data: document.getElementById('entData').value,
@@ -1792,6 +2214,9 @@ function configurarSubmitEntrada() {
             totalEmpreiteiro: calcData.totalFinanceiro,
             valorDescargaM3: calcData.valorDescargaM3,
             totalDescarga: calcData.totalDescarga,
+            tipoDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).tipo,
+            regraDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).label,
+            responsaveisDescarga,
             atualizadoEm: new Date().toISOString()
         };
 
@@ -1808,9 +2233,11 @@ function configurarSubmitEntrada() {
         submitBtn.disabled = true;
 
         try {
+            let entradaSalvaId = entradaEditandoId;
             if (entradaEditandoId) {
                 novaEntrada.atualizadoPor = usuarioAuditoria;
                 await window.FS.updateDoc('entradas', entradaEditandoId, novaEntrada);
+                await sincronizarCreditosDescargaNoRH(entradaEditandoId, novaEntrada);
                 alert(`✅ Entrada do Romaneio ${novaEntrada.romaneioNum} (${calcData.volume.toFixed(2).replace('.', ',')}m³) atualizada com sucesso!`);
                 entradasSelecionadas.delete(entradaEditandoId); // Clean selection of edited item
                 entradaEditandoId = null;
@@ -1819,7 +2246,8 @@ function configurarSubmitEntrada() {
                 novaEntrada.criadoEm = new Date().toISOString();
                 novaEntrada.criadoPor = usuarioAuditoria;
                 novaEntrada.atualizadoPor = usuarioAuditoria;
-                await window.FS.addDoc('entradas', novaEntrada);
+                entradaSalvaId = await window.FS.addDoc('entradas', novaEntrada);
+                await sincronizarCreditosDescargaNoRH(entradaSalvaId, novaEntrada);
                 const valorMensagem = usuarioPodeVerFinanceiroEmpreiteiro()
                     ? calcData.totalFinanceiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})
                     : calcData.totalDescarga.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -1847,6 +2275,8 @@ function configurarSubmitEntrada() {
 window.deletarEntrada = async function(id) {
     if(await window.confirmarExclusaoComSenha("Tem certeza que deseja apagar este registro de entrada?")) {
         try {
+            const entrada = window.entradasAtuaisLista.find(item => item.id === id) || await window.FS.getDoc('entradas', id);
+            if (entrada) await sincronizarCreditosDescargaNoRH(id, { ...entrada, responsaveisDescarga: [] });
             await deleteDoc(doc(db, 'entradas', id));
             entradasSelecionadas.delete(id);
             await carregarEntradas();
@@ -1908,7 +2338,7 @@ Observacao: ${en.observacaoCarga || 'N/A'}
 `);
 };
 
-window.alterarEntrada = function(id) {
+window.alterarEntrada = async function(id) {
     const en = window.entradasAtuaisLista.find(e => e.id === id);
     if(!en) return;
     entradaEditandoId = id;
@@ -1944,6 +2374,7 @@ window.alterarEntrada = function(id) {
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
     document.getElementById('entPlaca').value = en.placa || '';
+    await carregarFuncionariosParaDescarga(en.responsaveisDescarga || []);
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
     if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(Number(en.valorDescargaM3 || 0)) : formatDecimalValue(Number(en.valorDescargaM3 || 0));
@@ -1978,6 +2409,14 @@ window.alterarEntrada = function(id) {
 
     window.scrollTo({top: formEntrada.offsetTop - 100, behavior: 'smooth'});
     calcularVolumeAtual();
+    if (Array.isArray(en.responsaveisDescarga) && en.responsaveisDescarga.length) {
+        ultimaDistribuicaoAutomaticaDescarga = false;
+        en.responsaveisDescarga.forEach(responsavel => {
+            const campo = document.querySelector(`[data-funcionario-volume="${responsavel.funcionarioId}"]`);
+            if (campo) campo.value = formatarNumeroM3Descarga(responsavel.volume);
+        });
+        atualizarResumoDivisaoDescarga();
+    }
 };
 
 function gerarHtmlReciboEntrada(en) {
@@ -2209,6 +2648,8 @@ function inicializarModuloEntrada() {
     injetarEstiloFechamentosEntrada();
     atualizarEstadoEdicaoEntrada();
     carregarFechamentosSalvosExtracao();
+    carregarRegrasPagamentoDescarga();
+    carregarFuncionariosParaDescarga();
 
     const btnCancelarEdicaoEntrada = document.getElementById('btnCancelarEdicaoEntrada');
     if (btnCancelarEdicaoEntrada) {
@@ -2251,6 +2692,16 @@ function inicializarModuloEntrada() {
         entValorDescarga.addEventListener('input', window.formatCurrencyInput);
         entValorDescarga.addEventListener('input', calcularVolumeAtual);
     }
+    if (entData) entData.addEventListener('change', calcularVolumeAtual);
+    const funcionariosDescargaSelect = document.getElementById('entFuncionariosDescarga');
+    if (funcionariosDescargaSelect) funcionariosDescargaSelect.addEventListener('change', () => {
+        ultimaDistribuicaoAutomaticaDescarga = true;
+        atualizarResumoFuncionariosDescarga();
+        atualizarDivisaoDescarga(true);
+    });
+    configurarSeletorFuncionariosDescarga();
+    const btnDividirDescargaIgual = document.getElementById('btnDividirDescargaIgual');
+    if (btnDividirDescargaIgual) btnDividirDescargaIgual.addEventListener('click', distribuirMetrosDescargaIgualmente);
     const entOrigemTora = document.getElementById('entOrigemTora');
     if (entOrigemTora) entOrigemTora.addEventListener('change', atualizarOrigemToraEntrada);
     const entValorAvulso = document.getElementById('entValorAvulso');

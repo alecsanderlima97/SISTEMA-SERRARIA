@@ -50,7 +50,9 @@ function parseNumeroBR(valor) {
 function arredondarParaBaixo(valor, casas = 2) {
     const numero = Number(valor) || 0;
     const fator = Math.pow(10, casas);
-    return Math.floor((numero + Number.EPSILON) * fator) / fator;
+    // Evita que 10,301 x 960 vire 9.888,959999... e perca um centavo ao truncar.
+    const escalado = Number((numero * fator).toFixed(8));
+    return Math.floor(escalado + 0.0000001) / fator;
 }
 
 function formatarM3Baixo(valor) {
@@ -999,7 +1001,7 @@ function reprecificarPacotesParaCliente(cliente = {}) {
         return {
             ...pacote,
             precoM3,
-            valorTotalWood: arredondarParaBaixo(Number(pacote.m3VendaTotal || 0) * precoM3, 2)
+            valorTotalWood: arredondarParaBaixo(obterVolumePacoteExato(pacote, 'venda') * precoM3, 2)
         };
     });
 }
@@ -1090,6 +1092,58 @@ function chaveAgrupamentoPacoteRomaneio(p) {
     ].join('|');
 }
 
+function obterVolumePacoteExato(pacote = {}, tipo = 'venda') {
+    const campoExato = tipo === 'frete' ? 'm3FreteExato' : 'm3VendaExato';
+    const campoLegado = tipo === 'frete' ? 'm3FreteTotal' : 'm3VendaTotal';
+    const salvo = Number(pacote[campoExato]);
+    if (Number.isFinite(salvo) && salvo > 0) return salvo;
+
+    const esp = Number(pacote.esp || 0);
+    const larg = Number(pacote.larg || 0);
+    const comp = Number(tipo === 'frete' ? (pacote.compR || pacote.compV) : pacote.compV);
+    const pecas = Number(pacote.pecasPorPacote || 0) * Number(pacote.qtdPacotes || 0);
+    if (esp > 0 && larg > 0 && comp > 0 && pecas > 0) {
+        return (esp / 100) * (larg / 100) * comp * pecas;
+    }
+    return Number(pacote[campoLegado] || 0);
+}
+
+function chaveCubagemFinanceiraRomaneio(pacote = {}, tipo = 'venda') {
+    const comp = tipo === 'frete' ? (pacote.compR || pacote.compV) : pacote.compV;
+    return [
+        String(pacote.produtoNome || '').trim().toUpperCase(),
+        String(pacote.qualidade || pacote.classe || '').trim().toUpperCase(),
+        String(pacote.especie || '').trim().toUpperCase(),
+        Number(pacote.precoM3 || 0).toFixed(2),
+        Number(pacote.esp || 0).toFixed(3),
+        Number(pacote.larg || 0).toFixed(3),
+        Number(comp || 0).toFixed(3)
+    ].join('|');
+}
+
+function resumirCubagensRomaneio(pacotes = [], tipo = 'venda') {
+    const grupos = new Map();
+    pacotes.forEach(pacote => {
+        const chave = chaveCubagemFinanceiraRomaneio(pacote, tipo);
+        const atual = grupos.get(chave) || {
+            chave,
+            classe: (pacote.qualidade || pacote.classe || 'SEM CLASSE').toString().toUpperCase(),
+            precoM3: Number(pacote.precoM3 || 0),
+            m3Exato: 0,
+            pacotes: 0,
+            pecas: 0
+        };
+        atual.m3Exato += obterVolumePacoteExato(pacote, tipo);
+        atual.pacotes += Number(pacote.qtdPacotes || 0);
+        atual.pecas += Number(pacote.pecasPorPacote || 0) * Number(pacote.qtdPacotes || 0);
+        grupos.set(chave, atual);
+    });
+    return [...grupos.values()].map(grupo => ({
+        ...grupo,
+        m3: arredondarParaBaixo(grupo.m3Exato, 3)
+    }));
+}
+
 function somarPacoteAoRomaneio(novoPacote) {
     const chaveNova = chaveAgrupamentoPacoteRomaneio(novoPacote);
     const pacoteExistente = romaneioAtual.pacotes.find(p => chaveAgrupamentoPacoteRomaneio(p) === chaveNova);
@@ -1102,9 +1156,11 @@ function somarPacoteAoRomaneio(novoPacote) {
     pacoteExistente.qtdPacotes = Number(pacoteExistente.qtdPacotes || 0) + Number(novoPacote.qtdPacotes || 0);
     pacoteExistente.patioQtdPacotes = Number(pacoteExistente.patioQtdPacotes || 0) + Number(novoPacote.patioQtdPacotes || 0);
     pacoteExistente.patioItemIds = Array.from(new Set([...(pacoteExistente.patioItemIds || []), ...(novoPacote.patioItemIds || [])].filter(Boolean)));
-    pacoteExistente.m3VendaTotal = arredondarParaBaixo(Number(pacoteExistente.m3VendaTotal || 0) + Number(novoPacote.m3VendaTotal || 0), 3);
-    pacoteExistente.m3FreteTotal = arredondarParaBaixo(Number(pacoteExistente.m3FreteTotal || 0) + Number(novoPacote.m3FreteTotal || 0), 3);
-    pacoteExistente.valorTotalWood = arredondarParaBaixo(Number(pacoteExistente.valorTotalWood || 0) + Number(novoPacote.valorTotalWood || 0), 2);
+    pacoteExistente.m3VendaExato = obterVolumePacoteExato(pacoteExistente, 'venda') + obterVolumePacoteExato(novoPacote, 'venda');
+    pacoteExistente.m3FreteExato = obterVolumePacoteExato(pacoteExistente, 'frete') + obterVolumePacoteExato(novoPacote, 'frete');
+    pacoteExistente.m3VendaTotal = arredondarParaBaixo(pacoteExistente.m3VendaExato, 3);
+    pacoteExistente.m3FreteTotal = arredondarParaBaixo(pacoteExistente.m3FreteExato, 3);
+    pacoteExistente.valorTotalWood = arredondarParaBaixo(pacoteExistente.m3VendaExato * Number(pacoteExistente.precoM3 || 0), 2);
     pacoteExistente.atualizadoEm = new Date().toISOString();
     return pacoteExistente.id;
 }
@@ -1171,6 +1227,8 @@ function adicionarPacote(opcoes = {}) {
         patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
         patioQtdPacotes: itemPatio ? qtdPacotes : 0,
         patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
+        m3VendaExato: m3VendaUnit * qtdPacotes,
+        m3FreteExato: m3FreteUnit * qtdPacotes,
         m3VendaTotal: arredondarParaBaixo(m3VendaUnit * qtdPacotes, 3),
         m3FreteTotal: arredondarParaBaixo(m3FreteUnit * qtdPacotes, 3),
         valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
@@ -1325,9 +1383,11 @@ function salvarEdicaoPacote() {
         patioRelatorioId: itemPatio ? patioRelatorioRomaneio?.id : null,
         patioItemId: itemPatio ? itemPatio.id : null,
         patioItemIds: itemPatio ? (itemPatio.patioItemIds || [itemPatio.id]) : [],
-        patioQtdPacotes: itemPatio ? qtdPacotes : 0,
-        patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
-        m3VendaTotal: arredondarParaBaixo(m3VendaUnit * qtdPacotes, 3),
+            patioQtdPacotes: itemPatio ? qtdPacotes : 0,
+            patioCubagemKey: itemPatio ? chavePatioRomaneio(itemPatio) : null,
+            m3VendaExato: m3VendaUnit * qtdPacotes,
+            m3FreteExato: m3FreteUnit * qtdPacotes,
+            m3VendaTotal: arredondarParaBaixo(m3VendaUnit * qtdPacotes, 3),
             m3FreteTotal: arredondarParaBaixo(m3FreteUnit * qtdPacotes, 3),
             valorTotalWood: arredondarParaBaixo(m3VendaUnit * qtdPacotes * precoM3, 2)
         };
@@ -1352,12 +1412,14 @@ function atualizarTotalGeral() {
     let totalPacotes = 0;
     let totalPecasGeral = 0;
 
+    const cubagensVenda = resumirCubagensRomaneio(romaneioAtual.pacotes, 'venda');
+    const cubagensFrete = resumirCubagensRomaneio(romaneioAtual.pacotes, 'frete');
     romaneioAtual.pacotes.forEach(p => {
-        totalM3Frete += p.m3FreteTotal;
-        totalM3Venda += Number(p.m3VendaTotal || 0);
         totalPacotes += (p.qtdPacotes || 0);
         totalPecasGeral += (p.pecasPorPacote * p.qtdPacotes) || 0;
     });
+    totalM3Venda = cubagensVenda.reduce((total, cubagem) => total + cubagem.m3, 0);
+    totalM3Frete = cubagensFrete.reduce((total, cubagem) => total + cubagem.m3, 0);
     const gruposFinanceiros = agruparFinanceiroPorClasse(romaneioAtual.pacotes);
     const totalMadeira = gruposFinanceiros.reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
 
@@ -1404,16 +1466,16 @@ function getCorPorQualidade(qual) {
 
 function agruparFinanceiroPorClasse(pacotes = []) {
     const grupos = new Map();
-    pacotes.forEach(p => {
-        const classe = (p.qualidade || p.classe || 'SEM CLASSE').toString().toUpperCase();
-        const precoM3 = Number(p.precoM3 || 0);
+    resumirCubagensRomaneio(pacotes, 'venda').forEach(cubagem => {
+        const classe = cubagem.classe;
+        const precoM3 = cubagem.precoM3;
         const chave = `${classe}|${precoM3.toFixed(2)}`;
         if (!grupos.has(chave)) {
             grupos.set(chave, { classe, m3: 0, valor: 0, pacotes: 0, precoM3 });
         }
         const grupo = grupos.get(chave);
-        grupo.m3 += Number(p.m3VendaTotal || 0);
-        grupo.pacotes += Number(p.qtdPacotes || 0);
+        grupo.m3 += cubagem.m3;
+        grupo.pacotes += cubagem.pacotes;
     });
     const lista = [...grupos.values()].map(grupo => ({
         ...grupo,
@@ -1440,10 +1502,11 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
     pacotes.forEach(p => {
         totalPcts += Number(p.qtdPacotes || 0);
         totalPcs += Number((p.pecasPorPacote || 0) * (p.qtdPacotes || 0));
-        totalM3Madeira += Number(p.m3VendaTotal || 0);
-        totalM3Frete += Number(p.m3FreteTotal || p.m3VendaTotal || 0);
     });
-    const totalMadeira = agruparFinanceiroPorClasse(pacotes).reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
+    const gruposFinanceiros = agruparFinanceiroPorClasse(pacotes);
+    totalM3Madeira = resumirCubagensRomaneio(pacotes, 'venda').reduce((total, cubagem) => total + cubagem.m3, 0);
+    totalM3Frete = resumirCubagensRomaneio(pacotes, 'frete').reduce((total, cubagem) => total + cubagem.m3, 0);
+    const totalMadeira = gruposFinanceiros.reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
 
     const taxa = Number(r.financeiro?.taxaNF || 0);
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
@@ -1593,9 +1656,71 @@ function gerarHtmlDocumentoRomaneio(payload) {
 
 function definirDocumentoRomaneioAtual(r, clienteObj = {}) {
     window.romaneioDocumentoAtual = normalizarRomaneioDocumento(r, clienteObj);
+    const botaoEmail = document.getElementById('btnModalEnviarEmail');
+    if (botaoEmail) botaoEmail.style.display = '';
     return window.romaneioDocumentoAtual;
 }
 window.definirDocumentoRomaneioAtual = definirDocumentoRomaneioAtual;
+
+async function enviarRomaneioPorEmail() {
+    const documento = window.romaneioDocumentoAtual;
+    if (!documento) return;
+
+    const romaneio = documento.romaneio || {};
+    const cliente = documento.clienteObj || {};
+    const sugestao = String(cliente.email || romaneio.emailCliente || '').trim();
+    const destinatario = prompt('Enviar romaneio para qual e-mail?', sugestao);
+    if (destinatario === null) return;
+    const email = destinatario.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert('Informe um e-mail valido para enviar o romaneio.');
+        return;
+    }
+
+    const numero = romaneio.numero || romaneio.numeroCarga || '-';
+    const assunto = `Romaneio de carga ${numero} - Comercio de Madeiras Vanmarte`;
+    const mensagem = `Olá, segue em anexo o romaneio de carga ${numero}.\n\nAtenciosamente,\nComercio de Madeiras Vanmarte`;
+    if (!confirm(`Confirmar envio do romaneio ${numero} para ${email}?`)) return;
+
+    try {
+        const nomeArquivo = window.DocActions.buildDocumentName([romaneio.cliente, `carga ${numero}`]);
+        const arquivoBase64 = await window.DocActions.gerarPdfBase64({
+            title: nomeArquivo,
+            filename: nomeArquivo,
+            contentHtml: gerarHtmlDocumentoRomaneio(documento)
+        });
+        const resposta = await fetch('/api/romaneio-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                destinatario: email,
+                assunto,
+                mensagem,
+                arquivoNome: `${window.DocActions.sanitizeFileName(nomeArquivo)}.pdf`,
+                arquivoBase64
+            })
+        });
+        const resultado = await resposta.json().catch(() => ({}));
+        if (!resposta.ok || !resultado.ok) throw new Error(resultado.error || 'Nao foi possivel enviar o e-mail.');
+
+        const romaneioId = romaneio.idFirebase || romaneio.id;
+        const envio = { destinatario: email, enviadoEm: resultado.enviadoEm || new Date().toISOString(), canal: 'OUTLOOK' };
+        if (romaneioId) {
+            const historico = Array.isArray(romaneio.historicoEnvios) ? romaneio.historicoEnvios.slice(-19) : [];
+            historico.push(envio);
+            await updateDoc(doc(db, 'romaneios', romaneioId), {
+                ultimoEnvioEmail: envio,
+                historicoEnvios: historico
+            });
+            romaneio.ultimoEnvioEmail = envio;
+            romaneio.historicoEnvios = historico;
+        }
+        alert(`Romaneio enviado para ${email}.`);
+    } catch (error) {
+        console.error('Erro ao enviar romaneio por e-mail:', error);
+        alert(error.message || 'Nao foi possivel enviar o romaneio por e-mail.');
+    }
+}
 
 window.romaneioDocActions = {
     print() {
@@ -1613,6 +1738,9 @@ window.romaneioDocActions = {
         const phone = window.romaneioDocumentoAtual.clienteObj?.contato || window.romaneioDocumentoAtual.clienteObj?.telefone || '';
         const docName = window.DocActions.buildDocumentName([window.romaneioDocumentoAtual.romaneio.cliente, `carga ${window.romaneioDocumentoAtual.romaneio.numero || ''}`]);
         return window.DocActions.sendWhatsApp({ title: docName, filename: docName, phone, message: `Segue o romaneio ${docName} da madeira serrada.`, contentHtml: gerarHtmlDocumentoRomaneio(window.romaneioDocumentoAtual) });
+    },
+    email() {
+        return enviarRomaneioPorEmail();
     }
 };
 
@@ -1675,18 +1803,31 @@ function renderizarTabelaPacotes() {
     const resumosPorMedida = new Map();
     romaneioAtual.pacotes.forEach(p => {
         const chave = `${String(p.qualidade || '').trim().toUpperCase()}|${chaveMedidaResumo(p)}`;
-        const atual = resumosPorMedida.get(chave) || { pacotes: 0, pecas: 0, m3: 0 };
+        const atual = resumosPorMedida.get(chave) || { pacotes: 0, pecas: 0, m3Exato: 0 };
         atual.pacotes += Number(p.qtdPacotes || 0);
         atual.pecas += Number(p.pecasPorPacote || 0) * Number(p.qtdPacotes || 0);
-        atual.m3 += Number(p.m3VendaTotal || 0);
+        atual.m3Exato += obterVolumePacoteExato(p, 'venda');
         resumosPorMedida.set(chave, atual);
+    });
+    resumosPorMedida.forEach(resumo => {
+        resumo.m3 = arredondarParaBaixo(resumo.m3Exato, 3);
+    });
+    const financeiroPorClasse = new Map();
+    agruparFinanceiroPorClasse(romaneioAtual.pacotes).forEach(grupo => {
+        const atual = financeiroPorClasse.get(grupo.classe) || { m3: 0, valor: 0 };
+        atual.m3 += grupo.m3;
+        atual.valor += grupo.valor;
+        financeiroPorClasse.set(grupo.classe, atual);
     });
     const grupos = {};
     romaneioAtual.pacotes.forEach(p => {
         if (!grupos[p.qualidade]) grupos[p.qualidade] = { itens: [], subtotalM3: 0, subtotalValor: 0 };
         grupos[p.qualidade].itens.push(p);
-        grupos[p.qualidade].subtotalM3 += p.m3VendaTotal;
-        grupos[p.qualidade].subtotalValor += p.valorTotalWood;
+    });
+    Object.entries(grupos).forEach(([qualidade, grupo]) => {
+        const resumoFinanceiro = financeiroPorClasse.get(String(qualidade || '').trim().toUpperCase()) || { m3: 0, valor: 0 };
+        grupo.subtotalM3 = resumoFinanceiro.m3;
+        grupo.subtotalValor = resumoFinanceiro.valor;
     });
     let html = '';
     const qualidadesOrdenadas = Object.keys(grupos).sort((a, b) => numeroClasseRomaneio(a) - numeroClasseRomaneio(b) || a.localeCompare(b));
@@ -1826,6 +1967,9 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                     </button>
                     <button onclick="window.romaneioDocActions.whatsapp()" class="btn-v2 romaneio-action romaneio-action-whatsapp" title="Enviar WhatsApp" aria-label="Enviar WhatsApp">
                         <i class="fa-brands fa-whatsapp"></i>
+                    </button>
+                    <button onclick="window.romaneioDocActions.email()" class="btn-v2 romaneio-action" title="Enviar por e-mail" aria-label="Enviar por e-mail">
+                        <i class="fa-solid fa-envelope"></i>
                     </button>
                     ${romaneioAtual.idFirebase ? `
                     <button onclick="cancelarEdicaoRomaneioV2()" class="btn-v2 romaneio-action romaneio-action-cancel" title="Cancelar edição e descartar alterações" aria-label="Cancelar edição">
@@ -1974,6 +2118,8 @@ window.finalizarRomaneioV2 = async () => {
         || {};
     romaneioAtual.clienteId = clienteIdSelecionado || romaneioAtual.clienteId || '';
     romaneioAtual.cliente = cliente;
+    romaneioAtual.clienteEmail = clienteObjCobranca.email || '';
+    romaneioAtual.clienteContato = clienteObjCobranca.contato || clienteObjCobranca.telefone || clienteObjCobranca.whatsapp || '';
     
     // Atualizar dados de logística e observações redundantes em maiúsculo
     romaneioAtual.logistica.dataCarregamento = document.getElementById('v2-data-carreg')?.value || '';
@@ -2220,10 +2366,10 @@ window.verPreviaRomaneioV2 = () => {
     r.pacotes.forEach(p => { 
         totalPcts += p.qtdPacotes; 
         totalPcs += (p.pecasPorPacote * p.qtdPacotes); 
-        totalM3Madeira += p.m3VendaTotal;
-        totalMadeira += p.valorTotalWood;
-        totalM3Frete += p.m3FreteTotal;
     });
+    totalM3Madeira = resumirCubagensRomaneio(r.pacotes, 'venda').reduce((total, cubagem) => total + cubagem.m3, 0);
+    totalM3Frete = resumirCubagensRomaneio(r.pacotes, 'frete').reduce((total, cubagem) => total + cubagem.m3, 0);
+    totalMadeira = agruparFinanceiroPorClasse(r.pacotes).reduce((total, grupo) => total + grupo.valor, 0);
 
     const emitente = window.dadosSerrariaEmitente || {
         nome: "COMERCIO DE MADEIRAS VANMART LTDA",

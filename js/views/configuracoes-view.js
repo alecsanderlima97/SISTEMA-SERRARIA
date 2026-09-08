@@ -155,6 +155,28 @@
                             <i class="fa-solid fa-arrow-rotate-left"></i> Restaurar preferencias padrao
                         </button>
                     </div>
+
+                    <div class="glass-panel" data-subsection-permission="view-configuracoes:regras-pagamento">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <i class="fa-solid fa-hand-holding-dollar" style="font-size:24px; color:#f59e0b;"></i>
+                            <div>
+                                <h2 style="margin:0; font-size:20px;">Regras de Pagamento</h2>
+                                <p style="margin:4px 0 0; color:var(--text-muted); font-size:12px;">Valores usados em descarregamentos e diárias de fim de semana.</p>
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;">
+                            <div class="input-group" style="margin:0;"><label for="configDescargaDiaUtil">Descarga dia útil (R$/m³)</label><input id="configDescargaDiaUtil" type="text" inputmode="decimal" value="1,30"></div>
+                            <div class="input-group" style="margin:0;"><label for="configDescargaEspecial">Descarga fim de semana/feriado (R$/m³)</label><input id="configDescargaEspecial" type="text" inputmode="decimal" value="1,50"></div>
+                            <div class="input-group" style="margin:0;"><label for="configDiariaFimSemana">Diária integral fim de semana (R$)</label><input id="configDiariaFimSemana" type="text" inputmode="decimal" value="150,00"></div>
+                            <div class="input-group" style="margin:0;"><label for="configMeiaDiariaFimSemana">Meia diária fim de semana (R$)</label><input id="configMeiaDiariaFimSemana" type="text" inputmode="decimal" value="75,00"></div>
+                            <div class="input-group" style="grid-column:1 / -1; margin:0;"><label for="configLocalizacaoEmpresa">Cidade e estado de referência</label><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><input id="configLocalizacaoEmpresa" type="text" readonly placeholder="Use sua localização para identificar a cidade e o estado" style="flex:1; min-width:220px;"><button type="button" class="btn-secondary" id="btnUsarLocalizacaoEmpresa" onclick="window.identificarLocalizacaoEmpresa && window.identificarLocalizacaoEmpresa()" style="padding:10px 12px;"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button></div><small id="configLocalizacaoEmpresaInfo" style="color:var(--text-muted);">A localização serve apenas para identificar cidade e UF. Coordenadas não são salvas.</small></div>
+                            <div class="input-group" style="grid-column:1 / -1; margin:0;"><label for="configFeriadosDescarga">Feriados</label><textarea id="configFeriadosDescarga" rows="5" placeholder="2026-10-12 - Nossa Senhora Aparecida&#10;2026-12-08 - Feriado municipal" style="width:100%; resize:vertical;"></textarea><small style="color:var(--text-muted);">Um por linha, no formato AAAA-MM-DD - descrição. Sábados e domingos são classificados automaticamente.</small></div>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+                            <button type="button" class="btn-secondary" id="btnImportarFeriadosNacionais" onclick="window.importarFeriadosNacionais && window.importarFeriadosNacionais()" style="padding:12px 14px;"><i class="fa-solid fa-calendar-plus"></i> Atualizar feriados nacionais</button>
+                            <button type="button" class="btn-primary" id="btnSalvarRegrasPagamento" onclick="window.salvarRegrasPagamentoDescarga && window.salvarRegrasPagamentoDescarga()" style="flex:1; min-width:230px; justify-content:center;"><i class="fa-solid fa-floppy-disk"></i> Salvar regras de pagamento</button>
+                        </div>
+                    </div>
                     
                     <div class="glass-panel" data-subsection-permission="view-configuracoes:backup">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
@@ -202,12 +224,12 @@
                                 </div>
                                 <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
                                     <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Escopo inicial</div>
-                                    <strong style="font-size:16px; color:#f8fafc;">Leitura de e-mails</strong>
+                                    <strong style="font-size:16px; color:#f8fafc;">Leitura e envio</strong>
                                 </div>
                             </div>
 
                             <p id="outlookIntegrationHint" style="color:#cbd5e1; font-size:13px; line-height:1.6; margin:0;">
-                                Vamos usar a conta Outlook/Hotmail para receber documentos e mandar para fila de conferencia antes da importacao.
+                                A conta Outlook/Hotmail recebe documentos, envia romaneios confirmados e pode alimentar a fila de conferencia.
                             </p>
 
                             <div style="display:flex; gap:12px; flex-wrap:wrap;">

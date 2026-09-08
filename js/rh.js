@@ -825,6 +825,7 @@ window.abrirModalHE = (id) => {
 
     document.getElementById('he-funcionario-id').value = f.id;
     document.getElementById('he-funcionario-nome').textContent = f.nome;
+    atualizarOpcoesDiariaEspecialRH();
     
     // Resetar campos form HE
     const dataInput = document.getElementById('he-data');
@@ -1728,7 +1729,23 @@ function gerarRelatorioHEHtml(f, mesReferenciaManual = null) {
 }
 
 
-window.aplicarPresetHE = (tipo) => {
+async function atualizarOpcoesDiariaEspecialRH() {
+    const preset = document.getElementById('he-preset');
+    if (!preset) return;
+    try {
+        const regras = window.regrasPagamentoDescargaAtual?.() || await window.FS.getDoc('configuracoes_sistema', 'regras_pagamento_descarga') || {};
+        const meia = Number(regras.meiaDiariaFimSemana ?? 75);
+        const integral = Number(regras.diariaFimSemana ?? 150);
+        const meioOption = preset.querySelector('option[value="MEIO"]');
+        const integralOption = preset.querySelector('option[value="INTEGRAL"]');
+        if (meioOption) meioOption.textContent = `Meio dia de fim de semana (${meia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} fixo)`;
+        if (integralOption) integralOption.textContent = `Dia todo de fim de semana (${integral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} fixo)`;
+    } catch (error) {
+        console.warn('Não foi possível carregar os valores de diária:', error);
+    }
+}
+
+window.aplicarPresetHE = async (tipo) => {
     const inputHoras = document.getElementById('he-horas');
     const inputAdicional = document.getElementById('he-adicional');
     const inputObservacao = document.getElementById('he-observacao');
@@ -1736,15 +1753,22 @@ window.aplicarPresetHE = (tipo) => {
 
     if (!inputHoras || !inputAdicional || !inputObservacao || !inputTipoDia) return;
 
+    let regras = window.regrasPagamentoDescargaAtual?.();
+    if (!regras) {
+        try { regras = await window.FS.getDoc('configuracoes_sistema', 'regras_pagamento_descarga'); } catch (error) { regras = null; }
+    }
+    const valorMeio = Number(regras?.meiaDiariaFimSemana ?? 75);
+    const valorIntegral = Number(regras?.diariaFimSemana ?? 150);
+
     if (tipo === 'MEIO') {
         inputHoras.value = '0';
-        inputAdicional.value = '60,00';
-        inputObservacao.value = 'MEIO DIA';
+        inputAdicional.value = valorMeio.toFixed(2).replace('.', ',');
+        inputObservacao.value = 'MEIO PERÍODO - DIÁRIA FIM DE SEMANA/FERIADO';
         inputTipoDia.value = 'ESPECIAL';
     } else if (tipo === 'INTEGRAL') {
         inputHoras.value = '0';
-        inputAdicional.value = '110,00';
-        inputObservacao.value = 'DIA TODO';
+        inputAdicional.value = valorIntegral.toFixed(2).replace('.', ',');
+        inputObservacao.value = 'DIA INTEGRAL - DIÁRIA FIM DE SEMANA/FERIADO';
         inputTipoDia.value = 'ESPECIAL';
     } else {
         inputHoras.value = '';

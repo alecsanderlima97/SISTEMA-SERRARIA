@@ -19,6 +19,14 @@
                                         class="fa-solid fa-chevron-right"></i></button>
                             </div>
                         </div>
+                        <div class="calendar-special-days-legend">
+                            <span><i class="fa-solid fa-sun"></i> Dia útil</span>
+                            <span><i class="fa-solid fa-calendar-week"></i> Sábado e domingo</span>
+                            <span><i class="fa-solid fa-star"></i> Feriado</span>
+                            <button type="button" class="calendar-rules-link" onclick="window.abrirRegrasCalendario?.()">
+                                <i class="fa-solid fa-gear"></i> Gerenciar feriados
+                            </button>
+                        </div>
                         <div id="calendarGrid" class="calendar-grid">
                             <!-- Preenchido via JS -->
                         </div>

@@ -98,6 +98,7 @@ const SUBSECTION_PERMISSIONS = {
             { id: 'perfil', label: 'Perfil do usuario' },
             { id: 'personalizacao', label: 'Personalizacao visual' },
             { id: 'preferencias', label: 'Preferencias do sistema' },
+            { id: 'regras-pagamento', label: 'Regras de pagamento e feriados' },
             { id: 'seguranca', label: 'Seguranca e senha' },
             { id: 'backup', label: 'Backup e restauracao' },
             { id: 'integracao-email', label: 'Integracao de e-mail e automacao' },
@@ -783,7 +784,7 @@ const App = {
                 if (data.connected) {
                     definirStatusIntegracaoOutlook(
                         'Conectado',
-                        `Conta conectada: ${data.connectedEmail || 'Outlook autorizado'}. Agora ja podemos partir para a leitura dos documentos recebidos.`
+                        `Conta conectada: ${data.connectedEmail || 'Outlook autorizado'}. Ela pode receber documentos e enviar romaneios confirmados.`
                     );
                     this.carregarMensagensOutlook();
                 } else {

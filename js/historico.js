@@ -6,6 +6,7 @@ const filtroTipo = document.getElementById('filtroHistoricoTipo');
 
 let romaneiosCache = [];
 let subprodutosCache = [];
+const clientesHistoricoCache = new Map();
 let historicoSelecionados = new Set();
 let acaoPendente = null; // 'editar' ou 'excluir'
 let cargaPendenteId = null;
@@ -42,6 +43,33 @@ function ordenarHistoricoConformeFiltro(a, b, tipo) {
 function atualizarContadorHistorico() {
     const el = document.getElementById('histRelContador');
     if (el) el.textContent = `${historicoSelecionados.size} selecionado(s)`;
+}
+
+async function obterClienteDoRomaneioHistorico(romaneio = {}) {
+    try {
+        const id = String(romaneio.clienteId || '').trim();
+        if (id && clientesHistoricoCache.has(id)) return clientesHistoricoCache.get(id);
+
+        if (id) {
+            const clienteSnap = await getDoc(doc(db, 'clientes', id));
+            if (clienteSnap.exists()) {
+                const cliente = { id: clienteSnap.id, ...clienteSnap.data() };
+                clientesHistoricoCache.set(id, cliente);
+                return cliente;
+            }
+        }
+
+        if (clientesHistoricoCache.size === 0) {
+            const clientesSnap = await getDocs(collection(db, 'clientes'));
+            clientesSnap.forEach(clienteDoc => clientesHistoricoCache.set(clienteDoc.id, { id: clienteDoc.id, ...clienteDoc.data() }));
+        }
+
+        const nome = String(romaneio.cliente || '').trim().toUpperCase();
+        return [...clientesHistoricoCache.values()].find(cliente => String(cliente.nome || '').trim().toUpperCase() === nome) || {};
+    } catch (error) {
+        console.warn('Nao foi possivel buscar o cliente do romaneio:', error);
+        return {};
+    }
 }
 
 function preencherProdutosHistorico(tipo) {
@@ -114,7 +142,12 @@ function gerarHtmlDocumentoSubproduto(r) {
 
 window.subprodutoDocActions = {
     current: null,
-    set(record) { this.current = record; window.modalDetalhesActions = this; },
+    set(record) {
+        this.current = record;
+        window.modalDetalhesActions = this;
+        const botaoEmail = document.getElementById('btnModalEnviarEmail');
+        if (botaoEmail) botaoEmail.style.display = 'none';
+    },
     print() {
         if (!this.current) return;
         const docName = window.DocActions.buildDocumentName([this.current.cliente, this.current.romaneio || this.current.romaneioCliente]);
@@ -265,6 +298,9 @@ function aplicarFiltro() {
                         <button onclick="verDetalhesRomaneio('${r.id}')" class="btn-icon" style="color:var(--accent); font-size:1rem; padding: 4px;" title="Ver Detalhes">
                             <i class="fa-solid fa-eye"></i>
                         </button>
+                        <button onclick="window.enviarEmailRomaneioHistorico('${r.id}')" class="btn-icon" style="color:#60a5fa; font-size:1rem; padding: 4px;" title="Enviar por e-mail">
+                            <i class="fa-solid fa-envelope"></i>
+                        </button>
                         <button onclick="window.iniciarEditarCarga('${r.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 4px;" title="Editar Carga">
                             <i class="fa-solid fa-pencil"></i>
                         </button>
@@ -329,6 +365,26 @@ function aplicarFiltro() {
     }
     atualizarContadorHistorico();
 }
+
+window.enviarEmailRomaneioHistorico = async function(id) {
+    const romaneio = romaneiosCache.find(item => item.id === id);
+    if (!romaneio || typeof window.definirDocumentoRomaneioAtual !== 'function') {
+        alert('Romaneio nao encontrado para envio.');
+        return;
+    }
+    try {
+        const cliente = await obterClienteDoRomaneioHistorico(romaneio);
+        window.definirDocumentoRomaneioAtual(romaneio, {
+            ...cliente,
+            email: cliente.email || romaneio.clienteEmail || romaneio.emailCliente || romaneio.email || '',
+            contato: cliente.contato || cliente.telefone || cliente.whatsapp || romaneio.clienteContato || romaneio.telefone || ''
+        });
+        window.romaneioDocActions.email();
+    } catch (error) {
+        console.error('Erro ao buscar contato do cliente:', error);
+        alert('Nao foi possivel consultar o cadastro do cliente. Tente novamente.');
+    }
+};
 
 window.verDetalhesRomaneio = async (id) => {
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
@@ -456,7 +512,12 @@ window.verDetalhesRomaneio = async (id) => {
         </div>
     `;
     if (typeof window.definirDocumentoRomaneioAtual === 'function') {
-        window.definirDocumentoRomaneioAtual(r, { cidade: r.cidade || '', contato: r.telefone || '' });
+        const cliente = await obterClienteDoRomaneioHistorico(r);
+        window.definirDocumentoRomaneioAtual(r, {
+            ...cliente,
+            email: cliente.email || r.clienteEmail || r.emailCliente || r.email || '',
+            contato: cliente.contato || cliente.telefone || cliente.whatsapp || r.clienteContato || r.telefone || ''
+        });
         window.modalDetalhesActions = window.romaneioDocActions;
     }
     atualizarContadorHistorico();

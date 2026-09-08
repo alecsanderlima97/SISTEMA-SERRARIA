@@ -13,6 +13,7 @@
                 <button onclick="window.modalDetalhesActions.print()" class="btn-v2 btn-secondary-v2"><i class="fa-solid fa-print"></i> Imprimir</button>
                 <button onclick="window.modalDetalhesActions.pdf()" class="btn-v2" style="background:#16a34a; color:white;"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
                 <button onclick="window.modalDetalhesActions.whatsapp()" class="btn-v2" style="background:#22c55e; color:white;"><i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp</button>
+                <button id="btnModalEnviarEmail" onclick="window.modalDetalhesActions.email && window.modalDetalhesActions.email()" class="btn-v2" style="background:#2563eb; color:white;"><i class="fa-solid fa-envelope"></i> Enviar e-mail</button>
                 <button onclick="fecharModalDetalhes()" class="btn-v2" style="background: var(--border); color: white;">Fechar</button>
             </div>
         </div>

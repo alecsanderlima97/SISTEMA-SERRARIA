@@ -1,10 +1,11 @@
-import { db, collection, addDoc, getDocs, query, where, deleteDoc, doc, onAuthStateChanged, auth } from './js/firebase-init.js';
+import { db, collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, onAuthStateChanged, auth } from './js/firebase-init.js';
 
 // Estado da Agenda
 let currentDate = new Date();
 let selectedDate = new Date();
 let events = {}; // Objeto local para cache/renderização: { "YYYY-MM-DD": ["evento1", ...] }
 let eventsFullData = []; // Array com {id, dateKey, text} para facilitar deleção
+let regrasCalendario = { feriados: [] };
 
 // Elementos DOM
 const calendarGrid = document.getElementById('calendarGrid');
@@ -45,12 +46,46 @@ if (document.readyState === 'loading') {
 }
 
 async function initCalendar() {
-    await carregarEventosFirestore();
+    await Promise.all([carregarEventosFirestore(), carregarRegrasCalendario()]);
     renderCalendar();
     renderEvents();
 }
 
 window.SectionLoader?.register('view-agenda', initCalendar);
+
+async function carregarRegrasCalendario() {
+    try {
+        const regrasDaTela = window.regrasPagamentoDescargaAtual?.();
+        if (regrasDaTela) {
+            regrasCalendario = regrasDaTela;
+            return;
+        }
+        const snap = await getDoc(doc(db, 'configuracoes_sistema', 'regras_pagamento_descarga'));
+        regrasCalendario = snap.exists() ? snap.data() : { feriados: [] };
+    } catch (error) {
+        console.warn('Agenda: não foi possível carregar os feriados cadastrados.', error);
+        regrasCalendario = { feriados: [] };
+    }
+}
+
+function obterDiaEspecial(dateObj) {
+    const data = formatDateKey(dateObj);
+    const feriado = (Array.isArray(regrasCalendario.feriados) ? regrasCalendario.feriados : []).find(item =>
+        (typeof item === 'string' ? item : item?.data) === data
+    );
+    if (feriado) {
+        return { tipo: 'holiday', label: typeof feriado === 'string' ? 'Feriado cadastrado' : (feriado.nome || 'Feriado cadastrado') };
+    }
+    if (dateObj.getDay() === 0) return { tipo: 'sunday', label: 'Domingo' };
+    if (dateObj.getDay() === 6) return { tipo: 'saturday', label: 'Sábado' };
+    return null;
+}
+
+window.addEventListener('feriados:updated', event => {
+    regrasCalendario = { ...regrasCalendario, feriados: event.detail?.feriados || [] };
+    renderCalendar();
+    renderEvents();
+});
 
 async function carregarEventosFirestore() {
     try {
@@ -124,10 +159,19 @@ function renderCalendar() {
 
 function createDayElement(day, className, dateObj) {
     const dayEl = document.createElement('div');
-    dayEl.className = `calendar-day ${className}`;
+    const diaEspecial = dateObj ? obterDiaEspecial(dateObj) : null;
+    dayEl.className = `calendar-day ${className} ${diaEspecial?.tipo || ''}`;
     dayEl.textContent = day;
 
     if (dateObj) {
+        if (diaEspecial) {
+            dayEl.title = diaEspecial.label;
+            const marker = document.createElement('span');
+            marker.className = 'calendar-day-special-marker';
+            marker.textContent = diaEspecial.tipo === 'holiday' ? 'F' : diaEspecial.tipo === 'saturday' ? 'S' : 'D';
+            marker.setAttribute('aria-label', diaEspecial.label);
+            dayEl.appendChild(marker);
+        }
         const dateKey = formatDateKey(dateObj);
         if (events[dateKey] && events[dateKey].length > 0) {
             const dot = document.createElement('div');
@@ -157,6 +201,14 @@ function renderEvents() {
     header.style.marginBottom = '10px';
     header.textContent = `Compromissos para ${dayLabel}:`;
     eventListEl.appendChild(header);
+
+    const diaEspecial = obterDiaEspecial(selectedDate);
+    if (diaEspecial) {
+        const aviso = document.createElement('div');
+        aviso.className = `calendar-selected-day-status ${diaEspecial.tipo}`;
+        aviso.innerHTML = `<i class="fa-solid ${diaEspecial.tipo === 'holiday' ? 'fa-star' : 'fa-calendar-week'}"></i> ${diaEspecial.label}`;
+        eventListEl.appendChild(aviso);
+    }
 
     // Filtrar da lista completa para ter acesso aos IDs
     const dayEvents = eventsFullData.filter(e => e.dateKey === dateKey);

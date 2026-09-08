@@ -12,7 +12,7 @@ function buildAuthUrl() {
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('response_mode', 'query');
-    authUrl.searchParams.set('scope', 'offline_access openid profile email Mail.Read');
+    authUrl.searchParams.set('scope', 'offline_access openid profile email Mail.Read Mail.Send');
     authUrl.searchParams.set('prompt', 'select_account');
     authUrl.searchParams.set('state', 'orquestracs-outlook');
 

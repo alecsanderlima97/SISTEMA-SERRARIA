@@ -86,10 +86,9 @@
         return Promise.all([fontPromise, ...imagePromises]);
     }
 
-    async function downloadPdf({ title, contentHtml, filename }) {
+    async function gerarPdfBase64({ title, contentHtml, filename }) {
         if (typeof window.html2pdf === 'undefined') {
-            alert('Biblioteca de PDF ainda nao carregou. Tente novamente em alguns segundos.');
-            return;
+            throw new Error('Biblioteca de PDF ainda nao carregou. Tente novamente em alguns segundos.');
         }
 
         const wrapper = document.createElement('div');
@@ -107,17 +106,31 @@
             await waitForDocumentAssets(wrapper);
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             const paper = wrapper.querySelector('.doc-paper') || wrapper;
-            await window.html2pdf().set({
+            const worker = window.html2pdf().set({
                 margin: 8,
                 filename: `${sanitizeFileName(filename || title)}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'] }
-            }).from(paper).save();
+            }).from(paper).toPdf();
+            const dataUri = await worker.outputPdf('datauristring');
+            return String(dataUri || '').split(',').pop();
         } finally {
             wrapper.remove();
         }
+    }
+
+    async function downloadPdf({ title, contentHtml, filename }) {
+        const arquivo = `${sanitizeFileName(filename || title)}.pdf`;
+        const base64 = await gerarPdfBase64({ title, contentHtml, filename });
+        const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = arquivo;
+        link.click();
+        URL.revokeObjectURL(link.href);
     }
 
     async function sendWhatsApp({ title, contentHtml, filename, phone, message }) {
@@ -150,6 +163,7 @@
         buildDocumentName,
         buildPrintableHtml,
         printHtml,
+        gerarPdfBase64,
         downloadPdf,
         sendWhatsApp,
         actionsHtml

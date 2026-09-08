@@ -162,8 +162,37 @@
                                 </div>
                                 <div class="input-group" style="grid-column: span 2;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
-                                    <input type="text" id="entValorDescarga" placeholder="R\$ 0,00" value="R\$ 0,00">
-                                    <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Adicional de R$ 1,12/m³ liberado em qualquer horario.</small>
+                                    <input type="text" id="entValorDescarga" placeholder="R\$ 0,00" value="R\$ 0,00" readonly title="Valor calculado pelas regras de pagamento">
+                                    <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Definido pelas regras de pagamento.</small>
+                                </div>
+
+                                <div class="input-group" style="grid-column: 1 / -1;">
+                                    <label for="entFuncionariosDescarga">Funcionários responsáveis pelo descarregamento</label>
+                                    <div class="descarga-funcionarios-picker" id="entFuncionariosDescargaPicker">
+                                        <button type="button" class="descarga-funcionarios-trigger" id="btnFuncionariosDescarga" aria-expanded="false" aria-controls="entFuncionariosDescargaMenu">
+                                            <span id="entFuncionariosDescargaResumo">Carregando funcionários...</span>
+                                            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="descarga-funcionarios-menu" id="entFuncionariosDescargaMenu" hidden>
+                                            <div class="descarga-funcionarios-search">
+                                                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                                <input type="search" id="buscarFuncionariosDescarga" placeholder="Buscar funcionário" autocomplete="off">
+                                            </div>
+                                            <div class="descarga-funcionarios-lista" id="entFuncionariosDescargaLista"></div>
+                                        </div>
+                                    </div>
+                                    <select id="entFuncionariosDescarga" multiple hidden aria-hidden="true" tabindex="-1">
+                                        <option value="" disabled>Carregando funcionários...</option>
+                                    </select>
+                                    <small style="color:#94a3b8; font-size:.75rem; line-height:1.35;">Abra a lista para selecionar um ou mais nomes. Ao escolher mais de um, informe os metros de cada responsável abaixo.</small>
+                                </div>
+                                <div id="entDivisaoDescarga" style="grid-column:1 / -1; display:none; border:1px solid rgba(45,212,191,.28); background:rgba(45,212,191,.06); border-radius:8px; padding:12px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                        <strong style="color:#0f766e; font-size:.82rem;"><i class="fa-solid fa-people-group"></i> Metros creditados por responsável</strong>
+                                        <button type="button" class="btn-secondary" id="btnDividirDescargaIgual" style="padding:6px 10px; font-size:.75rem;"><i class="fa-solid fa-arrows-left-right-to-line"></i> Dividir igualmente</button>
+                                    </div>
+                                    <div id="entDivisaoDescargaLista" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px;"></div>
+                                    <small id="entDivisaoDescargaResumo" style="display:block; margin-top:10px; color:#64748b;"></small>
                                 </div>
 
                                 <!-- Alturas -->
@@ -222,7 +251,7 @@
                                     <div id="entCardFinanceiroDescarga" style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Total Descarga</h4>
                                         <div id="entResultadoDescarga" style="font-size: 1.8rem; font-weight: bold; color:#f59e0b; margin-top: 5px;">R\$ 0,00</div>
-                                        <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Base: R\$ 1,12/m³</small>
+                                        <small id="entInfoDescarga" style="color:#aaa; font-size: 0.75rem;">Aguardando medidas da carga.</small>
                                     </div>
                                 </div>
 
