@@ -1,4 +1,20 @@
-import { auth, db, doc, setDoc, reautenticarUsuarioAtual } from './firebase-init.js';
+// O Firebase carrega em paralelo para não bloquear os controles da tela.
+let auth = null;
+let db = null;
+let doc = null;
+let setDoc = null;
+let reautenticarUsuarioAtual = null;
+const estoqueFirebasePronto = import('./firebase-init.js').then(modulo => {
+    auth = modulo.auth;
+    db = modulo.db;
+    doc = modulo.doc;
+    setDoc = modulo.setDoc;
+    reautenticarUsuarioAtual = modulo.reautenticarUsuarioAtual;
+    return modulo;
+}).catch(error => {
+    console.warn('Firebase do estoque ainda nao ficou disponivel:', error);
+    return null;
+});
 
 // --- CONTROLE DE ESTOQUE SAAS PREMIUM & INTEGRADO ---
 // Sincronizado com os módulos de Frotas (Manutenção de Peças e Insumos)
@@ -31,6 +47,22 @@ styleTag.innerHTML = `
 }
 .btn-tab-estoque.active {
     text-shadow: 0 0 10px rgba(107, 142, 35, 0.4);
+}
+.estoque-nf-panel input[type="file"] { width: 100%; box-sizing: border-box; }
+.estoque-nf-status { padding: 11px 13px; border-radius: 8px; font-size: 0.86rem; border: 1px solid var(--panel-border); }
+.estoque-nf-status.is-error { color: #fecaca; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35); }
+.estoque-nf-status.is-ok { color: #bbf7d0; background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.35); }
+.estoque-nf-preview { overflow-x: auto; border: 1px solid var(--panel-border); border-radius: 10px; }
+.estoque-nf-preview table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: 0.82rem; }
+.estoque-nf-preview th { padding: 10px 8px; text-align: left; color: var(--text-muted); background: rgba(255,255,255,0.05); white-space: nowrap; }
+.estoque-nf-preview td { padding: 9px 8px; border-top: 1px solid var(--panel-border); vertical-align: middle; }
+.estoque-nf-preview input, .estoque-nf-preview select { max-width: 180px; padding: 7px 8px; border-radius: 6px; }
+.estoque-nf-confidence { display: inline-flex; padding: 4px 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+.estoque-nf-confidence.high { color: #bbf7d0; background: rgba(34,197,94,0.14); }
+.estoque-nf-confidence.low { color: #fde68a; background: rgba(234,179,8,0.14); }
+@media (max-width: 700px) {
+    .estoque-nf-upload { grid-template-columns: 1fr !important; }
+    .estoque-nf-upload button { width: 100%; justify-content: center; }
 }
 #corpoTabelaEstoque tr {
     font-size: 0.86rem !important;
@@ -238,6 +270,194 @@ function inicializarEventosEstoque() {
 }
 
 
+// --- IMPORTACAO DE NF-E PARA ENTRADA DE ESTOQUE ---
+let notaFiscalPendenteEstoque = null;
+
+function escaparHtmlEstoque(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, caractere => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[caractere]));
+}
+
+function normalizarTextoEstoque(valor) {
+    return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+function numeroNotaFiscalEstoque(valor) {
+    const texto = String(valor ?? '').trim().replace(/\s/g, '');
+    if (!texto) return 0;
+    const convertido = texto.includes(',') && texto.includes('.') ? texto.replace(/\./g, '').replace(',', '.') : texto.replace(',', '.');
+    const numero = Number(convertido);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function textoXmlEstoque(node, nome) {
+    return node?.getElementsByTagName(nome)?.[0]?.textContent?.trim() || '';
+}
+
+function classificarItemNotaFiscalEstoque(descricao) {
+    const nome = normalizarTextoEstoque(descricao);
+    const regras = [
+        { categoria: 'CORREIAS INDUSTRIAIS', palavras: ['CORREIA', 'ESTEIRA', 'ROLETE'], motivo: 'termo de correia/esteira' },
+        { categoria: 'LUBRIFICANTES', palavras: ['LUBRIFIC', 'OLEO', 'GRAXA', 'HIDRAULICO', 'HIDRAULICA'], motivo: 'termo de lubrificante/oleo' },
+        { categoria: 'FILTROS', palavras: ['FILTRO'], motivo: 'termo de filtro' },
+        { categoria: 'SERRAS E FACAS P/ PICADOR', palavras: ['SERRA', 'FACA', 'LAMINA', 'DISCO DE CORTE'], motivo: 'termo de corte' },
+        { categoria: "EPI'S", palavras: ['EPI', 'CAPACETE', 'LUVA', 'OCULOS', 'PROTETOR AURICULAR', 'BOTINA', 'MASCARA'], motivo: 'equipamento de protecao' },
+        { categoria: 'DIESEL', palavras: ['DIESEL', 'COMBUSTIVEL', 'GASOLINA'], motivo: 'combustivel' },
+        { categoria: 'ESCRITÓRIO', palavras: ['PAPEL', 'CANETA', 'TONER', 'IMPRESSORA'], motivo: 'material de escritorio' },
+        { categoria: 'HIGIENE', palavras: ['SABAO', 'SABONETE', 'DETERGENTE', 'LIMPEZA'], motivo: 'material de higiene/limpeza' },
+        { categoria: 'PEÇAS', palavras: ['ROLAMENTO', 'PARAFUSO', 'PORCA', 'MANCAL', 'BOMBA', 'VALVULA', 'PECAS', 'ACESSORIO'], motivo: 'peca ou acessorio' }
+    ];
+    const regra = regras.find(item => item.palavras.some(palavra => nome.includes(palavra)));
+    return regra ? { categoria: regra.categoria, confianca: 'alta', motivo: regra.motivo } : { categoria: 'OUTROS', confianca: 'revisar', motivo: 'nenhuma palavra-chave encontrada' };
+}
+
+function analisarXmlNotaFiscalEstoque(xmlTexto, nomeArquivo) {
+    const documento = new DOMParser().parseFromString(xmlTexto, 'application/xml');
+    if (documento.querySelector('parsererror')) throw new Error('O arquivo XML esta invalido ou incompleto.');
+    const infNFe = documento.getElementsByTagName('infNFe')[0] || documento;
+    const emit = documento.getElementsByTagName('emit')[0];
+    const dets = Array.from(documento.getElementsByTagName('det'));
+    if (!dets.length) throw new Error('Nenhum item de produto foi encontrado nesta NF-e. Envie o XML autorizado da nota.');
+    const itens = dets.map((det, indice) => {
+        const prod = det.getElementsByTagName('prod')[0] || det;
+        const descricao = textoXmlEstoque(prod, 'xProd') || `ITEM ${indice + 1}`;
+        const quantidade = numeroNotaFiscalEstoque(textoXmlEstoque(prod, 'qCom') || textoXmlEstoque(prod, 'qTrib'));
+        const unidade = textoXmlEstoque(prod, 'uCom') || textoXmlEstoque(prod, 'uTrib') || 'UN';
+        const total = numeroNotaFiscalEstoque(textoXmlEstoque(prod, 'vProd'));
+        const unitarioInformado = numeroNotaFiscalEstoque(textoXmlEstoque(prod, 'vUnCom'));
+        const classificacao = classificarItemNotaFiscalEstoque(descricao);
+        return { ordem: indice + 1, codigo: textoXmlEstoque(prod, 'cProd'), descricao, ncm: textoXmlEstoque(prod, 'NCM'), cfop: textoXmlEstoque(prod, 'CFOP'), unidade: unidade.toUpperCase(), quantidade, total, unitario: unitarioInformado || (quantidade ? total / quantidade : 0), ...classificacao, selecionado: true };
+    });
+    const id = infNFe.getAttribute?.('Id') || '';
+    return {
+        arquivo: nomeArquivo || 'NF-e.xml',
+        numero: textoXmlEstoque(documento, 'nNF'),
+        serie: textoXmlEstoque(documento, 'serie'),
+        emitente: textoXmlEstoque(emit, 'xNome'),
+        dataEmissao: textoXmlEstoque(documento, 'dhEmi') || textoXmlEstoque(documento, 'dEmi'),
+        chave: id.replace(/^NFe/i, ''),
+        itens
+    };
+}
+
+function definirStatusNotaFiscalEstoque(texto, tipo = 'ok') {
+    const el = document.getElementById('statusNotaFiscalEstoque');
+    if (!el) return;
+    el.className = `estoque-nf-status is-${tipo}`;
+    el.style.display = 'block';
+    el.textContent = texto;
+}
+
+function opcoesCategoriaNotaFiscalEstoque(categoriaSelecionada) {
+    const select = document.getElementById('estCategoria');
+    const categorias = select ? Array.from(select.options).map(opcao => ({ value: opcao.value, label: opcao.textContent })) : [];
+    if (!categorias.some(item => item.value === categoriaSelecionada)) categorias.push({ value: categoriaSelecionada, label: categoriaSelecionada });
+    return categorias.map(item => `<option value="${escaparHtmlEstoque(item.value)}" ${item.value === categoriaSelecionada ? 'selected' : ''}>${escaparHtmlEstoque(item.label)}</option>`).join('');
+}
+
+function renderizarPreviaNotaFiscalEstoque() {
+    const el = document.getElementById('previaNotaFiscalEstoque');
+    const nota = notaFiscalPendenteEstoque;
+    if (!el || !nota) return;
+    const identificacao = [nota.numero ? `NF ${nota.numero}` : 'NF sem numero', nota.serie ? `serie ${nota.serie}` : '', nota.emitente || 'Emitente nao informado'].filter(Boolean).join(' · ');
+    el.style.display = 'block';
+    el.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;"><div><strong style="color:white;">${escaparHtmlEstoque(identificacao)}</strong><small style="display:block; color:var(--text-muted); margin-top:4px;">${escaparHtmlEstoque(nota.arquivo)}${nota.chave ? ` · chave ${escaparHtmlEstoque(nota.chave)}` : ''}</small></div><span style="color:var(--text-muted); font-size:0.82rem;">${nota.itens.length} item(ns) identificado(s)</span></div><div class="estoque-nf-preview"><table><thead><tr><th><input type="checkbox" id="checkTodosItensNotaFiscal" checked title="Selecionar todos"></th><th>PRODUTO</th><th>CODIGO / NCM</th><th>QTD.</th><th>UN.</th><th>VALOR UN.</th><th>CATEGORIA</th><th>CLASSIFICACAO</th></tr></thead><tbody>${nota.itens.map((item, indice) => `<tr><td><input type="checkbox" class="check-item-nota-fiscal" data-index="${indice}" ${item.selecionado ? 'checked' : ''}></td><td><input type="text" class="nf-descricao" data-index="${indice}" value="${escaparHtmlEstoque(item.descricao)}" aria-label="Descricao do item"></td><td style="color:var(--text-muted);">${escaparHtmlEstoque(item.codigo || '-')}<small style="display:block;">NCM ${escaparHtmlEstoque(item.ncm || '-')}</small></td><td><input type="number" class="nf-quantidade" data-index="${indice}" min="0.0001" step="0.0001" value="${item.quantidade}" aria-label="Quantidade"></td><td>${escaparHtmlEstoque(item.unidade)}</td><td><input type="number" class="nf-unitario" data-index="${indice}" min="0" step="0.0001" value="${item.unitario.toFixed(4)}" aria-label="Valor unitario"></td><td><select class="nf-categoria" data-index="${indice}" aria-label="Categoria">${opcoesCategoriaNotaFiscalEstoque(item.categoria)}</select></td><td><span class="estoque-nf-confidence ${item.confianca === 'alta' ? 'high' : 'low'}">${item.confianca === 'alta' ? 'Automatica' : 'Revisar'}</span><small style="display:block; color:var(--text-muted); margin-top:3px;">${escaparHtmlEstoque(item.motivo)}</small></td></tr>`).join('')}</tbody></table></div><div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:16px;"><button type="button" class="btn-secondary" onclick="window.descartarNotaFiscalEstoque()" style="padding:10px 15px;"><i class="fa-solid fa-xmark"></i> Descartar leitura</button><button type="button" class="btn-primary" onclick="window.confirmarEntradaNotaFiscalEstoque()" style="padding:10px 17px;"><i class="fa-solid fa-boxes-stacked"></i> Confirmar entrada no estoque</button></div>`;
+    document.getElementById('checkTodosItensNotaFiscal')?.addEventListener('change', event => document.querySelectorAll('.check-item-nota-fiscal').forEach(check => { check.checked = event.target.checked; }));
+}
+
+window.processarNotaFiscalEstoque = async function() {
+    const arquivo = document.getElementById('inputNotaFiscalEstoque')?.files?.[0];
+    if (!arquivo) return definirStatusNotaFiscalEstoque('Selecione o arquivo XML da NF-e antes de iniciar a leitura.', 'error');
+    if (!/\.xml$/i.test(arquivo.name) && arquivo.type && !/xml/i.test(arquivo.type)) return definirStatusNotaFiscalEstoque('Por enquanto a leitura automatica trabalha com XML autorizado da NF-e. PDF e foto podem ser adicionados em uma etapa de OCR separada.', 'error');
+    const botao = document.getElementById('btnLerNotaFiscalEstoque');
+    if (botao) { botao.disabled = true; botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Lendo...'; }
+    try {
+        notaFiscalPendenteEstoque = analisarXmlNotaFiscalEstoque(await arquivo.text(), arquivo.name);
+        renderizarPreviaNotaFiscalEstoque();
+        definirStatusNotaFiscalEstoque('Leitura concluida. Revise descricao, quantidade e categoria antes de confirmar.', 'ok');
+    } catch (error) {
+        notaFiscalPendenteEstoque = null;
+        document.getElementById('previaNotaFiscalEstoque').style.display = 'none';
+        definirStatusNotaFiscalEstoque(error.message || 'Nao foi possivel ler a NF-e.', 'error');
+    } finally {
+        if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Ler nota'; }
+    }
+};
+window.__estoqueNFProcessadorReal = true;
+
+window.descartarNotaFiscalEstoque = function() {
+    notaFiscalPendenteEstoque = null;
+    const previa = document.getElementById('previaNotaFiscalEstoque');
+    if (previa) { previa.innerHTML = ''; previa.style.display = 'none'; }
+    definirStatusNotaFiscalEstoque('Leitura descartada. Nenhuma alteracao foi feita no estoque.', 'ok');
+};
+
+window.confirmarEntradaNotaFiscalEstoque = async function() {
+    const nota = notaFiscalPendenteEstoque;
+    if (!nota?.itens?.length) return;
+    const linhas = nota.itens.map((item, indice) => ({ ...item, selecionado: document.querySelector(`.check-item-nota-fiscal[data-index="${indice}"]`)?.checked, descricao: document.querySelector(`.nf-descricao[data-index="${indice}"]`)?.value?.trim().toUpperCase() || item.descricao.toUpperCase(), quantidade: Number(document.querySelector(`.nf-quantidade[data-index="${indice}"]`)?.value || item.quantidade), unitario: Number(document.querySelector(`.nf-unitario[data-index="${indice}"]`)?.value || item.unitario), categoria: document.querySelector(`.nf-categoria[data-index="${indice}"]`)?.value || item.categoria })).filter(item => item.selecionado && item.quantidade > 0 && item.unitario >= 0);
+    if (!linhas.length) return definirStatusNotaFiscalEstoque('Selecione ao menos um item com quantidade valida.', 'error');
+    const chaveImportacao = nota.chave || `${nota.numero}|${nota.emitente}|${nota.dataEmissao}`;
+    let importacoes = [];
+    try { importacoes = JSON.parse(localStorage.getItem('orquestra_estoque_notas_importadas') || '[]'); } catch {}
+    if (importacoes.includes(chaveImportacao) && !confirm('Esta NF-e ja foi importada neste navegador. Deseja lancar novamente?')) return;
+    const botao = document.querySelector('#previaNotaFiscalEstoque button.btn-primary');
+    if (botao) { botao.disabled = true; botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Gravando...'; }
+    try {
+        itensEstoque = obterEstoque();
+        const movimentos = [];
+        linhas.forEach(linha => {
+            let quantidadeEstoque = linha.quantidade;
+            let unitarioEstoque = linha.unitario;
+            let quantidadeGaloes = null;
+            let litrosPorGalao = null;
+            const unidade = normalizarTextoEstoque(linha.unidade);
+            if (linha.categoria === 'LUBRIFICANTES' && !['L', 'LT', 'LITRO', 'LITROS'].includes(unidade)) {
+                const matchLitros = normalizarTextoEstoque(linha.descricao).match(/(\d+(?:[.,]\d+)?)\s*L/);
+                const litros = matchLitros ? numeroNotaFiscalEstoque(matchLitros[1]) : (normalizarTextoEstoque(linha.descricao).includes('BALDE') ? 20 : 1);
+                quantidadeGaloes = linha.quantidade;
+                litrosPorGalao = litros;
+                quantidadeEstoque = linha.quantidade * litros;
+                unitarioEstoque = linha.unitario / litros;
+            }
+            const nomeNormalizado = normalizarTextoEstoque(linha.descricao);
+            const codigoNormalizado = normalizarTextoEstoque(linha.codigo);
+            const existente = itensEstoque.find(item => (codigoNormalizado && normalizarTextoEstoque(item.codigoProduto) === codigoNormalizado) || (normalizarTextoEstoque(item.nome) === nomeNormalizado && item.categoria === linha.categoria));
+            if (existente) {
+                const saldoAnterior = Number(existente.quantidade || 0);
+                const saldoNovo = saldoAnterior + quantidadeEstoque;
+                existente.unitario = saldoNovo > 0 ? ((saldoAnterior * Number(existente.unitario || 0)) + (quantidadeEstoque * unitarioEstoque)) / saldoNovo : unitarioEstoque;
+                existente.quantidade = saldoNovo;
+                existente.atualizadoEm = new Date().toISOString();
+                if (codigoNormalizado) existente.codigoProduto = linha.codigo;
+                if (quantidadeGaloes !== null) existente.quantidadeGaloes = Number(existente.quantidadeGaloes || 0) + quantidadeGaloes;
+                movimentos.push({ linha, itemId: existente.id, quantidadeEstoque, unitarioEstoque });
+            } else {
+                const novo = { id: 'est_nf_' + Date.now() + '_' + Math.floor(Math.random() * 10000), nome: linha.descricao, categoria: linha.categoria, quantidade: quantidadeEstoque, unitario: unitarioEstoque, limite_alerta: null, unidadeCompra: linha.unidade, codigoProduto: linha.codigo || '', ncm: linha.ncm || '', origemCadastro: 'IMPORTACAO_NFE', ultimaNotaFiscal: nota.numero || '', criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() };
+                if (quantidadeGaloes !== null) { novo.quantidadeGaloes = quantidadeGaloes; novo.litrosPorGalao = litrosPorGalao; }
+                itensEstoque.push(novo);
+                movimentos.push({ linha, itemId: novo.id, quantidadeEstoque, unitarioEstoque });
+            }
+        });
+        salvarEstoque(itensEstoque);
+        for (const movimento of movimentos) {
+            const linha = movimento.linha;
+            await window.registrarMovimentacaoEstoque({ tipo: 'ENTRADA', itemId: movimento.itemId, itemNome: linha.descricao, categoria: linha.categoria, quantidade: movimento.quantidadeEstoque, unitario: movimento.unitarioEstoque, observacao: `Entrada por NF-e ${nota.numero || 'sem numero'}${nota.serie ? ` serie ${nota.serie}` : ''} · ${nota.emitente || 'emitente nao informado'} · codigo ${linha.codigo || '-'} · NCM ${linha.ncm || '-'} · origem XML` });
+        }
+        importacoes = [chaveImportacao, ...importacoes.filter(item => item !== chaveImportacao)].slice(0, 100);
+        localStorage.setItem('orquestra_estoque_notas_importadas', JSON.stringify(importacoes));
+        notaFiscalPendenteEstoque = null;
+        document.getElementById('previaNotaFiscalEstoque').innerHTML = '';
+        document.getElementById('previaNotaFiscalEstoque').style.display = 'none';
+        definirStatusNotaFiscalEstoque(`${linhas.length} item(ns) confirmado(s) e lancado(s) no estoque.`, 'ok');
+        agendarRenderEstoque(0);
+    } catch (error) {
+        console.error('Erro ao confirmar entrada da NF-e:', error);
+        definirStatusNotaFiscalEstoque(`Nao foi possivel concluir a entrada: ${error.message || 'erro desconhecido'}`, 'error');
+    } finally {
+        if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-boxes-stacked"></i> Confirmar entrada no estoque'; }
+    }
+};
+
 // --- SUB-TABS NAVIGATION ---
 window.switchTabEstoque = function(tabName) {
     // Hide all sub-tabs
@@ -261,6 +481,7 @@ window.switchTabEstoque = function(tabName) {
     else if (tabName === 'tanques') btnId = 'btnTabEstoqueTanques';
     else if (tabName === 'movimentacoes') btnId = 'btnTabEstoqueMovimentacoes';
     else if (tabName === 'lancar') btnId = 'btnTabEstoqueLancar';
+    else if (tabName === 'nota-fiscal') btnId = 'btnTabEstoqueNotaFiscal';
 
     const activeBtn = document.getElementById(btnId);
     if (activeBtn) {
@@ -276,10 +497,16 @@ window.switchTabEstoque = function(tabName) {
         window.renderSimuladores();
     } else if (tabName === 'movimentacoes') {
         window.renderizarMovimentacoesEstoque();
-    } else {
+    } else if (tabName !== 'nota-fiscal') {
         renderizarEstoque();
     }
 };
+
+if (window.__estoqueTabPendente) {
+    const tabPendente = window.__estoqueTabPendente;
+    delete window.__estoqueTabPendente;
+    setTimeout(() => window.switchTabEstoque(tabPendente), 0);
+}
 
 // --- FILTRAR POR CATEGORIA (ATALHOS CARD) ---
 window.filtrarPorCategoriaEstoque = function(cat) {

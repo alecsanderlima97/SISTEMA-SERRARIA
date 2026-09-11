@@ -23,6 +23,28 @@
                     <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('lancar')" id="btnTabEstoqueLancar" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                         <i class="fa-solid fa-plus-minus"></i> Lançar Movimento
                     </button>
+                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('nota-fiscal')" id="btnTabEstoqueNotaFiscal" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fa-solid fa-file-invoice"></i> Importar NF
+                    </button>
+                </div>
+
+                <!-- SUB-VIEW: IMPORTAÇÃO DE NOTA FISCAL -->
+                <div id="subview-estoque-nota-fiscal" class="subview-estoque-section" style="display: none;">
+                    <div class="glass-panel estoque-nf-panel" style="padding: 24px; border-radius: 16px;">
+                        <div class="section-title" style="margin-bottom: 8px;">
+                            <h2><i class="fa-solid fa-file-invoice" style="color: var(--accent-color);"></i> Entrada de estoque pela NF</h2>
+                        </div>
+                        <p style="color: var(--text-muted); margin: 0 0 18px; line-height: 1.5;">Envie o XML da nota fiscal para identificar somente os produtos comprados. A classificação é sugerida automaticamente e nada será salvo antes da sua conferência.</p>
+                        <div class="estoque-nf-upload" style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end;">
+                            <div class="input-group">
+                                <label for="inputNotaFiscalEstoque">Arquivo da NF-e (XML)</label>
+                                <input type="file" id="inputNotaFiscalEstoque" accept=".xml,text/xml,application/xml" style="padding: 10px;">
+                            </div>
+                            <button type="button" id="btnLerNotaFiscalEstoque" class="btn-primary" onclick="window.processarNotaFiscalEstoque()" style="height: 42px; padding: 10px 18px; display: inline-flex; align-items: center; gap: 8px;"><i class="fa-solid fa-magnifying-glass"></i> Ler nota</button>
+                        </div>
+                        <div id="statusNotaFiscalEstoque" class="estoque-nf-status" role="status" aria-live="polite" style="display: none; margin-top: 14px;"></div>
+                        <div id="previaNotaFiscalEstoque" style="display: none; margin-top: 20px;"></div>
+                    </div>
                 </div>
 
                 <!-- SUB-VIEW 0: RESUMO OPERACIONAL -->
@@ -368,6 +390,7 @@
                                 <option value="LUBRIFICANTES">LUBRIFICANTES</option>
                                 <option value="DIESEL">DIESEL / COMBUSTÍVEIS</option>
                                 <option value="HIGIENE">HIGIENE</option>
+                                <option value="OUTROS">OUTROS</option>
                             </select>
                         </div>
 
@@ -408,5 +431,42 @@
                 </div>
             </div>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
+
+    // Evita erro de clique durante o carregamento assíncrono do módulo de estoque.
+    if (typeof window.switchTabEstoque !== 'function') {
+        window.switchTabEstoque = function(tabName) {
+            document.querySelectorAll('.subview-estoque-section').forEach(section => { section.style.display = 'none'; });
+            const target = document.getElementById(`subview-estoque-${tabName}`);
+            if (target) target.style.display = 'block';
+            document.querySelectorAll('.btn-tab-estoque').forEach(button => {
+                button.classList.toggle('active', button.id === `btnTabEstoque${tabName === 'nota-fiscal' ? 'NotaFiscal' : tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            });
+            window.__estoqueTabPendente = tabName;
+        };
+    }
+
+    if (typeof window.processarNotaFiscalEstoque !== 'function') {
+        const processadorEnquantoCarrega = function() {
+            const inicio = Date.now();
+            const tentarNovamente = () => {
+                if (window.processarNotaFiscalEstoque !== processadorEnquantoCarrega && typeof window.processarNotaFiscalEstoque === 'function') {
+                    window.processarNotaFiscalEstoque();
+                    return;
+                }
+                if (Date.now() - inicio < 8000) {
+                    window.setTimeout(tentarNovamente, 100);
+                    return;
+                }
+                const status = document.getElementById('statusNotaFiscalEstoque');
+                if (status) {
+                    status.className = 'estoque-nf-status is-error';
+                    status.style.display = 'block';
+                    status.textContent = 'O módulo de estoque ainda não terminou de carregar. Atualize a página com Ctrl + F5 e tente novamente.';
+                }
+            };
+            tentarNovamente();
+        };
+        window.processarNotaFiscalEstoque = processadorEnquantoCarrega;
+    }
 })();
 

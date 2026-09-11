@@ -821,7 +821,7 @@ function atualizarDivisaoDescarga(forcarDistribuicao = false) {
             : valoresAtuais.get(id);
         return `<label style="display:flex; flex-direction:column; gap:5px; font-size:.78rem; color:#334155;"><strong>${funcionario?.nome || 'Funcionário'}</strong><span style="display:flex; align-items:center; gap:6px;"><input type="text" inputmode="decimal" data-funcionario-volume="${id}" value="${valorAtual}" style="margin:0; min-width:0;"><small>m³</small></span></label>`;
     }).join('');
-    const valorM3 = obterValorM3Descarga(entData?.value);
+    const valorM3 = obterValorDescargaAtual(entData?.value);
     resumo.textContent = `${ids.length} responsável(is). Total informado: ${formatarNumeroM3Descarga(obterTotalMetrosResponsaveisDescarga())} m³ de ${formatarNumeroM3Descarga(volume)} m³. Valor: ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`;
     lista.querySelectorAll('[data-funcionario-volume]').forEach(input => input.addEventListener('input', () => {
         ultimaDistribuicaoAutomaticaDescarga = false;
@@ -848,7 +848,7 @@ function atualizarResumoDivisaoDescarga() {
     const volume = calcularVolumeSemAtualizarTela();
     const total = obterTotalMetrosResponsaveisDescarga();
     const diferenca = total - volume;
-    const valorM3 = obterValorM3Descarga(entData?.value);
+    const valorM3 = obterValorDescargaAtual(entData?.value);
     resumo.style.color = Math.abs(diferenca) <= 0.01 ? '#0f766e' : '#b45309';
     resumo.textContent = Math.abs(diferenca) <= 0.01
         ? `Distribuição conferida: ${formatarNumeroM3Descarga(total)} m³. Valor: ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`
@@ -1010,6 +1010,8 @@ function resetarMedidasEntrada() {
 
 function resetarFormularioEntradaCompleto() {
     formEntrada?.reset();
+    const valorManual = document.getElementById('entValorDescargaManual');
+    if (valorManual) valorManual.checked = false;
     const mapaSelect = document.getElementById('entMapaMatoId');
     if (mapaSelect) mapaSelect.value = '';
     atualizarInfoMapaMatoEntrada();
@@ -1239,15 +1241,33 @@ function descargaTemAdicional(horario) {
     return classificarDiaDescarga(entData?.value).tipo !== 'DIA_UTIL';
 }
 
+function valorDescargaManualAtivo() {
+    return document.getElementById('entValorDescargaManual')?.checked === true;
+}
+
+function obterValorDescargaAtual(data) {
+    if (valorDescargaManualAtivo()) {
+        const valorManual = window.parseCurrencyValue
+            ? window.parseCurrencyValue(document.getElementById('entValorDescarga')?.value || '0')
+            : numeroRegraPagamento(document.getElementById('entValorDescarga')?.value, 0);
+        return Math.max(0, Number(valorManual) || 0);
+    }
+    return obterValorM3Descarga(data);
+}
+
 function atualizarValorDescargaPorHorario() {
     const classificacao = classificarDiaDescarga(entData?.value);
-    const valorM3 = obterValorM3Descarga(entData?.value);
+    const manual = valorDescargaManualAtivo();
+    const valorM3 = obterValorDescargaAtual(entData?.value);
     const aviso = document.getElementById('entAvisoDescargaHorario');
-    if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valorM3) : valorM3.toFixed(2).replace('.', ',');
+    if (entValorDescarga && !manual) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(valorM3) : valorM3.toFixed(2).replace('.', ',');
     if (aviso) {
-        aviso.style.color = classificacao.tipo === 'DIA_UTIL' ? '#0f766e' : '#b45309';
-        aviso.textContent = `Regra aplicada: ${classificacao.label} - ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`;
+        aviso.style.color = manual ? '#2563eb' : (classificacao.tipo === 'DIA_UTIL' ? '#0f766e' : '#b45309');
+        aviso.textContent = manual
+            ? `Valor manual aplicado: ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`
+            : `Regra aplicada: ${classificacao.label} - ${valorM3.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/m³.`;
     }
+    return valorM3;
 }
 
 function calcularVolumeAtual() {
@@ -1288,7 +1308,7 @@ function calcularVolumeAtual() {
     }
 
     atualizarValorDescargaPorHorario();
-    const valorDescargaM3 = obterValorM3Descarga(entData?.value);
+    const valorDescargaM3 = obterValorDescargaAtual(entData?.value);
     const totalDescarga = volume * valorDescargaM3;
     if (resDescarga) resDescarga.textContent = totalDescarga.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoDescarga) {
@@ -2213,6 +2233,7 @@ function configurarSubmitEntrada() {
             valorMetroEmpreiteiro: calcData.valorMetro,
             totalEmpreiteiro: calcData.totalFinanceiro,
             valorDescargaM3: calcData.valorDescargaM3,
+            valorDescargaManual: valorDescargaManualAtivo(),
             totalDescarga: calcData.totalDescarga,
             tipoDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).tipo,
             regraDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).label,
@@ -2377,6 +2398,8 @@ window.alterarEntrada = async function(id) {
     await carregarFuncionariosParaDescarga(en.responsaveisDescarga || []);
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
+    const valorManualDescarga = document.getElementById('entValorDescargaManual');
+    if (valorManualDescarga) valorManualDescarga.checked = en.valorDescargaManual === true || Number(en.valorDescargaM3 || 0) === 0;
     if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(Number(en.valorDescargaM3 || 0)) : formatDecimalValue(Number(en.valorDescargaM3 || 0));
     
     // Carregar alturas individuais se existirem
@@ -2689,9 +2712,17 @@ function inicializarModuloEntrada() {
     const entMapaMatoId = document.getElementById('entMapaMatoId');
     if (entMapaMatoId) entMapaMatoId.addEventListener('change', aplicarMapaMatoSelecionadoEntrada);
     if(entValorDescarga) {
-        entValorDescarga.addEventListener('input', window.formatCurrencyInput);
-        entValorDescarga.addEventListener('input', calcularVolumeAtual);
+        entValorDescarga.addEventListener('input', event => {
+            if (window.formatCurrencyInput) window.formatCurrencyInput(event);
+            const valorManual = document.getElementById('entValorDescargaManual');
+            if (valorManual) valorManual.checked = true;
+            calcularVolumeAtual();
+        });
     }
+    const valorManualDescarga = document.getElementById('entValorDescargaManual');
+    if (valorManualDescarga) valorManualDescarga.addEventListener('change', () => {
+        calcularVolumeAtual();
+    });
     if (entData) entData.addEventListener('change', calcularVolumeAtual);
     const funcionariosDescargaSelect = document.getElementById('entFuncionariosDescarga');
     if (funcionariosDescargaSelect) funcionariosDescargaSelect.addEventListener('change', () => {

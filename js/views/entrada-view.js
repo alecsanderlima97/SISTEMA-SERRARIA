@@ -162,7 +162,8 @@
                                 </div>
                                 <div class="input-group" style="grid-column: span 2;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
-                                    <input type="text" id="entValorDescarga" placeholder="R\$ 0,00" value="R\$ 0,00" readonly title="Valor calculado pelas regras de pagamento">
+                                    <input type="text" id="entValorDescarga" inputmode="decimal" placeholder="R\$ 0,00" value="R\$ 0,00" title="Valor calculado pelas regras de pagamento. Marque valor manual para alterar.">
+                                    <label style="display:flex; align-items:center; gap:6px; margin-top:6px; color:#64748b; font-size:.75rem; cursor:pointer;"><input type="checkbox" id="entValorDescargaManual" style="accent-color:#0f766e;"> Valor manual, inclusive R\$ 0,00</label>
                                     <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Definido pelas regras de pagamento.</small>
                                 </div>
 
