@@ -716,7 +716,7 @@ async function carregarFuncionariosParaDescarga(selecionados = []) {
 function atualizarResumoFuncionariosDescarga() {
     const resumo = document.getElementById('entFuncionariosDescargaResumo');
     if (!resumo) return;
-    const ids = idsFuncionariosSelecionadosDescarga();
+    const ids = temDescarregamentoAtivo() ? idsFuncionariosSelecionadosDescarga() : [];
     const nomes = ids.map(id => funcionariosDescarga.find(item => item.id === id)?.nome).filter(Boolean);
     resumo.textContent = !nomes.length
         ? 'Selecionar responsáveis'
@@ -840,6 +840,49 @@ function calcularVolumeSemAtualizarTela() {
 
 function obterTotalMetrosResponsaveisDescarga() {
     return [...document.querySelectorAll('[data-funcionario-volume]')].reduce((soma, input) => soma + numeroRegraPagamento(input.value, 0), 0);
+}
+
+function temDescarregamentoAtivo() {
+    return document.getElementById('btnTemDescarga')?.dataset.ativo === 'true';
+}
+
+function atualizarVisibilidadeDescarga(ativo = temDescarregamentoAtivo()) {
+    const botao = document.getElementById('btnTemDescarga');
+    const campos = document.getElementById('entDescargaCampos');
+    const label = document.getElementById('entTemDescargaLabel');
+    if (!botao || !campos) return;
+
+    const estaAtivo = Boolean(ativo);
+    botao.dataset.ativo = String(estaAtivo);
+    botao.setAttribute('aria-pressed', String(estaAtivo));
+    botao.style.background = estaAtivo ? '#0f766e' : '';
+    botao.style.color = estaAtivo ? '#fff' : '';
+    if (label) label.textContent = estaAtivo ? 'Tem descarregamento' : 'Sem descarregamento';
+    campos.hidden = !estaAtivo;
+    campos.style.display = estaAtivo ? 'block' : 'none';
+
+    if (!estaAtivo) {
+        if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+        const valorManual = document.getElementById('entValorDescargaManual');
+        if (valorManual) valorManual.checked = false;
+        const select = document.getElementById('entFuncionariosDescarga');
+        if (select) [...select.options].forEach(option => { option.selected = false; });
+        renderizarSeletorFuncionariosDescarga();
+        atualizarDivisaoDescarga(true);
+    } else {
+        atualizarValorDescargaPorHorario();
+        atualizarDivisaoDescarga();
+    }
+}
+
+function configurarToggleDescarga() {
+    const botao = document.getElementById('btnTemDescarga');
+    if (!botao || botao.dataset.bound === '1') return;
+    botao.dataset.bound = '1';
+    botao.addEventListener('click', () => {
+        atualizarVisibilidadeDescarga(!temDescarregamentoAtivo());
+        calcularVolumeAtual();
+    });
 }
 
 function atualizarResumoDivisaoDescarga() {
@@ -1010,14 +1053,13 @@ function resetarMedidasEntrada() {
 
 function resetarFormularioEntradaCompleto() {
     formEntrada?.reset();
-    const valorManual = document.getElementById('entValorDescargaManual');
-    if (valorManual) valorManual.checked = false;
     const mapaSelect = document.getElementById('entMapaMatoId');
     if (mapaSelect) mapaSelect.value = '';
     atualizarInfoMapaMatoEntrada();
     const funcionariosSelect = document.getElementById('entFuncionariosDescarga');
     if (funcionariosSelect) [...funcionariosSelect.options].forEach(option => { option.selected = false; });
     renderizarSeletorFuncionariosDescarga();
+    atualizarVisibilidadeDescarga(false);
     ultimaDistribuicaoAutomaticaDescarga = true;
     atualizarDivisaoDescarga(true);
     aplicarDataHoraAtualEntrada();
@@ -1242,10 +1284,11 @@ function descargaTemAdicional(horario) {
 }
 
 function valorDescargaManualAtivo() {
-    return document.getElementById('entValorDescargaManual')?.checked === true;
+    return temDescarregamentoAtivo() && document.getElementById('entValorDescargaManual')?.checked === true;
 }
 
 function obterValorDescargaAtual(data) {
+    if (!temDescarregamentoAtivo()) return 0;
     if (valorDescargaManualAtivo()) {
         const valorManual = window.parseCurrencyValue
             ? window.parseCurrencyValue(document.getElementById('entValorDescarga')?.value || '0')
@@ -1256,6 +1299,10 @@ function obterValorDescargaAtual(data) {
 }
 
 function atualizarValorDescargaPorHorario() {
+    if (!temDescarregamentoAtivo()) {
+        if (entValorDescarga) entValorDescarga.value = window.formatCurrencyValue ? window.formatCurrencyValue(0) : 'R$ 0,00';
+        return 0;
+    }
     const classificacao = classificarDiaDescarga(entData?.value);
     const manual = valorDescargaManualAtivo();
     const valorM3 = obterValorDescargaAtual(entData?.value);
@@ -2194,15 +2241,18 @@ function configurarSubmitEntrada() {
         const empreiteiroNome = compraAvulsa ? fornecedorAvulso : selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
         const usuarioAuditoria = getUsuarioAtualAuditoria();
         const mapaMato = obterMapaMatoSelecionadoEntrada();
-        let responsaveisDescarga;
-        try {
-            if (!idsFuncionariosSelecionadosDescarga().length) {
-                throw new Error('Selecione ao menos um funcionário responsável pelo descarregamento.');
+        const temDescarga = temDescarregamentoAtivo();
+        let responsaveisDescarga = [];
+        if (temDescarga) {
+            try {
+                if (!idsFuncionariosSelecionadosDescarga().length) {
+                    throw new Error('Selecione ao menos um funcionário responsável pelo descarregamento.');
+                }
+                responsaveisDescarga = montarResponsaveisDescarga(calcData.volume, calcData.valorDescargaM3);
+            } catch (error) {
+                alert(error.message || 'Revise a divisão do descarregamento entre os funcionários.');
+                return;
             }
-            responsaveisDescarga = montarResponsaveisDescarga(calcData.volume, calcData.valorDescargaM3);
-        } catch (error) {
-            alert(error.message || 'Revise a divisão do descarregamento entre os funcionários.');
-            return;
         }
         
         const novaEntrada = {
@@ -2235,8 +2285,9 @@ function configurarSubmitEntrada() {
             valorDescargaM3: calcData.valorDescargaM3,
             valorDescargaManual: valorDescargaManualAtivo(),
             totalDescarga: calcData.totalDescarga,
-            tipoDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).tipo,
-            regraDiaDescarga: classificarDiaDescarga(document.getElementById('entData')?.value).label,
+            temDescarregamento: temDescarga,
+            tipoDiaDescarga: temDescarga ? classificarDiaDescarga(document.getElementById('entData')?.value).tipo : null,
+            regraDiaDescarga: temDescarga ? classificarDiaDescarga(document.getElementById('entData')?.value).label : 'SEM DESCARREGAMENTO',
             responsaveisDescarga,
             atualizadoEm: new Date().toISOString()
         };
@@ -2395,6 +2446,11 @@ window.alterarEntrada = async function(id) {
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
     document.getElementById('entPlaca').value = en.placa || '';
+    const temDescarga = en.temDescarregamento === true
+        || (Array.isArray(en.responsaveisDescarga) && en.responsaveisDescarga.length > 0)
+        || Number(en.totalDescarga || 0) > 0
+        || Number(en.valorDescargaM3 || 0) > 0;
+    atualizarVisibilidadeDescarga(temDescarga);
     await carregarFuncionariosParaDescarga(en.responsaveisDescarga || []);
     document.getElementById('entComp').value = formatDecimalValue(en.comp) || '';
     document.getElementById('entLarg').value = formatDecimalValue(en.larg) || '';
@@ -2666,6 +2722,8 @@ function inicializarModuloEntrada() {
     infoDescarga = document.getElementById('entInfoDescarga');
     entData = document.getElementById('entData');
     entHorario = document.getElementById('entHorario');
+    configurarToggleDescarga();
+    atualizarVisibilidadeDescarga(false);
     configurarSubmitEntrada();
     moverFechamentoEntradasParaTopo();
     injetarEstiloFechamentosEntrada();

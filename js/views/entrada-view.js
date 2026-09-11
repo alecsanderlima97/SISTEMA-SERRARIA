@@ -160,15 +160,25 @@
                                     <label>Largura Média (m) *</label>
                                     <input type="text" id="entLarg" inputmode="decimal" required placeholder="Ex: 2,40">
                                 </div>
-                                <div class="input-group" style="grid-column: span 2;">
+                                <div style="grid-column:1 / -1; display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:4px; padding:10px 12px; border:1px solid rgba(15,118,110,.22); border-radius:8px; background:rgba(15,118,110,.05);">
+                                    <button type="button" class="btn-secondary" id="btnTemDescarga" aria-pressed="false" data-ativo="false" style="display:inline-flex; align-items:center; gap:8px; min-height:38px;">
+                                        <i class="fa-solid fa-truck-ramp-box" aria-hidden="true"></i>
+                                        <span id="entTemDescargaLabel">Sem descarregamento</span>
+                                    </button>
+                                    <small id="entTemDescargaAjuda" style="color:#64748b; line-height:1.35;">Ative somente quando houver pagamento pelo descarregamento desta carga.</small>
+                                </div>
+
+                                <div id="entDescargaCampos" hidden style="grid-column:1 / -1; padding:12px; border:1px solid rgba(45,212,191,.28); border-radius:8px; background:rgba(45,212,191,.05);">
+                                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; align-items:start;">
+                                <div class="input-group" style="margin:0;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
                                     <input type="text" id="entValorDescarga" inputmode="decimal" placeholder="R\$ 0,00" value="R\$ 0,00" title="Valor calculado pelas regras de pagamento. Marque valor manual para alterar.">
                                     <label style="display:flex; align-items:center; gap:6px; margin-top:6px; color:#64748b; font-size:.75rem; cursor:pointer;"><input type="checkbox" id="entValorDescargaManual" style="accent-color:#0f766e;"> Valor manual, inclusive R\$ 0,00</label>
                                     <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Definido pelas regras de pagamento.</small>
                                 </div>
 
-                                <div class="input-group" style="grid-column: 1 / -1;">
-                                    <label for="entFuncionariosDescarga">Funcionários responsáveis pelo descarregamento</label>
+                                <div class="input-group" style="margin:0;">
+                                    <label for="entFuncionariosDescarga">Responsáveis pelo descarregamento</label>
                                     <div class="descarga-funcionarios-picker" id="entFuncionariosDescargaPicker">
                                         <button type="button" class="descarga-funcionarios-trigger" id="btnFuncionariosDescarga" aria-expanded="false" aria-controls="entFuncionariosDescargaMenu">
                                             <span id="entFuncionariosDescargaResumo">Carregando funcionários...</span>
@@ -185,15 +195,17 @@
                                     <select id="entFuncionariosDescarga" multiple hidden aria-hidden="true" tabindex="-1">
                                         <option value="" disabled>Carregando funcionários...</option>
                                     </select>
-                                    <small style="color:#94a3b8; font-size:.75rem; line-height:1.35;">Abra a lista para selecionar um ou mais nomes. Ao escolher mais de um, informe os metros de cada responsável abaixo.</small>
+                                    <small style="color:#94a3b8; font-size:.75rem; line-height:1.35;">Selecione um ou mais nomes. Com mais de um, a divisão dos metros aparecerá abaixo.</small>
                                 </div>
-                                <div id="entDivisaoDescarga" style="grid-column:1 / -1; display:none; border:1px solid rgba(45,212,191,.28); background:rgba(45,212,191,.06); border-radius:8px; padding:12px;">
+                                    </div>
+                                <div id="entDivisaoDescarga" style="display:none; margin-top:14px; border-top:1px solid rgba(45,212,191,.28); padding-top:12px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
                                         <strong style="color:#0f766e; font-size:.82rem;"><i class="fa-solid fa-people-group"></i> Metros creditados por responsável</strong>
                                         <button type="button" class="btn-secondary" id="btnDividirDescargaIgual" style="padding:6px 10px; font-size:.75rem;"><i class="fa-solid fa-arrows-left-right-to-line"></i> Dividir igualmente</button>
                                     </div>
                                     <div id="entDivisaoDescargaLista" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px;"></div>
                                     <small id="entDivisaoDescargaResumo" style="display:block; margin-top:10px; color:#64748b;"></small>
+                                </div>
                                 </div>
 
                                 <!-- Alturas -->
