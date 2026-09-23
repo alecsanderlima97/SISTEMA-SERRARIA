@@ -2218,10 +2218,12 @@ window.renderFinanceiro = function() {
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
                 <td>${anexos || '<span style="color:var(--text-muted);">-</span>'}</td>
                 <td class="financeiro-acoes">
-                    <button type="button" class="btn-icon financeiro-acao-ia" onclick="event.stopPropagation(); window.analisarFinanceiroDocumento('${item.id}')" title="Ler documento automaticamente" aria-label="Ler documento automaticamente"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
-                    <button type="button" class="btn-icon financeiro-acao-editar" onclick="event.stopPropagation(); window.editarFinanceiro('${item.id}')" title="Editar lançamento" aria-label="Editar lançamento"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button type="button" class="btn-icon financeiro-acao-pago" onclick="event.stopPropagation(); window.alternarPagoFinanceiro('${item.id}')" title="Marcar como pago ou não pago" aria-label="Marcar como pago ou não pago"><i class="fa-solid fa-circle-check"></i></button>
-                    <button type="button" class="btn-icon financeiro-acao-excluir" onclick="event.stopPropagation(); window.excluirFinanceiro('${item.id}')" title="Excluir" aria-label="Excluir lançamento"><i class="fa-solid fa-trash-can"></i></button>
+                    <div class="financeiro-acoes-inner">
+                        <button type="button" class="btn-icon financeiro-acao-ia" onclick="event.stopPropagation(); window.analisarFinanceiroDocumento('${item.id}')" title="Ler documento automaticamente" aria-label="Ler documento automaticamente"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                        <button type="button" class="btn-icon financeiro-acao-editar" onclick="event.stopPropagation(); window.editarFinanceiro('${item.id}')" title="Editar lançamento" aria-label="Editar lançamento"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button type="button" class="btn-icon financeiro-acao-pago" onclick="event.stopPropagation(); window.alternarPagoFinanceiro('${item.id}')" title="Marcar como pago ou não pago" aria-label="Marcar como pago ou não pago"><i class="fa-solid fa-circle-check"></i></button>
+                        <button type="button" class="btn-icon financeiro-acao-excluir" onclick="event.stopPropagation(); window.excluirFinanceiro('${item.id}')" title="Excluir" aria-label="Excluir lançamento"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -2808,8 +2810,8 @@ function injetarEstilosFinanceiro() {
         .financeiro-status-badge.aberto { color:var(--fin-warn); background:#f7eddc; }
         .financeiro-status-badge.pendente { color:var(--fin-warn); background:#f7eddc; }
         .financeiro-status-badge.vencido { color:var(--fin-danger); background:#f8e7e7; }
-        .financeiro-acoes, .financeiro-link { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
-        .financeiro-acoes { flex-wrap:nowrap; min-width:164px; width:164px; white-space:nowrap; position:sticky; right:0; z-index:3; background:#fffdf7; box-shadow:-10px 0 18px -16px rgba(15,23,42,.72); }
+        .financeiro-acoes { display:table-cell; min-width:164px; width:164px; white-space:nowrap; position:sticky; right:0; z-index:3; background:#fffdf7; box-shadow:-10px 0 18px -16px rgba(15,23,42,.72); }
+        .financeiro-acoes-inner, .financeiro-link { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:nowrap; min-width:148px; }
         .financeiro-table th:last-child { position:sticky; right:0; z-index:4; min-width:164px; width:164px; background:#efe7d8; box-shadow:-10px 0 18px -16px rgba(15,23,42,.72); }
         .financeiro-table tbody tr:nth-child(even) td.financeiro-acoes { background:#f8f4ea; }
         .financeiro-table tbody tr.financeiro-row:hover td.financeiro-acoes { background:#fff8e8; }
