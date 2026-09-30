@@ -1,4 +1,4 @@
-import { db, auth, reautenticarUsuarioAtual, collection, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, validarSenhaOperacional, collection, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
 
 const listaHistorico = document.getElementById('listaHistorico');
 const filtroCliente = document.getElementById('filtroHistoricoCliente');
@@ -727,8 +727,8 @@ function inicializarModuloHistorico() {
             btnConfirmarSeguranca.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Validando senha...';
 
             try {
-                // Validar senha fazendo login em background com a mesma conta ativa
-                await reautenticarUsuarioAtual(senha);
+                // A senha operacional e independente do login, inclusive para contas Google.
+                await validarSenhaOperacional(senha);
                 
                 // Se chegou aqui, a senha está correta!
                 if (acaoPendente === 'editar') {

@@ -3,13 +3,13 @@ let auth = null;
 let db = null;
 let doc = null;
 let setDoc = null;
-let reautenticarUsuarioAtual = null;
+let validarSenhaOperacional = null;
 const estoqueFirebasePronto = import('./firebase-init.js').then(modulo => {
     auth = modulo.auth;
     db = modulo.db;
     doc = modulo.doc;
     setDoc = modulo.setDoc;
-    reautenticarUsuarioAtual = modulo.reautenticarUsuarioAtual;
+    validarSenhaOperacional = modulo.validarSenhaOperacional;
     return modulo;
 }).catch(error => {
     console.warn('Firebase do estoque ainda nao ficou disponivel:', error);
@@ -1341,22 +1341,21 @@ function renderResumoEstoque() {
     }).join('');
 }
 
-async function validarSenhaMovimentacaoEstoque(mensagem = 'Digite sua senha de login para confirmar esta operacao:') {
+async function validarSenhaMovimentacaoEstoque(mensagem = 'Digite sua senha operacional para confirmar esta operacao:') {
     const senha = prompt(mensagem);
     if (!senha) return false;
 
-    const user = auth.currentUser;
-    if (!user?.email) {
+    if (!auth?.currentUser) {
         alert('Usuario autenticado nao encontrado. Faca login novamente.');
         return false;
     }
 
     try {
-        await reautenticarUsuarioAtual(senha);
+        await validarSenhaOperacional(senha);
         return true;
     } catch (err) {
         console.error('Senha invalida para operacao de estoque:', err);
-        alert('Senha incorreta. Operacao cancelada.');
+        alert(`${err.message || 'Senha operacional incorreta.'} Operacao cancelada.`);
         return false;
     }
 }

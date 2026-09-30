@@ -309,6 +309,10 @@ service cloud.firestore {
       allow list: if isAdmin() || isBootstrapAdmin();
       allow update: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserUpdate(userId);
       allow delete: if isAdmin() || isBootstrapAdmin();
+
+      match /seguranca/{document} {
+        allow read, write: if signedIn() && userId == request.auth.uid;
+      }
     }
 
     match /backup_snapshots/{document} {

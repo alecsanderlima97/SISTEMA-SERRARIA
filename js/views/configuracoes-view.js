@@ -292,6 +292,21 @@
                                 Sua autenticacao e feita com seguranca usando Firebase Auth.
                             </p>
                         </div>
+
+                        <div style="margin-top: 22px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+                            <h3 style="margin: 0 0 8px; font-size: 16px; color: #f59e0b;">Senha operacional</h3>
+                            <p style="color: #cbd5e1; font-size: 12px; line-height: 1.5; margin: 0 0 14px;">
+                                Senha independente do login, usada para confirmar exclusões e estornos protegidos. Na primeira configuração, deixe a senha atual em branco.
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <input type="password" id="senhaOperacionalAtual" autocomplete="off" placeholder="Senha operacional atual (se já existir)" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: white;">
+                                <input type="password" id="senhaOperacionalNova" autocomplete="new-password" minlength="6" placeholder="Nova senha operacional (mínimo 6 caracteres)" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: white;">
+                                <input type="password" id="senhaOperacionalConfirmar" autocomplete="new-password" minlength="6" placeholder="Confirme a senha operacional" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: white;">
+                                <button class="btn-primary" id="btnSalvarSenhaOperacional" style="background: #d97706; border-color: #d97706; width: 100%; justify-content: center;" onclick="window.salvarSenhaOperacional && window.salvarSenhaOperacional()">
+                                    <i class="fa-solid fa-key" style="margin-right: 8px;"></i> Salvar senha operacional
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="glass-panel" id="panelAuditoriaSistema" data-subsection-permission="view-configuracoes:auditoria" style="grid-column: span 2;">

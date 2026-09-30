@@ -28,29 +28,158 @@ export async function reautenticarUsuarioAtual(senha) {
     return true;
 }
 
-window.confirmarExclusaoComSenha = async function(mensagemConfirmacao = 'Deseja realmente excluir este registro?', mensagemSenha = 'Digite sua senha de login para confirmar a exclusao:') {
+const SENHA_OPERACIONAL_ITERACOES = 120000;
+
+function bytesParaBase64(bytes) {
+    let binario = '';
+    bytes.forEach(byte => { binario += String.fromCharCode(byte); });
+    return btoa(binario);
+}
+
+function base64ParaBytes(valor) {
+    const binario = atob(valor);
+    return Uint8Array.from(binario, caractere => caractere.charCodeAt(0));
+}
+
+async function derivarHashSenhaOperacional(senha, saltBase64, iteracoes = SENHA_OPERACIONAL_ITERACOES) {
+    const salt = saltBase64 ? base64ParaBytes(saltBase64) : crypto.getRandomValues(new Uint8Array(16));
+    const chave = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(senha),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt, iterations: iteracoes, hash: 'SHA-256' },
+        chave,
+        256
+    );
+    return {
+        hash: bytesParaBase64(new Uint8Array(bits)),
+        salt: saltBase64 || bytesParaBase64(salt),
+        iteracoes
+    };
+}
+
+function compararHashSeguro(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    let diferenca = a.length ^ b.length;
+    const tamanho = Math.max(a.length, b.length);
+    for (let i = 0; i < tamanho; i += 1) {
+        diferenca |= (a.charCodeAt(i % Math.max(1, a.length)) || 0)
+            ^ (b.charCodeAt(i % Math.max(1, b.length)) || 0);
+    }
+    return diferenca === 0;
+}
+
+function referenciaSenhaOperacional(user) {
+    return doc(db, 'usuarios', user.uid, 'seguranca', 'operacional');
+}
+
+export async function salvarSenhaOperacional(senhaAtual, novaSenha, confirmacao) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+    if (!novaSenha || novaSenha.length < 6) {
+        throw new Error('A senha operacional precisa ter no mínimo 6 caracteres.');
+    }
+    if (novaSenha !== confirmacao) {
+        throw new Error('As senhas operacionais não coincidem.');
+    }
+
+    const referencia = referenciaSenhaOperacional(user);
+    const existente = await getDoc(referencia);
+    const dadosExistentes = existente.exists() ? existente.data() : null;
+    if (dadosExistentes?.hash) {
+        if (!senhaAtual) throw new Error('Informe a senha operacional atual para alterá-la.');
+        const tentativa = await derivarHashSenhaOperacional(
+            senhaAtual,
+            dadosExistentes.salt,
+            Number(dadosExistentes.iteracoes) || SENHA_OPERACIONAL_ITERACOES
+        );
+        if (!compararHashSeguro(tentativa.hash, dadosExistentes.hash)) {
+            throw new Error('A senha operacional atual está incorreta.');
+        }
+    }
+
+    const resultado = await derivarHashSenhaOperacional(novaSenha);
+    await setDoc(referencia, {
+        hash: resultado.hash,
+        salt: resultado.salt,
+        iteracoes: resultado.iteracoes,
+        atualizadoEm: new Date().toISOString(),
+        atualizadoPor: user.uid
+    }, { merge: true });
+    return true;
+}
+
+export async function validarSenhaOperacional(senha) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+    const existente = await getDoc(referenciaSenhaOperacional(user));
+    const dados = existente.exists() ? existente.data() : null;
+    if (!dados?.hash || !dados?.salt) {
+        const erro = new Error('Configure uma senha operacional em Configurações > Segurança antes de excluir.');
+        erro.code = 'operational/not-configured';
+        throw erro;
+    }
+    const tentativa = await derivarHashSenhaOperacional(
+        senha || '',
+        dados.salt,
+        Number(dados.iteracoes) || SENHA_OPERACIONAL_ITERACOES
+    );
+    if (!compararHashSeguro(tentativa.hash, dados.hash)) {
+        const erro = new Error('Senha operacional incorreta.');
+        erro.code = 'operational/wrong-password';
+        throw erro;
+    }
+    return true;
+}
+
+window.salvarSenhaOperacional = async function() {
+    const senhaAtualEl = document.getElementById('senhaOperacionalAtual');
+    const novaSenhaEl = document.getElementById('senhaOperacionalNova');
+    const confirmarEl = document.getElementById('senhaOperacionalConfirmar');
+    const btn = document.getElementById('btnSalvarSenhaOperacional');
+    const original = btn?.innerHTML || '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
+    }
+    try {
+        await salvarSenhaOperacional(
+            senhaAtualEl?.value || '',
+            novaSenhaEl?.value || '',
+            confirmarEl?.value || ''
+        );
+        if (senhaAtualEl) senhaAtualEl.value = '';
+        if (novaSenhaEl) novaSenhaEl.value = '';
+        if (confirmarEl) confirmarEl.value = '';
+        alert('Senha operacional salva. Ela será solicitada para excluir ou estornar registros protegidos.');
+    } catch (error) {
+        console.error('Erro ao salvar senha operacional:', error);
+        alert(error.message || 'Não foi possível salvar a senha operacional.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original || 'Salvar senha operacional';
+        }
+    }
+};
+
+window.confirmarExclusaoComSenha = async function(mensagemConfirmacao = 'Deseja realmente excluir este registro?', mensagemSenha = 'Digite sua senha operacional para confirmar a exclusao:') {
     if (!confirm(mensagemConfirmacao)) return false;
 
     const senha = prompt(mensagemSenha);
     if (!senha) return false;
 
     try {
-        await reautenticarUsuarioAtual(senha);
+        await validarSenhaOperacional(senha);
         return true;
     } catch (error) {
-        console.error('Falha ao validar senha para exclusao:', error);
-
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            alert('Senha incorreta. Exclusao cancelada.');
-            return false;
-        }
-
-        if (error.code === 'auth/requires-recent-login') {
-            alert('Por seguranca, entre novamente no sistema e tente excluir logo em seguida.');
-            return false;
-        }
-
-        alert('Nao foi possivel validar a senha. Exclusao cancelada.');
+        console.error('Falha ao validar senha operacional para exclusao:', error);
+        alert(`${error.message || 'Não foi possível validar a senha.'} Exclusão cancelada.`);
         return false;
     }
 };

@@ -33,8 +33,8 @@
                     </p>
                 </div>
                 <div class="input-group" style="margin-bottom: 15px;">
-                    <label style="color: var(--text-muted); font-size: 0.85rem;">Confirme sua Senha de Login para Prosseguir:</label>
-                    <input type="password" id="senhaSeguranca" placeholder="Digite sua senha de acesso" required style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: white;">
+                    <label style="color: var(--text-muted); font-size: 0.85rem;">Confirme sua senha operacional para prosseguir:</label>
+                    <input type="password" id="senhaSeguranca" placeholder="Digite sua senha operacional" autocomplete="off" required style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: white;">
                 </div>
             </div>
             <div class="modal-footer-v2">
