@@ -3,6 +3,7 @@ window.abrirModalPatio = window.abrirModalPatio || function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (modalPatio) {
         modalPatio.style.display = 'flex';
+        document.body.classList.add('modal-open');
     }
 };
 
@@ -10,6 +11,7 @@ window.fecharModalPatio = window.fecharModalPatio || function() {
     const modalPatio = document.getElementById('modalControleProducao');
     if (modalPatio) {
         modalPatio.style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 };
 
@@ -264,8 +266,36 @@ function fixarColunaAcoesTabela(table) {
     });
 }
 
+function prepararTabelaParaCelular(table) {
+    if (!table || table.dataset.noMobileCards === 'true' || table.closest('.print-area')) return;
+
+    const cabecalhos = Array.from(table.querySelectorAll('thead tr:last-child > th'));
+    if (cabecalhos.length < 4) return;
+
+    const titulos = cabecalhos.map(cabecalho => (cabecalho.textContent || '').replace(/\s+/g, ' ').trim());
+    table.classList.add('orq-mobile-cards');
+
+    table.querySelectorAll('tbody tr').forEach(linha => {
+        const celulas = Array.from(linha.children).filter(celula => celula.tagName === 'TD');
+        if (celulas.length === 1 && Number(celulas[0].colSpan || 1) > 1) {
+            linha.classList.add('orq-mobile-card-message');
+            return;
+        }
+
+        celulas.forEach((celula, index) => {
+            celula.dataset.mobileLabel = titulos[index] || '';
+            const tituloNormalizado = normalizarTituloColuna(titulos[index]);
+            celula.classList.toggle('orq-mobile-card-actions', tituloNormalizado === 'acoes' || tituloNormalizado === 'acao');
+            celula.classList.toggle('orq-mobile-card-selection', /^(sel\.?|selecionar)$/.test(tituloNormalizado));
+        });
+    });
+}
+
 function aplicarColunasAcoesFixas() {
-    document.querySelectorAll('table').forEach(fixarColunaAcoesTabela);
+    document.querySelectorAll('table').forEach(table => {
+        fixarColunaAcoesTabela(table);
+        prepararTabelaParaCelular(table);
+    });
 }
 
 function inicializarTabelasOrdenaveis() {

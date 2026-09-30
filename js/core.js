@@ -9,6 +9,36 @@ console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
+const LOCAL_TEST_MODE_KEY = 'orquestra_local_test_mode';
+
+function isLocalTestModeRequested() {
+    const hostname = window.location.hostname.toLowerCase();
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.endsWith('.localhost');
+    if (!isLocal) return false;
+    const queryMode = new URLSearchParams(window.location.search).get('modo');
+    return queryMode === 'teste' || sessionStorage.getItem(LOCAL_TEST_MODE_KEY) === 'true';
+}
+
+function configurarProtecaoVoltarNavegador() {
+    if (window.__orquestraBrowserBackGuardReady) return;
+    if (!document.querySelector('.app-wrapper')) return;
+    if (window.location.pathname.toLowerCase().includes('login.html')) return;
+
+    window.__orquestraBrowserBackGuardReady = true;
+    const stateKey = '__orquestraAppShell';
+    const urlAtual = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    window.history.replaceState({
+        ...(window.history.state || {}),
+        [stateKey]: 'base'
+    }, document.title, urlAtual());
+    window.history.pushState({ [stateKey]: 'guard' }, document.title, urlAtual());
+
+    window.addEventListener('popstate', () => {
+        window.history.pushState({ [stateKey]: 'guard' }, document.title, urlAtual());
+        document.dispatchEvent(new CustomEvent('orquestra:back-blocked'));
+    });
+}
 
 const ROLE_PERMISSIONS = {
     'gerente': {
@@ -43,6 +73,7 @@ const ROLE_NAMES = {
     'mecanico': 'Mecânico',
     'muqueiro': 'Muqueiro',
     'estoquista': 'Estoquista',
+    'demo': 'Modo teste local',
     'PENDENTE': 'Acesso Pendente'
 };
 
@@ -718,14 +749,99 @@ const App = {
     cloudSnapshotAgendado: false,
     emitenteCarregamentoAgendado: false,
 
+    activateLocalTestMode() {
+        const allowedSections = [...ROLE_PERMISSIONS.gerente.allowedSections];
+        const allowedSubsections = Object.fromEntries(
+            Object.entries(SUBSECTION_PERMISSIONS).map(([sectionId, group]) => [
+                sectionId,
+                (group.items || []).map(item => item.id)
+            ])
+        );
+
+        this.user = {
+            uid: 'local-demo-user',
+            email: 'modo-teste@local.invalid',
+            displayName: 'MODO TESTE LOCAL'
+        };
+        this.userData = {
+            uid: this.user.uid,
+            nome: 'MODO TESTE LOCAL',
+            email: this.user.email,
+            cargo: 'demo',
+            empresaId: DEFAULT_EMPRESA_ID,
+            modoTeste: true
+        };
+        this.userRole = 'demo';
+        this.userPermissions = normalizePermissionModel({
+            allowedSections,
+            allowedSubsections,
+            writeSections: [],
+            deleteSections: [],
+            readOnly: true
+        });
+        window.AppUserContext = {
+            uid: this.user.uid,
+            email: this.user.email,
+            empresaId: DEFAULT_EMPRESA_ID,
+            cargo: 'demo',
+            modoTeste: true
+        };
+
+        document.body.classList.add('local-demo-mode');
+        const banner = document.createElement('div');
+        banner.id = 'localDemoBanner';
+        banner.innerHTML = `
+            <span><i class="fa-solid fa-flask" aria-hidden="true"></i> MODO TESTE LOCAL: somente leitura</span>
+            <button type="button" id="btnSairModoTeste">Sair</button>
+        `;
+        Object.assign(banner.style, {
+            position: 'fixed',
+            top: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: '20000',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '7px 10px 7px 12px',
+            border: '1px solid rgba(255, 193, 7, .55)',
+            borderRadius: '999px',
+            background: 'rgba(31, 27, 16, .96)',
+            color: '#ffe08a',
+            fontSize: '12px',
+            fontWeight: '800',
+            boxShadow: '0 8px 24px rgba(0,0,0,.22)'
+        });
+        const exitButton = banner.querySelector('#btnSairModoTeste');
+        Object.assign(exitButton.style, {
+            border: '1px solid rgba(255, 224, 138, .5)',
+            borderRadius: '999px',
+            padding: '4px 9px',
+            background: 'transparent',
+            color: '#fff4c2',
+            fontWeight: '800',
+            cursor: 'pointer'
+        });
+        exitButton.addEventListener('click', () => {
+            sessionStorage.removeItem(LOCAL_TEST_MODE_KEY);
+            window.location.href = 'login.html';
+        });
+        document.body.appendChild(banner);
+    },
+
     init() {
         const savedTheme = localStorage.getItem('orquestrasis_theme') || 'original';
         window.changeTheme(savedTheme);
-        this.checkAuth();
+        if (isLocalTestModeRequested()) {
+            this.activateLocalTestMode();
+        } else {
+            this.checkAuth();
+        }
         this.setupNavigation();
         this.setupSidebarCollapse();
         this.loadProfilePic();
         tratarRetornoOutlook();
+        configurarProtecaoVoltarNavegador();
         this.iniciarRelogioCabecalho();
         inicializarMascarasPerfil();
         atualizarResumoBackup();
@@ -738,6 +854,7 @@ const App = {
             });
         }
         this.renderPermissionEditor();
+        if (this.userData?.modoTeste) this.applyPermissionVisibility();
     },
 
     iniciarRelogioCabecalho() {
@@ -1156,7 +1273,7 @@ const App = {
         const appWrapper = document.querySelector('.app-wrapper');
         if (btnToggleSidebar && appWrapper) {
             // Se for dispositivo móvel (celular), inicia sempre recolhido para carregamento limpo
-            const isMobile = window.innerWidth <= 768;
+            const isMobile = window.innerWidth <= 900;
             const isCollapsed = isMobile || localStorage.getItem('sidebar_collapsed') === 'true';
             
             if (isCollapsed) {
@@ -1185,6 +1302,22 @@ const App = {
                         btnIcon.classList.add('fa-chevron-left');
                     }
                 }
+            });
+
+            // No celular, um toque fora da gaveta fecha o menu sem bloquear a tela.
+            appWrapper.addEventListener('click', (event) => {
+                if (window.innerWidth > 900 || appWrapper.classList.contains('sidebar-collapsed')) return;
+                if (event.target.closest('.sidebar, #btnToggleSidebar')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                appWrapper.classList.add('sidebar-collapsed');
+                const btnIcon = btnToggleSidebar.querySelector('i');
+                btnIcon?.classList.remove('fa-chevron-left');
+                btnIcon?.classList.add('fa-chevron-right');
+            }, true);
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth <= 900) appWrapper.classList.add('sidebar-collapsed');
             });
         }
     },
@@ -1655,7 +1788,7 @@ window.navegarPara = function(targetId) {
         if (d) d.style.display = 'none';
         
         // Em telas pequenas, recolher a sidebar ao clicar em um link
-        if (window.innerWidth <= 768) {
+        if (window.innerWidth <= 900) {
             const appWrapper = document.querySelector('.app-wrapper');
             if (appWrapper && !appWrapper.classList.contains('sidebar-collapsed')) {
                 document.getElementById('btnToggleSidebar')?.click();

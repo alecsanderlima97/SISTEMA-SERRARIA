@@ -265,6 +265,7 @@
                             <div style="min-width:145px;"><label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Pagamento</label><select id="subRelStatus" style="padding:8px; width:100%;"><option value="">Todos</option><option value="PENDENTE">Pendentes</option><option value="PAGO">Pagos</option></select></div>
                             <div id="subRelContador" style="min-width:145px; padding:9px 12px; border:1px solid rgba(45,212,191,.35); border-radius:7px; color:#5eead4; font-weight:800; text-align:center;">0 selecionados</div>
                             <button type="button" class="btn-primary" onclick="window.gerarRelatorioFechamentoSubprodutos && window.gerarRelatorioFechamentoSubprodutos()" style="padding:10px 14px;"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Fechamento</button>
+                            <button type="button" class="btn-secondary" onclick="window.salvarFechamentoSubprodutos && window.salvarFechamentoSubprodutos()" style="padding:10px 14px; border-color:rgba(45,212,191,.55); color:#5eead4;"><i class="fa-solid fa-floppy-disk"></i> Salvar por cliente</button>
                         </div>
                         <div style="max-height: 430px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
@@ -285,6 +286,18 @@
                                 </thead>
                                 <tbody id="listaLancamentosSubprodutos"></tbody>
                             </table>
+                        </div>
+                        <div style="margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,.08);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                <h3 style="margin:0; font-size:1rem; color:var(--accent-color);"><i class="fa-solid fa-folder-open"></i> Fechamentos salvos por cliente</h3>
+                                <small style="color:var(--text-muted);">Cada cliente possui seu próprio fechamento.</small>
+                            </div>
+                            <div style="max-height:260px; overflow:auto; border:1px solid rgba(255,255,255,.05); border-radius:8px;">
+                                <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+                                    <thead><tr style="background:rgba(0,0,0,.2); color:var(--text-muted);"><th style="padding:9px; text-align:left;">Cliente</th><th style="padding:9px; text-align:left;">Período</th><th style="padding:9px; text-align:center;">Lançamentos</th><th style="padding:9px; text-align:right;">Quantidade</th><th style="padding:9px; text-align:right;">Total</th></tr></thead>
+                                    <tbody id="listaFechamentosSubprodutos"><tr><td colspan="5" style="padding:14px; text-align:center; color:var(--text-muted);">Nenhum fechamento salvo.</td></tr></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 

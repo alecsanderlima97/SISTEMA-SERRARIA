@@ -120,10 +120,11 @@ function injetarEstiloEmpreiteiro() {
                 grid-column: 1 / -1 !important;
             }
             #panelListaEmpreiteiros .table-container {
-                overflow-x: auto;
+                overflow: visible;
             }
             #panelListaEmpreiteiros table {
-                min-width: 720px;
+                min-width: 0;
+                table-layout: auto;
             }
         }
     `;

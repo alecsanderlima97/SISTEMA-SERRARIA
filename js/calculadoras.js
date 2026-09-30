@@ -69,6 +69,7 @@ let clienteSubprodutoEditandoId = null;
 let vendaSubprodutoEditandoId = null;
 let ultimoDocumentoSubproduto = null;
 let subprodutosSelecionadosRelatorio = new Set();
+let fechamentosSubprodutosCache = [];
 let caminhoesSubprodutoForm = [];
 
 function numeroRomaneioSubproduto(venda) {
@@ -156,6 +157,73 @@ function filtrarLancamentosSubprodutos() {
             && (!status || statusVenda === status)
             && (!inicio || v.data >= inicio) && (!fim || v.data <= fim);
     }).sort(ordenarSubprodutosConformeFiltro);
+}
+
+function obterItensParaFechamentoSubprodutos() {
+    return filtrarLancamentosSubprodutos().filter(venda =>
+        subprodutosSelecionadosRelatorio.size === 0 || subprodutosSelecionadosRelatorio.has(venda.id)
+    ).sort(ordenarSubprodutosConformeFiltro);
+}
+
+function agruparItensFechamentoSubprodutos(itens) {
+    const grupos = new Map();
+    itens.forEach(venda => {
+        const cliente = String(venda.cliente || 'CLIENTE NAO INFORMADO').trim();
+        const clienteId = String(venda.clienteSubprodutoId || '').trim();
+        const chave = clienteId || normalizarTextoReceberSubproduto(cliente) || 'CLIENTE_NAO_INFORMADO';
+        if (!grupos.has(chave)) grupos.set(chave, { cliente, clienteId, itens: [] });
+        grupos.get(chave).itens.push(venda);
+    });
+    return [...grupos.values()];
+}
+
+function resumoGrupoFechamentoSubproduto(grupo) {
+    return {
+        quantidade: grupo.itens.reduce((total, venda) => total + Number(venda.quantidade || 0), 0),
+        valor: grupo.itens.reduce((total, venda) => total + Number(venda.total || 0), 0),
+        vendas: grupo.itens.length
+    };
+}
+
+function formatarPeriodoFechamentoSubproduto(fechamento = {}) {
+    const formatar = valor => valor ? new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR') : '';
+    const inicio = formatar(fechamento.periodoInicio);
+    const fim = formatar(fechamento.periodoFim);
+    if (inicio || fim) return `${inicio || 'Inicio'} a ${fim || 'Fim'}`;
+    return 'Todos os lancamentos selecionados';
+}
+
+function renderizarFechamentosSubprodutos() {
+    const lista = document.getElementById('listaFechamentosSubprodutos');
+    if (!lista) return;
+    const esc = window.DocActions?.escapeHtml || (valor => String(valor ?? ''));
+    if (!fechamentosSubprodutosCache.length) {
+        lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center; color:var(--text-muted);">Nenhum fechamento salvo.</td></tr>';
+        return;
+    }
+    lista.innerHTML = fechamentosSubprodutosCache.map(fechamento => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+            <td style="padding:9px; font-weight:700;">${esc(fechamento.cliente || 'Cliente nao informado')}</td>
+            <td style="padding:9px; color:var(--text-muted);">${esc(formatarPeriodoFechamentoSubproduto(fechamento))}</td>
+            <td style="padding:9px; text-align:center;">${Number(fechamento.quantidadeLancamentos || fechamento.itens?.length || 0)}</td>
+            <td style="padding:9px; text-align:right;">${Number(fechamento.quantidadeTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            <td style="padding:9px; text-align:right; color:#5eead4; font-weight:800;">${Number(fechamento.totalValor || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' })}</td>
+        </tr>
+    `).join('');
+}
+
+async function carregarFechamentosSubprodutos() {
+    const lista = document.getElementById('listaFechamentosSubprodutos');
+    if (!lista || !window.FS?.getCollection) return;
+    try {
+        const fechamentos = await window.FS.getCollection('fechamentos_subprodutos');
+        fechamentosSubprodutosCache = (Array.isArray(fechamentos) ? fechamentos : [])
+            .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
+        renderizarFechamentosSubprodutos();
+    } catch (error) {
+        console.error('Erro ao carregar fechamentos de subprodutos:', error);
+        lista.innerHTML = '<tr><td colspan="5" style="padding:14px; text-align:center; color:#fbbf24;">Nao foi possivel carregar os fechamentos salvos.</td></tr>';
+    }
 }
 
 function hojeIsoSubproduto() {
@@ -872,12 +940,72 @@ window.toggleSelecionarSubprodutosRelatorio = function(checked) {
     atualizarContadorSubprodutos();
 };
 
+window.salvarFechamentoSubprodutos = async function() {
+    const itens = obterItensParaFechamentoSubprodutos();
+    if (!itens.length) {
+        alert('Selecione cargas ou informe um periodo com lancamentos.');
+        return;
+    }
+    if (!window.FS?.addDoc) {
+        alert('O modulo de fechamentos ainda nao terminou de carregar. Atualize a pagina e tente novamente.');
+        return;
+    }
+
+    const grupos = agruparItensFechamentoSubprodutos(itens);
+    const inicio = document.getElementById('subRelDataInicio')?.value || '';
+    const fim = document.getElementById('subRelDataFim')?.value || '';
+    const usuario = window.App?.userName || document.getElementById('userNameHeader')?.textContent?.trim() || auth.currentUser?.email || 'Usuario';
+    const botao = document.querySelector('button[onclick*="salvarFechamentoSubprodutos"]');
+    const textoOriginal = botao?.innerHTML;
+    if (botao) {
+        botao.disabled = true;
+        botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
+    }
+
+    try {
+        for (const grupo of grupos) {
+            const resumo = resumoGrupoFechamentoSubproduto(grupo);
+            await window.FS.addDoc('fechamentos_subprodutos', {
+                cliente: grupo.cliente.toUpperCase(),
+                clienteSubprodutoId: grupo.clienteId || null,
+                periodoInicio: inicio || null,
+                periodoFim: fim || null,
+                quantidadeLancamentos: resumo.vendas,
+                quantidadeTotal: resumo.quantidade,
+                totalValor: resumo.valor,
+                status: 'ABERTO',
+                vendaIds: grupo.itens.map(venda => venda.id),
+                itens: grupo.itens.map(venda => ({
+                    vendaId: venda.id,
+                    data: venda.data || null,
+                    romaneio: venda.romaneio || '',
+                    produto: venda.tipo || '',
+                    unidade: venda.unidade || 'm3',
+                    quantidade: Number(venda.quantidade || 0),
+                    valorUnitario: Number(venda.valorUnitario || 0),
+                    total: Number(venda.total || 0)
+                })),
+                criadoPor: usuario,
+                criadoEm: new Date().toISOString()
+            });
+        }
+        await carregarFechamentosSubprodutos();
+        alert(`${grupos.length} fechamento${grupos.length === 1 ? '' : 's'} salvo${grupos.length === 1 ? '' : 's'} por cliente.`);
+    } catch (error) {
+        console.error('Erro ao salvar fechamento de subprodutos:', error);
+        alert('Nao foi possivel salvar o fechamento. Tente novamente.');
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = textoOriginal || '<i class="fa-solid fa-floppy-disk"></i> Salvar por cliente';
+        }
+    }
+};
+
 window.gerarRelatorioFechamentoSubprodutos = function() {
     const inicio = document.getElementById('subRelDataInicio')?.value || '';
     const fim = document.getElementById('subRelDataFim')?.value || '';
-    let itens = filtrarLancamentosSubprodutos().filter(v =>
-        subprodutosSelecionadosRelatorio.size === 0 || subprodutosSelecionadosRelatorio.has(v.id)
-    );
+    let itens = obterItensParaFechamentoSubprodutos();
     if (!itens.length) {
         alert('Selecione cargas ou informe um periodo com lancamentos.');
         return;
@@ -1173,7 +1301,8 @@ window.excluirVendaSubproduto = async (id) => {
 
 window.SectionLoader?.register('view-cavaco', () => Promise.all([
     carregarClientesSubprodutos(),
-    carregarLancamentosSubprodutos()
+    carregarLancamentosSubprodutos(),
+    carregarFechamentosSubprodutos()
 ]));
 ['subRelBusca', 'subRelProduto', 'subRelDataInicio', 'subRelDataFim', 'subRelOrdem', 'subRelStatus'].forEach(id => {
     const campo = document.getElementById(id);

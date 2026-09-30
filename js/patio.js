@@ -318,6 +318,7 @@ window.abrirModalPatio = async function() {
     if (!modalPatio) return;
 
     modalPatio.style.display = 'flex';
+    document.body.classList.add('modal-open');
 
     // Preencher Data e Hora Atuais por padrÃ£o
     const inputData = document.getElementById('patioData');
@@ -357,6 +358,7 @@ window.fecharModalPatio = function() {
     if (modalPatio) {
         modalPatio.style.display = 'none';
     }
+    document.body.classList.remove('modal-open');
 };
 
 window.abrirFluxoPatio = async function() {

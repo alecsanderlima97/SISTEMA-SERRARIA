@@ -17,6 +17,12 @@ const DEFAULT_EMPRESA_ID = 'vanmarte';
 const LOGIN_SOUND_PATH = 'assets/audio/login_sound.mp3';
 const MIN_LOGIN_SOUND_MS = 3500;
 const LOCAL_GOOGLE_AUTH_HOST = 'localhost:5500';
+const LOCAL_TEST_MODE_KEY = 'orquestra_local_test_mode';
+
+function isLocalDevHost() {
+    const hostname = window.location.hostname.toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.endsWith('.localhost');
+}
 
 function isHostLocalAlternativo() {
     const hostname = window.location.hostname.toLowerCase();
@@ -103,6 +109,19 @@ const registerErrorMsg = document.getElementById('registerError');
 const tabBtnLogin = document.getElementById('tabBtnLogin');
 const tabBtnRegister = document.getElementById('tabBtnRegister');
 const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+const btnModoTeste = document.getElementById('btnModoTeste');
+const modoTesteAviso = document.getElementById('modoTesteAviso');
+
+if (btnModoTeste && modoTesteAviso && isLocalDevHost()) {
+    btnModoTeste.hidden = false;
+    btnModoTeste.style.display = 'flex';
+    modoTesteAviso.hidden = false;
+    modoTesteAviso.style.display = 'block';
+    btnModoTeste.addEventListener('click', () => {
+        sessionStorage.setItem(LOCAL_TEST_MODE_KEY, 'true');
+        window.location.href = 'index.html?modo=teste';
+    });
+}
 
 // 1. ALTERNÂNCIA DE ABAS DE LOGIN / CADASTRO
 if (tabBtnLogin && tabBtnRegister && loginForm && registerForm) {
