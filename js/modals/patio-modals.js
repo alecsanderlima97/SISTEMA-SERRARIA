@@ -241,7 +241,7 @@
                         </button>
                     </div>
 
-                    <div class="hide-on-print" style="display:flex; align-items:center; gap:12px; margin:0 0 10px 0; color:#f8fafc; font-size:.82rem; font-weight:800;">
+                    <div class="hide-on-print patio-selection-toolbar" style="display:flex; align-items:center; gap:12px; margin:0 0 10px 0; color:#f8fafc; font-size:.82rem; font-weight:800;">
                         <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
                             <input type="checkbox" onchange="window.selecionarTodosItensPatio(this.checked)" style="width:17px; height:17px; accent-color:#16a34a;">
                             Selecionar todos

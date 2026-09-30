@@ -2535,3 +2535,84 @@ body.dashboard-fluxo-patio-exclusivo #panelProducaoPatio {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* O formulario do Patio precisa de uma coluna real no celular. O botao de
+   adicionar lote ocupava duas colunas e criava uma coluna implicita estreita. */
+@media (max-width: 760px) {
+    #formAdicionarItemPatio {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    #formAdicionarItemPatio > .input-group,
+    #formAdicionarItemPatio > .patio-totais-inline,
+    #formAdicionarItemPatio > .patio-config-suggestion,
+    #formAdicionarItemPatio > .btn-add-lote-col {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    #formAdicionarItemPatio .input-group label {
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+
+    #formAdicionarItemPatio input,
+    #formAdicionarItemPatio select {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #formAdicionarItemPatio .patio-especie-compacta > div {
+        min-height: 42px !important;
+        flex-wrap: wrap !important;
+        overflow: visible !important;
+    }
+
+    #formAdicionarItemPatio .package-entry-calc {
+        width: 100% !important;
+        min-width: 0 !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    #formAdicionarItemPatio .package-entry-calc input {
+        min-width: 0 !important;
+    }
+
+    #formAdicionarItemPatio .patio-totais-inline {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    #formAdicionarItemPatio .patio-campo-pecas,
+    #formAdicionarItemPatio .patio-campo-volume {
+        max-width: none !important;
+    }
+
+    #modalControleProducao .patio-selection-toolbar {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 9px !important;
+        align-items: stretch !important;
+    }
+
+    #modalControleProducao .patio-selection-toolbar > label,
+    #modalControleProducao .patio-selection-toolbar > span,
+    #modalControleProducao .patio-selection-toolbar > button {
+        width: 100% !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    #modalControleProducao .patio-selection-toolbar > button {
+        min-height: 42px !important;
+        padding: 8px 10px !important;
+        white-space: nowrap !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
