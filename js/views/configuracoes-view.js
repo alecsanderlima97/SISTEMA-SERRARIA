@@ -271,6 +271,10 @@
                         
                         <div style="display: flex; flex-direction: column; gap: 16px;">
                             <div>
+                                <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Senha Atual</label>
+                                <input type="password" id="perfilSenhaAtual" autocomplete="current-password" minlength="6" placeholder="Digite a senha usada no login" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
+                            </div>
+                            <div>
                                 <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Nova Senha</label>
                                 <input type="password" id="perfilNovaSenha" autocomplete="new-password" minlength="6" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
                             </div>

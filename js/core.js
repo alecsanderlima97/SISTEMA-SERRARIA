@@ -1,7 +1,7 @@
 import {
     auth, signOut, onAuthStateChanged, db, collection, getDocs,
     doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot,
-    updatePassword, limit
+    reautenticarUsuarioAtual, updatePassword, limit
 } from './firebase-init.js';
 
 
@@ -2013,14 +2013,27 @@ window.excluirUsuario = async function(id) {
 };
 
 window.alterarSenhaPerfil = async function() {
+    const senhaAtualEl = document.getElementById('perfilSenhaAtual');
     const novaSenhaEl = document.getElementById('perfilNovaSenha');
     const confirmarSenhaEl = document.getElementById('perfilConfirmarSenha');
     const btn = document.getElementById('btnAlterarSenhaPerfil');
-    const novaSenha = (novaSenhaEl?.value || '').trim();
-    const confirmarSenha = (confirmarSenhaEl?.value || '').trim();
+    const senhaAtual = senhaAtualEl?.value || '';
+    const novaSenha = novaSenhaEl?.value || '';
+    const confirmarSenha = confirmarSenhaEl?.value || '';
+    const user = auth.currentUser;
 
-    if (!auth.currentUser) {
+    if (!user) {
         alert('Sessão expirada. Faça login novamente para alterar a senha.');
+        return;
+    }
+    const usaSenha = user.providerData.some(provider => provider.providerId === 'password');
+    if (!usaSenha) {
+        alert('Esta conta entra com Google. A senha deve ser alterada diretamente na Conta Google.');
+        return;
+    }
+    if (!senhaAtual) {
+        alert('Informe sua senha atual para confirmar a alteração.');
+        senhaAtualEl?.focus();
         return;
     }
     if (novaSenha.length < 6) {
@@ -2039,14 +2052,20 @@ window.alterarSenhaPerfil = async function() {
     }
 
     try {
-        await updatePassword(auth.currentUser, novaSenha);
+        await reautenticarUsuarioAtual(senhaAtual);
+        await updatePassword(user, novaSenha);
+        if (senhaAtualEl) senhaAtualEl.value = '';
         novaSenhaEl.value = '';
         confirmarSenhaEl.value = '';
         alert('Senha alterada com sucesso. Use a nova senha no próximo login.');
     } catch (err) {
         console.error('Erro ao alterar senha:', err);
-        if (err.code === 'auth/requires-recent-login') {
-            alert('Por segurança, o Firebase exige login recente. Saia do sistema, entre novamente com e-mail e senha, e tente alterar a senha logo em seguida.');
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            alert('A senha atual está incorreta. Confira e tente novamente.');
+        } else if (err.code === 'auth/requires-recent-login') {
+            alert('Não foi possível confirmar sua sessão. Saia do sistema, entre novamente com e-mail e senha e tente outra vez.');
+        } else if (err.code === 'auth/weak-password') {
+            alert('A nova senha é muito fraca. Use pelo menos 6 caracteres.');
         } else if (err.code === 'auth/provider-already-linked' || err.code === 'auth/operation-not-allowed') {
             alert('Esta conta usa provedor externo. Para contas Google, altere a senha diretamente na Conta Google.');
         } else {
