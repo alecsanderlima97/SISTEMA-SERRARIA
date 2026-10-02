@@ -1463,14 +1463,14 @@ function renderizarEntradas() {
         
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="check-entrada" data-id="${en.id}" ${isChecked} style="transform: scale(1.25); cursor: pointer;"></td>
-            <td>${dtStr} <br><small style="color:#aaa;">${en.horario || '-'}</small></td>
+            <td>${dtStr} <br><small style="color:var(--text-muted);">${en.horario || '-'}</small></td>
             <td>
-                <strong style="display:block; font-size:1rem; color:#fff; text-transform:uppercase;">${en.empreiteiroNome || en.fornecedor || '-'}</strong>
+                <strong style="display:block; font-size:1rem; color:var(--text-color); text-transform:uppercase;">${en.empreiteiroNome || en.fornecedor || '-'}</strong>
                 <span style="display:inline-block; margin-top:4px; padding:3px 8px; border-radius:6px; background:rgba(245,158,11,0.18); color:#fbbf24; font-weight:900; text-transform:uppercase;">Mato: ${en.mato || '-'}</span><br>
-                <small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small>
+                <small style="color:var(--text-muted);">Rom: ${en.romaneioNum || '-'}</small>
                 ${infoAutorHtml}
             </td>
-            <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:#aaa;">${en.caminhao || '-'}</small></td>
+            <td><span class="badge" style="background:#555;">${en.placa}</span><br><small style="color:var(--text-muted);">${en.caminhao || '-'}</small></td>
             <td style="font-size: 0.9em;">
                 C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m <br>
                 A. Média: ${formatDecimalValue(en.mediaAltura)}m
@@ -1551,8 +1551,8 @@ function renderizarDescarregamentos() {
         const isChecked = descargasSelecionadas.has(en.id) ? 'checked' : '';
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="check-descarga" data-id="${en.id}" ${isChecked} style="transform: scale(1.2); cursor:pointer;"></td>
-            <td>${dtStr}<br><small style="color:#aaa;">${en.horario || '-'}</small></td>
-            <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:#aaa;">Mato: ${en.mato || '-'}</small><br><small style="color:#aaa;">Rom: ${en.romaneioNum || '-'}</small></td>
+            <td>${dtStr}<br><small style="color:var(--text-muted);">${en.horario || '-'}</small></td>
+            <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:var(--text-muted);">Mato: ${en.mato || '-'}</small><br><small style="color:var(--text-muted);">Rom: ${en.romaneioNum || '-'}</small></td>
             <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. Média: ${formatDecimalValue(en.mediaAltura)}m</td>
             <td><span class="badge" style="background:#555;">${en.placa || '-'}</span></td>
             <td style="font-weight:bold; color:var(--accent-color);">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>

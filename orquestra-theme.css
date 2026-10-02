@@ -1946,6 +1946,82 @@ body.orquestra-theme .modal-content-v2 {
     }
 }
 
+/* Contraste global: o tema claro precisa vencer legados que usavam texto claro
+   em tabelas e modais escuros. Botoes e badges continuam controlando a propria cor. */
+body.orquestra-theme table th {
+    color: #475569 !important;
+}
+
+body.orquestra-theme table td {
+    color: var(--oq-text) !important;
+}
+
+body.orquestra-theme table td small {
+    color: var(--oq-muted) !important;
+}
+
+body.orquestra-theme .modal-content-v2 .modal-body-v2 {
+    color: var(--oq-text);
+}
+
+body.orquestra-theme .modal-content-v2 .modal-body-v2 p,
+body.orquestra-theme .modal-content-v2 .modal-body-v2 h3 {
+    color: var(--oq-text) !important;
+}
+
+/* Compatibilidade com telas legadas que ainda imprimem texto claro inline.
+   O escopo fica restrito a superficies claras; botoes, links e badges ficam intactos. */
+body.orquestra-theme :is(.glass-panel, .card-v2, .chart-box, .modal-content-v2, table) :is(
+    [style*="color:white"],
+    [style*="color: white"],
+    [style*="color:#fff"],
+    [style*="color: #fff"],
+    [style*="color:#ffffff"],
+    [style*="color: #ffffff"],
+    [style*="color:#eee"],
+    [style*="color: #eee"]
+):not(button):not(a):not([class*="badge"]):not([class*="status"]) {
+    color: var(--oq-text) !important;
+}
+
+body.orquestra-theme :is(.glass-panel, .card-v2, .chart-box, .modal-content-v2, table) :is(
+    [style*="color:#aaa"],
+    [style*="color: #aaa"],
+    [style*="color:#e5e7eb"],
+    [style*="color: #e5e7eb"]
+):not(button):not(a):not([class*="badge"]):not([class*="status"]) {
+    color: var(--oq-muted) !important;
+}
+
+/* Algumas telas antigas ainda imprimem cores inline pensadas para o tema escuro. */
+body.orquestra-theme #listaHE td:nth-child(2) span,
+body.orquestra-theme #listaHE td:nth-child(5) span {
+    color: var(--oq-text) !important;
+}
+
+body.orquestra-theme #listaHE td:nth-child(3) span[style*="#ef4444"] {
+    color: #b91c1c !important;
+}
+
+body.orquestra-theme #listaHE td:nth-child(3) span[style*="#00ff88"] {
+    color: var(--oq-green) !important;
+}
+
+body.orquestra-theme #listaHE td:nth-child(6) strong,
+body.orquestra-theme #listaHistoricoHE td:nth-child(3),
+body.orquestra-theme #he-total-soma,
+body.orquestra-theme #he-total-valor {
+    color: var(--oq-green) !important;
+}
+
+body.orquestra-theme #modalHorasExtras > .modal-content-v2 > .modal-body-v2 > div[style*="border-top"] h3 {
+    color: var(--oq-text) !important;
+}
+
+body.orquestra-theme #modalHorasExtras .modal-footer-v2 > div > span[style*="color"] {
+    color: var(--oq-muted) !important;
+}
+
 /* Ajustes finais do tema: listas, acoes e microinteracoes. */
 body.orquestra-theme .view-section,
 body.orquestra-theme .glass-panel,
