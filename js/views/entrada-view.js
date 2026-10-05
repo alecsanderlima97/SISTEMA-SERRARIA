@@ -260,7 +260,7 @@
                                     <div id="entCardFinanceiroEmpreiteiro" style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto Empreiteiro</h4>
                                         <div id="entResultadoFinanceiro" style="font-size: 1.8rem; font-weight: bold; color:#3498db; margin-top: 5px;">R\$ 0,00</div>
-                                        <small id="entInfoFinanceira" style="color:#aaa; font-size: 0.75rem;">Base: R\$ 0,00/m³</small>
+                                        <small id="entInfoFinanceira" style="display:block; margin-top:8px; color:#d8e8f5; font-size: 0.78rem; line-height:1.45;">Acerto: 0,00 m³ × R\$ 0,00/m³ = R\$ 0,00</small>
                                     </div>
                                     <div id="entCardFinanceiroDescarga" style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Total Descarga</h4>

@@ -1283,7 +1283,11 @@ function formatarDataHoraLancamentoEntrada(en = {}) {
 }
 
 function usuarioPodeVerFinanceiroEmpreiteiro() {
-    return normalizeText(window.App?.userRole) === 'gerente';
+    const cargo = normalizeText(window.App?.userRole);
+    return cargo === 'gerente'
+        || cargo === 'gerente geral'
+        || cargo === 'admin'
+        || cargo === 'administrador';
 }
 
 function aplicarVisibilidadeFinanceiraEntrada() {
@@ -1436,7 +1440,7 @@ function calcularVolumeAtual() {
     if (resFinanceiro) resFinanceiro.textContent = totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoFinanceira) {
         infoFinanceira.textContent = matoSelecionado.nome && produtoCarga
-            ? `${formatDecimalValue(volume)} m³ x ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³ = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} (${produtoCarga})`
+            ? `Acerto: ${formatDecimalValue(volume)} m³ × ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³ = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} · ${produtoCarga}`
             : 'Selecione o mato e o produto para aplicar o valor combinado.';
     }
     if (entInfoTarifaEmpreiteiro) {
@@ -1444,7 +1448,10 @@ function calcularVolumeAtual() {
             entInfoTarifaEmpreiteiro.textContent = `Compra avulsa: ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³.`;
             entInfoTarifaEmpreiteiro.dataset.estado = 'ok';
         } else if (matoSelecionado.nome && produtoCarga) {
-            entInfoTarifaEmpreiteiro.textContent = `Valor aplicado: ${matoSelecionado.nome} · ${produtoCarga} · ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³.`;
+            const detalheTotal = usuarioPodeVerFinanceiroEmpreiteiro()
+                ? ` · ${formatDecimalValue(volume)} m³ × ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³ = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`
+                : '';
+            entInfoTarifaEmpreiteiro.textContent = `Valor aplicado: ${matoSelecionado.nome} · ${produtoCarga} · ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³${detalheTotal}.`;
             entInfoTarifaEmpreiteiro.dataset.estado = 'ok';
         } else if (matoSelecionado.nome) {
             entInfoTarifaEmpreiteiro.textContent = 'Selecione o produto para aplicar a tarifa correta.';
