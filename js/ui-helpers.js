@@ -137,6 +137,72 @@ function inicializarWidgetRolagem() {
     document.body.appendChild(widget);
 }
 
+function dispositivoUsaToque() {
+    return window.matchMedia?.('(pointer: coarse)').matches
+        || Number(window.navigator?.maxTouchPoints || 0) > 0
+        || window.innerWidth <= 768;
+}
+
+function existeModalVisivel() {
+    return Array.from(document.querySelectorAll('.modal-v2, .modal, [role="dialog"]')).some(modal => {
+        const estilo = window.getComputedStyle(modal);
+        const rect = modal.getBoundingClientRect();
+        return estilo.display !== 'none'
+            && estilo.visibility !== 'hidden'
+            && estilo.pointerEvents !== 'none'
+            && rect.width > 0
+            && rect.height > 0;
+    });
+}
+
+function normalizarRolagemDispositivoTouch() {
+    const touch = dispositivoUsaToque();
+    document.documentElement.classList.toggle('orq-touch-device', touch);
+    document.body?.classList.toggle('orq-touch-device', touch);
+    if (!touch || !document.body) return;
+
+    const modalVisivel = existeModalVisivel();
+    document.body.classList.toggle('orq-modal-active', modalVisivel);
+
+    // Evita que um modal fechado deixe a classe global travando a pagina.
+    if (!modalVisivel && document.body.classList.contains('modal-open')) {
+        document.body.classList.remove('modal-open');
+    }
+}
+
+function inicializarRolagemDispositivoTouch() {
+    if (window.__orqRolagemTouchAtiva) return;
+    window.__orqRolagemTouchAtiva = true;
+
+    const atualizar = () => window.requestAnimationFrame(normalizarRolagemDispositivoTouch);
+    atualizar();
+    window.addEventListener('resize', atualizar, { passive: true });
+    window.addEventListener('orientationchange', atualizar, { passive: true });
+    document.addEventListener('app:section-change', atualizar);
+
+    // Modais alteram display diretamente; observar somente os modais evita
+    // acompanhar cada linha das listas operacionais.
+    const modaisObservados = new WeakSet();
+    const observarModais = () => {
+        document.querySelectorAll('.modal-v2, .modal, [role="dialog"]').forEach(modal => {
+            if (modaisObservados.has(modal)) return;
+            modaisObservados.add(modal);
+            const observerModal = new MutationObserver(atualizar);
+            observerModal.observe(modal, { attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+        });
+    };
+
+    observarModais();
+    const observerEstrutura = new MutationObserver(() => {
+        observarModais();
+        atualizar();
+    });
+    observerEstrutura.observe(document.body, { childList: true, subtree: true });
+
+    const observerClasseBody = new MutationObserver(atualizar);
+    observerClasseBody.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+}
+
 function normalizarValorTabelaOrdenavel(texto = '') {
     const valor = String(texto || '').replace(/\s+/g, ' ').trim();
     const dataMatch = valor.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
@@ -326,9 +392,11 @@ if (document.readyState === 'loading') {
         inicializarWidgetRolagem();
         inicializarAtalhosCampos();
         inicializarTabelasOrdenaveis();
+        inicializarRolagemDispositivoTouch();
     });
 } else {
     inicializarWidgetRolagem();
     inicializarAtalhosCampos();
     inicializarTabelasOrdenaveis();
+    inicializarRolagemDispositivoTouch();
 }

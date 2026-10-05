@@ -121,6 +121,7 @@
                                         <option value="OUTROS">OUTROS</option>
                                         <option value="CORTE/REMOCAO">CORTE/REMOCAO</option>
                                     </select>
+                                    <small id="entInfoTarifaEmpreiteiro" class="entrada-tarifa-info" data-estado="neutro">Selecione o empreiteiro, o mato e o produto para aplicar a tarifa.</small>
                                 </div>
                                 <div class="input-group">
                                     <label for="entRomaneio">Nº Romaneio *</label>
@@ -301,7 +302,7 @@
                                             <th>Nome</th>
                                             <th>Contato</th>
                                             <th>Mato</th>
-                                            <th>Valor (R\$/m³)</th>
+                                            <th>Valores (R\$/m³)</th>
                                             <th>PIX</th>
                                             <th>Ações</th>
                                         </tr>

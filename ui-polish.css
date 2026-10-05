@@ -2362,6 +2362,40 @@ body.dashboard-fluxo-patio-exclusivo #panelProducaoPatio {
     }
 }
 
+/* Alguns navegadores moveis usam viewport de desktop mesmo em um aparelho touch.
+   Nessa situacao as media queries por largura nao entram, mas a pagina ainda deve
+   usar uma unica rolagem vertical no documento. */
+html.orq-touch-device,
+body.orq-touch-device {
+    height: auto !important;
+    min-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y !important;
+}
+
+body.orq-touch-device .app-wrapper {
+    display: block !important;
+    height: auto !important;
+    min-height: 100dvh;
+}
+
+body.orq-touch-device .main-content,
+body.orq-touch-device .view-section,
+body.orq-touch-device #view-entrada,
+body.orq-touch-device #panelDescarregamentos {
+    height: auto !important;
+    min-height: 0;
+    max-height: none !important;
+    overflow: visible !important;
+    touch-action: pan-y !important;
+}
+
+body.orq-touch-device:not(.orq-modal-active) {
+    overflow-y: auto !important;
+}
+
 #panelListaClientesSub table,
 #panelLancamentosSub table {
     width: 100%;

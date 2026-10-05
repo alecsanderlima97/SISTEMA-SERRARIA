@@ -52,6 +52,16 @@ function injetarEstiloEmpreiteiro() {
             white-space: nowrap;
             justify-content: center;
         }
+        .entrada-tarifa-info {
+            display: block;
+            margin-top: 7px;
+            color: #64748b;
+            font-size: .76rem;
+            line-height: 1.35;
+            font-weight: 700;
+        }
+        .entrada-tarifa-info[data-estado="ok"] { color: #047857; }
+        .entrada-tarifa-info[data-estado="alerta"] { color: #b45309; }
         #empMatosLista span {
             max-width: 100%;
             overflow-wrap: anywhere;
@@ -107,11 +117,21 @@ function injetarEstiloEmpreiteiro() {
             font-weight: 800;
             white-space: nowrap;
         }
+        #panelListaEmpreiteiros .empreiteiro-valores-cell {
+            color: #047857;
+            font-size: .74rem;
+            line-height: 1.35;
+            font-weight: 800;
+            white-space: normal;
+        }
         @media (max-width: 760px) {
             #formEmpreiteiro.form-empreiteiro,
             #formEmpreiteiro .emp-matos-row,
             #formEmpreiteiro .emp-matos-labels {
                 grid-template-columns: 1fr;
+            }
+            #formEmpreiteiro .emp-matos-row {
+                gap: 8px;
             }
             #formEmpreiteiro .emp-matos-labels span:not(:first-child) {
                 display: none;
@@ -135,17 +155,43 @@ function normalizarNomeMato(nome) {
     return (nome || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
 
+function parseValorEmpreiteiro(valor) {
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+    if (window.parseCurrencyValue) return Number(window.parseCurrencyValue(valor)) || 0;
+    const texto = String(valor ?? '').trim().replace(/R\$\s?/gi, '').replace(/\./g, '').replace(',', '.');
+    const numero = Number(texto);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function obterMatosDaOpcaoEmpreiteiro(opcao) {
+    if (!opcao) return [];
+    try {
+        const matos = JSON.parse(opcao.dataset?.matos || '[]');
+        return Array.isArray(matos) ? matos.map(mato => criarMatoEmpreiteiro(
+            mato?.nome,
+            mato?.valorMetro ?? mato?.valorTora ?? mato?.valorToraM3,
+            mato
+        )).filter(mato => mato.nome) : [];
+    } catch {
+        return [];
+    }
+}
+
 function obterMatosEmpreiteiro(emp) {
     const matos = Array.isArray(emp?.matos) ? emp.matos : [];
     const normalizados = matos.map(mato => {
         if (typeof mato === 'string') {
-            return criarMatoEmpreiteiro(mato, Number(emp?.valorMetro) || 0);
+            return criarMatoEmpreiteiro(mato, parseValorEmpreiteiro(emp?.valorMetro));
         }
-        return criarMatoEmpreiteiro(mato?.nome, mato?.valorMetro ?? emp?.valorMetro, mato);
+        return criarMatoEmpreiteiro(
+            mato?.nome,
+            mato?.valorMetro ?? mato?.valorTora ?? mato?.valorToraM3 ?? emp?.valorMetro,
+            mato
+        );
     });
 
     if (normalizados.length === 0 && emp?.mato) {
-        normalizados.push(criarMatoEmpreiteiro(emp.mato, Number(emp?.valorMetro) || 0, emp));
+        normalizados.push(criarMatoEmpreiteiro(emp.mato, parseValorEmpreiteiro(emp?.valorMetro), emp));
     }
 
     const unicos = new Map();
@@ -154,47 +200,71 @@ function obterMatosEmpreiteiro(emp) {
 }
 
 function criarMatoEmpreiteiro(nome, valorMetro = 0, extras = {}) {
-    const valorPadrao = Number(valorMetro ?? extras?.valorMetro) || 0;
+    const valorPadrao = parseValorEmpreiteiro(valorMetro ?? extras?.valorMetro ?? extras?.valorTora ?? extras?.valorToraM3);
     return {
         nome: (nome || '').toString().toUpperCase().trim(),
         valorMetro: valorPadrao,
-        valorLenha: Number(extras?.valorLenha ?? extras?.valorMetroLenha ?? 0) || 0,
-        valorOutros: Number(extras?.valorOutros ?? extras?.valorMetroOutros ?? 0) || 0,
-        valorCorteRemocao: Number(extras?.valorCorteRemocao ?? extras?.valorCorte ?? 0) || 0
+        valorLenha: parseValorEmpreiteiro(extras?.valorLenha ?? extras?.valorMetroLenha ?? extras?.valorLenhaM3 ?? 0),
+        valorOutros: parseValorEmpreiteiro(extras?.valorOutros ?? extras?.valorMetroOutros ?? extras?.valorOutrosM3 ?? 0),
+        valorCorteRemocao: parseValorEmpreiteiro(extras?.valorCorteRemocao ?? extras?.valorCorte ?? extras?.valorRemocao ?? 0)
     };
 }
 
 function obterValorMatoPorProduto(mato = {}, produto = '') {
     const tipo = normalizarNomeMato(produto);
-    if (tipo.includes('LENHA')) return Number(mato.valorLenha ?? mato.valorMetro) || 0;
-    if (tipo.includes('CORTE') || tipo.includes('REMOCAO') || tipo.includes('REMOÇÃO')) return Number(mato.valorCorteRemocao ?? 0) || 0;
-    if (tipo.includes('OUTRO')) return Number(mato.valorOutros ?? mato.valorMetro) || 0;
-    return Number(mato.valorMetro) || 0;
+    if (tipo.includes('LENHA')) return parseValorEmpreiteiro(mato.valorLenha);
+    if (tipo.includes('CORTE') || tipo.includes('REMOCAO')) return parseValorEmpreiteiro(mato.valorCorteRemocao);
+    if (tipo.includes('OUTRO')) return parseValorEmpreiteiro(mato.valorOutros);
+    return parseValorEmpreiteiro(mato.valorMetro);
+}
+
+function produtoCombinaComMato(produto, mato) {
+    const produtoNormalizado = normalizarNomeMato(produto);
+    const matoNormalizado = normalizarNomeMato(mato?.nome);
+    if (!produtoNormalizado || !matoNormalizado) return false;
+    if (produtoNormalizado.includes('EUCALIPTO')) return matoNormalizado.includes('EUCALIPTO');
+    if (produtoNormalizado.includes('PINO')) return matoNormalizado.includes('PINO') || matoNormalizado.includes('PINUS');
+    if (produtoNormalizado.includes('CEDRO')) return matoNormalizado.includes('CEDRO');
+    return false;
+}
+
+function selecionarMatoPorProduto() {
+    const entMatoSelect = document.getElementById('entMatoSelect');
+    if (!entMatoSelect || entMatoSelect.style.display === 'none') return;
+    if (entMatoSelect.dataset.matoManual === '1') return;
+
+    const opcaoEmpreiteiro = selectEmpreiteiro?.options[selectEmpreiteiro.selectedIndex];
+    const matos = obterMatosDaOpcaoEmpreiteiro(opcaoEmpreiteiro);
+    const produto = document.getElementById('entProdutoCarga')?.value || '';
+    const correspondente = matos.find(mato => produtoCombinaComMato(produto, mato));
+
+    if (correspondente) {
+        entMatoSelect.value = correspondente.nome;
+        if (entMato) entMato.value = correspondente.nome;
+    }
 }
 
 function obterMatoSelecionadoEntrada() {
     const selectMato = document.getElementById('entMatoSelect');
-    if (selectMato && selectMato.style.display !== 'none' && selectMato.selectedIndex > 0) {
-        const opt = selectMato.selectedOptions[0];
-        return {
-            nome: opt.value,
-            valorMetro: Number(opt.dataset.valor || 0),
-            valorLenha: Number(opt.dataset.valorLenha || 0),
-            valorOutros: Number(opt.dataset.valorOutros || 0),
-            valorCorteRemocao: Number(opt.dataset.valorCorteRemocao || 0)
-        };
+    if (!selectEmpreiteiro || selectEmpreiteiro.selectedIndex <= 0) return {};
+
+    const opt = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
+    const matos = obterMatosDaOpcaoEmpreiteiro(opt);
+    if (selectMato && selectMato.style.display !== 'none') {
+        if (selectMato.selectedIndex <= 0) return {};
+        const matoSelecionado = matos.find(mato => normalizarNomeMato(mato.nome) === normalizarNomeMato(selectMato.value));
+        return matoSelecionado || {};
     }
-    if (selectEmpreiteiro && selectEmpreiteiro.selectedIndex > 0) {
-        const opt = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
-        return {
-            nome: entMato?.value || '',
-            valorMetro: Number(opt.dataset.valor || 0),
-            valorLenha: Number(opt.dataset.valorLenha || 0),
-            valorOutros: Number(opt.dataset.valorOutros || 0),
-            valorCorteRemocao: Number(opt.dataset.valorCorteRemocao || 0)
-        };
-    }
-    return {};
+
+    const nomeMato = entMato?.value || '';
+    const matoSelecionado = matos.find(mato => normalizarNomeMato(mato.nome) === normalizarNomeMato(nomeMato));
+    if (matoSelecionado) return matoSelecionado;
+
+    return criarMatoEmpreiteiro(nomeMato, opt.dataset.valor, {
+        valorLenha: opt.dataset.valorLenha,
+        valorOutros: opt.dataset.valorOutros,
+        valorCorteRemocao: opt.dataset.valorCorteRemocao
+    });
 }
 
 function renderizarMatosEmpreiteiro() {
@@ -297,12 +367,17 @@ function renderizarEmpreiteiros() {
 
     filtrados.forEach(emp => {
         const tr = document.createElement('tr');
-        const valorFormatado = parseFloat(emp.valorMetro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        const matos = obterMatosEmpreiteiro(emp);
+        const valorPrincipal = matos[0]?.valorMetro ?? parseValorEmpreiteiro(emp.valorMetro);
+        const valorFormatado = valorPrincipal.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        const valoresResumo = matos.length
+            ? matos.map(mato => `${mato.nome}: Tora ${parseValorEmpreiteiro(mato.valorMetro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} · Lenha ${parseValorEmpreiteiro(mato.valorLenha).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`).join('<br>')
+            : valorFormatado;
         tr.innerHTML = `
             <td><strong>${emp.nome}</strong></td>
             <td>${emp.contato || '-'}</td>
             <td class="empreiteiro-matos-cell">${formatarMatosListaEmpreiteiro(emp)}</td>
-            <td style="color:var(--accent-color); font-weight:bold;">${valorFormatado}</td>
+            <td class="empreiteiro-valores-cell">${valoresResumo}</td>
             <td>${emp.pix || '-'}</td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
@@ -324,10 +399,14 @@ function atualizarSelectEmpreiteiros() {
     selectEmpreiteiro.innerHTML = '<option value="">Selecione o Empreiteiro...</option>';
     empreiteirosAtuais.forEach(emp => {
         const opt = document.createElement('option');
+        const matos = obterMatosEmpreiteiro(emp);
         opt.value = emp.id;
         opt.textContent = emp.nome;
-        opt.dataset.valor = emp.valorMetro;
-        opt.dataset.matos = JSON.stringify(obterMatosEmpreiteiro(emp));
+        opt.dataset.valor = parseValorEmpreiteiro(matos[0]?.valorMetro ?? emp.valorMetro);
+        opt.dataset.valorLenha = parseValorEmpreiteiro(matos[0]?.valorLenha);
+        opt.dataset.valorOutros = parseValorEmpreiteiro(matos[0]?.valorOutros);
+        opt.dataset.valorCorteRemocao = parseValorEmpreiteiro(matos[0]?.valorCorteRemocao);
+        opt.dataset.matos = JSON.stringify(matos);
         selectEmpreiteiro.appendChild(opt);
     });
 }
@@ -358,14 +437,10 @@ function preencherDadosEmpreiteiroSelecionado() {
     if (!selectEmpreiteiro) return;
     const opt = selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex];
     const entMatoSelect = document.getElementById('entMatoSelect');
-    let matos = [];
-    try {
-        matos = JSON.parse(opt?.dataset?.matos || '[]');
-    } catch {
-        matos = [];
-    }
+    const matos = obterMatosDaOpcaoEmpreiteiro(opt);
 
     if (!entMato || !entMatoSelect) return;
+    entMatoSelect.dataset.matoManual = '0';
     entMatoSelect.innerHTML = '<option value="">Selecione o Mato...</option>';
 
     if (matos.length > 1) {
@@ -374,15 +449,16 @@ function preencherDadosEmpreiteiroSelecionado() {
             option.value = mato.nome;
             const valorTexto = Number(mato.valorMetro || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
             option.textContent = usuarioPodeVerFinanceiroEmpreiteiro() ? `${mato.nome} - Tora ${valorTexto}/m3` : mato.nome;
-            option.dataset.valor = mato.valorMetro || 0;
-            option.dataset.valorLenha = mato.valorLenha || 0;
-            option.dataset.valorOutros = mato.valorOutros || 0;
-            option.dataset.valorCorteRemocao = mato.valorCorteRemocao || 0;
+            option.dataset.valor = parseValorEmpreiteiro(mato.valorMetro);
+            option.dataset.valorLenha = parseValorEmpreiteiro(mato.valorLenha);
+            option.dataset.valorOutros = parseValorEmpreiteiro(mato.valorOutros);
+            option.dataset.valorCorteRemocao = parseValorEmpreiteiro(mato.valorCorteRemocao);
             entMatoSelect.appendChild(option);
         });
         entMato.value = '';
         entMato.style.display = 'none';
         entMatoSelect.style.display = 'block';
+        selecionarMatoPorProduto();
         return;
     }
 
@@ -390,10 +466,10 @@ function preencherDadosEmpreiteiroSelecionado() {
     entMato.style.display = 'block';
     entMato.value = (matos[0]?.nome || '').toUpperCase();
     if (selectEmpreiteiro && matos[0]) {
-        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valor = matos[0].valorMetro || 0;
-        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorLenha = matos[0].valorLenha || 0;
-        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorOutros = matos[0].valorOutros || 0;
-        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorCorteRemocao = matos[0].valorCorteRemocao || 0;
+        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valor = parseValorEmpreiteiro(matos[0].valorMetro);
+        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorLenha = parseValorEmpreiteiro(matos[0].valorLenha);
+        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorOutros = parseValorEmpreiteiro(matos[0].valorOutros);
+        selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].dataset.valorCorteRemocao = parseValorEmpreiteiro(matos[0].valorCorteRemocao);
     }
 }
 
@@ -488,7 +564,7 @@ window.deletarEmpreiteiro = async function(id) {
 
 
 // --- 2. ENTRADA DE TORAS (CÁLCULOS E REGISTRO) ---
-let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entMato, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
+let formEntrada, listaEntradas, listaDescarregamentos, filtroEntradasNome, filtroDescargaNome, entRomaneio, entMato, entComp, entLarg, inputsAlt = [], resVolume, resInfo, resFinanceiro, infoFinanceira, entInfoTarifaEmpreiteiro, entData, entHorario, entValorDescarga, resDescarga, infoDescarga;
 
 let entradaEditandoId = null;
 window.entradasAtuaisLista = [];
@@ -943,6 +1019,9 @@ async function sincronizarCreditosDescargaNoRH(entradaId, dadosEntrada) {
     }));
 }
 let entradasUnsubscribe = null;
+let entradasCarregadas = false;
+let entradasComErro = false;
+let renderDescarregamentosId = 0;
 const FECHAMENTOS_SALVOS_KEY = 'orquestra_fechamentos_salvos';
 let fechamentosSalvosExtracao = [];
 
@@ -1213,8 +1292,11 @@ function aplicarVisibilidadeFinanceiraEntrada() {
     if (cardEmpreiteiro) cardEmpreiteiro.style.display = podeVerEmpreiteiro ? 'block' : 'none';
 }
 
-function temDescarga(en) {
-    return (en.totalDescarga || 0) > 0 && (en.valorDescargaM3 || 0) > 0;
+function temDescarga(en = {}) {
+    return en.temDescarregamento === true
+        || (Array.isArray(en.responsaveisDescarga) && en.responsaveisDescarga.length > 0)
+        || Number(en.totalDescarga || 0) > 0
+        || Number(en.valorDescargaM3 || 0) > 0;
 }
 
 function entradaCompraAvulsaAtiva() {
@@ -1341,18 +1423,39 @@ function calcularVolumeAtual() {
     
     // Calculo Financeiro
     let valorMetro = 0;
+    let matoSelecionado = {};
+    let produtoCarga = document.getElementById('entProdutoCarga')?.value || '';
     if (entradaCompraAvulsaAtiva()) {
         valorMetro = window.parseCurrencyValue ? window.parseCurrencyValue(document.getElementById('entValorAvulso')?.value || '0') : 0;
     } else if(selectEmpreiteiro && selectEmpreiteiro.selectedIndex > 0) {
-        const produtoCarga = document.getElementById('entProdutoCarga')?.value || '';
-        valorMetro = obterValorMatoPorProduto(obterMatoSelecionadoEntrada(), produtoCarga);
+        matoSelecionado = obterMatoSelecionadoEntrada();
+        valorMetro = produtoCarga ? obterValorMatoPorProduto(matoSelecionado, produtoCarga) : 0;
     }
     
     const totalFinanceiro = volume * valorMetro;
     if (resFinanceiro) resFinanceiro.textContent = totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     if (infoFinanceira) {
-        const produtoCarga = document.getElementById('entProdutoCarga')?.value || 'TORA';
-        infoFinanceira.textContent = `${formatDecimalValue(volume)} m3 x ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m3 = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} (${produtoCarga})`;
+        infoFinanceira.textContent = matoSelecionado.nome && produtoCarga
+            ? `${formatDecimalValue(volume)} m³ x ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³ = ${totalFinanceiro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} (${produtoCarga})`
+            : 'Selecione o mato e o produto para aplicar o valor combinado.';
+    }
+    if (entInfoTarifaEmpreiteiro) {
+        if (entradaCompraAvulsaAtiva()) {
+            entInfoTarifaEmpreiteiro.textContent = `Compra avulsa: ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³.`;
+            entInfoTarifaEmpreiteiro.dataset.estado = 'ok';
+        } else if (matoSelecionado.nome && produtoCarga) {
+            entInfoTarifaEmpreiteiro.textContent = `Valor aplicado: ${matoSelecionado.nome} · ${produtoCarga} · ${valorMetro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/m³.`;
+            entInfoTarifaEmpreiteiro.dataset.estado = 'ok';
+        } else if (matoSelecionado.nome) {
+            entInfoTarifaEmpreiteiro.textContent = 'Selecione o produto para aplicar a tarifa correta.';
+            entInfoTarifaEmpreiteiro.dataset.estado = 'alerta';
+        } else if (selectEmpreiteiro?.selectedIndex > 0) {
+            entInfoTarifaEmpreiteiro.textContent = 'Selecione o mato para usar o preço cadastrado corretamente.';
+            entInfoTarifaEmpreiteiro.dataset.estado = 'alerta';
+        } else {
+            entInfoTarifaEmpreiteiro.textContent = 'Selecione o empreiteiro, o mato e o produto para aplicar a tarifa.';
+            entInfoTarifaEmpreiteiro.dataset.estado = 'neutro';
+        }
     }
 
     atualizarValorDescargaPorHorario();
@@ -1367,21 +1470,32 @@ function calcularVolumeAtual() {
     atualizarDivisaoDescarga();
 
     aplicarVisibilidadeFinanceiraEntrada();
-    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga };
+    return { volume, mediaAltura, pontos: valoresAltura.length, comp: c, larg: l, valorMetro, totalFinanceiro, valorDescargaM3, totalDescarga, mato: matoSelecionado.nome || '', produtoCarga };
 }
 
 async function carregarEntradas() {
-    if(!listaEntradas) return;
-    listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>';
+    if (!listaEntradas && !listaDescarregamentos) return;
 
     if (entradasUnsubscribe) {
         renderizarEntradas();
+        renderizarDescarregamentos();
         return;
+    }
+
+    entradasCarregadas = false;
+    entradasComErro = false;
+    if (listaEntradas) {
+        listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando entradas...</td></tr>';
+    }
+    if (listaDescarregamentos) {
+        listaDescarregamentos.innerHTML = '<tr><td colspan="9" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando descarregamentos...</td></tr>';
     }
 
     try {
         entradasUnsubscribe = onSnapshot(collection(db, 'entradas'), (querySnapshot) => {
             window.entradasAtuaisLista = [];
+            entradasCarregadas = true;
+            entradasComErro = false;
             const idsAtuais = new Set();
             querySnapshot.forEach(docSnap => {
                 idsAtuais.add(docSnap.id);
@@ -1398,13 +1512,56 @@ async function carregarEntradas() {
             renderizarDescarregamentos();
         }, (error) => {
             console.error(error);
-            listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
+            entradasCarregadas = true;
+            entradasComErro = true;
+            renderizarErroEntradas();
+            renderizarErroDescarregamentos();
         });
     } catch (error) {
         console.error(error);
-        listaEntradas.innerHTML = '<tr><td colspan="7" style="text-align:center; color: red;">Erro ao carregar entradas.</td></tr>';
+        entradasCarregadas = true;
+        entradasComErro = true;
+        renderizarErroEntradas();
+        renderizarErroDescarregamentos();
     }
 }
+
+function renderizarErroEntradas() {
+    if (!listaEntradas) return;
+    listaEntradas.innerHTML = `
+        <tr>
+            <td colspan="7" style="text-align:center; color:var(--danger-color); padding:18px;">
+                Não foi possível carregar as entradas agora.<br>
+                <button type="button" class="btn-secondary" style="margin-top:10px;" onclick="window.recarregarEntradas()">
+                    <i class="fa-solid fa-rotate-right"></i> Tentar novamente
+                </button>
+            </td>
+        </tr>`;
+}
+
+function renderizarErroDescarregamentos() {
+    if (!listaDescarregamentos) return;
+    renderDescarregamentosId += 1;
+    listaDescarregamentos.innerHTML = `
+        <tr>
+            <td colspan="9" style="text-align:center; color:var(--danger-color); padding:18px;">
+                Não foi possível carregar os descarregamentos agora.<br>
+                <button type="button" class="btn-secondary" style="margin-top:10px;" onclick="window.recarregarEntradas()">
+                    <i class="fa-solid fa-rotate-right"></i> Tentar novamente
+                </button>
+            </td>
+        </tr>`;
+    atualizarResumoDescarregamento([]);
+    atualizarSelecaoDescarregamento([]);
+}
+
+window.recarregarEntradas = async function() {
+    if (typeof entradasUnsubscribe === 'function') {
+        entradasUnsubscribe();
+        entradasUnsubscribe = null;
+    }
+    await carregarEntradas();
+};
 
 function renderizarEntradas() {
     if(!listaEntradas) return;
@@ -1414,7 +1571,8 @@ function renderizarEntradas() {
     const dataInicio = document.getElementById('filtroEntradasDataInicio')?.value || '';
     const dataFim = document.getElementById('filtroEntradasDataFim')?.value || '';
     
-    const filtradas = window.entradasAtuaisLista.filter(en => {
+    const entradas = Array.isArray(window.entradasAtuaisLista) ? window.entradasAtuaisLista : [];
+    const filtradas = entradas.filter(en => {
         // Filtro por fornecedor, mato ou romaneio
         const emp = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
         const mato = (en.mato || '').toLowerCase();
@@ -1514,7 +1672,8 @@ function getDescargasFiltradas() {
     const dataInicio = document.getElementById('filtroDescargaDataInicio')?.value || '';
     const dataFim = document.getElementById('filtroDescargaDataFim')?.value || '';
 
-    return window.entradasAtuaisLista.filter(en => {
+    const entradas = Array.isArray(window.entradasAtuaisLista) ? window.entradasAtuaisLista : [];
+    return entradas.filter(en => {
         if (!temDescarga(en)) return false;
         const funcionario = (en.criadoPor?.nome || en.usuarioNome || en.autorNome || '').toLowerCase();
         const fornecedor = (en.empreiteiroNome || en.fornecedor || '').toLowerCase();
@@ -1530,6 +1689,15 @@ function getDescargasFiltradas() {
 
 function renderizarDescarregamentos() {
     if (!listaDescarregamentos) return;
+    const renderId = ++renderDescarregamentosId;
+    if (!entradasCarregadas) {
+        listaDescarregamentos.innerHTML = '<tr><td colspan="9" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando descarregamentos...</td></tr>';
+        return;
+    }
+    if (entradasComErro) {
+        renderizarErroDescarregamentos();
+        return;
+    }
     const filtradas = getDescargasFiltradas();
     const idsVisiveis = new Set(filtradas.map(en => en.id));
     descargasSelecionadas.forEach(id => {
@@ -1537,14 +1705,23 @@ function renderizarDescarregamentos() {
     });
 
     if (filtradas.length === 0) {
-        listaDescarregamentos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum descarregamento com valor encontrado.</td></tr>';
+        listaDescarregamentos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum descarregamento encontrado para os filtros atuais.</td></tr>';
         atualizarResumoDescarregamento(filtradas);
         atualizarSelecaoDescarregamento(filtradas);
         return;
     }
 
     listaDescarregamentos.innerHTML = '';
-    filtradas.forEach(en => {
+    atualizarResumoDescarregamento(filtradas);
+    atualizarSelecaoDescarregamento(filtradas);
+
+    let indice = 0;
+    const renderizarLote = () => {
+        if (renderId !== renderDescarregamentosId || !listaDescarregamentos) return;
+        const fragmento = document.createDocumentFragment();
+        const limite = Math.min(indice + 20, filtradas.length);
+        for (; indice < limite; indice += 1) {
+            const en = filtradas[indice];
         const tr = document.createElement('tr');
         const dtStr = new Date(en.data + 'T12:00:00').toLocaleDateString('pt-BR');
         const funcionario = en.criadoPor?.nome || en.usuarioNome || en.autorNome || '-';
@@ -1555,9 +1732,9 @@ function renderizarDescarregamentos() {
             <td><strong>${en.empreiteiroNome || en.fornecedor || '-'}</strong><br><small style="color:var(--text-muted);">Mato: ${en.mato || '-'}</small><br><small style="color:var(--text-muted);">Rom: ${en.romaneioNum || '-'}</small></td>
             <td style="font-size: 0.9em;">C: ${formatDecimalValue(en.comp)}m | L: ${formatDecimalValue(en.larg)}m<br>A. Média: ${formatDecimalValue(en.mediaAltura)}m</td>
             <td><span class="badge" style="background:#555;">${en.placa || '-'}</span></td>
-            <td style="font-weight:bold; color:var(--accent-color);">${(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
-            <td>${(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
-            <td style="font-weight:bold; color:#f59e0b;">${(en.totalDescarga || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+            <td style="font-weight:bold; color:var(--accent-color);">${Number(en.volume || 0).toFixed(2).replace('.', ',')} m³</td>
+            <td>${Number(en.valorDescargaM3 || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+            <td style="font-weight:bold; color:#f59e0b;">${Number(en.totalDescarga || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                     <button onclick="window.visualizarEntrada('${en.id}')" class="btn-icon" style="color:var(--accent); font-size:1.1rem; padding: 4px;" title="Visualizar Descarregamento">
@@ -1572,11 +1749,15 @@ function renderizarDescarregamentos() {
                 </div>
             </td>
         `;
-        listaDescarregamentos.appendChild(tr);
-    });
+            fragmento.appendChild(tr);
+        }
+        listaDescarregamentos.appendChild(fragmento);
+        if (indice < filtradas.length) {
+            window.requestAnimationFrame(renderizarLote);
+        }
+    };
 
-    atualizarResumoDescarregamento(filtradas);
-    atualizarSelecaoDescarregamento(filtradas);
+    renderizarLote();
 }
 window.renderizarDescarregamentos = renderizarDescarregamentos;
 
@@ -2237,6 +2418,11 @@ function configurarSubmitEntrada() {
         
         const origemTora = document.getElementById('entOrigemTora')?.value || 'EMPREITEIRO';
         const compraAvulsa = origemTora === 'COMPRA_AVULSA';
+        if (!compraAvulsa && !calcData.mato) {
+            alert('Selecione o mato correspondente ao valor combinado antes de registrar a entrada.');
+            document.getElementById('entMatoSelect')?.focus();
+            return;
+        }
         const empreiteiroId = compraAvulsa ? null : selectEmpreiteiro.value;
         const fornecedorAvulso = (document.getElementById('entFornecedorAvulso')?.value || '').toUpperCase().trim();
         const empreiteiroNome = compraAvulsa ? fornecedorAvulso : selectEmpreiteiro.options[selectEmpreiteiro.selectedIndex].text;
@@ -2264,7 +2450,7 @@ function configurarSubmitEntrada() {
             empreiteiroId: empreiteiroId,
             empreiteiroNome: empreiteiroNome,
             fornecedor: empreiteiroNome,
-            mato: (mapaMato?.nome || (document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
+            mato: (mapaMato?.nome || calcData.mato || (document.getElementById('entMatoSelect')?.style.display !== 'none' ? document.getElementById('entMatoSelect')?.value : entMato?.value) || '').toUpperCase().trim(),
             mapaMatoId: mapaMato?.id || null,
             mapaMatoNome: mapaMato?.nome || null,
             mapaMatoProprietario: mapaMato?.proprietario || null,
@@ -2441,6 +2627,10 @@ window.alterarEntrada = async function(id) {
     }
     const produtoCargaInput = document.getElementById('entProdutoCarga');
     if (produtoCargaInput) produtoCargaInput.value = en.produtoCarga || '';
+    if (entMatoSelect) {
+        entMatoSelect.dataset.matoManual = en.mato ? '1' : '0';
+        if (!en.mato) selecionarMatoPorProduto();
+    }
     const observacaoCargaInput = document.getElementById('entObservacaoCarga');
     if (observacaoCargaInput) observacaoCargaInput.value = en.observacaoCarga || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
@@ -2718,6 +2908,7 @@ function inicializarModuloEntrada() {
     resInfo = document.getElementById('entInfoMedia');
     resFinanceiro = document.getElementById('entResultadoFinanceiro');
     infoFinanceira = document.getElementById('entInfoFinanceira');
+    entInfoTarifaEmpreiteiro = document.getElementById('entInfoTarifaEmpreiteiro');
     entValorDescarga = document.getElementById('entValorDescarga');
     resDescarga = document.getElementById('entResultadoDescarga');
     infoDescarga = document.getElementById('entInfoDescarga');
@@ -2764,6 +2955,7 @@ function inicializarModuloEntrada() {
     const entMatoSelect = document.getElementById('entMatoSelect');
     if (entMatoSelect) {
         entMatoSelect.addEventListener('change', () => {
+            entMatoSelect.dataset.matoManual = '1';
             if (entMato) entMato.value = entMatoSelect.value;
             calcularVolumeAtual();
         });
@@ -2804,7 +2996,10 @@ function inicializarModuloEntrada() {
         entHorario.addEventListener('change', calcularVolumeAtual);
     }
     const entProdutoCarga = document.getElementById('entProdutoCarga');
-    if (entProdutoCarga) entProdutoCarga.addEventListener('change', calcularVolumeAtual);
+    if (entProdutoCarga) entProdutoCarga.addEventListener('change', () => {
+        selecionarMatoPorProduto();
+        calcularVolumeAtual();
+    });
 
     carregarMatosMapaEntrada();
     document.addEventListener('mapa:updated', () => carregarMatosMapaEntrada(document.getElementById('entMapaMatoId')?.value || ''));
