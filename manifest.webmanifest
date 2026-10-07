@@ -1,7 +1,7 @@
 {
-  "name": "Serraria Vanmarte - Orquestra.cs",
-  "short_name": "Orquestra.cs",
-  "description": "Sistema industrial personalizado da Orquestra.cs.",
+  "name": "Orquestra MAD360 - Gestão Industrial Madeireira",
+  "short_name": "MAD360",
+  "description": "Plataforma de gestão para a indústria madeireira, desenvolvida pela Orquestra.cs.",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",

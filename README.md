@@ -1,6 +1,8 @@
-# Sistema Serraria
+# Orquestra MAD360
 
-Sistema de gestao operacional para serrarias, com foco em controle de romaneios, estoque, frota, financeiro, RH, patio e relatorios.
+Plataforma de gestao industrial madeireira, com foco em controle de romaneios, estoque, frota, financeiro, RH, patio e relatorios.
+
+Produto desenvolvido pela Orquestra.cs.
 
 ## Modulos principais
 
