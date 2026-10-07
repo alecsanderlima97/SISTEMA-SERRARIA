@@ -884,14 +884,14 @@ async function renderizarProducaoPatio(options = {}) {
                 : `<small style="display:block; color:#334155; font-size:0.78rem; font-weight:900;">* ${formatarResumoPacoteProducao(item)}</small>`;
             return `
             <tr class="fluxo-patio-row-areia ${itensFluxoPatioSelecionados.has(item.id) ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
-                <td class="hide-on-print fluxo-patio-selection-cell"><input type="checkbox" ${itensFluxoPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" title="Selecionar lote"></td>
-                <td>${classeHtml}</td>
-                <td class="fluxo-patio-cubagem">
+                <td class="hide-on-print fluxo-patio-selection-cell" data-mobile-label="Selecionar"><input type="checkbox" ${itensFluxoPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" title="Selecionar lote"></td>
+                <td data-mobile-label="Classe">${classeHtml}</td>
+                <td class="fluxo-patio-cubagem" data-mobile-label="Cubagem">
                     ${cubagemHtml}
                 </td>
-                <td class="fluxo-patio-numero" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
-                <td class="fluxo-patio-numero" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m3</td>
-                <td style="text-align:center;">
+                <td class="fluxo-patio-numero" data-mobile-label="Pacotes" style="font-weight:900; color:#1d4ed8;">${item.pacotes || 0}</td>
+                <td class="fluxo-patio-numero" data-mobile-label="Volume" style="font-weight:900; color:#047857;">${formatDecimalMockup(item.volume || 0)} m3</td>
+                <td data-mobile-label="Acoes" style="text-align:center;">
                     ${botaoPacotePatio('remove', `window.alterarPacotesProducaoPatio('${item.id}', -1, this)`, 'Diminuir')}
                     ${botaoPacotePatio('add', `window.alterarPacotesProducaoPatio('${item.id}', 1, this)`, 'Adicionar')}
                     <button type="button" class="btn-fluxo-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')" title="Editar este pacote e sua configuracao">
