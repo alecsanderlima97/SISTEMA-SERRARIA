@@ -64,6 +64,11 @@ module.exports = async function handler(req, res) {
                     fonteVencimento: 'rotulo VENCIMENTO, linha digitavel, imagem ou vazio',
                     emissao: 'yyyy-mm-dd ou vazio',
                     numeroDocumento: '',
+                    chaveNfe: 'chave de acesso da NF-e, normalmente 44 digitos, ou vazio',
+                    linhaDigitavel: 'linha digitavel completa do boleto ou vazio',
+                    codigoBarras: 'codigo de barras completo ou vazio',
+                    banco: '',
+                    nossoNumero: '',
                     valor: 0,
                     produtos: [{ descricao: '', quantidade: '', valor: 0 }],
                     categoriaSugerida: '',
@@ -94,7 +99,8 @@ module.exports = async function handler(req, res) {
                 'Classifique tipo como BOLETO, IMPOSTO, NOTA FISCAL, CONTA, COMPROVANTE ou DOCUMENTO.',
                 'Para boleto, o valor principal deve vir de (=) VALOR DO DOCUMENTO, VALOR COBRADO, VALOR A PAGAR ou da linha digitavel; nao use juros, multa, mora, desconto, abatimento ou quantidade como valor.',
                 'Para boleto, fornecedor deve ser o BENEFICIARIO/CEDENTE, nunca o PAGADOR.',
-                'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, valorTotal e produtos quando existirem.'
+                'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, chaveNfe, valorTotal e produtos quando existirem.',
+                'Para boleto, extraia linhaDigitavel, codigoBarras, banco e nossoNumero somente quando estiverem legiveis. Nunca invente identificadores.'
             ].join(' '),
             input: [{ role: 'user', content: conteudoUsuario }]
         };

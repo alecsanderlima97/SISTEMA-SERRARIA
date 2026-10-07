@@ -59,9 +59,11 @@ const FINANCEIRO_DOC_CATEGORIAS = {
 
 let financeiroAbaAtiva = 'todos';
 let financeiroAnexosTemp = { documento: null, comprovante: null };
+let financeiroDadosLeituraTemp = null;
 let financeiroRelatorioAtual = [];
 let financeiroNuvemCarregada = false;
 let financeiroOrdenacaoTabela = { campo: 'vencimento', direcao: 'asc' };
+let financeiroClassificacaoManual = false;
 
 function obterPastaFinanceiraItem(item = {}) {
     if (item.pastaFinanceira) return item.pastaFinanceira;
@@ -92,6 +94,114 @@ function obterSubpastaFinanceiraItem(item = {}) {
 
 function normalizarTexto(valor) {
     return (valor || '').toString().trim().toUpperCase();
+}
+
+function obterClassificacaoFinanceiraAutomatica(item = {}) {
+    const pasta = obterPastaFinanceiraItem(item);
+    const subpasta = obterSubpastaFinanceiraItem({ ...item, pastaFinanceira: pasta });
+    return { pasta, subpasta };
+}
+
+function atualizarClassificacaoFinanceiraUI(item = {}) {
+    const classificacao = obterClassificacaoFinanceiraAutomatica(item);
+    const pasta = document.getElementById('financeiroPasta');
+    const subpasta = document.getElementById('financeiroSubpasta');
+    const resumo = document.getElementById('financeiroClassificacaoResumo');
+    if (pasta && !financeiroClassificacaoManual && Array.from(pasta.options).some(option => option.value === classificacao.pasta)) {
+        pasta.value = classificacao.pasta;
+    }
+    if (subpasta && !financeiroClassificacaoManual) subpasta.value = classificacao.subpasta;
+    if (resumo) {
+        const pastaTitulo = FINANCEIRO_PASTAS[classificacao.pasta]?.titulo || classificacao.pasta;
+        resumo.textContent = financeiroClassificacaoManual
+            ? 'Classificação manual ativada.'
+            : `Classificação automática: ${pastaTitulo} / ${classificacao.subpasta}`;
+    }
+}
+
+window.alternarClassificacaoFinanceira = function() {
+    financeiroClassificacaoManual = !financeiroClassificacaoManual;
+    document.querySelectorAll('.financeiro-classificacao-manual').forEach(elemento => {
+        elemento.hidden = !financeiroClassificacaoManual;
+    });
+    const botao = document.getElementById('btnAlternarClassificacaoFinanceira');
+    if (botao) {
+        botao.innerHTML = financeiroClassificacaoManual
+            ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Usar classificação automática'
+            : '<i class="fa-solid fa-sliders"></i> Ajustar manualmente';
+    }
+    atualizarClassificacaoFinanceiraUI({
+        tipo: document.getElementById('financeiroTipo')?.value || '',
+        descricao: document.getElementById('financeiroDescricao')?.value || '',
+        observacao: document.getElementById('financeiroObservacao')?.value || '',
+        conferenciaStatus: 'conferido'
+    });
+};
+
+function obterStatusFinanceiro(item = {}) {
+    if (item.pago || item.situacaoDocumento === 'PAGO_A_VISTA') return 'PAGO';
+    if (item.conferenciaStatus === 'pendente' || ['AGUARDANDO_BOLETO', 'AGUARDANDO_NOTA'].includes(item.situacaoDocumento)) return 'PENDENTE';
+    if (estaVencido(item)) return 'VENCIDO';
+    return financeiroGeraCobranca(item) ? 'A_PAGAR' : 'REGISTRADO';
+}
+
+function criarProcessoFinanceiro(item = {}, documentos = []) {
+    const processoAnterior = item.processoFinanceiro || {};
+    const processoId = item.processoId || processoAnterior.id || item.id || '';
+    return {
+        id: processoId,
+        status: obterStatusFinanceiro(item),
+        natureza: financeiroGeraCobranca(item) ? 'CONTAS_A_PAGAR' : 'DOCUMENTO_FINANCEIRO',
+        valor: Number(item.valor || 0),
+        vencimento: item.vencimento || '',
+        dataEmissao: item.dataEmissao || item.emissao || '',
+        documentos: documentos.map(documento => documento.id).filter(Boolean),
+        atualizadoEm: item.atualizadoEm || item.criadoEm || new Date().toISOString()
+    };
+}
+
+function normalizarLancamentoFinanceiro(item = {}) {
+    if (!item || typeof item !== 'object') return item;
+
+    const documentos = normalizarDocumentosVinculadosFinanceiro(item);
+    const documentoPrincipal = item.documento || documentos.find(documento => documento.categoria !== 'comprovante') || null;
+    const comprovantePrincipal = item.comprovante || documentos.find(documento => documento.categoria === 'comprovante') || null;
+    const normalizado = {
+        ...item,
+        aba: item.aba || 'caixa-financeira',
+        pastaFinanceira: item.pastaFinanceira || obterPastaFinanceiraItem(item),
+        subpastaFinanceira: item.subpastaFinanceira || obterSubpastaFinanceiraItem(item),
+        documentosVinculados: documentos,
+        documento: documentoPrincipal,
+        comprovante: comprovantePrincipal,
+        geraCobranca: item.geraCobranca !== false && !financeiroEhNotaFiscal(item),
+        pago: Boolean(item.pago),
+        conferenciaStatus: item.conferenciaStatus || (['AGUARDANDO_BOLETO', 'AGUARDANDO_NOTA'].includes(item.situacaoDocumento) ? 'pendente' : 'conferido')
+    };
+    normalizado.statusFinanceiro = obterStatusFinanceiro(normalizado);
+    normalizado.processoId = item.processoId || item.processoFinanceiro?.id || item.id || '';
+    normalizado.processoFinanceiro = criarProcessoFinanceiro(normalizado, documentos);
+    return normalizado;
+}
+
+function normalizarMetadadosLeituraFinanceira(dados = {}, anexo = null) {
+    const metadados = {
+        fornecedor: normalizarTexto(dados.fornecedor || ''),
+        cnpj: String(dados.cnpj || '').trim(),
+        numeroDocumento: String(dados.numeroDocumento || '').trim(),
+        chaveNfe: String(dados.chaveNfe || dados.chaveNFe || dados.chave || '').trim(),
+        linhaDigitavel: String(dados.linhaDigitavel || '').trim(),
+        codigoBarras: String(dados.codigoBarras || '').trim(),
+        banco: String(dados.banco || '').trim(),
+        nossoNumero: String(dados.nossoNumero || dados.nossoNumeroBoleto || '').trim(),
+        confianca: dados.confiancaIA || dados.confianca || 'media',
+        confiancaData: dados.confiancaData || dados.confiancaVencimento || 'media',
+        fonteVencimento: dados.fonteVencimento || '',
+        observacao: dados.observacaoIA || dados.observacao || '',
+        analisadoPorIA: Boolean(dados.analisadoPorIA),
+        arquivoNome: anexo?.nome || ''
+    };
+    return Object.fromEntries(Object.entries(metadados).filter(([, valor]) => valor !== '' && valor !== null && valor !== undefined));
 }
 
 function financeiroEhNotaFiscal(item = {}) {
@@ -125,16 +235,23 @@ function obterDataFinanceiroOrdenacao(item = {}) {
 }
 
 function obterStatusOrdemFinanceiro(item = {}) {
-    if (estaVencido(item)) return 0;
-    if (item.conferenciaStatus === 'pendente') return 1;
-    if (!item.pago && financeiroGeraCobranca(item)) return 2;
-    if (financeiroEhNotaFiscal(item)) return 3;
-    if (item.pago) return 4;
+    const status = obterStatusFinanceiro(item);
+    if (status === 'VENCIDO') return 0;
+    if (status === 'PENDENTE') return 1;
+    if (status === 'A_PAGAR') return 2;
+    if (status === 'REGISTRADO') return 3;
+    if (status === 'PAGO') return 4;
     return 5;
 }
 
 function obterLancamentosFinanceiros() {
-    return JSON.parse(localStorage.getItem(FINANCEIRO_KEY) || '[]');
+    try {
+        const registros = JSON.parse(localStorage.getItem(FINANCEIRO_KEY) || '[]');
+        return Array.isArray(registros) ? registros.map(normalizarLancamentoFinanceiro) : [];
+    } catch (error) {
+        console.warn('Não foi possível ler os lançamentos financeiros locais.', error);
+        return [];
+    }
 }
 
 function limparDadosPesadosFinanceiro(item) {
@@ -148,7 +265,7 @@ function limparDadosPesadosFinanceiro(item) {
 }
 
 function salvarLancamentosFinanceiros(lista) {
-    const leves = (lista || []).map(limparDadosPesadosFinanceiro);
+    const leves = (lista || []).map(item => limparDadosPesadosFinanceiro(normalizarLancamentoFinanceiro(item)));
     localStorage.setItem(FINANCEIRO_KEY, JSON.stringify(leves));
 }
 
@@ -240,12 +357,17 @@ function grupoTipoFinanceiro(item = {}) {
 }
 
 function extrairIdentificadoresFinanceiros(item = {}) {
+    const ia = item.ia || {};
     const texto = normalizarTexto([
         item.descricao,
         item.observacao,
-        item.ia?.fornecedor,
-        item.ia?.cnpj,
-        item.ia?.numeroDocumento,
+        ia.fornecedor,
+        ia.cnpj,
+        ia.numeroDocumento,
+        ia.chaveNfe,
+        ia.linhaDigitavel,
+        ia.codigoBarras,
+        ia.nossoNumero,
         item.documento?.nome,
         item.documento?.localPath
     ].filter(Boolean).join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -256,9 +378,84 @@ function extrairIdentificadoresFinanceiros(item = {}) {
     numerosLongos.forEach(valor => ids.add(`num:${valor}`));
     const cnpjs = texto.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g) || [];
     cnpjs.forEach(valor => ids.add(`cnpj:${valor.replace(/\D/g, '')}`));
-    const numeroDocumento = normalizarDescricaoDuplicidadeFinanceira(item.ia?.numeroDocumento || '');
+    const chaveNfe = String(ia.chaveNfe || ia.chaveNFe || '').replace(/\D/g, '');
+    if (chaveNfe.length >= 44) ids.add(`nfe:${chaveNfe}`);
+    const linhaDireta = String(ia.linhaDigitavel || '').replace(/\D/g, '');
+    if (linhaDireta.length >= 44) ids.add(`linha:${linhaDireta}`);
+    const codigoBarras = String(ia.codigoBarras || '').replace(/\D/g, '');
+    if (codigoBarras.length >= 44) ids.add(`barcode:${codigoBarras}`);
+    const nossoNumero = normalizarDescricaoDuplicidadeFinanceira(ia.nossoNumero || ia.nossoNumeroBoleto || '');
+    if (nossoNumero.length >= 4) ids.add(`nosso:${nossoNumero}`);
+    const numeroDocumento = normalizarDescricaoDuplicidadeFinanceira(ia.numeroDocumento || '');
     if (numeroDocumento && numeroDocumento.length >= 4) ids.add(`doc:${numeroDocumento}`);
     return Array.from(ids);
+}
+
+function chavesFortesVinculoFinanceiro(item = {}) {
+    return extrairIdentificadoresFinanceiros(item)
+        .filter(chave => /^(nfe|linha|barcode):/.test(chave));
+}
+
+function normalizarFornecedorVinculoFinanceiro(item = {}) {
+    return normalizarTexto(item.ia?.fornecedor || item.fornecedor || '').replace(/[^A-Z0-9]/g, '');
+}
+
+function diferencaDiasFinanceiro(dataA, dataB) {
+    if (!dataA || !dataB) return null;
+    const primeiro = new Date(`${dataA}T12:00:00`);
+    const segundo = new Date(`${dataB}T12:00:00`);
+    if (Number.isNaN(primeiro.getTime()) || Number.isNaN(segundo.getTime())) return null;
+    return Math.abs(primeiro.getTime() - segundo.getTime()) / 86400000;
+}
+
+function grupoVinculoFinanceiro(item = {}) {
+    const tipo = normalizarTexto(item.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (/NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|XML/.test(tipo)) return 'NOTA_FISCAL';
+    if (/BOLETO|BLOQUETO|COBRANCA|FICHA DE COMPENSACAO/.test(tipo)) return 'BOLETO';
+    if (/COMPROVANTE|PAGAMENTO|PIX|TRANSFERENCIA/.test(tipo)) return 'COMPROVANTE';
+    return grupoTipoFinanceiro(item);
+}
+
+function obterSugestoesVinculoFinanceiro(registro, lista = []) {
+    const gruposVinculaveis = new Set(['NOTA_FISCAL', 'BOLETO', 'COMPROVANTE']);
+    const grupoAtual = grupoVinculoFinanceiro(registro);
+    if (!gruposVinculaveis.has(grupoAtual)) return [];
+    const fortesAtuais = new Set(chavesFortesVinculoFinanceiro(registro));
+    const cnpjAtual = String(registro.ia?.cnpj || '').replace(/\D/g, '');
+    const fornecedorAtual = normalizarFornecedorVinculoFinanceiro(registro);
+    const valorAtual = valorCentavosFinanceiro(registro.valor);
+    const dataAtual = registro.dataEmissao || registro.emissao || registro.vencimento || '';
+    if (!fortesAtuais.size && !cnpjAtual && !fornecedorAtual) return [];
+
+    return lista
+        .filter(item => item?.id && item.id !== registro.id)
+        .map(item => {
+            const grupoItem = grupoVinculoFinanceiro(item);
+            if (grupoItem === grupoAtual || !gruposVinculaveis.has(grupoItem)) return null;
+            const fortesItem = new Set(chavesFortesVinculoFinanceiro(item));
+            const identificadorComum = Array.from(fortesAtuais).find(chave => fortesItem.has(chave));
+            const cnpjComum = cnpjAtual && cnpjAtual === String(item.ia?.cnpj || '').replace(/\D/g, '') ? cnpjAtual : '';
+            const fornecedorComum = fornecedorAtual && fornecedorAtual === normalizarFornecedorVinculoFinanceiro(item);
+            const mesmoValor = valorAtual > 0 && valorAtual === valorCentavosFinanceiro(item.valor);
+            const dias = diferencaDiasFinanceiro(dataAtual, item.dataEmissao || item.emissao || item.vencimento || '');
+            const dataProxima = dias !== null && dias <= 45;
+            if (!identificadorComum && !(cnpjComum && mesmoValor && dataProxima) && !(fornecedorComum && mesmoValor && dataProxima)) return null;
+
+            const confianca = identificadorComum ? 'alta' : (cnpjComum ? 'media' : 'baixa');
+            return {
+                registroId: item.id,
+                tipo: item.tipo || 'DOCUMENTO',
+                descricao: item.descricao || 'Documento financeiro',
+                grupo: grupoItem,
+                confianca,
+                motivo: identificadorComum
+                    ? `Identificador comum: ${identificadorComum.split(':')[0]}`
+                    : `${cnpjComum ? 'CNPJ' : 'fornecedor'} + mesmo valor + data próxima`
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => ({ alta: 0, media: 1, baixa: 2 }[a.confianca] - { alta: 0, media: 1, baixa: 2 }[b.confianca]))
+        .slice(0, 3);
 }
 
 function obterAssinaturasDocumentoFinanceiro(doc = {}) {
@@ -520,7 +717,7 @@ function removerDadosPesadosDocumentoVinculadoFinanceiro(doc) {
 
 function prepararFinanceiroParaNuvem(item) {
     if (!item) return item;
-    return limparDadosPesadosFinanceiro(item);
+    return limparDadosPesadosFinanceiro(normalizarLancamentoFinanceiro(item));
 }
 
 function abrirDbArquivosFinanceiro() {
@@ -868,10 +1065,12 @@ window.irParaFinanceiroAlertas = function() {
 };
 
 function obterStatusItem(item) {
-    if (item.pago) return { label: 'Pago', classe: 'pago' };
-    if (item.conferenciaStatus === 'pendente') return { label: 'Pendente', classe: 'pendente' };
-    if (estaVencido(item)) return { label: 'Vencido', classe: 'vencido' };
-    return { label: item.conferenciaStatus === 'conferido' ? 'Conferido' : 'Não pago', classe: 'aberto' };
+    const status = item.statusFinanceiro || obterStatusFinanceiro(item);
+    if (status === 'PAGO') return { label: 'Pago', classe: 'pago' };
+    if (status === 'PENDENTE') return { label: 'Pendente', classe: 'pendente' };
+    if (status === 'VENCIDO') return { label: 'Vencido', classe: 'vencido' };
+    if (status === 'REGISTRADO') return { label: 'Registrado', classe: 'aberto' };
+    return { label: 'Não pago', classe: 'aberto' };
 }
 
 function atualizarStatusToggle() {
@@ -937,9 +1136,12 @@ function atualizarCategoriaDocumentoFinanceiro(anexo, dados = {}) {
 async function lerArquivoFinanceiro(file, tipo) {
     if (!file) {
         financeiroAnexosTemp[tipo] = null;
+        if (tipo === 'documento') financeiroDadosLeituraTemp = null;
         preencherNomeArquivo(tipo, null);
         return;
     }
+
+    if (tipo === 'documento') financeiroDadosLeituraTemp = null;
 
     const hashArquivo = await calcularHashArquivoFinanceiro(file);
     const anexoPreliminar = {
@@ -1243,6 +1445,11 @@ function normalizarDadosIAFinanceiro(dados = {}) {
         dataEmissao: dados.dataEmissao || dados.emissao || '',
         valor: Number(dados.valor || dados.valorTotal || 0),
         numeroDocumento: dados.numeroDocumento || '',
+        chaveNfe: dados.chaveNfe || dados.chaveNFe || dados.chave || '',
+        linhaDigitavel: dados.linhaDigitavel || '',
+        codigoBarras: dados.codigoBarras || '',
+        banco: dados.banco || '',
+        nossoNumero: dados.nossoNumero || dados.nossoNumeroBoleto || '',
         produtos,
         categoriaSugerida: dados.categoriaSugerida || '',
         pastaSugerida: dados.pastaSugerida || '',
@@ -1620,11 +1827,13 @@ window.lerDocumentoFinanceiroAutomaticamente = async function() {
         alert('Não foi possível identificar os dados do documento. Preencha manualmente.');
         return;
     }
+    financeiroDadosLeituraTemp = normalizarMetadadosLeituraFinanceira(dados, anexo);
     preencherCampoFinanceiro('financeiroTipo', dados.tipo, true);
     preencherCampoFinanceiro('financeiroDescricao', dados.descricao, true);
     preencherCampoFinanceiro('financeiroVencimento', financeiroEhNotaFiscal(dados) ? (dados.dataEmissao || dados.emissao || '') : dados.vencimento, true);
     if (dados.valor > 0) preencherCampoFinanceiro('financeiroValor', formatarMoeda(dados.valor), true);
     atualizarCategoriaDocumentoFinanceiro(anexo, dados);
+    atualizarClassificacaoFinanceiraUI(dados);
     const situacao = document.getElementById('financeiroSituacaoDocumento');
     if (situacao && financeiroEhNotaFiscal(dados)) situacao.value = 'AGUARDANDO_BOLETO';
     const obs = `${usouIA ? 'IMPORTADO DO DOCUMENTO COM APOIO DA IA' : 'IMPORTADO DO DOCUMENTO'}: ${anexo.nome}${dados.precisaConferencia ? ' | CONFERIR DATA E VALOR NO DOCUMENTO' : ''}`;
@@ -2086,6 +2295,164 @@ function salvarEstadoUiFinanceiro(estado) {
     localStorage.setItem(FINANCEIRO_UI_STATE_KEY, JSON.stringify(estado || {}));
 }
 
+function obterMembrosProcessoVinculoFinanceiro(lista, processoId) {
+    if (!processoId) return [];
+    return lista
+        .filter(item => item.processoVinculoId === processoId)
+        .flatMap(item => [item.id, ...(Array.isArray(item.processoVinculoMembros) ? item.processoVinculoMembros : [])])
+        .filter(Boolean);
+}
+
+window.confirmarVinculoFinanceiro = async function(id, alvoId) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(registro => registro.id === id);
+    const alvo = lista.find(registro => registro.id === alvoId);
+    if (!item || !alvo) {
+        alert('Não foi possível localizar os dois documentos para confirmar o vínculo.');
+        return false;
+    }
+
+    const ok = confirm([
+        'Confirmar vínculo financeiro?',
+        '',
+        `${item.tipo || 'Documento'}: ${item.descricao || 'Sem descrição'}`,
+        `${alvo.tipo || 'Documento'}: ${alvo.descricao || 'Sem descrição'}`,
+        '',
+        'Os registros continuarão separados, mas passarão a compartilhar o mesmo processo financeiro.'
+    ].join('\n'));
+    if (!ok) return false;
+
+    const processoIds = new Set([item.processoVinculoId, alvo.processoVinculoId].filter(Boolean));
+    const membros = new Set([item.id, alvo.id]);
+    processoIds.forEach(processoId => obterMembrosProcessoVinculoFinanceiro(lista, processoId).forEach(membro => membros.add(membro)));
+    const processoVinculoId = [...processoIds][0] || `proc_fin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const agora = new Date().toISOString();
+    const membrosFinais = Array.from(membros);
+    const afetados = lista.filter(registro => membros.has(registro.id));
+
+    afetados.forEach(registro => {
+        registro.processoVinculoId = processoVinculoId;
+        registro.processoVinculoStatus = 'CONFIRMADO';
+        registro.processoVinculoMembros = membrosFinais;
+        registro.processoVinculoConfirmadoEm = agora;
+        registro.processoVinculoSugestao = [];
+        registro.atualizadoEm = agora;
+    });
+
+    salvarLancamentosFinanceiros(lista);
+    await Promise.all(afetados.map(registro => salvarFinanceiroNuvem(registro)));
+    renderFinanceiro();
+    alert('Vínculo financeiro confirmado. Os documentos permanecem separados e agora fazem parte do mesmo processo.');
+    return true;
+};
+
+window.desvincularProcessoFinanceiro = async function(id) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(registro => registro.id === id);
+    if (!item?.processoVinculoId) return false;
+    const ok = confirm('Desfazer o vínculo deste processo financeiro? Os documentos continuarão cadastrados separadamente.');
+    if (!ok) return false;
+
+    const membros = new Set(obterMembrosProcessoVinculoFinanceiro(lista, item.processoVinculoId));
+    const afetados = lista.filter(registro => membros.has(registro.id));
+    const agora = new Date().toISOString();
+    afetados.forEach(registro => {
+        registro.processoVinculoId = null;
+        registro.processoVinculoStatus = 'DESVINCULADO';
+        registro.processoVinculoMembros = [];
+        registro.processoVinculoDesvinculadoEm = agora;
+        registro.atualizadoEm = agora;
+    });
+    salvarLancamentosFinanceiros(lista);
+    await Promise.all(afetados.map(registro => salvarFinanceiroNuvem(registro)));
+    renderFinanceiro();
+    alert('Vínculo desfeito. Os documentos continuam preservados na lista financeira.');
+    return true;
+};
+
+window.abrirProcessoFinanceiro = function(id) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(registro => registro.id === id);
+    if (!item?.processoVinculoId) return false;
+    const membros = new Set(obterMembrosProcessoVinculoFinanceiro(lista, item.processoVinculoId));
+    membros.add(item.id);
+    const relacionados = lista.filter(registro => membros.has(registro.id));
+    const overlay = document.createElement('div');
+    overlay.className = 'financeiro-import-modal';
+    overlay.innerHTML = `
+        <div class="financeiro-import-box">
+            <div class="financeiro-import-head">
+                <div>
+                    <h3><i class="fa-solid fa-link"></i> Processo financeiro</h3>
+                    <small>${relacionados.length} documento(s) relacionado(s) · confirmado em ${dataHoraBR(item.processoVinculoConfirmadoEm)}</small>
+                </div>
+                <button type="button" class="btn-secondary" data-action="fechar"><i class="fa-solid fa-xmark"></i> Fechar</button>
+            </div>
+            <div class="financeiro-import-grid" style="display:block; margin-top:14px;">
+                <div style="overflow:auto; border:1px solid rgba(148,163,184,.2); border-radius:8px;">
+                    <table style="width:100%; border-collapse:collapse; min-width:620px;">
+                        <thead><tr><th style="text-align:left; padding:9px;">Tipo</th><th style="text-align:left; padding:9px;">Descrição</th><th style="text-align:left; padding:9px;">Data</th><th style="text-align:right; padding:9px;">Valor</th><th style="text-align:left; padding:9px;">Status</th></tr></thead>
+                        <tbody>${relacionados.map(registro => {
+                            const status = obterStatusItem(registro);
+                            return `<tr><td style="padding:9px; border-top:1px solid rgba(148,163,184,.14);">${escapeHtmlFinanceiro(registro.tipo || 'DOCUMENTO')}</td><td style="padding:9px; border-top:1px solid rgba(148,163,184,.14);">${escapeHtmlFinanceiro(registro.descricao || 'Sem descrição')}</td><td style="padding:9px; border-top:1px solid rgba(148,163,184,.14);">${dataBR(obterDataFinanceiroExibicao(registro))}</td><td style="padding:9px; border-top:1px solid rgba(148,163,184,.14); text-align:right;">${formatarMoeda(registro.valor)}</td><td style="padding:9px; border-top:1px solid rgba(148,163,184,.14);"><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td></tr>`;
+                        }).join('')}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="financeiro-import-actions">
+                <button type="button" class="btn-danger" data-action="desvincular"><i class="fa-solid fa-link-slash"></i> Desfazer vínculo</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('[data-action="fechar"]')?.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-action="desvincular"]')?.addEventListener('click', async () => {
+        overlay.remove();
+        await window.desvincularProcessoFinanceiro(item.id);
+    });
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) overlay.remove();
+    });
+    return true;
+};
+
+window.recalcularSugestoesVinculoFinanceiro = async function() {
+    if (window.App?.userData?.modoTeste) {
+        alert('A varredura de vínculos fica disponível somente fora do modo teste local.');
+        return { encontrados: 0, alterados: 0, somenteLeitura: true };
+    }
+    const lista = obterLancamentosFinanceiros();
+    if (lista.length < 2) {
+        alert('É preciso ter pelo menos dois documentos financeiros cadastrados para procurar vínculos.');
+        return { encontrados: 0, alterados: 0 };
+    }
+    const ok = confirm('Procurar vínculos entre notas fiscais, boletos e comprovantes?\n\nApenas sugestões serão salvas. Nenhum documento será juntado ou excluído automaticamente.');
+    if (!ok) return { encontrados: 0, alterados: 0, cancelado: true };
+
+    let encontrados = 0;
+    const alterados = [];
+    lista.forEach(item => {
+        if (item.processoVinculoId) return;
+        const sugestoes = obterSugestoesVinculoFinanceiro(item, lista.filter(registro => registro.id !== item.id));
+        encontrados += sugestoes.length;
+        if (JSON.stringify(item.processoVinculoSugestao || []) !== JSON.stringify(sugestoes)) {
+            item.processoVinculoSugestao = sugestoes;
+            item.atualizadoEm = new Date().toISOString();
+            alterados.push(item);
+        }
+    });
+
+    if (alterados.length) {
+        salvarLancamentosFinanceiros(lista);
+        await Promise.all(alterados.map(item => salvarFinanceiroNuvem(item)));
+    }
+    renderFinanceiro();
+    alert(encontrados
+        ? `${encontrados} sugestão(ões) de vínculo encontrada(s). Revise cada uma antes de confirmar.`
+        : 'Nenhum vínculo seguro foi encontrado pela regra atual.');
+    return { encontrados, alterados: alterados.length };
+};
+
 function atualizarBotaoCollapseFinanceiro(targetId, oculto) {
     document.querySelectorAll(`[onclick*="${targetId}"]`).forEach(botao => {
         botao.classList.toggle('is-collapsed', oculto);
@@ -2120,15 +2487,23 @@ function aplicarEstadoVisualFinanceiro() {
 window.limparFinanceiroForm = function() {
     document.getElementById('financeiroForm')?.reset();
     document.getElementById('financeiroId').value = '';
+    financeiroClassificacaoManual = false;
+    document.querySelectorAll('.financeiro-classificacao-manual').forEach(elemento => {
+        elemento.hidden = true;
+    });
+    const botaoClassificacao = document.getElementById('btnAlternarClassificacaoFinanceira');
+    if (botaoClassificacao) botaoClassificacao.innerHTML = '<i class="fa-solid fa-sliders"></i> Ajustar manualmente';
     const situacao = document.getElementById('financeiroSituacaoDocumento');
     if (situacao) situacao.value = 'A_PAGAR';
     const categoria = document.getElementById('financeiroDocumentoCategoria');
     if (categoria) categoria.value = 'AUTO';
     financeiroAnexosTemp = { documento: null, comprovante: null };
+    financeiroDadosLeituraTemp = null;
     preencherNomeArquivo('documento', null);
     preencherNomeArquivo('comprovante', null);
     atualizarStatusToggle();
     atualizarDatalistsFinanceiro();
+    atualizarClassificacaoFinanceiraUI({ tipo: '', descricao: '', conferenciaStatus: 'conferido' });
 };
 
 window.renderFinanceiro = function() {
@@ -2148,7 +2523,7 @@ window.renderFinanceiro = function() {
 
     if (filtroStatus === 'PAGO') lista = lista.filter(item => item.pago);
     if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago && financeiroGeraCobranca(item));
-    if (filtroStatus === 'PENDENTE') lista = lista.filter(item => item.conferenciaStatus === 'pendente');
+    if (filtroStatus === 'PENDENTE') lista = lista.filter(item => obterStatusFinanceiro(item) === 'PENDENTE');
     if (filtroStatus === 'VENCIDO') lista = lista.filter(estaVencido);
     if (busca) {
         lista = lista.filter(item => [
@@ -2207,18 +2582,31 @@ window.renderFinanceiro = function() {
         const tooltipLancamento = `Lançado no sistema em: ${criadoEm}${atualizadoEm !== criadoEm ? ` | Última alteração: ${atualizadoEm}` : ''}`;
         const ehNota = financeiroEhNotaFiscal(item);
         const dataExibicao = obterDataFinanceiroExibicao(item);
+        const sugestaoVinculo = Array.isArray(item.processoVinculoSugestao) ? item.processoVinculoSugestao[0] : null;
+        const processoVinculado = Boolean(item.processoVinculoId && item.processoVinculoStatus === 'CONFIRMADO');
+        const vinculoResumo = processoVinculado
+            ? '<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Processo financeiro vinculado</small>'
+            : (sugestaoVinculo
+                ? `<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Vínculo sugerido (${escapeHtmlFinanceiro(sugestaoVinculo.confianca || 'baixa')})</small>`
+                : '');
+        const vinculoAcao = sugestaoVinculo
+            ? `<button type="button" class="btn-icon financeiro-acao-vinculo" onclick="event.stopPropagation(); window.confirmarVinculoFinanceiro('${escapeJsStringFinanceiro(item.id)}', '${escapeJsStringFinanceiro(sugestaoVinculo.registroId)}')" title="Revisar vínculo sugerido com ${escapeHtmlFinanceiro(sugestaoVinculo.descricao || 'outro documento')}" aria-label="Revisar vínculo sugerido"><i class="fa-solid fa-link"></i></button>`
+            : (processoVinculado
+                ? `<button type="button" class="btn-icon financeiro-acao-vinculo" onclick="event.stopPropagation(); window.abrirProcessoFinanceiro('${escapeJsStringFinanceiro(item.id)}')" title="Ver processo financeiro vinculado" aria-label="Ver processo financeiro vinculado"><i class="fa-solid fa-link"></i></button>`
+                : '');
 
         return `
             <tr class="financeiro-row ${duplicado ? 'financeiro-row-duplicado' : ''}" title="${tooltipLancamento}" onclick="window.toggleFinanceiroLinha('${escapeJsStringFinanceiro(item.id)}', event)">
                 <td><input type="checkbox" class="financeiro-check" value="${item.id}" onchange="window.atualizarSelecaoFinanceiro()"></td>
                 <td><span class="financeiro-tipo-pill">${escapeHtmlFinanceiro(item.tipo || 'Documento')}</span></td>
-                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
+                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}${vinculoResumo}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
                 <td>${dataBR(dataExibicao)}${ehNota ? '<small>Emissão fiscal</small>' : ''}</td>
                 <td><strong>${formatarMoeda(item.valor)}</strong></td>
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
                 <td>${anexos || '<span style="color:var(--text-muted);">-</span>'}</td>
                 <td class="financeiro-acoes orq-coluna-acoes-fixa">
                     <div class="financeiro-acoes-inner">
+                        ${vinculoAcao}
                         <button type="button" class="btn-icon financeiro-acao-ia" onclick="event.stopPropagation(); window.analisarFinanceiroDocumento('${item.id}')" title="Ler documento automaticamente" aria-label="Ler documento automaticamente"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                         <button type="button" class="btn-icon financeiro-acao-editar" onclick="event.stopPropagation(); window.editarFinanceiro('${item.id}')" title="Editar lançamento" aria-label="Editar lançamento"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button type="button" class="btn-icon financeiro-acao-pago" onclick="event.stopPropagation(); window.alternarPagoFinanceiro('${item.id}')" title="Marcar como pago ou não pago" aria-label="Marcar como pago ou não pago"><i class="fa-solid fa-circle-check"></i></button>
@@ -2296,6 +2684,11 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             fornecedor: dados.fornecedor || '',
             cnpj: dados.cnpj || '',
             numeroDocumento: dados.numeroDocumento || '',
+            chaveNfe: dados.chaveNfe || dados.chaveNFe || dados.chave || '',
+            linhaDigitavel: dados.linhaDigitavel || '',
+            codigoBarras: dados.codigoBarras || '',
+            banco: dados.banco || '',
+            nossoNumero: dados.nossoNumero || dados.nossoNumeroBoleto || '',
             produtos: dados.produtos || [],
             confiancaData: dados.confiancaData || 'media',
             fonteVencimento: dados.fonteVencimento || '',
@@ -2315,6 +2708,9 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             ia: dadosIA,
             atualizadoEm: new Date().toISOString()
         };
+        if (!atualizado.processoVinculoId) {
+            atualizado.processoVinculoSugestao = obterSugestoesVinculoFinanceiro(atualizado, lista.filter(registro => registro.id !== id));
+        }
         const duplicado = buscarLancamentoDuplicadoFinanceiro(atualizado, id);
         if (duplicado) {
             if (silencioso) {
@@ -2398,6 +2794,7 @@ window.editarFinanceiro = function(id) {
     const categoria = document.getElementById('financeiroDocumentoCategoria');
     if (categoria) categoria.value = principal?.categoria || 'AUTO';
     financeiroAnexosTemp = { documento: item.documento || null, comprovante: item.comprovante || null };
+    financeiroDadosLeituraTemp = item.ia ? { ...item.ia } : null;
     preencherNomeArquivo('documento', item.documento ? { name: item.documento.nome } : null);
     preencherNomeArquivo('comprovante', item.comprovante ? { name: item.comprovante.nome } : null);
     atualizarStatusToggle();
@@ -2589,17 +2986,30 @@ async function salvarFinanceiroSubmit(event) {
     const conferenciaPendente = ['AGUARDANDO_BOLETO', 'AGUARDANDO_NOTA'].includes(situacaoDocumento);
     const vencimentoFinal = ehNotaFiscalManual ? '' : vencimento;
     const dataEmissaoFinal = ehNotaFiscalManual ? (vencimento || existente?.dataEmissao || '') : (existente?.dataEmissao || '');
+    const observacao = document.getElementById('financeiroObservacao').value.trim();
+    const classificacaoAutomatica = obterClassificacaoFinanceiraAutomatica({
+        tipo,
+        descricao,
+        observacao,
+        conferenciaStatus: conferenciaPendente ? 'pendente' : 'conferido'
+    });
+    const pastaFinanceira = financeiroClassificacaoManual
+        ? (document.getElementById('financeiroPasta')?.value || classificacaoAutomatica.pasta)
+        : classificacaoAutomatica.pasta;
+    const subpastaFinanceira = financeiroClassificacaoManual
+        ? normalizarTexto(document.getElementById('financeiroSubpasta')?.value || classificacaoAutomatica.subpasta)
+        : classificacaoAutomatica.subpasta;
     const registro = {
         id,
         aba: financeiroAbaAtiva === 'todos' ? 'caixa-financeira' : financeiroAbaAtiva,
-        pastaFinanceira: document.getElementById('financeiroPasta')?.value || (financeiroAbaAtiva === 'todos' ? 'conferir' : financeiroAbaAtiva),
-        subpastaFinanceira: normalizarTexto(document.getElementById('financeiroSubpasta')?.value || ''),
+        pastaFinanceira,
+        subpastaFinanceira,
         tipo,
         descricao,
         vencimento: vencimentoFinal,
         dataEmissao: dataEmissaoFinal,
         valor,
-        observacao: document.getElementById('financeiroObservacao').value.trim(),
+        observacao,
         situacaoDocumento,
         conferenciaStatus: conferenciaPendente ? 'pendente' : 'conferido',
         geraCobranca: !ehNotaFiscalManual,
@@ -2608,6 +3018,22 @@ async function salvarFinanceiroSubmit(event) {
         documentosVinculados,
         documento: documentoPrincipal,
         comprovante: comprovantePrincipal,
+        ia: financeiroDadosLeituraTemp,
+        processoVinculoId: existente?.processoVinculoId || null,
+        processoVinculoStatus: existente?.processoVinculoStatus || '',
+        processoVinculoMembros: Array.isArray(existente?.processoVinculoMembros) ? existente.processoVinculoMembros : [],
+        processoVinculoConfirmadoEm: existente?.processoVinculoConfirmadoEm || null,
+        processoVinculoSugestao: existente?.processoVinculoId
+            ? []
+            : obterSugestoesVinculoFinanceiro({
+                id,
+                tipo,
+                descricao,
+                vencimento: vencimentoFinal,
+                dataEmissao: dataEmissaoFinal,
+                valor,
+                ia: financeiroDadosLeituraTemp
+            }, lista.filter(item => item.id !== id)),
         atualizadoEm: new Date().toISOString(),
         criadoEm: existente?.criadoEm || new Date().toISOString()
     };
@@ -2643,6 +3069,10 @@ function injetarEstilosFinanceiro() {
         .financeiro-toggle-btn:active, .financeiro-collapse-icon:active, #view-financeiro button:active { transform:translateY(0) scale(.99); }
         .financeiro-toggle-btn.is-collapsed { color:#667085; background:#efe7d8; opacity:.94; }
         .financeiro-card-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .financeiro-classificacao-bar { grid-area:classificacao; min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:7px 9px; border:1px solid #d9e6df; border-radius:8px; background:#f4faf6; color:#166534; font-size:.75rem; font-weight:750; }
+        .financeiro-classificacao-bar i { margin-right:5px; color:#0f8fa6; }
+        .financeiro-classificacao-bar .btn-secondary { min-height:28px; padding:0 9px; font-size:.72rem; }
+        .financeiro-classificacao-manual[hidden] { display:none !important; }
         .financeiro-collapse-icon { width:34px; padding:0; }
         .financeiro-collapsible { transition:opacity .16s ease, max-height .2s ease, margin .16s ease; }
         .financeiro-collapsible.is-collapsed { display:none !important; }
@@ -2701,6 +3131,7 @@ function injetarEstilosFinanceiro() {
         .financeiro-form-card > div:first-child { align-items:center !important; gap:12px; }
         .financeiro-form-grid { display:grid; grid-template-columns: 136px 168px 118px minmax(220px, 1fr) 124px 112px 92px; grid-template-areas:
             "sec-doc sec-doc sec-doc sec-doc sec-doc sec-doc sec-doc"
+            "classificacao classificacao classificacao classificacao classificacao classificacao classificacao"
             "pasta subpasta tipo desc venc valor status"
             "situacao situacao situacao situacao situacao situacao situacao"
             "sec-arq sec-arq sec-arq sec-arq sec-arq sec-arq sec-arq"
@@ -2711,6 +3142,7 @@ function injetarEstilosFinanceiro() {
         .financeiro-form-section:first-of-type { margin-top:0; padding-top:0; border-top:0; }
         .financeiro-form-section i { color:var(--fin-accent); font-size:.78rem; }
         .fin-section-documento { grid-area:sec-doc; }
+        .fin-classificacao { grid-area:classificacao; }
         .fin-section-arquivo { grid-area:sec-arq; }
         .fin-section-final { grid-area:sec-final; }
         .fin-pasta { grid-area:pasta; }
@@ -2834,6 +3266,7 @@ function injetarEstilosFinanceiro() {
         #view-financeiro .financeiro-acao-editar { color:#17406d !important; background:#edf4fb; border-color:#bfd2e6; }
         #view-financeiro .financeiro-acao-pago { color:#0f6840 !important; background:#e6f3ec; border-color:#abd8bf; }
         #view-financeiro .financeiro-acao-excluir { color:#a3202b !important; background:#f8e7e7; border-color:#e7b8bc; }
+        #view-financeiro .financeiro-acao-vinculo { color:#0f6b78 !important; background:#e5f5f5; border-color:#a8d8dc; }
         .financeiro-doc-chip { border:1px solid #c9c3b9; background:#fffdf7; color:#475569; border-radius:7px; min-height:28px; padding:3px 8px; display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:800; margin:2px; cursor:pointer; transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease; }
         .financeiro-doc-chip i { color:var(--doc-color); }
         .financeiro-doc-chip:hover { background:#ffffff; border-color:#a99b86; transform:translateY(-1px); box-shadow:0 6px 14px rgba(23,32,51,.12); }
@@ -2999,6 +3432,7 @@ function injetarEstilosFinanceiro() {
         @media (max-width: 1100px) {
             .financeiro-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas:
                 "sec-doc sec-doc"
+                "classificacao classificacao"
                 "pasta subpasta"
                 "tipo desc"
                 "venc valor"
@@ -3017,6 +3451,7 @@ function injetarEstilosFinanceiro() {
         @media (max-width: 680px) {
             .financeiro-form-grid { grid-template-columns: 1fr; grid-template-areas:
                 "sec-doc"
+                "classificacao"
                 "pasta"
                 "subpasta"
                 "tipo"
@@ -3102,6 +3537,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('financeiroDocumento')?.addEventListener('change', event => lerArquivoFinanceiro(event.target.files[0], 'documento'));
     document.getElementById('financeiroComprovante')?.addEventListener('change', event => lerArquivoFinanceiro(event.target.files[0], 'comprovante'));
     document.getElementById('btnLerDocumentoFinanceiro')?.addEventListener('click', window.lerDocumentoFinanceiroAutomaticamente);
+    ['financeiroTipo', 'financeiroDescricao', 'financeiroObservacao'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            if (!financeiroClassificacaoManual) atualizarClassificacaoFinanceiraUI({
+                tipo: document.getElementById('financeiroTipo')?.value || '',
+                descricao: document.getElementById('financeiroDescricao')?.value || '',
+                observacao: document.getElementById('financeiroObservacao')?.value || '',
+                conferenciaStatus: 'conferido'
+            });
+        });
+    });
     document.getElementById('financeiroArquivosInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroPastaInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroFilaInput')?.addEventListener('change', event => window.importarFilaMonitorFinanceiro(event.target.files));

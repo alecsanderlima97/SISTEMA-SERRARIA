@@ -533,6 +533,73 @@ body.orquestra-theme .weather-popover-actions a {
     .weather-popover-actions a { margin-left: 0; }
 }
 
+/* Fase 2: listas claras precisam manter contraste mesmo quando um módulo
+   antigo injeta cor branca diretamente no HTML da tabela. */
+body.orquestra-theme {
+    --oq-text-table: #172033;
+    --oq-text-table-soft: #475569;
+    --oq-text-table-muted: #64748b;
+}
+
+body.orquestra-theme .view-section table tbody td[style*="color: white"],
+body.orquestra-theme .view-section table tbody td[style*="color:white"],
+body.orquestra-theme .view-section table tbody td[style*="color: #fff"],
+body.orquestra-theme .view-section table tbody td[style*="color:#fff"],
+body.orquestra-theme .view-section table tbody td[style*="color: #ffffff"],
+body.orquestra-theme .view-section table tbody td[style*="color:#ffffff"] {
+    color: var(--oq-text-table) !important;
+    text-shadow: none !important;
+}
+
+body.orquestra-theme .view-section table tbody td span[style*="color: white"],
+body.orquestra-theme .view-section table tbody td span[style*="color:white"],
+body.orquestra-theme .view-section table tbody td span[style*="color: #fff"],
+body.orquestra-theme .view-section table tbody td span[style*="color:#fff"],
+body.orquestra-theme .view-section table tbody td strong[style*="color: white"],
+body.orquestra-theme .view-section table tbody td strong[style*="color:white"],
+body.orquestra-theme .view-section table tbody td strong[style*="color: #fff"],
+body.orquestra-theme .view-section table tbody td strong[style*="color:#fff"] {
+    color: var(--oq-text-table) !important;
+    text-shadow: none !important;
+}
+
+body.orquestra-theme .view-section table tbody td[style*="color: var(--text-muted)"],
+body.orquestra-theme .view-section table tbody td[style*="color:var(--text-muted)"] {
+    color: var(--oq-text-table-muted) !important;
+}
+
+body.orquestra-theme .view-section table tbody td small,
+body.orquestra-theme .view-section table tbody td .muted,
+body.orquestra-theme .view-section table tbody td .text-muted {
+    color: var(--oq-text-table-muted) !important;
+}
+
+body.orquestra-theme .view-section table tbody td a:not(.btn-primary):not(.btn-secondary):not(.btn-danger) {
+    color: #075985 !important;
+}
+
+body.orquestra-theme .view-section table tbody td button {
+    text-shadow: none;
+}
+
+body.orquestra-theme .modal-content-v2 .modal-body-v2 h3[style*="color:white"],
+body.orquestra-theme .modal-content-v2 .modal-body-v2 h3[style*="color: white"] {
+    color: var(--oq-text-table) !important;
+}
+
+body.orquestra-theme .modal-content-v2 .modal-body-v2 form[style*="background: rgba(255,255,255,0.02)"],
+body.orquestra-theme .modal-content-v2 .modal-body-v2 form[style*="background:rgba(255,255,255,0.02)"] {
+    background: var(--oq-card-soft) !important;
+    border-color: var(--oq-line) !important;
+}
+
+body.orquestra-theme .modal-content-v2 .modal-body-v2 .package-table span[style*="color:white"],
+body.orquestra-theme .modal-content-v2 .modal-body-v2 .package-table span[style*="color: white"],
+body.orquestra-theme .modal-content-v2 .modal-body-v2 .package-table td[style*="color:white"],
+body.orquestra-theme .modal-content-v2 .modal-body-v2 .package-table td[style*="color: white"] {
+    color: var(--oq-text-table) !important;
+}
+
 body.orquestra-theme .header-user-group {
     background: rgba(255, 253, 247, 0.72) !important;
     border: 1px solid rgba(201, 187, 167, 0.55) !important;

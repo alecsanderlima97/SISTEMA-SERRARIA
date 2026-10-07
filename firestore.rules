@@ -68,7 +68,7 @@ service cloud.firestore {
     function collectionMatchesSections(collection, sections) {
       return
         ((collection in ['clientes']) && 'view-clientes' in sections)
-        || ((collection in ['clientes_subprodutos', 'vendas_subprodutos']) && 'view-cavaco' in sections)
+        || ((collection in ['clientes_subprodutos', 'vendas_subprodutos', 'fechamentos_subprodutos']) && 'view-cavaco' in sections)
         || ((collection in ['romaneios']) && 'view-romaneio-v2' in sections)
         || ((collection in ['historico', 'romaneios', 'vendas_subprodutos']) && 'view-historico' in sections)
         || ((collection in ['transportes']) && 'view-transportes' in sections)
@@ -77,7 +77,7 @@ service cloud.firestore {
         || ((collection in ['produtos']) && 'view-produtos' in sections)
         || ((collection in ['estoque', 'estoque_movimentacoes']) && 'view-estoque' in sections)
         || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']) && 'view-frotas' in sections)
-        || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais']) && 'view-financeiro' in sections)
+        || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais', 'contas_receber']) && 'view-financeiro' in sections)
         || ((collection in ['funcionarios']) && 'view-rh' in sections)
         || ((collection in ['agenda']) && 'view-agenda' in sections)
         || ((collection in ['patio_relatorios']) && ('view-dashboard' in sections || 'view-romaneio-v2' in sections))
@@ -144,6 +144,7 @@ service cloud.firestore {
         'romaneios',
         'historico',
         'vendas_subprodutos',
+        'fechamentos_subprodutos',
         'patio_relatorios',
         'funcionarios',
         'agenda',
@@ -153,7 +154,8 @@ service cloud.firestore {
         'frota_abastecimentos',
         'frota_manutencoes',
         'financeiro_lancamentos',
-        'financeiro_relatorios_mensais'
+        'financeiro_relatorios_mensais',
+        'contas_receber'
       ];
     }
 
@@ -195,6 +197,7 @@ service cloud.firestore {
             'romaneios',
             'historico',
             'vendas_subprodutos',
+            'fechamentos_subprodutos',
             'patio_relatorios',
             'funcionarios',
             'agenda',
@@ -204,7 +207,8 @@ service cloud.firestore {
             'frota_abastecimentos',
             'frota_manutencoes',
             'financeiro_lancamentos',
-            'financeiro_relatorios_mensais'
+            'financeiro_relatorios_mensais',
+            'contas_receber'
           ])
         )
       );
@@ -245,6 +249,7 @@ service cloud.firestore {
             'romaneios',
             'historico',
             'vendas_subprodutos',
+            'fechamentos_subprodutos',
             'patio_relatorios',
             'funcionarios',
             'agenda',
@@ -254,7 +259,8 @@ service cloud.firestore {
             'frota_abastecimentos',
             'frota_manutencoes',
             'financeiro_lancamentos',
-            'financeiro_relatorios_mensais'
+            'financeiro_relatorios_mensais',
+            'contas_receber'
           ])
         )
       );
@@ -285,7 +291,8 @@ service cloud.firestore {
             'frota_abastecimentos',
             'frota_manutencoes',
             'financeiro_lancamentos',
-            'financeiro_relatorios_mensais'
+            'financeiro_relatorios_mensais',
+            'contas_receber'
           ])
         )
       );
@@ -397,6 +404,7 @@ service cloud.firestore {
           'romaneios',
           'historico',
           'vendas_subprodutos',
+          'fechamentos_subprodutos',
           'patio_relatorios',
           'funcionarios',
           'agenda',
@@ -406,7 +414,8 @@ service cloud.firestore {
           'frota_abastecimentos',
           'frota_manutencoes',
           'financeiro_lancamentos',
-          'financeiro_relatorios_mensais'
+          'financeiro_relatorios_mensais',
+          'contas_receber'
         ];
 
       allow create, update: if canWriteCollection(collection)
@@ -422,6 +431,7 @@ service cloud.firestore {
           'romaneios',
           'historico',
           'vendas_subprodutos',
+          'fechamentos_subprodutos',
           'patio_relatorios',
           'funcionarios',
           'agenda',
@@ -431,7 +441,8 @@ service cloud.firestore {
           'frota_abastecimentos',
           'frota_manutencoes',
           'financeiro_lancamentos',
-          'financeiro_relatorios_mensais'
+          'financeiro_relatorios_mensais',
+          'contas_receber'
         ];
 
       allow delete: if canDeleteCollection(collection)
@@ -447,6 +458,7 @@ service cloud.firestore {
           'romaneios',
           'historico',
           'vendas_subprodutos',
+          'fechamentos_subprodutos',
           'patio_relatorios',
           'funcionarios',
           'agenda',
@@ -456,7 +468,8 @@ service cloud.firestore {
           'frota_abastecimentos',
           'frota_manutencoes',
           'financeiro_lancamentos',
-          'financeiro_relatorios_mensais'
+          'financeiro_relatorios_mensais',
+          'contas_receber'
         ];
     }
   }

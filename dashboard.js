@@ -2,7 +2,17 @@ import { db, getDocs, collection } from './js/firebase-init.js';
 
 let chartVendasInstance = null;
 let chartVolumeInstance = null;
-let dashboardData = { romaneios: [], entradas: [], subprodutos: [], funcionarios: [], estoque: [], financeiro: [], relatoriosFinanceiros: [] };
+let dashboardData = {
+    romaneios: [],
+    entradas: [],
+    subprodutos: [],
+    funcionarios: [],
+    estoque: [],
+    financeiro: [],
+    contasReceber: [],
+    fechamentosSubprodutos: [],
+    relatoriosFinanceiros: []
+};
 let dashboardPeriodo = null;
 let dashboardViewAtual = 'madeira';
 
@@ -19,15 +29,17 @@ document.addEventListener('historicoUpdated', () => {
 
 async function initDashboard() {
     try {
-        const [snapRomaneios, snapClientes, snapEntradas, snapSubprodutos, snapFuncionarios, snapEstoque, snapFinanceiro, snapRelatoriosFinanceiros] = await Promise.all([
-            getDocs(collection(db, 'romaneios')),
-            getDocs(collection(db, 'clientes')),
-            getDocs(collection(db, 'entradas')),
-            getDocs(collection(db, 'vendas_subprodutos')),
-            getDocs(collection(db, 'funcionarios')),
-            getDocs(collection(db, 'estoque')),
-            getDocs(collection(db, 'financeiro_lancamentos')),
-            getDocs(collection(db, 'financeiro_relatorios_mensais'))
+        const [snapRomaneios, snapClientes, snapEntradas, snapSubprodutos, snapFuncionarios, snapEstoque, snapFinanceiro, snapContasReceber, snapFechamentosSubprodutos, snapRelatoriosFinanceiros] = await Promise.all([
+            obterSnapshotDashboard('romaneios'),
+            obterSnapshotDashboard('clientes'),
+            obterSnapshotDashboard('entradas'),
+            obterSnapshotDashboard('vendas_subprodutos'),
+            obterSnapshotDashboard('funcionarios'),
+            obterSnapshotDashboard('estoque'),
+            obterSnapshotDashboard('financeiro_lancamentos'),
+            obterSnapshotDashboard('contas_receber'),
+            obterSnapshotDashboard('fechamentos_subprodutos'),
+            obterSnapshotDashboard('financeiro_relatorios_mensais')
         ]);
 
         dashboardData = {
@@ -37,11 +49,13 @@ async function initDashboard() {
             funcionarios: docsToArray(snapFuncionarios),
             estoque: docsToArray(snapEstoque),
             financeiro: docsToArray(snapFinanceiro),
+            contasReceber: docsToArray(snapContasReceber),
+            fechamentosSubprodutos: docsToArray(snapFechamentosSubprodutos),
             relatoriosFinanceiros: docsToArray(snapRelatoriosFinanceiros)
         };
 
         configurarFiltroDashboard();
-        atualizarKpisDashboard(snapClientes.size);
+        atualizarKpisDashboard(snapClientes ? snapClientes.size : null);
 
         bindKpiClicks();
         renderDashboardView('madeira');
@@ -51,9 +65,31 @@ async function initDashboard() {
     }
 }
 
+async function obterSnapshotDashboard(nomeColecao) {
+    try {
+        return await getDocs(collection(db, nomeColecao));
+    } catch (error) {
+        console.warn(`Dashboard: fonte ${nomeColecao} indisponivel; mantendo o restante do painel.`, error);
+        return null;
+    }
+}
+
+async function atualizarFontesFinanceirasDashboard() {
+    const [snapFinanceiro, snapContasReceber, snapFechamentosSubprodutos] = await Promise.all([
+        obterSnapshotDashboard('financeiro_lancamentos'),
+        obterSnapshotDashboard('contas_receber'),
+        obterSnapshotDashboard('fechamentos_subprodutos')
+    ]);
+    if (snapFinanceiro) dashboardData.financeiro = docsToArray(snapFinanceiro);
+    if (snapContasReceber) dashboardData.contasReceber = docsToArray(snapContasReceber);
+    if (snapFechamentosSubprodutos) dashboardData.fechamentosSubprodutos = docsToArray(snapFechamentosSubprodutos);
+}
+
 document.addEventListener('financeiroUpdated', () => {
-    atualizarKpisDashboard();
-    renderRelatorioMensalDashboard();
+    atualizarFontesFinanceirasDashboard().finally(() => {
+        atualizarKpisDashboard();
+        renderRelatorioMensalDashboard();
+    });
 });
 
 document.addEventListener('themeChanged', () => {
@@ -62,6 +98,7 @@ document.addEventListener('themeChanged', () => {
 
 function docsToArray(snapshot) {
     const list = [];
+    if (!snapshot) return list;
     snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
     return list;
 }
@@ -101,7 +138,23 @@ function atualizarKpisDashboard(totalClientes = null) {
     const faturamentoTotal = faturamentoMadeira + faturamentoSub;
     const resumoFinanceiro = getResumoFinanceiroLocal(periodo.inicio, periodo.fim);
     const comparativoFinanceiro = faturamentoTotal - resumoFinanceiro.despesas;
-    window.dashboardFinanceiroResumo = { faturamentoTotal, faturamentoMadeira, faturamentoSub, despesasMes: resumoFinanceiro.despesas, comparativoFinanceiro };
+    const contasReceberPeriodo = dashboardData.contasReceber.filter(item => itemDentroPeriodo(item, periodo, ['vencimento', 'data']));
+    const aReceber = contasReceberPeriodo
+        .filter(item => !item.pago && String(item.status || '').toUpperCase() !== 'CANCELADO')
+        .reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    const recebido = contasReceberPeriodo
+        .filter(item => Boolean(item.pago))
+        .reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    window.dashboardFinanceiroResumo = {
+        faturamentoTotal,
+        faturamentoMadeira,
+        faturamentoSub,
+        despesasMes: resumoFinanceiro.despesas,
+        comparativoFinanceiro,
+        aReceber,
+        recebido,
+        fontesDespesas: resumoFinanceiro.detalhes.fontes
+    };
     const saldoSubEstimado = Math.max(volumeToras - volumeMadeira - volumeSub, 0);
     const aproveitamentoTotal = volumeToras > 0 ? ((volumeMadeira + volumeSub + saldoSubEstimado) / volumeToras) * 100 : 0;
     const itensAcabando = getItensAlmoxarifadoAcabando();
@@ -135,13 +188,14 @@ function periodoPorMes(mes) {
     return { inicio, fim, mes: inicio.slice(0, 7) };
 }
 
-function itemDentroPeriodo(item, periodo) {
-    const data = normalizarDataISO(item);
+function itemDentroPeriodo(item, periodo, camposData = null) {
+    const data = normalizarDataISO(item, camposData);
     return !!data && data >= periodo.inicio && data <= periodo.fim;
 }
 
-function normalizarDataISO(item) {
-    const raw = item?.data || item?.dataCarregamento || item?.dataCriacao || item?.criadoEm || item?.dataEmissao || item?.vencimento || '';
+function normalizarDataISO(item, camposData = null) {
+    const campos = camposData || ['data', 'dataCarregamento', 'dataCriacao', 'criadoEm', 'dataEmissao', 'vencimento'];
+    const raw = campos.map(campo => item?.[campo]).find(valor => valor !== undefined && valor !== null && valor !== '') || '';
     if (!raw) return '';
     if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
     const date = raw?.toDate ? raw.toDate() : new Date(raw);
@@ -521,10 +575,10 @@ function getPeriodoLabel() {
 }
 
 function getDataKey(item) {
-    const raw = item.data || item.dataCriacao || item.criadoEm || item.dataEmissao || '';
-    const date = raw ? new Date(raw) : null;
-    if (!date || isNaN(date.getTime())) return 'Sem data';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const iso = normalizarDataISO(item);
+    if (!iso) return 'Sem data';
+    const [, mes, dia] = iso.split('-');
+    return `${dia}/${mes}`;
 }
 
 function addGroup(acc, key, value) {
@@ -611,17 +665,8 @@ function getResumoFinanceiroLocal(inicio = null, fim = null) {
 function agruparDespesasPorMes() {
     const periodo = getDashboardPeriodoSelecionado();
     const grupos = {};
-    obterLancamentosFinanceirosLocal()
-        .filter(item => itemDentroPeriodo({ data: item.vencimento }, periodo))
-        .forEach(item => addGroup(grupos, getDataKey({ data: item.vencimento }), item.valor || 0));
-    dadosPeriodo('entradas').forEach(item => {
-        addGroup(grupos, getMesKey({ data: item.data }), Number(item.totalEmpreiteiro || 0) + Number(item.totalDescarga || 0));
-    });
-    dashboardData.funcionarios.forEach(func => {
-        (func.horasExtras || [])
-            .filter(he => itemDentroPeriodo({ data: he.data }, periodo))
-            .forEach(he => addGroup(grupos, getDataKey({ data: he.data }), calcularValorHoraExtra(func, he)));
-    });
+    obterFontesDespesasFinanceiras(periodo.inicio, periodo.fim)
+        .forEach(fonte => addGroup(grupos, getDataKey({ data: fonte.data }), fonte.valor));
     return grupos;
 }
 
@@ -631,23 +676,118 @@ function calcularDespesasDetalhadasPeriodo() {
 }
 
 function calcularDespesasDetalhadas(inicio = getInicioMesAtual(), fim = getFimMesAtual()) {
-    const dentroPeriodo = data => (!inicio || data >= inicio) && (!fim || data <= fim);
-    const manual = obterLancamentosFinanceirosLocal().filter(item => dentroPeriodo(item.vencimento || ''));
-    const porOrigem = {
-        'Pagamento funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + Number(f.salario || 0), 0),
-        'Hora extra funcionarios': dashboardData.funcionarios.reduce((acc, f) => acc + (f.horasExtras || []).filter(he => dentroPeriodo(he.data || '')).reduce((sum, he) => sum + calcularValorHoraExtra(f, he), 0), 0),
-        'Valor a pagar empreiteiro': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalEmpreiteiro || 0), 0),
-        'Valor a pagar descarregamento': dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).reduce((acc, e) => acc + Number(e.totalDescarga || 0), 0),
-        'Despesas gerais': manual.filter(item => item.aba === 'despesas-gerais').reduce((acc, item) => acc + Number(item.valor || 0), 0),
-        'Boletos aleatorios': manual.filter(item => item.aba === 'boletos').reduce((acc, item) => acc + Number(item.valor || 0), 0),
-        'Impostos': manual.filter(item => item.aba === 'impostos').reduce((acc, item) => acc + Number(item.valor || 0), 0),
-        'Despesas fixas': manual.filter(item => item.aba === 'despesas-fixas').reduce((acc, item) => acc + Number(item.valor || 0), 0)
-    };
+    const fontes = obterFontesDespesasFinanceiras(inicio, fim);
+    const porOrigem = fontes.reduce((acc, fonte) => {
+        acc[fonte.categoria] = (acc[fonte.categoria] || 0) + Number(fonte.valor || 0);
+        return acc;
+    }, {});
     return {
         porOrigem,
-        total: Object.values(porOrigem).reduce((acc, valor) => acc + Number(valor || 0), 0),
-        quantidade: manual.length + dashboardData.funcionarios.length + dashboardData.entradas.filter(e => dentroPeriodo(e.data || '')).length
+        total: fontes.reduce((acc, fonte) => acc + Number(fonte.valor || 0), 0),
+        quantidade: fontes.length,
+        fontes
     };
+}
+
+function obterFontesDespesasFinanceiras(inicio, fim) {
+    const dentroPeriodo = data => Boolean(data) && (!inicio || data >= inicio) && (!fim || data <= fim);
+    const fontes = [];
+    const lancamentos = obterLancamentosFinanceirosLocal().filter(item => dentroPeriodo(
+        normalizarDataISO(item, ['vencimento', 'dataCompetencia', 'dataEmissao', 'data', 'criadoEm'])
+    ));
+    const referenciasManuais = new Set();
+
+    lancamentos.forEach(item => {
+        const referencias = [item.origemId, item.fonteId, item.sourceId, item.entradaId]
+            .filter(Boolean)
+            .map(valor => String(valor));
+        referencias.forEach(valor => referenciasManuais.add(valor));
+        fontes.push({
+            id: `financeiro:${item.id || item.chave || `${item.vencimento || ''}:${item.valor || 0}:${item.descricao || ''}`}`,
+            categoria: categoriaDespesaFinanceira(item),
+            data: normalizarDataISO(item, ['vencimento', 'dataCompetencia', 'dataEmissao', 'data', 'criadoEm']),
+            valor: Number(item.valor || 0),
+            origem: 'financeiro',
+            origemId: item.id || item.chave || ''
+        });
+    });
+
+    const folha = dashboardData.funcionarios
+        .filter(funcionario => funcionarioAtivoNoPeriodo(funcionario, inicio, fim))
+        .reduce((total, funcionario) => total + Number(funcionario.salario || 0), 0);
+    if (folha > 0) {
+        fontes.push({
+            id: `folha:${inicio || 'inicio'}:${fim || 'fim'}`,
+            categoria: 'Pagamento funcionarios',
+            data: inicio || fim || '',
+            valor: folha,
+            origem: 'funcionarios'
+        });
+    }
+
+    dashboardData.funcionarios.forEach(funcionario => {
+        (funcionario.horasExtras || []).forEach((horaExtra, indice) => {
+            const data = normalizarDataISO(horaExtra, ['data', 'dataHora', 'criadoEm']);
+            if (!dentroPeriodo(data)) return;
+            fontes.push({
+                id: `hora-extra:${funcionario.id || funcionario.nome || 'funcionario'}:${horaExtra.id || indice}:${data}`,
+                categoria: 'Hora extra funcionarios',
+                data,
+                valor: calcularValorHoraExtra(funcionario, horaExtra),
+                origem: 'funcionarios',
+                origemId: horaExtra.id || ''
+            });
+        });
+    });
+
+    dashboardData.entradas.forEach(entrada => {
+        const data = normalizarDataISO(entrada, ['data', 'dataCarregamento', 'dataCriacao', 'criadoEm']);
+        if (!dentroPeriodo(data)) return;
+        const entradaId = String(entrada.id || entrada.codigo || '');
+        if (entradaId && referenciasManuais.has(entradaId)) return;
+
+        const totalEmpreiteiro = Number(entrada.totalEmpreiteiro || 0);
+        if (totalEmpreiteiro > 0) {
+            fontes.push({
+                id: `entrada:${entradaId || data}:empreiteiro`,
+                categoria: 'Valor a pagar empreiteiro',
+                data,
+                valor: totalEmpreiteiro,
+                origem: 'entradas',
+                origemId: entradaId
+            });
+        }
+
+        const totalDescarga = Number(entrada.totalDescarga || 0);
+        if (totalDescarga > 0) {
+            fontes.push({
+                id: `entrada:${entradaId || data}:descarregamento`,
+                categoria: 'Valor a pagar descarregamento',
+                data,
+                valor: totalDescarga,
+                origem: 'entradas',
+                origemId: entradaId
+            });
+        }
+    });
+
+    return Array.from(new Map(fontes.map(fonte => [fonte.id, fonte])).values());
+}
+
+function categoriaDespesaFinanceira(item = {}) {
+    const aba = String(item.aba || '').toLowerCase();
+    if (aba === 'despesas-gerais') return 'Despesas gerais';
+    if (aba === 'boletos') return 'Boletos aleatorios';
+    if (aba === 'impostos') return 'Impostos';
+    if (aba === 'despesas-fixas') return 'Despesas fixas';
+    return 'Lançamentos financeiros';
+}
+
+function funcionarioAtivoNoPeriodo(funcionario = {}, inicio = getInicioMesAtual(), fim = getFimMesAtual()) {
+    if (funcionario.ativo === false || funcionario.status === 'INATIVO' || funcionario.status === 'DESLIGADO') return false;
+    const admissao = normalizarDataISO(funcionario, ['dataAdmissao', 'admissao']);
+    const desligamento = normalizarDataISO(funcionario, ['dataDemissao', 'desligamento']);
+    return (!admissao || admissao <= fim) && (!desligamento || desligamento >= inicio);
 }
 
 function calcularValorHoraExtra(func, he) {
