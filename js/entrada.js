@@ -18,26 +18,72 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
     if (!select) return;
 
     try {
-        const snapshot = await getDocs(collection(db, 'transportes'));
+        const [terceirosResult, frotaResult] = await Promise.allSettled([
+            getDocs(collection(db, 'transportes')),
+            getDocs(collection(db, 'frotas'))
+        ]);
+        const terceiros = terceirosResult.status === 'fulfilled' ? terceirosResult.value : null;
+        const frotaNuvem = frotaResult.status === 'fulfilled' ? frotaResult.value : null;
+        let frotaLocal = [];
+        try {
+            frotaLocal = JSON.parse(localStorage.getItem('orquestra_frota') || '[]');
+        } catch {
+            frotaLocal = [];
+        }
+
         transportesEntradaAtuais = [];
         select.innerHTML = '<option value="">Selecionar transportadora, caminhão e motorista...</option>';
 
-        snapshot.forEach((registro) => {
-            const transporte = { id: registro.id, ...registro.data() };
+        const grupoProprios = document.createElement('optgroup');
+        grupoProprios.label = 'Veículos próprios — Controle de Frota';
+        const grupoTerceiros = document.createElement('optgroup');
+        grupoTerceiros.label = 'Transportadores terceiros';
+
+        const adicionarOpcao = (transporte, grupo) => {
             transportesEntradaAtuais.push(transporte);
             const option = document.createElement('option');
-            option.value = transporte.id;
+            option.value = transporte.chave;
             option.textContent = [
                 transporte.nome,
                 transporte.caminhao,
                 transporte.placa,
                 transporte.motorista ? `Motorista: ${transporte.motorista}` : ''
             ].filter(Boolean).join(' | ');
-            select.appendChild(option);
-        });
+            grupo.appendChild(option);
+        };
 
-        if (valorSelecionado && transportesEntradaAtuais.some(item => item.id === valorSelecionado)) {
-            select.value = valorSelecionado;
+        if (terceiros) {
+            terceiros.forEach(registro => {
+                const transporte = { id: registro.id, origem: 'TERCEIRO', chave: `TERCEIRO:${registro.id}`, ...registro.data() };
+                adicionarOpcao(transporte, grupoTerceiros);
+            });
+        }
+
+        const frotaRegistros = [
+            ...(frotaNuvem?.docs || []).map(registro => ({ id: registro.id, ...registro.data() })),
+            ...frotaLocal
+        ];
+        const frotaPorPlaca = new Map();
+        frotaRegistros.forEach(item => {
+            const placa = String(item.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (placa && !frotaPorPlaca.has(placa)) frotaPorPlaca.set(placa, item);
+        });
+        frotaPorPlaca.forEach(item => adicionarOpcao({
+            ...item,
+            nome: 'FROTA PRÓPRIA',
+            caminhao: item.modelo || item.caminhao || '',
+            origem: 'PROPRIO',
+            chave: `FROTA:${item.id}`
+        }, grupoProprios));
+
+        if (grupoProprios.children.length) select.appendChild(grupoProprios);
+        if (grupoTerceiros.children.length) select.appendChild(grupoTerceiros);
+
+        if (valorSelecionado) {
+            const encontrado = transportesEntradaAtuais.find(item =>
+                item.chave === valorSelecionado || item.id === valorSelecionado
+            );
+            if (encontrado) select.value = encontrado.chave;
         }
     } catch (error) {
         console.error('Erro ao carregar transportadoras para a entrada:', error);
@@ -60,7 +106,10 @@ function preencherTransporteEntrada(transporte) {
 function localizarTransporteEntrada(entrada) {
     if (!entrada) return null;
     if (entrada.transportadoraId) {
-        const porId = transportesEntradaAtuais.find(item => item.id === entrada.transportadoraId);
+        const porId = transportesEntradaAtuais.find(item =>
+            item.id === entrada.transportadoraId
+            && (!entrada.transportadoraOrigem || item.origem === entrada.transportadoraOrigem)
+        );
         if (porId) return porId;
     }
     const normalizar = valor => String(valor || '').toUpperCase().trim();
@@ -1246,7 +1295,7 @@ function injetarEstiloFechamentosEntrada() {
             border: 1px solid rgba(234, 179, 8, 0.24);
             background: rgba(234, 179, 8, 0.06);
             border-radius: 10px;
-            padding: 12px;
+            overflow: hidden;
         }
         .fechamento-folder-header {
             display: flex;
@@ -1254,7 +1303,35 @@ function injetarEstiloFechamentosEntrada() {
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
-            margin-bottom: 8px;
+            padding: 12px;
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+        .fechamento-folder-header::-webkit-details-marker {
+            display: none;
+        }
+        .fechamento-folder-card[open] > .fechamento-folder-header {
+            border-bottom: 1px solid rgba(234, 179, 8, 0.2);
+        }
+        .fechamento-folder-header .fechamento-folder-chevron {
+            color: #facc15;
+            transition: transform .2s ease;
+        }
+        .fechamento-folder-card[open] .fechamento-folder-chevron {
+            transform: rotate(180deg);
+        }
+        .fechamento-folder-body {
+            padding: 0 12px 12px;
+        }
+        .fechamento-folder-totals {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px 0 2px;
+            color: var(--text-muted);
+            font-size: .8rem;
+            font-weight: 800;
         }
         .fechamento-folder-title {
             margin: 0;
@@ -2169,17 +2246,20 @@ function renderizarFechamentosSalvosExtracao() {
             }).join('');
 
         return `
-            <div class="fechamento-folder-card">
-                <div class="fechamento-folder-header">
+            <details class="fechamento-folder-card">
+                <summary class="fechamento-folder-header">
                     <h4 class="fechamento-folder-title"><i class="fa-solid fa-folder"></i> ${pasta}</h4>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; color:var(--text-muted); font-size:.8rem; font-weight:800;">
+                    <i class="fa-solid fa-chevron-down fechamento-folder-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="fechamento-folder-body">
+                    <div class="fechamento-folder-totals">
                         <span>${itens.length} fechamento(s)</span>
                         <span>Total: ${formatarMoedaEntrada(totalPasta)}</span>
                         <span>Saldo: ${formatarMoedaEntrada(saldoPasta)}</span>
                     </div>
+                    ${linhas}
                 </div>
-                ${linhas}
-            </div>
+            </details>
         `;
     }).join('');
 }
@@ -2509,6 +2589,8 @@ function configurarSubmitEntrada() {
             }
         }
         
+        const transporteSelect = document.getElementById('entTransportadora');
+        const transporteSelecionado = transportesEntradaAtuais.find(item => item.chave === transporteSelect?.value) || null;
         const novaEntrada = {
             data: document.getElementById('entData').value,
             horario: document.getElementById('entHorario').value,
@@ -2525,10 +2607,10 @@ function configurarSubmitEntrada() {
             produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
             observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
-            transportadoraId: document.getElementById('entTransportadora')?.value || null,
-            transportadoraNome: document.getElementById('entTransportadora')?.value
-                ? document.getElementById('entTransportadora')?.selectedOptions?.[0]?.textContent?.trim() || null
-                : null,
+            transportadoraId: transporteSelecionado?.id || null,
+            transportadoraOrigem: transporteSelecionado?.origem || null,
+            frotaId: transporteSelecionado?.origem === 'PROPRIO' ? transporteSelecionado.id : null,
+            transportadoraNome: transporteSelecionado?.nome || null,
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
             placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
@@ -2930,7 +3012,7 @@ window.switchTabEntrada = function(tabName) {
         
         colDireita.style.display = 'block';
         colDireita.style.width = '100%';
-        panelEntradas.style.display = 'block';
+        panelEntradas.style.display = 'flex';
         
         gridLayout.classList.remove('form-table-grid');
     } else if (tabName === 'descarregamento') {
@@ -3008,6 +3090,9 @@ function inicializarModuloEntrada() {
         }
     });
     document.addEventListener('transportesUpdated', () => {
+        carregarTransportesEntrada(document.getElementById('entTransportadora')?.value || '');
+    });
+    document.addEventListener('frotaUpdated', () => {
         carregarTransportesEntrada(document.getElementById('entTransportadora')?.value || '');
     });
     configurarToggleDescarga();

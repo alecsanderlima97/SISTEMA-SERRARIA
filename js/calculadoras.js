@@ -7,7 +7,7 @@ const btnCalcCub = document.getElementById('btnCalcCub');
 const resultadoCub = document.getElementById('resultadoCub');
 
 // Forçar letras maiúsculas em tempo real nos campos de subprodutos (Cavaco/Pó)
-['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'subCliNome', 'subCliIE', 'subCliLogradouro', 'subCliCidadeEstado', 'subCliPrazoPagamento', 'subCliCaminhao', 'subCliPlacaCaminhao', 'subCliPlacaCarreta', 'calcCavRomaneioCliente', 'calcCavCaminhao', 'calcCavPlacaCaminhao', 'calcCavPlacaCarreta'].forEach(id => {
+['calcCavRomaneio', 'calcCavCliente', 'calcCavMotorista', 'subCliNome', 'subCliIE', 'subCliLogradouro', 'subCliCidadeEstado', 'subCliPrazoPagamento', 'subCliCaminhao', 'subCliMotorista', 'subCliPlacaCaminhao', 'subCliPlacaCarreta', 'calcCavRomaneioCliente', 'calcCavCaminhao', 'calcCavPlacaCaminhao', 'calcCavPlacaCarreta'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
         input.addEventListener('input', window.forceUppercaseInput);
@@ -240,6 +240,7 @@ function normalizarCaminhoesSubproduto(cli = {}) {
     if (Array.isArray(cli.caminhoes) && cli.caminhoes.length) {
         return cli.caminhoes.map(item => ({
             modelo: (item.modelo || '').toUpperCase().trim(),
+            motorista: (item.motorista || '').toUpperCase().trim(),
             placaCaminhao: (item.placaCaminhao || '').toUpperCase().trim(),
             placaCarreta: (item.placaCarreta || '').toUpperCase().trim(),
             medidas: {
@@ -253,6 +254,7 @@ function normalizarCaminhoesSubproduto(cli = {}) {
 
     const legado = {
         modelo: (cli.caminhao || '').toUpperCase().trim(),
+        motorista: (cli.motorista || '').toUpperCase().trim(),
         placaCaminhao: (cli.placaCaminhao || '').toUpperCase().trim(),
         placaCarreta: (cli.placaCarreta || '').toUpperCase().trim(),
         medidas: {
@@ -285,6 +287,7 @@ function renderListaCaminhoesSub() {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(15,23,42,0.35);">
             <div style="font-size:0.85rem; line-height:1.5;">
                 <div><strong>${item.modelo || 'Sem modelo'}</strong></div>
+                <div>Motorista: ${item.motorista || '-'}</div>
                 <div>Placa cavalo: ${item.placaCaminhao || '-'}</div>
                 <div>Placa carreta: ${item.placaCarreta || '-'}</div>
                 <div style="color:#5eead4; font-weight:800;">${medidasTexto}</div>
@@ -298,6 +301,7 @@ function renderListaCaminhoesSub() {
 }
 
 function preencherCaminhaoSelecionadoSub(caminhao) {
+    document.getElementById('calcCavMotorista').value = caminhao?.motorista || '';
     document.getElementById('calcCavCaminhao').value = caminhao?.modelo || '';
     document.getElementById('calcCavPlacaCaminhao').value = caminhao?.placaCaminhao || '';
     document.getElementById('calcCavPlacaCarreta').value = caminhao?.placaCarreta || '';
@@ -320,7 +324,7 @@ function preencherSeletorCaminhoesSub(cli) {
     caminhoes.forEach((item, index) => {
         const option = document.createElement('option');
         option.value = String(index);
-        const partes = [item.modelo, item.placaCaminhao, item.placaCarreta].filter(Boolean);
+        const partes = [item.modelo, item.placaCaminhao, item.placaCarreta, item.motorista ? `Motorista: ${item.motorista}` : ''].filter(Boolean);
         const m = item.medidas || {};
         const volume = ((Number(m.alt) || 0) * (Number(m.larg) || 0) * (Number(m.comp) || 0)) + (Number(m.cupimAdicional) || 0);
         option.textContent = `${partes.join(' | ') || `Caminhão ${index + 1}`}${volume > 0 ? ` - ${volume.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m³` : ''}`;
@@ -417,6 +421,7 @@ window.editarClienteSub = (id) => {
     
     caminhoesSubprodutoForm = normalizarCaminhoesSubproduto(cli);
     document.getElementById('subCliCaminhao').value = '';
+    document.getElementById('subCliMotorista').value = '';
     document.getElementById('subCliPlacaCaminhao').value = '';
     document.getElementById('subCliPlacaCarreta').value = '';
     renderListaCaminhoesSub();
@@ -474,6 +479,7 @@ if (formCliSub) {
         const valorPoParticular = window.parseCurrencyValue(document.getElementById('subCliValorPoParticular').value);
         
         const caminhao = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
+        const motorista = document.getElementById('subCliMotorista').value.toUpperCase().trim();
         const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
         const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
         
@@ -491,12 +497,13 @@ if (formCliSub) {
             ...caminhoesSubprodutoForm,
             ...(caminhao || placaCaminhao || placaCarreta ? [{
                 modelo: caminhao,
+                motorista,
                 placaCaminhao,
                 placaCarreta,
                 medidas: medidasAtuais
             }] : [])
         ];
-        const caminhaoPrincipal = caminhoes[0] || { modelo: '', placaCaminhao: '', placaCarreta: '' };
+        const caminhaoPrincipal = caminhoes[0] || { modelo: '', motorista: '', placaCaminhao: '', placaCarreta: '' };
 
         const dadosCli = {
             nome,
@@ -512,6 +519,7 @@ if (formCliSub) {
             valorCavacoParticular,
             valorPoParticular,
             caminhao: caminhaoPrincipal.modelo,
+            motorista: caminhaoPrincipal.motorista || motorista,
             placaCaminhao: caminhaoPrincipal.placaCaminhao,
             placaCarreta: caminhaoPrincipal.placaCarreta,
             caminhoes,
@@ -570,6 +578,7 @@ if (selectCavCli) {
             const selectCaminhao = document.getElementById('calcCavCaminhaoSelecionado');
             if (selectCaminhao) selectCaminhao.innerHTML = '<option value="">Selecionar caminhão cadastrado</option>';
             document.getElementById('calcCavCaminhao').value = '';
+            document.getElementById('calcCavMotorista').value = '';
             document.getElementById('calcCavPlacaCaminhao').value = '';
             document.getElementById('calcCavPlacaCarreta').value = '';
             const chkParticular = document.getElementById('calcCavCarregamentoParticular');
@@ -595,7 +604,7 @@ if (selectCavCli) {
                 
                 preencherSeletorCaminhoesSub(cli);
                 
-                if (cli.medidas) {
+                if (!normalizarCaminhoesSubproduto(cli).length && cli.medidas) {
                     document.getElementById('calcCavAlt').value = cli.medidas.alt || '';
                     document.getElementById('calcCavLarg').value = cli.medidas.larg || '';
                     document.getElementById('calcCavComp').value = cli.medidas.comp || '';
@@ -680,6 +689,7 @@ const btnAdicionarCaminhaoSub = document.getElementById('btnAdicionarCaminhaoSub
 if (btnAdicionarCaminhaoSub) {
     btnAdicionarCaminhaoSub.addEventListener('click', () => {
         const modelo = document.getElementById('subCliCaminhao').value.toUpperCase().trim();
+        const motorista = document.getElementById('subCliMotorista').value.toUpperCase().trim();
         const placaCaminhao = document.getElementById('subCliPlacaCaminhao').value.toUpperCase().trim();
         const placaCarreta = document.getElementById('subCliPlacaCarreta').value.toUpperCase().trim();
         const alt = window.parseDecimalValue ? window.parseDecimalValue(document.getElementById('subCliAlt').value) : (parseFloat(document.getElementById('subCliAlt').value) || 0);
@@ -689,8 +699,9 @@ if (btnAdicionarCaminhaoSub) {
             alert('Preencha pelo menos modelo ou placa para adicionar o caminhão.');
             return;
         }
-        caminhoesSubprodutoForm.push({ modelo, placaCaminhao, placaCarreta, medidas: { alt, larg, comp, cupimAdicional: 0 } });
+        caminhoesSubprodutoForm.push({ modelo, motorista, placaCaminhao, placaCarreta, medidas: { alt, larg, comp, cupimAdicional: 0 } });
         document.getElementById('subCliCaminhao').value = '';
+        document.getElementById('subCliMotorista').value = '';
         document.getElementById('subCliPlacaCaminhao').value = '';
         document.getElementById('subCliPlacaCarreta').value = '';
         document.getElementById('subCliAlt').value = '';

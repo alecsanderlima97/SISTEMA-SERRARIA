@@ -89,6 +89,11 @@
                         </div>
 
                         <div class="input-group">
+                            <label for="veicMotorista">Motorista / responsável padrão</label>
+                            <input type="text" id="veicMotorista" placeholder="Ex: João da Silva" class="text-uppercase-input">
+                        </div>
+
+                        <div class="input-group">
                             <label for="veicGrupo">Setor / Grupo</label>
                             <select id="veicGrupo">
                                 <option value="SERRARIA">SERRARIA</option>
@@ -109,6 +114,16 @@
                         <div class="input-group">
                             <label for="veicAno">Ano de Fabricação</label>
                             <input type="number" id="veicAno" min="1980" max="2030" placeholder="Ex: 2021">
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 2;">
+                            <label>Medidas úteis da carroceria / carga (m)</label>
+                            <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;">
+                                <input type="text" id="veicAlturaCarga" inputmode="decimal" placeholder="Altura">
+                                <input type="text" id="veicLarguraCarga" inputmode="decimal" placeholder="Largura">
+                                <input type="text" id="veicComprimentoCarga" inputmode="decimal" placeholder="Comprimento">
+                            </div>
+                            <small>Essas medidas serão sugeridas na Conferência de Cargas e na venda de subprodutos quando o veículo for selecionado.</small>
                         </div>
 
                         <!-- Anexar Documento do Veículo -->

@@ -106,11 +106,35 @@ const DEFAULT_ESTOQUE = [
     { id: 'est_09', nome: 'DIESEL COMUM', categoria: 'DIESEL', quantidade: 5000, unitario: 5.89 }
 ];
 
+const FROTA_PROPRIA_PADRAO = [
+    { id: 'v_constellation_ayo9d04', modelo: 'CAMINHÃO CONSTELLATION', placa: 'AYO-9D04', grupo: 'SERRARIA', propriedade: 'PROPRIO', motorista: '', medidas: { alt: 0, larg: 0, comp: 0 }, documento: '', documentoNome: '' },
+    { id: 'v_axor_bwz3b85', modelo: 'CAMINHÃO AXOR', placa: 'BWZ-3B85', grupo: 'SERRARIA', propriedade: 'PROPRIO', motorista: '', medidas: { alt: 0, larg: 0, comp: 0 }, documento: '', documentoNome: '' }
+];
+
 const DEFAULT_FROTA = [
     { id: 'v_01', modelo: 'CAMINHÃO VOLVO FH 540', placa: 'ABC-5F40', grupo: 'FLORESTAL', ano: 2021, documento: '', documentoNome: '' },
     { id: 'v_02', modelo: 'PÁ CARREGADEIRA CAT 924K', placa: 'PC-02', grupo: 'SERRARIA', ano: 2019, documento: '', documentoNome: '' },
-    { id: 'v_03', modelo: 'ESCADA DE ESTEIRA KOMATSU D61', placa: 'TR-05', grupo: 'TERRAPLANAGEM', ano: 2022, documento: '', documentoNome: '' }
+    { id: 'v_03', modelo: 'ESCADA DE ESTEIRA KOMATSU D61', placa: 'TR-05', grupo: 'TERRAPLANAGEM', ano: 2022, documento: '', documentoNome: '' },
+    ...FROTA_PROPRIA_PADRAO
 ];
+
+function normalizarPlacaFrota(valor) {
+    return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function garantirVeiculosPropriosBasicos(lista) {
+    const resultado = Array.isArray(lista) ? [...lista] : [];
+    const adicionados = [];
+    FROTA_PROPRIA_PADRAO.forEach(base => {
+        const existe = resultado.some(item => normalizarPlacaFrota(item.placa) === normalizarPlacaFrota(base.placa));
+        if (!existe) {
+            const novo = { ...base, medidas: { ...(base.medidas || {}) } };
+            resultado.push(novo);
+            adicionados.push(novo);
+        }
+    });
+    return { lista: resultado, adicionados };
+}
 
 // Carregar e persistir iniciais se vazios
 function obterBanco(key, defaults = []) {
@@ -168,7 +192,9 @@ async function excluirDocFrota(collName, id) {
 }
 
 // Estados Locais
-let frota = obterBanco(KEYS.FROTA, DEFAULT_FROTA);
+const frotaInicial = garantirVeiculosPropriosBasicos(obterBanco(KEYS.FROTA, DEFAULT_FROTA));
+let frota = frotaInicial.lista;
+if (frotaInicial.adicionados.length) salvarBanco(KEYS.FROTA, frota);
 let abastecimentos = obterBanco(KEYS.ABASTECIMENTOS, []);
 let manutencoes = obterBanco(KEYS.MANUTENCOES, []);
 let relatosFrota = obterBanco(KEYS.RELATOS, []);
@@ -224,11 +250,18 @@ window.SectionLoader?.register('view-frotas', carregarDadosFrotaNuvem);
 
 async function carregarDadosFrotaNuvem() {
     frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, DEFAULT_FROTA);
+    const integracaoProprios = garantirVeiculosPropriosBasicos(frota);
+    frota = integracaoProprios.lista;
+    if (integracaoProprios.adicionados.length) {
+        await Promise.all(integracaoProprios.adicionados.map(item => salvarDocFrota(FROTA_COLLECTIONS.FROTA, item)));
+        salvarBanco(KEYS.FROTA, frota);
+    }
     abastecimentos = await carregarColecaoFrota(FROTA_COLLECTIONS.ABASTECIMENTOS, KEYS.ABASTECIMENTOS, []);
     manutencoes = await carregarColecaoFrota(FROTA_COLLECTIONS.MANUTENCOES, KEYS.MANUTENCOES, []);
     relatosFrota = await carregarColecaoFrota(FROTA_COLLECTIONS.RELATOS, KEYS.RELATOS, []);
     renderizarFrota();
     atualizarKPIsFrota();
+    document.dispatchEvent(new Event('frotaUpdated'));
 }
 
 // Registrar eventos
@@ -310,9 +343,13 @@ function limparFormFrota() {
     document.getElementById('veicModelo').value = '';
     document.getElementById('veicCodigo').value = '';
     document.getElementById('veicPlaca').value = '';
+    document.getElementById('veicMotorista').value = '';
     document.getElementById('veicGrupo').value = 'SERRARIA';
     document.getElementById('veicStatus').value = 'OK';
     document.getElementById('veicAno').value = '';
+    document.getElementById('veicAlturaCarga').value = '';
+    document.getElementById('veicLarguraCarga').value = '';
+    document.getElementById('veicComprimentoCarga').value = '';
     document.getElementById('veicDocumento').value = '';
     document.getElementById('lblDocumentoNome').textContent = 'Nenhum arquivo anexado';
     document.getElementById('veicDocumentoBase64').value = '';
@@ -389,18 +426,27 @@ async function salvarVeiculo() {
     const modelo = document.getElementById('veicModelo').value.trim().toUpperCase() || 'VEÍCULO S/ MODELO';
     const codigoInput = document.getElementById('veicCodigo').value.trim().toUpperCase();
     const placa = document.getElementById('veicPlaca').value.trim().toUpperCase() || 'S/ PLACA';
+    const motorista = document.getElementById('veicMotorista')?.value.trim().toUpperCase() || '';
     const grupo = document.getElementById('veicGrupo').value || 'SERRARIA';
     const statusOperacional = document.getElementById('veicStatus')?.value || 'OK';
     const ano = parseInt(document.getElementById('veicAno').value) || new Date().getFullYear();
     const documento = document.getElementById('veicDocumentoBase64').value;
     const documentoNome = document.getElementById('lblDocumentoNome').textContent;
+    const lerMedida = id => window.parseDecimalValue
+        ? Number(window.parseDecimalValue(document.getElementById(id)?.value || '')) || 0
+        : (parseFloat(String(document.getElementById(id)?.value || '').replace(',', '.')) || 0);
+    const medidas = {
+        alt: lerMedida('veicAlturaCarga'),
+        larg: lerMedida('veicLarguraCarga'),
+        comp: lerMedida('veicComprimentoCarga')
+    };
 
     let registroSalvo = null;
     if (id) {
         // Editar existente
         frota = frota.map(v => {
             if (v.id !== id) return v;
-            registroSalvo = aplicarAuditoriaFrota({ ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, statusOperacional, ano, documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome });
+            registroSalvo = aplicarAuditoriaFrota({ ...v, modelo, codigo: codigoInput || v.codigo || gerarCodigoFrota(grupo), placa, grupo, statusOperacional, ano, motorista, medidas, propriedade: v.propriedade || 'PROPRIO', documento: documento || v.documento, documentoNome: documento ? documentoNome : v.documentoNome });
             return registroSalvo;
         });
     } else {
@@ -413,6 +459,9 @@ async function salvarVeiculo() {
             grupo,
             statusOperacional,
             ano,
+            motorista,
+            medidas,
+            propriedade: 'PROPRIO',
             documento,
             documentoNome: documento ? documentoNome : 'Sem Anexo'
         }, true);
@@ -424,6 +473,7 @@ async function salvarVeiculo() {
     await salvarDocFrota(FROTA_COLLECTIONS.FROTA, registroSalvo);
     renderizarFrota();
     atualizarKPIsFrota();
+    document.dispatchEvent(new Event('frotaUpdated'));
 
     // Fechar formulário
     window.switchTabFrotas('lista');
@@ -439,9 +489,13 @@ window.editarVeiculo = function(id) {
     document.getElementById('veicModelo').value = v.modelo;
     document.getElementById('veicCodigo').value = garantirCodigoFrota(v);
     document.getElementById('veicPlaca').value = v.placa;
+    document.getElementById('veicMotorista').value = v.motorista || '';
     document.getElementById('veicGrupo').value = v.grupo;
     document.getElementById('veicStatus').value = v.statusOperacional || 'OK';
     document.getElementById('veicAno').value = v.ano;
+    document.getElementById('veicAlturaCarga').value = v.medidas?.alt || '';
+    document.getElementById('veicLarguraCarga').value = v.medidas?.larg || '';
+    document.getElementById('veicComprimentoCarga').value = v.medidas?.comp || '';
     document.getElementById('veicDocumentoBase64').value = v.documento || '';
     document.getElementById('lblDocumentoNome').textContent = v.documentoNome || 'Sem Anexo';
 
@@ -464,6 +518,7 @@ window.excluirVeiculo = async function(id) {
     salvarBanco(KEYS.FROTA, frota);
     renderizarFrota();
     atualizarKPIsFrota();
+    document.dispatchEvent(new Event('frotaUpdated'));
 };
 
 window.abrirFrotaPorCodigo = function(codigo) {
@@ -626,6 +681,10 @@ function renderizarFrota() {
     grid.innerHTML = filtrados.map(v => {
         const codigo = garantirCodigoFrota(v);
         const statusInfo = getStatusFrotaInfo(v.statusOperacional || 'OK');
+        const medidasCarga = v.medidas || {};
+        const medidasTexto = Number(medidasCarga.alt) > 0 && Number(medidasCarga.larg) > 0 && Number(medidasCarga.comp) > 0
+            ? `${Number(medidasCarga.alt).toLocaleString('pt-BR')} x ${Number(medidasCarga.larg).toLocaleString('pt-BR')} x ${Number(medidasCarga.comp).toLocaleString('pt-BR')} m`
+            : 'NAO INFORMADAS';
         const relatosPendentesLista = relatosFrota.filter(r => r.veiculoId === v.id && r.status !== 'RESOLVIDO');
         const relatosPendentes = relatosPendentesLista.length;
         const avisoProblemaHtml = relatosPendentes ? `
@@ -687,6 +746,8 @@ function renderizarFrota() {
                     <div class="frota-card-info" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px;">
                         <span>CÓDIGO: <strong style="color: var(--accent-color);">${codigo}</strong></span><br>
                         <span>PLACA / PREFIXO: <strong style="color: white;">${v.placa}</strong></span><br>
+                        <span>MOTORISTA: <strong style="color: white;">${v.motorista || 'NAO INFORMADO'}</strong></span><br>
+                        <span>MEDIDAS: <strong style="color: white;">${medidasTexto}</strong></span><br>
                         <span>ANO FABRICAÇÃO: <strong style="color: white;">${v.ano}</strong></span><br>
                         <span>RELATOS PENDENTES: <strong style="color: ${relatosPendentes ? '#f59e0b' : '#22c55e'};">${relatosPendentes}</strong></span><br>
                         <span class="frota-card-documento" style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">DOCUMENTO: ${docLinkHtml}</span>

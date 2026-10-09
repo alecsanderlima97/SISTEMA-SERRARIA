@@ -104,6 +104,10 @@
                                 <input type="text" id="subCliCaminhao" class="text-uppercase-input" placeholder="Ex: Scania R440">
                             </div>
                             <div class="input-group" style="margin-bottom:10px;">
+                                <label>Motorista padrão</label>
+                                <input type="text" id="subCliMotorista" class="text-uppercase-input" placeholder="Ex: João da Silva">
+                            </div>
+                            <div class="input-group" style="margin-bottom:10px;">
                                 <label>Placa Caminhão</label>
                                 <input type="text" id="subCliPlacaCaminhao" class="text-uppercase-input" placeholder="Ex: ABC-1234">
                             </div>
