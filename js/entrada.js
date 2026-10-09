@@ -1133,6 +1133,7 @@ let entradasComErro = false;
 let renderDescarregamentosId = 0;
 const FECHAMENTOS_SALVOS_KEY = 'orquestra_fechamentos_salvos';
 let fechamentosSalvosExtracao = [];
+let fechamentoExtracaoEditandoId = null;
 
 function lerMatosMapaLocalEntrada() {
     try {
@@ -2054,6 +2055,54 @@ function atualizarPainelFechamento() {
     if (payText) payText.textContent = totalPay.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 }
 
+function limparSelecaoEntradas() {
+    entradasSelecionadas.clear();
+    const checkAll = document.getElementById('checkAllEntradas');
+    if (checkAll) checkAll.checked = false;
+    document.querySelectorAll('.check-entrada').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    atualizarPainelFechamento();
+}
+
+function obterFechamentoExtracaoPorId(id) {
+    const fonte = fechamentosSalvosExtracao.length
+        ? fechamentosSalvosExtracao
+        : obterFechamentosLocais();
+    return fonte.find(item => String(item.id) === String(id));
+}
+
+function definirPainelFechamentoExtracaoAberto(aberto) {
+    const panel = document.getElementById('panelRelatorioConsolidado');
+    const button = document.getElementById('btnToggleFechamentoExtracao');
+    if (!panel) return;
+
+    const visivel = Boolean(aberto);
+    panel.style.display = visivel ? 'block' : 'none';
+    panel.dataset.fechamentoAberto = visivel ? 'true' : 'false';
+    if (button) {
+        button.setAttribute('aria-expanded', String(visivel));
+        button.innerHTML = visivel
+            ? '<i class="fa-solid fa-chevron-up"></i><span>Ocultar fechamento</span>'
+            : '<i class="fa-solid fa-file-invoice-dollar"></i><span>Mostrar fechamento</span>';
+    }
+}
+
+function atualizarEstadoEdicaoFechamentoExtracao() {
+    const aviso = document.getElementById('fechamentoEdicaoAviso');
+    const cancelar = document.getElementById('btnCancelarEdicaoFechamento');
+    const salvar = document.getElementById('btnSalvarFechamentoExtracao');
+    const editando = Boolean(fechamentoExtracaoEditandoId);
+
+    if (aviso) aviso.style.display = editando ? 'inline' : 'none';
+    if (cancelar) cancelar.style.display = editando ? 'inline-flex' : 'none';
+    if (salvar) {
+        salvar.innerHTML = editando
+            ? '<i class="fa-solid fa-pen-to-square"></i> Atualizar Fechamento'
+            : '<i class="fa-solid fa-folder-plus"></i> Salvar Fechamento';
+    }
+}
+
 function formatarMoedaEntrada(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -2122,7 +2171,12 @@ function montarFechamentoExtracaoSelecionado() {
     const usuario = getUsuarioAtualAuditoria();
     const pessoaNome = pessoas[0] || 'SEM NOME';
     const agora = new Date().toISOString();
-    const id = `fech_ext_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const existente = fechamentoExtracaoEditandoId
+        ? obterFechamentoExtracaoPorId(fechamentoExtracaoEditandoId)
+        : null;
+    const id = existente?.id || `fech_ext_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const pagamentos = Array.isArray(existente?.pagamentos) ? [...existente.pagamentos] : [];
+    const valorPago = pagamentos.reduce((sum, item) => sum + Number(item.valor || 0), 0);
 
     return {
         id,
@@ -2135,15 +2189,18 @@ function montarFechamentoExtracaoSelecionado() {
         pastaNome: pessoaNome,
         periodoInicio: datas[0] || '',
         periodoFim: datas[datas.length - 1] || '',
-        dataGeracao: agora,
-        geradoPor: usuario,
+        dataGeracao: existente?.dataGeracao || agora,
+        criadoEm: existente?.criadoEm || agora,
+        geradoPor: existente?.geradoPor || usuario,
         totalRegistros: selected.length,
         totalVolume,
         valorTotal: totalValor,
-        valorPago: 0,
-        saldoRestante: totalValor,
-        status: obterStatusFechamento(totalValor, 0),
-        pagamentos: [],
+        valorPago,
+        saldoRestante: Math.max(0, totalValor - valorPago),
+        status: obterStatusFechamento(totalValor, valorPago),
+        pagamentos,
+        atualizadoEm: agora,
+        atualizadoPor: usuario,
         resumoMateriaPrima: resumirMateriaPrimaEntradas(selected),
         itemIds: selected.map(en => en.id),
         itens: selected.map(en => ({
@@ -2172,19 +2229,31 @@ window.salvarFechamentoExtracao = async function() {
     if (!fechamento) return;
 
     const periodo = `${fechamento.periodoInicio ? new Date(fechamento.periodoInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '-'} a ${fechamento.periodoFim ? new Date(fechamento.periodoFim + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}`;
-    if (!confirm(`Salvar fechamento de ${fechamento.pessoaNome}?\nPeriodo: ${periodo}\nTotal: ${formatarMoedaEntrada(fechamento.valorTotal)}`)) return;
+    const editando = Boolean(fechamentoExtracaoEditandoId);
+    const acao = editando ? 'Atualizar fechamento' : 'Salvar fechamento';
+    const avisoPagamento = editando && fechamento.valorPago > 0
+        ? '\nOs pagamentos já registrados serão mantidos.'
+        : '';
+    if (!confirm(`${acao} de ${fechamento.pessoaNome}?\nPeriodo: ${periodo}\nTotal: ${formatarMoedaEntrada(fechamento.valorTotal)}${avisoPagamento}`)) return;
 
     const lista = obterFechamentosLocais().filter(item => item.id !== fechamento.id);
     lista.unshift(fechamento);
     salvarFechamentosLocais(lista);
+    fechamentoExtracaoEditandoId = null;
+    limparSelecaoEntradas();
+    atualizarEstadoEdicaoFechamentoExtracao();
     renderizarFechamentosSalvosExtracao();
 
     try {
         if (window.FS) await window.FS.setDoc('fechamentos_salvos', fechamento.id, fechamento);
-        alert('Fechamento salvo na pasta do empreiteiro/fornecedor.');
+        alert(editando
+            ? 'Fechamento atualizado na pasta do empreiteiro/fornecedor.'
+            : 'Fechamento salvo na pasta do empreiteiro/fornecedor.');
     } catch (err) {
         console.error('Erro ao salvar fechamento na nuvem:', err);
-        alert('Fechamento salvo localmente, mas nao foi possivel sincronizar na nuvem agora.');
+        alert(editando
+            ? 'Fechamento atualizado localmente, mas nao foi possivel sincronizar na nuvem agora.'
+            : 'Fechamento salvo localmente, mas nao foi possivel sincronizar na nuvem agora.');
     }
 };
 
@@ -2239,7 +2308,9 @@ function renderizarFechamentosSalvosExtracao() {
                         <div style="display:flex; justify-content:flex-end; align-items:center; gap:7px; flex-wrap:wrap;">
                             <span class="fechamento-status-badge ${classeStatusFechamento(status)}">${status}</span>
                             <button type="button" class="btn-icon" onclick="window.visualizarFechamentoExtracao('${item.id}')" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                            <button type="button" class="btn-icon" onclick="window.editarFechamentoExtracao('${item.id}')" title="Editar fechamento" style="color:#38bdf8;"><i class="fa-solid fa-pen-to-square"></i></button>
                             <button type="button" class="btn-icon" onclick="window.registrarPagamentoFechamentoExtracao('${item.id}')" title="Registrar pagamento" style="color:#22c55e;"><i class="fa-solid fa-money-bill-transfer"></i></button>
+                            <button type="button" class="btn-icon" onclick="window.excluirFechamentoExtracao('${item.id}')" title="Excluir fechamento" style="color:#f87171;"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -2263,6 +2334,72 @@ function renderizarFechamentosSalvosExtracao() {
         `;
     }).join('');
 }
+
+window.editarFechamentoExtracao = function(id) {
+    const fechamento = obterFechamentoExtracaoPorId(id);
+    if (!fechamento) return alert('Fechamento nao encontrado.');
+
+    if (Array.isArray(fechamento.pagamentos) && fechamento.pagamentos.length) {
+        const continuar = confirm('Este fechamento possui pagamentos registrados. Os pagamentos serão mantidos, mas o total poderá mudar conforme as cargas selecionadas. Continuar?');
+        if (!continuar) return;
+    }
+
+    fechamentoExtracaoEditandoId = fechamento.id;
+    entradasSelecionadas.clear();
+    const ids = Array.isArray(fechamento.itemIds) && fechamento.itemIds.length
+        ? fechamento.itemIds
+        : (fechamento.itens || []).map(item => item.id).filter(Boolean);
+    ids.forEach(itemId => entradasSelecionadas.add(itemId));
+
+    if (filtroEntradasNome) filtroEntradasNome.value = fechamento.pessoaNome || fechamento.pastaNome || '';
+    const dataInicio = document.getElementById('filtroEntradasDataInicio');
+    const dataFim = document.getElementById('filtroEntradasDataFim');
+    if (dataInicio) dataInicio.value = '';
+    if (dataFim) dataFim.value = '';
+
+    window.switchTabEntrada?.('lista');
+    definirPainelFechamentoExtracaoAberto(false);
+    atualizarEstadoEdicaoFechamentoExtracao();
+    renderizarEntradas();
+    atualizarPainelFechamento();
+    document.querySelector('#panelListaEntradas .table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.cancelarEdicaoFechamentoExtracao = function() {
+    fechamentoExtracaoEditandoId = null;
+    limparSelecaoEntradas();
+    if (filtroEntradasNome) filtroEntradasNome.value = '';
+    const dataInicio = document.getElementById('filtroEntradasDataInicio');
+    const dataFim = document.getElementById('filtroEntradasDataFim');
+    if (dataInicio) dataInicio.value = '';
+    if (dataFim) dataFim.value = '';
+    atualizarEstadoEdicaoFechamentoExtracao();
+    renderizarEntradas();
+};
+
+window.excluirFechamentoExtracao = async function(id) {
+    const fechamento = obterFechamentoExtracaoPorId(id);
+    if (!fechamento) return alert('Fechamento nao encontrado.');
+
+    const autorizado = window.confirmarExclusaoComSenha
+        ? await window.confirmarExclusaoComSenha(`Excluir o fechamento de ${fechamento.pessoaNome || 'empreiteiro'}? Esta ação não apagará as cargas originais.`)
+        : confirm(`Excluir o fechamento de ${fechamento.pessoaNome || 'empreiteiro'}? Esta ação não apagará as cargas originais.`);
+    if (!autorizado) return;
+
+    try {
+        if (window.FS?.deleteDoc) await window.FS.deleteDoc('fechamentos_salvos', id);
+    } catch (error) {
+        console.error('Erro ao excluir fechamento na nuvem:', error);
+        alert('Não foi possível excluir o fechamento na nuvem. Nenhum dado local foi removido.');
+        return;
+    }
+
+    salvarFechamentosLocais(obterFechamentosLocais().filter(item => item.id !== id));
+    fechamentosSalvosExtracao = fechamentosSalvosExtracao.filter(item => item.id !== id);
+    if (fechamentoExtracaoEditandoId === id) window.cancelarEdicaoFechamentoExtracao();
+    renderizarFechamentosSalvosExtracao();
+    alert('Fechamento excluído. As cargas originais continuam na lista de entradas.');
+};
 
 window.registrarPagamentoFechamentoExtracao = async function(id) {
     const lista = obterFechamentosLocais();
@@ -3100,6 +3237,8 @@ function inicializarModuloEntrada() {
     configurarSubmitEntrada();
     moverFechamentoEntradasParaTopo();
     injetarEstiloFechamentosEntrada();
+    definirPainelFechamentoExtracaoAberto(false);
+    atualizarEstadoEdicaoFechamentoExtracao();
     atualizarEstadoEdicaoEntrada();
     carregarFechamentosSalvosExtracao();
     carregarRegrasPagamentoDescarga();
@@ -3186,13 +3325,22 @@ function inicializarModuloEntrada() {
     document.addEventListener('mapa:updated', () => carregarMatosMapaEntrada(document.getElementById('entMapaMatoId')?.value || ''));
 
     // Eventos de Busca e Filtro de Entradas
-    if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', renderizarEntradas);
+    if(filtroEntradasNome) filtroEntradasNome.addEventListener('input', () => {
+        if (!fechamentoExtracaoEditandoId) limparSelecaoEntradas();
+        renderizarEntradas();
+    });
     
     // Eventos de Filtro de Período
     const filtroEntradasDataInicio = document.getElementById('filtroEntradasDataInicio');
     const filtroEntradasDataFim = document.getElementById('filtroEntradasDataFim');
-    if(filtroEntradasDataInicio) filtroEntradasDataInicio.addEventListener('change', renderizarEntradas);
-    if(filtroEntradasDataFim) filtroEntradasDataFim.addEventListener('change', renderizarEntradas);
+    if(filtroEntradasDataInicio) filtroEntradasDataInicio.addEventListener('change', () => {
+        if (!fechamentoExtracaoEditandoId) limparSelecaoEntradas();
+        renderizarEntradas();
+    });
+    if(filtroEntradasDataFim) filtroEntradasDataFim.addEventListener('change', () => {
+        if (!fechamentoExtracaoEditandoId) limparSelecaoEntradas();
+        renderizarEntradas();
+    });
 
     if(filtroDescargaNome) filtroDescargaNome.addEventListener('input', renderizarDescarregamentos);
     const filtroDescargaDataInicio = document.getElementById('filtroDescargaDataInicio');
@@ -3267,6 +3415,17 @@ function inicializarModuloEntrada() {
     const btnAtualizarFechamentosExtracao = document.getElementById('btnAtualizarFechamentosExtracao');
     if (btnAtualizarFechamentosExtracao) {
         btnAtualizarFechamentosExtracao.addEventListener('click', carregarFechamentosSalvosExtracao);
+    }
+    const btnToggleFechamentoExtracao = document.getElementById('btnToggleFechamentoExtracao');
+    if (btnToggleFechamentoExtracao) {
+        btnToggleFechamentoExtracao.addEventListener('click', () => {
+            const panel = document.getElementById('panelRelatorioConsolidado');
+            definirPainelFechamentoExtracaoAberto(panel?.dataset.fechamentoAberto !== 'true');
+        });
+    }
+    const btnCancelarEdicaoFechamento = document.getElementById('btnCancelarEdicaoFechamento');
+    if (btnCancelarEdicaoFechamento) {
+        btnCancelarEdicaoFechamento.addEventListener('click', window.cancelarEdicaoFechamentoExtracao);
     }
     const buscaFechamentoExtracao = document.getElementById('buscaFechamentoExtracao');
     if (buscaFechamentoExtracao) buscaFechamentoExtracao.addEventListener('input', renderizarFechamentosSalvosExtracao);

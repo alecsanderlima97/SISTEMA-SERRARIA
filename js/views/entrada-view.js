@@ -324,7 +324,12 @@
                         <!-- Últimas Entradas -->
                         <div class="glass-panel" id="panelListaEntradas" style="margin-bottom: 0; display: none; flex-direction: column; width: 100%;">
                             <div class="section-title" style="display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 15px;">
-                                <h2 style="margin: 0;"><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                                    <h2 style="margin: 0;"><i class="fa-solid fa-list"></i> Últimas Entradas</h2>
+                                    <button type="button" id="btnToggleFechamentoExtracao" class="btn-secondary" aria-expanded="false" style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px;">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i><span>Mostrar fechamento</span>
+                                    </button>
+                                </div>
                                 
                                 <!-- Filtros Avançados por Nome e Período -->
                                 <div class="filters-row" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; width: 100%;">
@@ -363,10 +368,14 @@
                             </div>
 
                             <!-- Painel de Relatório de Fechamento Consolidado -->
-                            <div id="panelRelatorioConsolidado" style="order: -1; margin-top: 0; margin-bottom: 20px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--panel-border); border-radius: 8px; padding: 15px;">
+                            <div id="panelRelatorioConsolidado" data-fechamento-aberto="false" style="display:none; order: -1; margin-top: 0; margin-bottom: 20px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--panel-border); border-radius: 8px; padding: 15px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 10px;">
                                     <h3 style="margin: 0; color: var(--accent-color); font-size: 1rem;"><i class="fa-solid fa-file-invoice-dollar"></i> Fechamento Financeiro de Extração</h3>
-                                    <span class="badge" style="background: var(--primary-color);" id="fechamentoQtdCargas">0 Cargas Selecionadas</span>
+                                    <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                                        <span class="badge" style="background: var(--primary-color);" id="fechamentoQtdCargas">0 Cargas Selecionadas</span>
+                                        <span id="fechamentoEdicaoAviso" style="display:none; color:#facc15; font-size:.78rem; font-weight:800;">Editando fechamento</span>
+                                        <button type="button" id="btnCancelarEdicaoFechamento" class="btn-secondary" style="display:none; height:30px; padding:0 9px;" title="Cancelar edição do fechamento"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
                                     <div style="text-align: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
