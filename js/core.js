@@ -1272,8 +1272,11 @@ const App = {
         const btnToggleSidebar = document.getElementById('btnToggleSidebar');
         const appWrapper = document.querySelector('.app-wrapper');
         if (btnToggleSidebar && appWrapper) {
-            // Se for dispositivo móvel (celular), inicia sempre recolhido para carregamento limpo
-            const isMobile = window.innerWidth <= 900;
+            // O modo "computador" do navegador pode manter uma viewport larga em um celular.
+            // Nesse caso, a capacidade de toque tambem precisa entrar na decisao do shell.
+            const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches
+                || Number(window.navigator?.maxTouchPoints || 0) > 0;
+            const isMobile = window.innerWidth <= 900 || isTouchDevice;
             const isCollapsed = isMobile || localStorage.getItem('sidebar_collapsed') === 'true';
             
             if (isCollapsed) {
@@ -1306,7 +1309,7 @@ const App = {
 
             // No celular, um toque fora da gaveta fecha o menu sem bloquear a tela.
             appWrapper.addEventListener('click', (event) => {
-                if (window.innerWidth > 900 || appWrapper.classList.contains('sidebar-collapsed')) return;
+                if (!isMobile || appWrapper.classList.contains('sidebar-collapsed')) return;
                 if (event.target.closest('.sidebar, #btnToggleSidebar')) return;
                 event.preventDefault();
                 event.stopPropagation();
@@ -1317,7 +1320,7 @@ const App = {
             }, true);
 
             window.addEventListener('resize', () => {
-                if (window.innerWidth <= 900) appWrapper.classList.add('sidebar-collapsed');
+                if (isMobile) appWrapper.classList.add('sidebar-collapsed');
             });
         }
     },
@@ -1788,7 +1791,9 @@ window.navegarPara = function(targetId) {
         if (d) d.style.display = 'none';
         
         // Em telas pequenas, recolher a sidebar ao clicar em um link
-        if (window.innerWidth <= 900) {
+        const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches
+            || Number(window.navigator?.maxTouchPoints || 0) > 0;
+        if (window.innerWidth <= 900 || isTouchDevice) {
             const appWrapper = document.querySelector('.app-wrapper');
             if (appWrapper && !appWrapper.classList.contains('sidebar-collapsed')) {
                 document.getElementById('btnToggleSidebar')?.click();

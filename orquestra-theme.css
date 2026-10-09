@@ -2750,3 +2750,99 @@ body.orquestra-theme table.financeiro-table tbody tr:has(input[type="checkbox"]:
         transform: none !important;
     }
 }
+
+/* Shell responsivo para celulares que estejam usando "modo computador".
+   A viewport pode ser larga, mas a operacao continua sendo touch e precisa
+   ocupar toda a tela sem deixar a sidebar desktop espremida ao lado. */
+html.orq-touch-device,
+body.orq-touch-device {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+body.orq-touch-device .app-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+body.orq-touch-device .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: min(84vw, 320px) !important;
+    max-width: calc(100vw - 24px) !important;
+    height: 100dvh !important;
+    transform: translateX(-105%) !important;
+    transition: transform .25s ease !important;
+    z-index: 300 !important;
+}
+
+body.orq-touch-device .app-wrapper:not(.sidebar-collapsed) .sidebar {
+    transform: translateX(0) !important;
+}
+
+body.orq-touch-device .app-wrapper.sidebar-collapsed .sidebar {
+    transform: translateX(-105%) !important;
+}
+
+body.orq-touch-device .main-content {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    overflow: visible !important;
+}
+
+body.orq-touch-device .main-content::before,
+body.orq-touch-device .main-content::after {
+    inset: 0 !important;
+}
+
+body.orq-touch-device .main-content > .view-section,
+body.orq-touch-device .view-section {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-inline: auto !important;
+}
+
+body.orq-touch-device .global-header,
+body.orq-touch-device .global-header-left,
+body.orq-touch-device .header-actions-group,
+body.orq-touch-device .global-header-context {
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+body.orq-touch-device .global-header {
+    width: 100% !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+}
+
+body.orq-touch-device .global-header-context small,
+body.orq-touch-device .assistant-home-search,
+body.orq-touch-device .header-weather-widget,
+body.orq-touch-device .header-user-text {
+    display: none !important;
+}
+
+body.orq-touch-device .app-wrapper.sidebar-collapsed::before {
+    content: none !important;
+    pointer-events: none !important;
+}
+
+body.orq-touch-device .app-wrapper:not(.sidebar-collapsed)::before {
+    content: "" !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 250 !important;
+    background: rgba(6, 10, 18, .56) !important;
+    pointer-events: none !important;
+}
