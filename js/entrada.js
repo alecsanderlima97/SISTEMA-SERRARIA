@@ -10,6 +10,66 @@ let empreiteirosAtuais = [];
 let empreiteiroEditandoId = null;
 let matosEmpreiteiroEditando = [];
 let ordenarEmpreiteirosAZ = false;
+let transportesEntradaAtuais = [];
+let aplicandoTransporteEntrada = false;
+
+async function carregarTransportesEntrada(valorSelecionado = '') {
+    const select = document.getElementById('entTransportadora');
+    if (!select) return;
+
+    try {
+        const snapshot = await getDocs(collection(db, 'transportes'));
+        transportesEntradaAtuais = [];
+        select.innerHTML = '<option value="">Selecionar transportadora, caminhão e motorista...</option>';
+
+        snapshot.forEach((registro) => {
+            const transporte = { id: registro.id, ...registro.data() };
+            transportesEntradaAtuais.push(transporte);
+            const option = document.createElement('option');
+            option.value = transporte.id;
+            option.textContent = [
+                transporte.nome,
+                transporte.caminhao,
+                transporte.placa,
+                transporte.motorista ? `Motorista: ${transporte.motorista}` : ''
+            ].filter(Boolean).join(' | ');
+            select.appendChild(option);
+        });
+
+        if (valorSelecionado && transportesEntradaAtuais.some(item => item.id === valorSelecionado)) {
+            select.value = valorSelecionado;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar transportadoras para a entrada:', error);
+        select.innerHTML = '<option value="">Não foi possível carregar os cadastros</option>';
+    }
+}
+
+function preencherTransporteEntrada(transporte) {
+    if (!transporte) return;
+    aplicandoTransporteEntrada = true;
+    const motorista = document.getElementById('entMotorista');
+    const caminhao = document.getElementById('entCaminhao');
+    const placa = document.getElementById('entPlaca');
+    if (motorista) motorista.value = transporte.motorista || '';
+    if (caminhao) caminhao.value = transporte.caminhao || '';
+    if (placa) placa.value = transporte.placa || '';
+    aplicandoTransporteEntrada = false;
+}
+
+function localizarTransporteEntrada(entrada) {
+    if (!entrada) return null;
+    if (entrada.transportadoraId) {
+        const porId = transportesEntradaAtuais.find(item => item.id === entrada.transportadoraId);
+        if (porId) return porId;
+    }
+    const normalizar = valor => String(valor || '').toUpperCase().trim();
+    return transportesEntradaAtuais.find(item =>
+        normalizar(item.placa) === normalizar(entrada.placa)
+        && normalizar(item.caminhao) === normalizar(entrada.caminhao)
+        && normalizar(item.motorista) === normalizar(entrada.motorista)
+    ) || null;
+}
 
 function injetarEstiloEmpreiteiro() {
     if (document.getElementById('empreiteiro-layout-style')) return;
@@ -2465,6 +2525,10 @@ function configurarSubmitEntrada() {
             produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
             observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
+            transportadoraId: document.getElementById('entTransportadora')?.value || null,
+            transportadoraNome: document.getElementById('entTransportadora')?.value
+                ? document.getElementById('entTransportadora')?.selectedOptions?.[0]?.textContent?.trim() || null
+                : null,
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
             placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
@@ -2641,6 +2705,9 @@ window.alterarEntrada = async function(id) {
     const observacaoCargaInput = document.getElementById('entObservacaoCarga');
     if (observacaoCargaInput) observacaoCargaInput.value = en.observacaoCarga || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
+    const transporteSelecionado = localizarTransporteEntrada(en);
+    const transporteSelect = document.getElementById('entTransportadora');
+    if (transporteSelect) transporteSelect.value = transporteSelecionado?.id || '';
     document.getElementById('entMotorista').value = en.motorista || '';
     document.getElementById('entCaminhao').value = en.caminhao || '';
     document.getElementById('entPlaca').value = en.placa || '';
@@ -2921,6 +2988,28 @@ function inicializarModuloEntrada() {
     infoDescarga = document.getElementById('entInfoDescarga');
     entData = document.getElementById('entData');
     entHorario = document.getElementById('entHorario');
+    carregarTransportesEntrada();
+
+    const transporteEntradaSelect = document.getElementById('entTransportadora');
+    if (transporteEntradaSelect) {
+        transporteEntradaSelect.addEventListener('change', event => {
+            const transporte = transportesEntradaAtuais.find(item => item.id === event.target.value);
+            preencherTransporteEntrada(transporte);
+        });
+    }
+    ['entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', () => {
+                if (aplicandoTransporteEntrada) return;
+                const select = document.getElementById('entTransportadora');
+                if (select) select.value = '';
+            });
+        }
+    });
+    document.addEventListener('transportesUpdated', () => {
+        carregarTransportesEntrada(document.getElementById('entTransportadora')?.value || '');
+    });
     configurarToggleDescarga();
     atualizarVisibilidadeDescarga(false);
     configurarSubmitEntrada();

@@ -127,6 +127,13 @@
                                     <label for="entRomaneio">Nº Romaneio *</label>
                                     <input type="text" id="entRomaneio" class="text-uppercase-input" required placeholder="Ex: ROM-1004">
                                 </div>
+                                <div class="input-group" style="grid-column: 1 / -1;">
+                                    <label for="entTransportadora">Transportadora / veículo cadastrado</label>
+                                    <select id="entTransportadora">
+                                        <option value="">Selecionar transportadora, caminhão e motorista...</option>
+                                    </select>
+                                    <small>Ao selecionar um cadastro, motorista, modelo e placa serão preenchidos automaticamente. Você ainda pode ajustar os campos manualmente.</small>
+                                </div>
                                 <div class="input-group">
                                     <label for="entMotorista">Nome do Motorista *</label>
                                     <input type="text" id="entMotorista" class="text-uppercase-input" required placeholder="Ex: Carlos Motorista">
