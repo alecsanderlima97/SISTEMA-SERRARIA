@@ -14,7 +14,7 @@ let transportesEntradaAtuais = [];
 let aplicandoTransporteEntrada = false;
 
 async function carregarTransportesEntrada(valorSelecionado = '') {
-    const select = document.getElementById('entTransportadora');
+    const select = document.getElementById('entCaminhao');
     if (!select) return;
 
     try {
@@ -32,7 +32,7 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
         }
 
         transportesEntradaAtuais = [];
-        select.innerHTML = '<option value="">Selecionar transportadora, caminhão e motorista...</option>';
+        select.innerHTML = '<option value="">Selecionar caminhão cadastrado...</option>';
 
         const grupoProprios = document.createElement('optgroup');
         grupoProprios.label = 'Veículos próprios — Controle de Frota';
@@ -40,11 +40,11 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
         grupoTerceiros.label = 'Transportadores terceiros';
 
         const adicionarOpcao = (transporte, grupo) => {
+            if (!window.OrquestraCaminhoes?.ehCaminhao(transporte)) return;
             transportesEntradaAtuais.push(transporte);
             const option = document.createElement('option');
             option.value = transporte.chave;
             option.textContent = [
-                transporte.nome,
                 transporte.caminhao,
                 transporte.placa,
                 transporte.motorista ? `Motorista: ${transporte.motorista}` : ''
@@ -79,28 +79,69 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
         if (grupoProprios.children.length) select.appendChild(grupoProprios);
         if (grupoTerceiros.children.length) select.appendChild(grupoTerceiros);
 
+        const manualOption = document.createElement('option');
+        manualOption.value = '__MANUAL__';
+        manualOption.textContent = 'Outro caminhão / preencher manualmente';
+        select.appendChild(manualOption);
+
         if (valorSelecionado) {
             const encontrado = transportesEntradaAtuais.find(item =>
                 item.chave === valorSelecionado || item.id === valorSelecionado
             );
             if (encontrado) select.value = encontrado.chave;
         }
+        window.orquestraCaminhoesEntrada = () => transportesEntradaAtuais.map(item => ({ ...item }));
+        document.dispatchEvent(new Event('caminhoesEntradaUpdated'));
     } catch (error) {
         console.error('Erro ao carregar transportadoras para a entrada:', error);
-        select.innerHTML = '<option value="">Não foi possível carregar os cadastros</option>';
+        select.innerHTML = '<option value="">Não foi possível carregar os caminhões</option><option value="__MANUAL__">Outro caminhão / preencher manualmente</option>';
     }
 }
 
 function preencherTransporteEntrada(transporte) {
-    if (!transporte) return;
     aplicandoTransporteEntrada = true;
+    const select = document.getElementById('entCaminhao');
     const motorista = document.getElementById('entMotorista');
-    const caminhao = document.getElementById('entCaminhao');
+    const caminhaoManual = document.getElementById('entCaminhaoManual');
     const placa = document.getElementById('entPlaca');
-    if (motorista) motorista.value = transporte.motorista || '';
-    if (caminhao) caminhao.value = transporte.caminhao || '';
-    if (placa) placa.value = transporte.placa || '';
+    const medidas = window.OrquestraCaminhoes?.medidas(transporte || {}) || {};
+
+    if (transporte) {
+        if (select) select.value = transporte.chave || '';
+        if (caminhaoManual) {
+            caminhaoManual.value = '';
+            caminhaoManual.style.display = 'none';
+        }
+        if (motorista) motorista.value = transporte.motorista || '';
+        if (placa) placa.value = transporte.placa || '';
+        preencherMedidasCaminhaoEntrada(medidas);
+    } else {
+        if (select) select.value = '__MANUAL__';
+        if (caminhaoManual) caminhaoManual.style.display = 'block';
+    }
     aplicandoTransporteEntrada = false;
+}
+
+function preencherMedidasCaminhaoEntrada(medidas = {}) {
+    const definir = (id, valor) => {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = Number(valor || 0) > 0 ? formatDecimalValue(Number(valor)) : '';
+    };
+    definir('entComp', medidas.comp);
+    definir('entLarg', medidas.larg);
+    ['entAltEsq1', 'entAltEsq2', 'entAltEsq3', 'entAltEsq4', 'entAltDir1', 'entAltDir2', 'entAltDir3', 'entAltDir4']
+        .forEach(id => definir(id, medidas.alt));
+}
+
+function obterCaminhaoEntradaSelecionado() {
+    const select = document.getElementById('entCaminhao');
+    return transportesEntradaAtuais.find(item => item.chave === select?.value) || null;
+}
+
+function obterModeloCaminhaoEntrada() {
+    const selecionado = obterCaminhaoEntradaSelecionado();
+    if (selecionado) return selecionado.caminhao || selecionado.modelo || '';
+    return document.getElementById('entCaminhaoManual')?.value || '';
 }
 
 function localizarTransporteEntrada(entrada) {
@@ -1243,6 +1284,11 @@ function resetarMedidasEntrada() {
 
 function resetarFormularioEntradaCompleto() {
     formEntrada?.reset();
+    const caminhaoManual = document.getElementById('entCaminhaoManual');
+    if (caminhaoManual) {
+        caminhaoManual.value = '';
+        caminhaoManual.style.display = 'none';
+    }
     const mapaSelect = document.getElementById('entMapaMatoId');
     if (mapaSelect) mapaSelect.value = '';
     atualizarInfoMapaMatoEntrada();
@@ -2726,8 +2772,7 @@ function configurarSubmitEntrada() {
             }
         }
         
-        const transporteSelect = document.getElementById('entTransportadora');
-        const transporteSelecionado = transportesEntradaAtuais.find(item => item.chave === transporteSelect?.value) || null;
+        const transporteSelecionado = obterCaminhaoEntradaSelecionado();
         const novaEntrada = {
             data: document.getElementById('entData').value,
             horario: document.getElementById('entHorario').value,
@@ -2749,7 +2794,7 @@ function configurarSubmitEntrada() {
             frotaId: transporteSelecionado?.origem === 'PROPRIO' ? transporteSelecionado.id : null,
             transportadoraNome: transporteSelecionado?.nome || null,
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
-            caminhao: document.getElementById('entCaminhao').value.toUpperCase().trim(),
+            caminhao: obterModeloCaminhaoEntrada().toUpperCase().trim(),
             placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
             comp: calcData.comp,
             larg: calcData.larg,
@@ -2925,11 +2970,14 @@ window.alterarEntrada = async function(id) {
     if (observacaoCargaInput) observacaoCargaInput.value = en.observacaoCarga || '';
     document.getElementById('entRomaneio').value = en.romaneioNum || '';
     const transporteSelecionado = localizarTransporteEntrada(en);
-    const transporteSelect = document.getElementById('entTransportadora');
-    if (transporteSelect) transporteSelect.value = transporteSelecionado?.id || '';
-    document.getElementById('entMotorista').value = en.motorista || '';
-    document.getElementById('entCaminhao').value = en.caminhao || '';
-    document.getElementById('entPlaca').value = en.placa || '';
+    if (transporteSelecionado) {
+        preencherTransporteEntrada(transporteSelecionado);
+    } else {
+        preencherTransporteEntrada(null);
+        document.getElementById('entCaminhaoManual').value = en.caminhao || '';
+        document.getElementById('entMotorista').value = en.motorista || '';
+        document.getElementById('entPlaca').value = en.placa || '';
+    }
     const temDescarga = en.temDescarregamento === true
         || (Array.isArray(en.responsaveisDescarga) && en.responsaveisDescarga.length > 0)
         || Number(en.totalDescarga || 0) > 0
@@ -3209,28 +3257,36 @@ function inicializarModuloEntrada() {
     entHorario = document.getElementById('entHorario');
     carregarTransportesEntrada();
 
-    const transporteEntradaSelect = document.getElementById('entTransportadora');
+    const transporteEntradaSelect = document.getElementById('entCaminhao');
     if (transporteEntradaSelect) {
         transporteEntradaSelect.addEventListener('change', event => {
-            const transporte = transportesEntradaAtuais.find(item => item.id === event.target.value);
-            preencherTransporteEntrada(transporte);
+            const transporte = transportesEntradaAtuais.find(item => item.chave === event.target.value);
+            if (event.target.value === '__MANUAL__') {
+                preencherTransporteEntrada(null);
+            } else if (transporte) {
+                preencherTransporteEntrada(transporte);
+            }
         });
     }
-    ['entMotorista', 'entCaminhao', 'entPlaca'].forEach(id => {
+    ['entMotorista', 'entCaminhaoManual', 'entPlaca', 'entComp', 'entLarg', 'entAltEsq1', 'entAltEsq2', 'entAltEsq3', 'entAltEsq4', 'entAltDir1', 'entAltDir2', 'entAltDir3', 'entAltDir4'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', () => {
                 if (aplicandoTransporteEntrada) return;
-                const select = document.getElementById('entTransportadora');
-                if (select) select.value = '';
+                const select = document.getElementById('entCaminhao');
+                const manual = document.getElementById('entCaminhaoManual');
+                if (id === 'entCaminhaoManual') {
+                    if (select) select.value = '__MANUAL__';
+                    if (manual) manual.style.display = 'block';
+                }
             });
         }
     });
     document.addEventListener('transportesUpdated', () => {
-        carregarTransportesEntrada(document.getElementById('entTransportadora')?.value || '');
+        carregarTransportesEntrada(document.getElementById('entCaminhao')?.value || '');
     });
     document.addEventListener('frotaUpdated', () => {
-        carregarTransportesEntrada(document.getElementById('entTransportadora')?.value || '');
+        carregarTransportesEntrada(document.getElementById('entCaminhao')?.value || '');
     });
     configurarToggleDescarga();
     atualizarVisibilidadeDescarga(false);
@@ -3250,7 +3306,7 @@ function inicializarModuloEntrada() {
     }
 
     // Forçar letras maiúsculas em tempo real nos campos de texto
-    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entFornecedorAvulso', 'entMotorista', 'entCaminhao', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
+    ['empNome', 'empMato', 'entRomaneio', 'entMato', 'entFornecedorAvulso', 'entMotorista', 'entCaminhaoManual', 'entPlaca', 'entObservacaoCarga'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', window.forceUppercaseInput);

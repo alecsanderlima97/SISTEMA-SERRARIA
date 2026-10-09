@@ -71,6 +71,8 @@ let ultimoDocumentoSubproduto = null;
 let subprodutosSelecionadosRelatorio = new Set();
 let fechamentosSubprodutosCache = [];
 let caminhoesSubprodutoForm = [];
+let caminhoesGlobaisSubproduto = [];
+let caminhoesDisponiveisSubproduto = [];
 
 function numeroRomaneioSubproduto(venda) {
     const texto = String(venda?.romaneio || venda?.romaneioCliente || '');
@@ -237,6 +239,7 @@ function garantirDataVendaSubproduto() {
 }
 
 function normalizarCaminhoesSubproduto(cli = {}) {
+    cli = cli || {};
     if (Array.isArray(cli.caminhoes) && cli.caminhoes.length) {
         return cli.caminhoes.map(item => ({
             modelo: (item.modelo || '').toUpperCase().trim(),
@@ -266,6 +269,84 @@ function normalizarCaminhoesSubproduto(cli = {}) {
     };
 
     return legado.modelo || legado.placaCaminhao || legado.placaCarreta ? [legado] : [];
+}
+
+async function carregarCaminhoesGlobaisSubproduto() {
+    try {
+        const [terceirosResult, frotaResult] = await Promise.allSettled([
+            getDocs(collection(db, 'transportes')),
+            getDocs(collection(db, 'frotas'))
+        ]);
+        const registros = [];
+        if (terceirosResult.status === 'fulfilled') {
+            terceirosResult.value.forEach(registro => registros.push({ origem: 'TERCEIRO', id: registro.id, ...registro.data() }));
+        }
+        if (frotaResult.status === 'fulfilled') {
+            frotaResult.value.forEach(registro => registros.push({ origem: 'PROPRIO', id: registro.id, ...registro.data() }));
+        }
+        try {
+            const frotaLocal = JSON.parse(localStorage.getItem('orquestra_frota') || '[]');
+            if (Array.isArray(frotaLocal)) registros.push(...frotaLocal.map(item => ({ origem: 'PROPRIO', ...item })));
+        } catch {
+            // O cadastro em nuvem continua sendo suficiente quando o cache local estiver indisponivel.
+        }
+
+        atualizarCaminhoesGlobaisSubproduto(registros);
+    } catch (error) {
+        console.error('Erro ao carregar caminhoes globais para subprodutos:', error);
+        caminhoesGlobaisSubproduto = [];
+    }
+}
+
+function atualizarCaminhoesGlobaisSubproduto(registros = []) {
+    const vistos = new Set();
+    caminhoesGlobaisSubproduto = registros.map(registro => {
+            const modelo = String(registro.modelo || registro.caminhao || '').toUpperCase().trim();
+            const placa = String(registro.placa || registro.placaCaminhao || '').toUpperCase().trim();
+            const item = {
+                origem: registro.origem || 'PROPRIO',
+                id: registro.id || '',
+                modelo,
+                motorista: String(registro.motorista || '').toUpperCase().trim(),
+                placaCaminhao: placa,
+                placaCarreta: String(registro.placaCarreta || '').toUpperCase().trim(),
+                medidas: window.OrquestraCaminhoes?.medidas(registro) || {
+                    alt: Number(registro.medidas?.alt || 0),
+                    larg: Number(registro.medidas?.larg || 0),
+                    comp: Number(registro.medidas?.comp || 0)
+                }
+            };
+            return { registro, item };
+        }).filter(({ registro, item }) => {
+            if (!window.OrquestraCaminhoes?.ehCaminhao(registro)) return false;
+            const chave = `${item.placaCaminhao.replace(/[^A-Z0-9]/g, '')}|${item.modelo}`;
+            if (!chave.replace('|', '')) return false;
+            if (vistos.has(chave)) return false;
+            vistos.add(chave);
+            return true;
+        }).map(({ item }) => item);
+
+    const idCliente = document.getElementById('calcCavSelectCliente')?.value;
+    const cliente = clientesSubprodutosCache.find(item => item.id === idCliente);
+    if (cliente) preencherSeletorCaminhoesSub(cliente, true);
+    else if (document.getElementById('calcCavCaminhaoSelecionado')) preencherSeletorCaminhoesSub(null, false);
+}
+
+function sincronizarCaminhoesEntradaNosSubprodutos() {
+    const registros = window.orquestraCaminhoesEntrada?.() || [];
+    if (registros.length) atualizarCaminhoesGlobaisSubproduto(registros);
+}
+
+function obterCaminhoesSubproduto(cli) {
+    const cliente = normalizarCaminhoesSubproduto(cli).map(item => ({ ...item, origem: 'CLIENTE' }));
+    const todos = [...cliente, ...caminhoesGlobaisSubproduto];
+    const vistos = new Set();
+    return todos.filter(item => {
+        const chave = `${String(item.placaCaminhao || '').replace(/[^A-Z0-9]/gi, '').toUpperCase()}|${String(item.modelo || '').toUpperCase()}`;
+        if (!chave.replace('|', '') || vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+    });
 }
 
 function renderListaCaminhoesSub() {
@@ -314,11 +395,12 @@ function preencherCaminhaoSelecionadoSub(caminhao) {
     }
 }
 
-function preencherSeletorCaminhoesSub(cli) {
+function preencherSeletorCaminhoesSub(cli, selecionarPrimeiro = true) {
     const select = document.getElementById('calcCavCaminhaoSelecionado');
     if (!select) return;
 
-    const caminhoes = normalizarCaminhoesSubproduto(cli);
+    const caminhoes = obterCaminhoesSubproduto(cli);
+    caminhoesDisponiveisSubproduto = caminhoes;
     select.innerHTML = '<option value="">Selecionar caminhão cadastrado</option>';
 
     caminhoes.forEach((item, index) => {
@@ -331,12 +413,12 @@ function preencherSeletorCaminhoesSub(cli) {
         select.appendChild(option);
     });
 
-    if (caminhoes.length) {
+    if (caminhoes.length && selecionarPrimeiro) {
         select.value = '0';
         preencherCaminhaoSelecionadoSub(caminhoes[0]);
     } else {
         select.value = '';
-        preencherCaminhaoSelecionadoSub(null);
+        if (!caminhoes.length) preencherCaminhaoSelecionadoSub(null);
     }
 }
 
@@ -576,7 +658,7 @@ if (selectCavCli) {
             document.getElementById('calcCavCidadeEstado').value = '';
             
             const selectCaminhao = document.getElementById('calcCavCaminhaoSelecionado');
-            if (selectCaminhao) selectCaminhao.innerHTML = '<option value="">Selecionar caminhão cadastrado</option>';
+            preencherSeletorCaminhoesSub(null, false);
             document.getElementById('calcCavCaminhao').value = '';
             document.getElementById('calcCavMotorista').value = '';
             document.getElementById('calcCavPlacaCaminhao').value = '';
@@ -720,8 +802,7 @@ const selectCavCaminhao = document.getElementById('calcCavCaminhaoSelecionado');
 if (selectCavCaminhao) {
     selectCavCaminhao.addEventListener('change', function() {
         const cli = clientesSubprodutosCache.find(x => x.id === document.getElementById('calcCavSelectCliente')?.value);
-        const caminhoes = normalizarCaminhoesSubproduto(cli);
-        const item = caminhoes[Number(this.value)] || null;
+        const item = caminhoesDisponiveisSubproduto[Number(this.value)] || null;
         preencherCaminhaoSelecionadoSub(item);
     });
 }
@@ -732,6 +813,10 @@ if (chkCavParticular) {
 }
 
 renderListaCaminhoesSub();
+
+document.addEventListener('transportesUpdated', carregarCaminhoesGlobaisSubproduto);
+document.addEventListener('frotaUpdated', carregarCaminhoesGlobaisSubproduto);
+document.addEventListener('caminhoesEntradaUpdated', sincronizarCaminhoesEntradaNosSubprodutos);
 
 // Ouvintes de cubagem
 ['subCliAlt', 'subCliLarg', 'subCliComp', 'calcCavAlt', 'calcCavLarg', 'calcCavComp', 'calcCavCupimAdicional', 'calcCavQtd'].forEach(id => {
@@ -1311,6 +1396,7 @@ window.excluirVendaSubproduto = async (id) => {
 };
 
 window.SectionLoader?.register('view-cavaco', () => Promise.all([
+    carregarCaminhoesGlobaisSubproduto(),
     carregarClientesSubprodutos(),
     carregarLancamentosSubprodutos(),
     carregarFechamentosSubprodutos()

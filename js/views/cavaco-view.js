@@ -208,7 +208,7 @@
                                     <div class="input-group"><label>Nosso Romaneio *</label><input type="text" id="calcCavRomaneio" class="text-uppercase-input" required placeholder="Ex: 00123"></div>
                                     <div class="input-group"><label>Romaneio do Cliente</label><input type="text" id="calcCavRomaneioCliente" class="text-uppercase-input" placeholder="Ex: ROM-987"></div>
                                     <div class="input-group"><label>Motorista do Caminhao</label><input type="text" id="calcCavMotorista" class="text-uppercase-input" placeholder="Nome do motorista"></div>
-                                    <div class="input-group"><label>Caminhao do Cliente</label><select id="calcCavCaminhaoSelecionado" style="width: 100%;"><option value="">Selecionar caminhao cadastrado</option></select></div>
+                                    <div class="input-group"><label>Caminhao cadastrado</label><select id="calcCavCaminhaoSelecionado" style="width: 100%;"><option value="">Selecionar caminhao cadastrado</option></select><small>Frota propria e transportadores terceiros. A selecao preenche motorista, placas e medidas.</small></div>
                                     <div class="input-group span-2" style="background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.45); border-radius:10px; padding:12px;">
                                         <label style="display:flex; align-items:center; gap:12px; color:#fbbf24; font-weight:900; font-size:1rem;">
                                             <input type="checkbox" id="calcCavCarregamentoParticular" style="width:22px; height:22px; margin:0; accent-color:#f59e0b;"> Carregamento particular

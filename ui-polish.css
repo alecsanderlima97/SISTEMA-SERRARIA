@@ -99,6 +99,43 @@ input[inputmode="decimal"],
     align-items: end;
 }
 
+/* Mantem a entrada de cargas alinhada mesmo quando um campo possui informacao auxiliar. */
+#formEntrada {
+    align-items: start;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+#formEntrada > .input-group {
+    align-self: start;
+    min-width: 0;
+}
+
+#formEntrada > .input-group > label {
+    min-height: 2.35em;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 6px;
+}
+
+#formEntrada > .input-group > input,
+#formEntrada > .input-group > select {
+    width: 100%;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    #formEntrada {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    #formEntrada {
+        grid-template-columns: 1fr;
+    }
+}
+
 .frota-photo-btn {
     position: absolute;
     top: 8px;
