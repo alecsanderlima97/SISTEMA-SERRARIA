@@ -59,6 +59,40 @@ function formatarM3Baixo(valor) {
     return arredondarParaBaixo(valor, 3).toFixed(3);
 }
 
+function parseFreteUnitario(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+
+    const texto = String(valor).trim().replace(/^R\$\s*/i, '').replace(/\s/g, '');
+    if (!texto) return 0;
+
+    // No frete, "110" significa R$ 110,00. Ponto isolado com ate duas casas
+    // tambem pode ser decimal digitado no teclado (110.50).
+    if (texto.includes(',')) {
+        return Number(texto.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    if (/^-?\d+\.\d{1,2}$/.test(texto)) {
+        return Number(texto) || 0;
+    }
+    return Number(texto.replace(/[^\d-]/g, '')) || 0;
+}
+
+function formatarFreteUnitario(event) {
+    const input = event?.currentTarget || event?.target;
+    if (!input) return;
+    input.value = window.formatCurrencyValue(parseFreteUnitario(input.value));
+}
+
+function prepararEdicaoFreteUnitario(input) {
+    if (!input) return;
+    input.addEventListener('focus', () => {
+        const valor = parseFreteUnitario(input.value);
+        input.value = valor ? String(valor).replace('.', ',') : '';
+        input.select();
+    });
+    input.addEventListener('blur', formatarFreteUnitario);
+}
+
 // 1. INICIALIZAÇÃO IMEDIATA (Para data e eventos)
 function prepararInterface() {
     console.log("Romaneio V2: Preparando interface...");
@@ -694,12 +728,13 @@ function configurarEventos() {
         if (el) el.oninput = atualizarTotalGeral;
     });
 
-    ['v2-preco-m3-item', 'v2-valor-frete', 'v2-adicional-madeira', 'v2-adicional-frete'].forEach(id => {
+    ['v2-preco-m3-item', 'v2-adicional-madeira', 'v2-adicional-frete'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', window.formatCurrencyInput);
         }
     });
+    prepararEdicaoFreteUnitario(document.getElementById('v2-valor-frete'));
 
     // Forçar letras maiúsculas em tempo real nos campos de romaneio e observações
     ['v2-motorista', 'v2-caminhao', 'v2-placa', 'v2-obs-madeira', 'v2-obs-frete', 'v2-produto-manual'].forEach(id => {
@@ -1423,7 +1458,7 @@ function atualizarTotalGeral() {
     const gruposFinanceiros = agruparFinanceiroPorClasse(romaneioAtual.pacotes);
     const totalMadeira = gruposFinanceiros.reduce((acc, grupo) => acc + Number(grupo.valor || 0), 0);
 
-    const valorFreteUnit = window.parseCurrencyValue(document.getElementById('v2-valor-frete').value) || 0;
+    const valorFreteUnit = parseFreteUnitario(document.getElementById('v2-valor-frete')?.value) || 0;
     let totalFrete = arredondarParaBaixo(totalM3Frete * valorFreteUnit, 2);
     
     const addMadeira = window.parseCurrencyValue(document.getElementById('v2-adicional-madeira')?.value) || 0;
