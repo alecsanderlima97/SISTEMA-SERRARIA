@@ -105,7 +105,6 @@
                                     <select id="entMapaMatoId">
                                         <option value="">Sem vínculo com o Mapa</option>
                                     </select>
-                                    <small id="entMapaMatoInfo">Vincule a carga para acompanhar volume, custos e saldo do mato.</small>
                                 </div>
                                 <div class="input-group" id="grupoValorAvulso" style="display:none;">
                                     <label for="entValorAvulso">Valor compra avulsa (R$ / m³)</label>
@@ -121,7 +120,6 @@
                                         <option value="OUTROS">OUTROS</option>
                                         <option value="CORTE/REMOCAO">CORTE/REMOCAO</option>
                                     </select>
-                                    <small id="entInfoTarifaEmpreiteiro" class="entrada-tarifa-info" data-estado="neutro">Selecione o empreiteiro, o mato e o produto para aplicar a tarifa.</small>
                                 </div>
                                 <div class="input-group">
                                     <label for="entRomaneio">Nº Romaneio *</label>
