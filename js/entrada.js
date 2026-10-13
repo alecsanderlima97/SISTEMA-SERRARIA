@@ -18,12 +18,7 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
     if (!select) return;
 
     try {
-        const [terceirosResult, frotaResult] = await Promise.allSettled([
-            getDocs(collection(db, 'transportes')),
-            getDocs(collection(db, 'frotas'))
-        ]);
-        const terceiros = terceirosResult.status === 'fulfilled' ? terceirosResult.value : null;
-        const frotaNuvem = frotaResult.status === 'fulfilled' ? frotaResult.value : null;
+        const frotaNuvem = await getDocs(collection(db, 'frotas'));
         let frotaLocal = [];
         try {
             frotaLocal = JSON.parse(localStorage.getItem('orquestra_frota') || '[]');
@@ -36,8 +31,6 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
 
         const grupoProprios = document.createElement('optgroup');
         grupoProprios.label = 'Veículos próprios — Controle de Frota';
-        const grupoTerceiros = document.createElement('optgroup');
-        grupoTerceiros.label = 'Transportadores terceiros';
 
         const adicionarOpcao = (transporte, grupo) => {
             if (!window.OrquestraCaminhoes?.ehCaminhao(transporte)) return;
@@ -51,13 +44,6 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
             ].filter(Boolean).join(' | ');
             grupo.appendChild(option);
         };
-
-        if (terceiros) {
-            terceiros.forEach(registro => {
-                const transporte = { id: registro.id, origem: 'TERCEIRO', chave: `TERCEIRO:${registro.id}`, ...registro.data() };
-                adicionarOpcao(transporte, grupoTerceiros);
-            });
-        }
 
         const frotaRegistros = [
             ...(frotaNuvem?.docs || []).map(registro => ({ id: registro.id, ...registro.data() })),
@@ -77,11 +63,10 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
         }, grupoProprios));
 
         if (grupoProprios.children.length) select.appendChild(grupoProprios);
-        if (grupoTerceiros.children.length) select.appendChild(grupoTerceiros);
 
         const manualOption = document.createElement('option');
         manualOption.value = '__MANUAL__';
-        manualOption.textContent = 'Outro caminhão / preencher manualmente';
+        manualOption.textContent = 'Outro caminhão / informar manualmente';
         select.appendChild(manualOption);
 
         if (valorSelecionado) {
@@ -93,8 +78,8 @@ async function carregarTransportesEntrada(valorSelecionado = '') {
         window.orquestraCaminhoesEntrada = () => transportesEntradaAtuais.map(item => ({ ...item }));
         document.dispatchEvent(new Event('caminhoesEntradaUpdated'));
     } catch (error) {
-        console.error('Erro ao carregar transportadoras para a entrada:', error);
-        select.innerHTML = '<option value="">Não foi possível carregar os caminhões</option><option value="__MANUAL__">Outro caminhão / preencher manualmente</option>';
+        console.error('Erro ao carregar frota própria para a entrada:', error);
+        select.innerHTML = '<option value="">Não foi possível carregar os caminhões da frota</option><option value="__MANUAL__">Outro caminhão / informar manualmente</option>';
     }
 }
 
@@ -146,6 +131,10 @@ function obterModeloCaminhaoEntrada() {
 
 function localizarTransporteEntrada(entrada) {
     if (!entrada) return null;
+    if (entrada.frotaId) {
+        const porFrotaId = transportesEntradaAtuais.find(item => item.id === entrada.frotaId && item.origem === 'PROPRIO');
+        if (porFrotaId) return porFrotaId;
+    }
     if (entrada.transportadoraId) {
         const porId = transportesEntradaAtuais.find(item =>
             item.id === entrada.transportadoraId
@@ -2789,10 +2778,9 @@ function configurarSubmitEntrada() {
             produtoCarga: (document.getElementById('entProdutoCarga')?.value || '').toUpperCase().trim(),
             observacaoCarga: (document.getElementById('entObservacaoCarga')?.value || '').toUpperCase().trim(),
             romaneioNum: document.getElementById('entRomaneio').value.toUpperCase().trim(),
-            transportadoraId: transporteSelecionado?.id || null,
-            transportadoraOrigem: transporteSelecionado?.origem || null,
-            frotaId: transporteSelecionado?.origem === 'PROPRIO' ? transporteSelecionado.id : null,
-            transportadoraNome: transporteSelecionado?.nome || null,
+            frotaId: transporteSelecionado?.id || null,
+            frotaOrigem: transporteSelecionado ? 'CONTROLE_FROTA' : null,
+            frotaModelo: transporteSelecionado?.modelo || transporteSelecionado?.caminhao || null,
             motorista: document.getElementById('entMotorista').value.toUpperCase().trim(),
             caminhao: obterModeloCaminhaoEntrada().toUpperCase().trim(),
             placa: document.getElementById('entPlaca').value.toUpperCase().trim(),
@@ -3281,9 +3269,6 @@ function inicializarModuloEntrada() {
                 }
             });
         }
-    });
-    document.addEventListener('transportesUpdated', () => {
-        carregarTransportesEntrada(document.getElementById('entCaminhao')?.value || '');
     });
     document.addEventListener('frotaUpdated', () => {
         carregarTransportesEntrada(document.getElementById('entCaminhao')?.value || '');

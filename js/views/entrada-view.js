@@ -132,11 +132,11 @@
                                     <input type="text" id="entMotorista" class="text-uppercase-input" required placeholder="Ex: Carlos Motorista">
                                 </div>
                                 <div class="input-group">
-                                    <label for="entCaminhao">Modelo do Caminhão</label>
+                                    <label for="entCaminhao">Caminhão da Frota Própria</label>
                                     <select id="entCaminhao">
-                                        <option value="">Selecionar caminhão cadastrado...</option>
+                                        <option value="">Selecionar caminhão do Controle de Frota...</option>
                                     </select>
-                                    <input type="text" id="entCaminhaoManual" class="text-uppercase-input" placeholder="Digite o modelo manualmente" style="display:none; margin-top:8px;">
+                                    <input type="text" id="entCaminhaoManual" class="text-uppercase-input" placeholder="Informe somente se não estiver cadastrado" style="display:none; margin-top:8px;">
                                 </div>
                                 <div class="input-group">
                                     <label for="entPlaca">Placa do Caminhão *</label>
