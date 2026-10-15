@@ -55,6 +55,26 @@ function arredondarParaBaixo(valor, casas = 2) {
     return Math.floor(escalado + 0.0000001) / fator;
 }
 
+const BASE_NF_ROMANEIO = Object.freeze({
+    INTEIRA: { fator: 1, descricao: 'nota inteira' },
+    MEIA: { fator: 0.5, descricao: 'meia nota' },
+    TERCO: { fator: 1 / 3, descricao: '1/3 da nota' },
+    QUARTO: { fator: 0.25, descricao: '1/4 da nota' }
+});
+
+function obterConfigBaseNFRomaneio(valor) {
+    return BASE_NF_ROMANEIO[String(valor || 'INTEIRA').toUpperCase()] || BASE_NF_ROMANEIO.INTEIRA;
+}
+
+function calcularBaseNFRomaneio(total, valor) {
+    const config = obterConfigBaseNFRomaneio(valor);
+    return arredondarParaBaixo((Number(total) || 0) * config.fator, 2);
+}
+
+function descricaoBaseNFRomaneio(valor) {
+    return obterConfigBaseNFRomaneio(valor).descricao;
+}
+
 function formatarM3Baixo(valor) {
     return arredondarParaBaixo(valor, 3).toFixed(3);
 }
@@ -1478,7 +1498,7 @@ function atualizarTotalGeral() {
 
     const taxaStr = (document.getElementById('v2-taxa-nf')?.value || "0").toString().replace(',', '.');
     const taxa = parseFloat(taxaStr) || 0;
-    const baseNF = arredondarParaBaixo(romaneioAtual.financeiro.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const baseNF = calcularBaseNFRomaneio(totalMadeiraComAjuste, romaneioAtual.financeiro.baseNF);
     const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
     
     romaneioAtual.financeiro.totalGeral = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
@@ -1546,7 +1566,8 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
     const taxa = Number(r.financeiro?.taxaNF || 0);
     const adicionalMadeira = Number(r.financeiro?.adicionalMadeira || 0);
     const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + adicionalMadeira, 2);
-    const baseNF = arredondarParaBaixo(r.financeiro?.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const baseNF = calcularBaseNFRomaneio(totalMadeiraComAjuste, r.financeiro?.baseNF);
+    const baseNFDescricao = descricaoBaseNFRomaneio(r.financeiro?.baseNF);
     const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
     const subtotalLiquido = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
     const valorFrete = Number(r.logistica?.valorFrete || 0);
@@ -1681,7 +1702,7 @@ function gerarHtmlDocumentoRomaneio(payload) {
                 <div class="rom-doc-kpi"><small>Metragem real / frete</small><strong>${formatarM3Baixo(totalM3Frete)} m³</strong></div>
             </section>
             <section class="rom-doc-finance">
-                <div class="rom-doc-finance-card"><h3>Madeira e cobrança</h3>${linhasFinanceiroClasse}<div class="rom-doc-value-row"><span>Total da madeira serrada</span><strong>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>${adicionalMadeira ? `<div class="rom-doc-value-row"><span>Ajuste da madeira</span><strong>${adicionalMadeira > 0 ? '+' : ''} R$ ${adicionalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row"><span>Madeira após ajuste</span><strong>R$ ${totalMadeiraComAjuste.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>` : ''}<div class="rom-doc-value-row tax"><span>Taxa NF (${taxa}%)${r.financeiro?.baseNF === 'MEIA' ? ` · base meia carga R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</span><strong>+ R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row total"><span>Total do romaneio</span><strong>R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div></div>
+                <div class="rom-doc-finance-card"><h3>Madeira e cobrança</h3>${linhasFinanceiroClasse}<div class="rom-doc-value-row"><span>Total da madeira serrada</span><strong>R$ ${totalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>${adicionalMadeira ? `<div class="rom-doc-value-row"><span>Ajuste da madeira</span><strong>${adicionalMadeira > 0 ? '+' : ''} R$ ${adicionalMadeira.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row"><span>Madeira após ajuste</span><strong>R$ ${totalMadeiraComAjuste.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>` : ''}<div class="rom-doc-value-row tax"><span>Taxa NF (${taxa}%)${baseNFDescricao !== 'nota inteira' ? ` · base ${baseNFDescricao} R$ ${baseNF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</span><strong>+ R$ ${imposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div><div class="rom-doc-value-row total"><span>Total do romaneio</span><strong>R$ ${totalCarga.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div></div>
                 <div class="rom-doc-finance-card rom-doc-freight"><h3>Conferência e frete</h3><div class="rom-doc-value-row"><span>Volume usado na venda</span><strong>${formatarM3Baixo(totalM3Madeira)} m³</strong></div><div class="rom-doc-value-row"><span>Metragem real para o frete</span><strong>${formatarM3Baixo(totalM3Frete)} m³</strong></div><div class="rom-doc-value-row"><span>Diferença de cubagem</span><strong>${diferencaCubagem > 0 ? '+' : ''}${formatarM3Baixo(diferencaCubagem)} m³</strong></div><div class="rom-doc-value-row"><span>${formatarM3Baixo(totalM3Frete)} m³ × R$ ${valorFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span><strong>R$ ${freteBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>${adicionalFrete ? `<div class="rom-doc-value-row"><span>Ajuste do frete</span><strong>${adicionalFrete > 0 ? '+' : ''} R$ ${adicionalFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>` : ''}<div class="rom-doc-value-row freight-total"><span><b>Frete estimado</b></span><strong>R$ ${freteFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div></div>
             </section>
             ${r.observacaoCarga ? `<section class="rom-doc-note"><strong>Observações da carga</strong><div>${r.observacaoCarga}</div></section>` : ''}
@@ -1928,6 +1949,7 @@ function renderizarTabelaPacotes() {
 function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecasGeral, totalMadeira, addMadeira, imposto, totalMadeiraComAjuste, baseNF = totalMadeiraComAjuste, totalM3Venda = 0) {
     const taxa = romaneioAtual.financeiro.taxaNF;
     const totalComTaxa = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
+    const baseNFDescricao = descricaoBaseNFRomaneio(romaneioAtual.financeiro.baseNF);
     const linhasClasse = agruparFinanceiroPorClasse(romaneioAtual.pacotes).map(grupo => {
         return `
             <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; align-items:center;">
@@ -1969,9 +1991,9 @@ function renderizarResumoFinanceiro(valFrete, volFrete, totalPacotes, totalPecas
                     <span style="color: var(--text-muted);">Impostos / Taxa NF (${taxa}%):</span>
                     <span style="color: var(--danger);">+ R$ ${imposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
-                ${romaneioAtual.financeiro.baseNF === 'MEIA' ? `
+                ${baseNFDescricao !== 'nota inteira' ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: var(--text-muted);">Base NF meia carga:</span>
+                    <span style="color: var(--text-muted);">Base considerada para a NF (${baseNFDescricao}):</span>
                     <span>R$ ${baseNF.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>` : ''}
                 <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-weight: bold; font-size: 1.1rem;">
@@ -2421,7 +2443,8 @@ window.verPreviaRomaneioV2 = () => {
 
     const taxa = r.financeiro.taxaNF || 0;
     const totalMadeiraComAjuste = arredondarParaBaixo(totalMadeira + (r.financeiro.adicionalMadeira || 0), 2);
-    const baseNF = arredondarParaBaixo(r.financeiro?.baseNF === 'MEIA' ? totalMadeiraComAjuste / 2 : totalMadeiraComAjuste, 2);
+    const baseNF = calcularBaseNFRomaneio(totalMadeiraComAjuste, r.financeiro?.baseNF);
+    const baseNFDescricao = descricaoBaseNFRomaneio(r.financeiro?.baseNF);
     const imposto = arredondarParaBaixo(baseNF * (taxa / 100), 2);
     const subtotalLiquido = arredondarParaBaixo(totalMadeiraComAjuste + imposto, 2);
     const freteBruto = arredondarParaBaixo(totalM3Frete * (r.logistica.valorFrete || 0), 2);
@@ -2471,6 +2494,7 @@ window.verPreviaRomaneioV2 = () => {
                 <p style="margin: 0 0 5px 0; font-size: 1rem;">Soma dos Produtos: <span style="font-weight: 500;">R$ ${totalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></p>
                 ${r.financeiro.adicionalMadeira ? `<p style="margin: 0 0 5px 0; font-size: 0.9rem;">Ajuste Madeira: R$ ${r.financeiro.adicionalMadeira.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ${r.financeiro.obsMadeira ? `(${r.financeiro.obsMadeira})` : ''}</p>` : ''}
                 <p style="margin: 0 0 5px 0; font-size: 0.9rem;">Impostos / Taxa NF (${taxa}%): <span style="color: #555;">+ R$ ${imposto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></p>
+                ${baseNFDescricao !== 'nota inteira' ? `<p style="margin: 0 0 5px 0; font-size: 0.9rem;">Base considerada para a NF (${baseNFDescricao}): R$ ${baseNF.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>` : ''}
                 <p style="margin: 10px 0 5px 0; font-size: 1.1rem; font-weight: bold; border-top: 1px solid #ccc; padding-top: 5px;">Subtotal Líquido: R$ ${subtotalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                 
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 0.9rem;">

@@ -89,10 +89,12 @@
                             <input type="number" step="0.01" id="cliPorcentagemNF" placeholder="Ex: 9.3">
                         </div>
                         <div class="input-group">
-                            <label for="cliBaseNF">Base de calculo da NF</label>
+                            <label for="cliBaseNF">Base de cálculo da nota</label>
                             <select id="cliBaseNF">
-                                <option value="INTEIRA">Carga inteira</option>
-                                <option value="MEIA">Meia carga / meia nota</option>
+                                <option value="INTEIRA">Nota inteira (100%)</option>
+                                <option value="MEIA">Meia nota (50%)</option>
+                                <option value="TERCO">1/3 da nota (33,33%)</option>
+                                <option value="QUARTO">1/4 da nota (25%)</option>
                             </select>
                         </div>
                         <div class="input-group">
