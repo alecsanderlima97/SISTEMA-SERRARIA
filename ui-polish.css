@@ -2816,3 +2816,73 @@ body.orq-touch-device:not(.orq-modal-active) {
         text-overflow: ellipsis;
     }
 }
+
+/* Divisorias de colunas ajustaveis nas listas operacionais. */
+table.orq-colunas-redimensionaveis {
+    position: relative;
+}
+
+table.orq-colunas-redimensionaveis thead th {
+    position: relative;
+}
+
+table.orq-col-resizing,
+body.orq-redimensionando-coluna,
+body.orq-redimensionando-coluna * {
+    user-select: none !important;
+    cursor: col-resize !important;
+}
+
+.orq-col-resize-handle {
+    position: absolute;
+    z-index: 6;
+    top: 0;
+    right: -5px;
+    width: 10px;
+    height: 100%;
+    min-height: 30px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.orq-col-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    bottom: 20%;
+    left: 4px;
+    width: 2px;
+    border-radius: 2px;
+    background: rgba(14, 159, 154, .22);
+    transition: background-color .15s ease, box-shadow .15s ease;
+}
+
+.orq-col-resize-handle:hover::after,
+.orq-col-resize-handle:focus-visible::after,
+.orq-col-resize-handle.is-dragging::after {
+    background: #0e9f9a;
+    box-shadow: 0 0 0 2px rgba(14, 159, 154, .18);
+}
+
+@media (max-width: 760px) {
+    /* No celular as listas podem virar cartoes; os puxadores nao devem roubar espaco nem toque. */
+    table.orq-colunas-redimensionaveis {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    table.orq-colunas-redimensionaveis > colgroup > col {
+        width: auto !important;
+    }
+
+    .orq-col-resize-handle {
+        display: none !important;
+    }
+}
+
+@media print {
+    .orq-col-resize-handle {
+        display: none !important;
+    }
+}

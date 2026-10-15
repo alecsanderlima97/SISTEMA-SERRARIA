@@ -9,6 +9,8 @@ const FINANCEIRO_DB_STORE = 'anexos';
 const FINANCEIRO_COLLECTION = 'financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_COLLECTION = 'financeiro_relatorios_mensais';
 const FINANCEIRO_NOTIFICACOES_LIDAS_KEY = 'orquestra_financeiro_notificacoes_lidas';
+const SIGEWIN_LOCAL_API = 'http://127.0.0.1:8766';
+const SIGEWIN_SYNC_STATE_KEY = 'orquestra_financeiro_sigewin_sync_v1';
 
 const FINANCEIRO_ABAS = {
     'caixa-financeira': {
@@ -189,11 +191,15 @@ function normalizarMetadadosLeituraFinanceira(dados = {}, anexo = null) {
         fornecedor: normalizarTexto(dados.fornecedor || ''),
         cnpj: String(dados.cnpj || '').trim(),
         numeroDocumento: String(dados.numeroDocumento || '').trim(),
+        serie: String(dados.serie || '').trim(),
         chaveNfe: String(dados.chaveNfe || dados.chaveNFe || dados.chave || '').trim(),
+        destinatario: normalizarTexto(dados.destinatario || ''),
+        destinatarioCnpj: String(dados.destinatarioCnpj || '').trim(),
         linhaDigitavel: String(dados.linhaDigitavel || '').trim(),
         codigoBarras: String(dados.codigoBarras || '').trim(),
         banco: String(dados.banco || '').trim(),
         nossoNumero: String(dados.nossoNumero || dados.nossoNumeroBoleto || '').trim(),
+        produtos: Array.isArray(dados.produtos) ? dados.produtos.slice(0, 200) : [],
         confianca: dados.confiancaIA || dados.confianca || 'media',
         confiancaData: dados.confiancaData || dados.confiancaVencimento || 'media',
         fonteVencimento: dados.fonteVencimento || '',
@@ -1288,22 +1294,99 @@ function valorXmlPorTag(xml, tags = []) {
     return '';
 }
 
+function elementosXmlPorNome(raiz, nome) {
+    return Array.from(raiz?.getElementsByTagName?.('*') || [])
+        .filter(elemento => elemento.localName === nome || elemento.tagName === nome);
+}
+
+function primeiroElementoXmlPorNome(raiz, nome) {
+    return elementosXmlPorNome(raiz, nome)[0] || null;
+}
+
+function valorXmlNoElemento(elemento, nome) {
+    return primeiroElementoXmlPorNome(elemento, nome)?.textContent?.trim() || '';
+}
+
+function normalizarDataXmlFinanceiro(valor) {
+    const texto = String(valor || '').trim();
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const brasileira = texto.match(/^(\d{2})[\/. -](\d{2})[\/. -](\d{4})/);
+    return brasileira ? `${brasileira[3]}-${brasileira[2]}-${brasileira[1]}` : '';
+}
+
+function numeroXmlFinanceiro(valor) {
+    const texto = String(valor ?? '').trim().replace(/\s/g, '');
+    if (!texto) return 0;
+    const normalizado = texto.includes(',')
+        ? (texto.includes('.') ? texto.replace(/\./g, '').replace(',', '.') : texto.replace(',', '.'))
+        : texto;
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function extrairChaveNfeXmlFinanceiro(xml) {
+    const chave = valorXmlPorTag(xml, ['chNFe']).replace(/\D/g, '');
+    if (chave.length === 44) return chave;
+    const infNfe = primeiroElementoXmlPorNome(xml, 'infNFe');
+    const id = String(infNfe?.getAttribute?.('Id') || '').replace(/^NFe/i, '').replace(/\D/g, '');
+    return id.length === 44 ? id : '';
+}
+
+function extrairProdutosXmlFinanceiro(xml) {
+    return elementosXmlPorNome(xml, 'det').map((det, indice) => {
+        const produto = primeiroElementoXmlPorNome(det, 'prod') || det;
+        const descricao = valorXmlNoElemento(produto, 'xProd');
+        if (!descricao) return null;
+        return {
+            item: Number(det.getAttribute?.('nItem') || indice + 1) || indice + 1,
+            codigo: valorXmlNoElemento(produto, 'cProd'),
+            descricao,
+            ncm: valorXmlNoElemento(produto, 'NCM'),
+            cfop: valorXmlNoElemento(produto, 'CFOP'),
+            unidade: valorXmlNoElemento(produto, 'uCom') || valorXmlNoElemento(produto, 'uTrib'),
+            quantidade: numeroXmlFinanceiro(valorXmlNoElemento(produto, 'qCom') || valorXmlNoElemento(produto, 'qTrib')),
+            valorUnitario: numeroXmlFinanceiro(valorXmlNoElemento(produto, 'vUnCom') || valorXmlNoElemento(produto, 'vUnTrib')),
+            valorTotal: numeroXmlFinanceiro(valorXmlNoElemento(produto, 'vProd'))
+        };
+    }).filter(Boolean);
+}
+
 function extrairDadosXmlFinanceiro(texto) {
     const xml = new DOMParser().parseFromString(texto, 'text/xml');
     const erro = xml.getElementsByTagName('parsererror')?.[0];
     if (erro) return null;
-    const emit = xml.getElementsByTagName('emit')?.[0];
-    const nome = emit?.getElementsByTagName('xNome')?.[0]?.textContent?.trim()
-        || valorXmlPorTag(xml, ['xNome', 'nome']);
-    const vencimento = valorXmlPorTag(xml, ['dVenc', 'vencimento', 'dtVenc']);
-    const emissao = valorXmlPorTag(xml, ['dhEmi', 'dEmi']);
-    const valor = valorXmlPorTag(xml, ['vNF', 'vLiq', 'valor']);
+    const emit = primeiroElementoXmlPorNome(xml, 'emit');
+    const dest = primeiroElementoXmlPorNome(xml, 'dest');
+    const ide = primeiroElementoXmlPorNome(xml, 'ide');
+    const total = primeiroElementoXmlPorNome(xml, 'ICMSTot') || primeiroElementoXmlPorNome(xml, 'total');
+    const nome = valorXmlNoElemento(emit, 'xNome') || valorXmlPorTag(xml, ['xNome', 'nome']);
+    const cnpj = valorXmlNoElemento(emit, 'CNPJ');
+    const numeroDocumento = valorXmlNoElemento(ide, 'nNF');
+    const serie = valorXmlNoElemento(ide, 'serie');
+    const emissao = valorXmlNoElemento(ide, 'dhEmi') || valorXmlNoElemento(ide, 'dEmi') || valorXmlPorTag(xml, ['dhEmi', 'dEmi']);
+    const valor = valorXmlNoElemento(total, 'vNF') || valorXmlPorTag(xml, ['vNF', 'vLiq', 'valor']);
+    const produtos = extrairProdutosXmlFinanceiro(xml);
+    const chaveNfe = extrairChaveNfeXmlFinanceiro(xml);
+    const descricao = nome || 'DOCUMENTO XML';
     return {
         tipo: 'NOTA FISCAL',
-        descricao: nome || 'DOCUMENTO XML',
+        descricao,
+        fornecedor: nome,
+        cnpj,
+        numeroDocumento,
+        serie,
+        chaveNfe,
         vencimento: '',
-        dataEmissao: emissao ? emissao.slice(0, 10) : '',
-        valor: Number(String(valor || '0').replace(',', '.')) || 0,
+        dataEmissao: normalizarDataXmlFinanceiro(emissao),
+        valor: numeroXmlFinanceiro(valor),
+        produtos,
+        destinatario: valorXmlNoElemento(dest, 'xNome'),
+        destinatarioCnpj: valorXmlNoElemento(dest, 'CNPJ') || valorXmlNoElemento(dest, 'CPF'),
+        confianca: 'alta',
+        confiancaData: 'alta',
+        fonteVencimento: 'XML NF-e',
+        analisadoPorIA: false,
         geraCobranca: false,
         situacaoDocumento: 'AGUARDANDO_BOLETO'
     };
@@ -2002,11 +2085,14 @@ function dataUrlParaBlobUrlFinanceiro(dataUrl) {
     }
 }
 
-window.importarPastaFinanceira = async function(files) {
+window.importarPastaFinanceira = async function(files, opcoes = {}) {
+    const silencioso = Boolean(opcoes.silencioso);
+    const origem = opcoes.origem || 'importacao_pasta';
+    const rotuloOrigem = opcoes.rotuloOrigem || 'PASTA FINANCEIRA';
     const listaArquivos = Array.from(files || []).filter(file => /\.(pdf|xml)$/i.test(file.name) || (file.type || '').startsWith('image/'));
     if (!listaArquivos.length) {
-        alert('Nenhum PDF, XML ou imagem encontrado na pasta selecionada.');
-        return;
+        if (!silencioso) alert('Nenhum PDF, XML ou imagem encontrado na pasta selecionada.');
+        return { importados: 0, duplicados: 0, ids: [] };
     }
     const lista = obterLancamentosFinanceiros();
     const importados = [];
@@ -2037,7 +2123,7 @@ window.importarPastaFinanceira = async function(files) {
             const anexoLocal = await salvarArquivoFinanceiroLocal(anexo);
             const id = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             const categoriaDocumento = detectarCategoriaDocumentoFinanceiro(anexoLocal, {});
-            const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexoLocal, categoriaDocumento, 'importacao_pasta');
+            const documentoVinculado = criarDocumentoVinculadoFinanceiro(anexoLocal, categoriaDocumento, origem);
             const ehNotaImportada = categoriaDocumento === 'nota_fiscal' || categoriaDocumento === 'xml';
             const registro = {
                 id,
@@ -2047,7 +2133,7 @@ window.importarPastaFinanceira = async function(files) {
                 vencimento: '',
                 dataEmissao: '',
                 valor: 0,
-                observacao: `IMPORTADO RAPIDO DA PASTA FINANCEIRA: ${file.webkitRelativePath || file.name}`,
+                observacao: `IMPORTADO RAPIDO DE ${rotuloOrigem}: ${file.webkitRelativePath || file.name}`,
                 conferenciaStatus: 'pendente',
                 ia: null,
                 pago: false,
@@ -2081,13 +2167,97 @@ window.importarPastaFinanceira = async function(files) {
     if (importados.length) {
         setTimeout(() => analisarFinanceiroImportados(importados.map(item => item.id)), 250);
     }
-    const msg = [
-        `${importados.length} documento(s) novo(s) importado(s) rapidamente.`,
-        duplicados.length ? `${duplicados.length} duplicado(s) ignorado(s), pois já estavam salvos na lista financeira.` : '',
-        importados.length ? 'A leitura automatica vai continuar em segundo plano e atualizar a lista conforme encontrar valor, vencimento e fornecedor.' : ''
-    ].filter(Boolean).join('\n');
-    alert(msg || 'Nenhum documento novo foi importado.');
+    if (!silencioso) {
+        const msg = [
+            `${importados.length} documento(s) novo(s) importado(s) rapidamente.`,
+            duplicados.length ? `${duplicados.length} duplicado(s) ignorado(s), pois já estavam salvos na lista financeira.` : '',
+            importados.length ? 'A leitura automatica vai continuar em segundo plano e atualizar a lista conforme encontrar valor, vencimento e fornecedor.' : ''
+        ].filter(Boolean).join('\n');
+        alert(msg || 'Nenhum documento novo foi importado.');
+    }
+    return { importados: importados.length, duplicados: duplicados.length, ids: importados.map(item => item.id) };
 };
+
+function obterEstadoSigeWinFinanceiro() {
+    try {
+        const estado = JSON.parse(localStorage.getItem(SIGEWIN_SYNC_STATE_KEY) || '{}');
+        return estado && typeof estado === 'object' ? estado : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function salvarEstadoSigeWinFinanceiro(estado = {}) {
+    localStorage.setItem(SIGEWIN_SYNC_STATE_KEY, JSON.stringify(estado));
+}
+
+function atualizarStatusSigeWinFinanceiro(mensagem, cor = '') {
+    const elemento = document.getElementById('financeiroSigewinStatus');
+    if (!elemento) return;
+    elemento.textContent = `SIGEWIN local: ${mensagem}`;
+    elemento.style.color = cor || 'var(--text-muted)';
+}
+
+window.sincronizarSigeWinFinanceiro = async function(opcoes = {}) {
+    if (window.__sigeWinSyncEmAndamento) return { importados: 0, indisponivel: true };
+    window.__sigeWinSyncEmAndamento = true;
+    const silencioso = opcoes.silencioso !== false;
+    const estadoAnterior = obterEstadoSigeWinFinanceiro();
+    const consultaIniciadaEm = new Date().toISOString();
+    try {
+        const parametros = new URLSearchParams({ limit: estadoAnterior.primeiraConsulta ? '40' : '20' });
+        if (estadoAnterior.ultimaConsultaEm) parametros.set('since', estadoAnterior.ultimaConsultaEm);
+        atualizarStatusSigeWinFinanceiro('consultando arquivos novos...', '#64748b');
+        const resposta = await fetch(`${SIGEWIN_LOCAL_API}/api/sigewin/nfe?${parametros.toString()}`, { cache: 'no-store' });
+        if (!resposta.ok) throw new Error(`conector respondeu ${resposta.status}`);
+        const dados = await resposta.json();
+        const itens = Array.isArray(dados.items) ? dados.items : [];
+        if (!itens.length) {
+            salvarEstadoSigeWinFinanceiro({ ...estadoAnterior, primeiraConsulta: true, ultimaConsultaEm: consultaIniciadaEm });
+            atualizarStatusSigeWinFinanceiro('conectado; nenhum XML novo.', '#047857');
+            return { importados: 0, duplicados: 0 };
+        }
+        const arquivos = [];
+        for (const item of itens) {
+            const caminho = String(item.relativePath || '');
+            if (!caminho) continue;
+            const xmlResposta = await fetch(`${SIGEWIN_LOCAL_API}/api/sigewin/xml?path=${encodeURIComponent(caminho)}`, { cache: 'no-store' });
+            if (!xmlResposta.ok) continue;
+            const blob = await xmlResposta.blob();
+            const arquivo = new File([blob], item.name || 'nfe.xml', {
+                type: 'application/xml',
+                lastModified: Date.parse(item.lastWriteTimeUtc || '') || Date.now()
+            });
+            arquivos.push(arquivo);
+        }
+        const resultado = await window.importarPastaFinanceira(arquivos, {
+            silencioso: true,
+            origem: 'sigewin_local_readonly',
+            rotuloOrigem: 'SIGEWIN SOMENTE LEITURA'
+        });
+        salvarEstadoSigeWinFinanceiro({ ...estadoAnterior, primeiraConsulta: true, ultimaConsultaEm: consultaIniciadaEm });
+        atualizarStatusSigeWinFinanceiro(
+            resultado.importados ? `${resultado.importados} NF-e nova(s) importada(s).` : 'conectado; XMLs já importados.',
+            '#047857'
+        );
+        if (!silencioso && !resultado.importados) alert('Nenhuma NF-e nova encontrada no SIGEWIN.');
+        return resultado;
+    } catch (error) {
+        atualizarStatusSigeWinFinanceiro('conector local não disponível.', '#b45309');
+        if (!silencioso) alert('Não foi possível conectar ao importador local do SIGEWIN. Inicie o conector e tente novamente.');
+        return { importados: 0, indisponivel: true, erro: error.message };
+    } finally {
+        window.__sigeWinSyncEmAndamento = false;
+    }
+};
+
+function iniciarSincronizacaoSigeWinFinanceiro() {
+    window.sincronizarSigeWinFinanceiro({ silencioso: true });
+    window.clearInterval(window.__sigeWinSyncTimer);
+    window.__sigeWinSyncTimer = window.setInterval(() => {
+        if (document.visibilityState === 'visible') window.sincronizarSigeWinFinanceiro({ silencioso: true });
+    }, 60000);
+}
 
 window.importarFilaMonitorFinanceiro = async function(files) {
     const arquivos = Array.from(files || []).filter(file => file.name.toLowerCase().endsWith('.json'));
@@ -2453,6 +2623,408 @@ window.recalcularSugestoesVinculoFinanceiro = async function() {
     return { encontrados, alterados: alterados.length };
 };
 
+function normalizarDocumentoPessoaConciliacao(valor = '') {
+    return String(valor || '').replace(/\D/g, '');
+}
+
+function normalizarTextoConciliacao(valor = '') {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, ' ')
+        .trim();
+}
+
+function obterDocumentoClienteConciliacao(cliente = {}) {
+    return normalizarDocumentoPessoaConciliacao(cliente.cnpj || cliente.cpf || cliente.documento || cliente.cnpjCpf || '');
+}
+
+function obterBaseNfConciliacao(valor = '') {
+    const chave = String(valor || 'INTEIRA').toUpperCase();
+    const bases = {
+        INTEIRA: { fator: 1, descricao: 'nota inteira' },
+        MEIA: { fator: 0.5, descricao: 'meia nota' },
+        TERCO: { fator: 1 / 3, descricao: '1/3 da nota' },
+        QUARTO: { fator: 0.25, descricao: '1/4 da nota' }
+    };
+    return bases[chave] || bases.INTEIRA;
+}
+
+function arredondarBaixoConciliacao(valor = 0, casas = 2) {
+    const fator = 10 ** casas;
+    return Math.floor((Number(valor || 0) * fator) + 0.0000001) / fator;
+}
+
+function obterDataRomaneioConciliacao(romaneio = {}) {
+    return String(
+        romaneio.logistica?.dataCarregamento
+        || romaneio.logistica?.dataDescarregamento
+        || romaneio.data
+        || romaneio.dataCriacao
+        || romaneio.criadoEm
+        || ''
+    ).slice(0, 10);
+}
+
+function obterNomeClienteRomaneioConciliacao(romaneio = {}) {
+    return String(romaneio.cliente || romaneio.clienteNome || '').trim();
+}
+
+function obterMadeiraRomaneioConciliacao(romaneio = {}) {
+    const pacotes = Array.isArray(romaneio.pacotes) ? romaneio.pacotes : [];
+    const totalPacotes = pacotes.reduce((total, pacote) => {
+        const valorSalvo = Number(pacote.valorTotalWood || 0);
+        if (valorSalvo > 0) return total + valorSalvo;
+        const volume = Number(pacote.m3VendaExato || pacote.m3VendaTotal || 0);
+        return total + (volume * Number(pacote.precoM3 || 0));
+    }, 0);
+    return arredondarBaixoConciliacao(totalPacotes, 2);
+}
+
+function obterResumoFiscalRomaneioConciliacao(romaneio = {}, cliente = {}) {
+    const madeira = obterMadeiraRomaneioConciliacao(romaneio);
+    const adicional = Number(romaneio.financeiro?.adicionalMadeira || 0);
+    const madeiraAjustada = arredondarBaixoConciliacao(madeira + adicional, 2);
+    const baseConfig = obterBaseNfConciliacao(romaneio.financeiro?.baseNF || cliente.baseNF || 'INTEIRA');
+    const base = arredondarBaixoConciliacao(madeiraAjustada * baseConfig.fator, 2);
+    const taxa = Number(romaneio.financeiro?.taxaNF ?? cliente.porcentagemNF ?? 0) || 0;
+    const imposto = arredondarBaixoConciliacao(base * (taxa / 100), 2);
+    return {
+        madeira,
+        madeiraAjustada,
+        base,
+        taxa,
+        imposto,
+        esperadoNf: arredondarBaixoConciliacao(base + imposto, 2),
+        totalRomaneio: Number(romaneio.financeiro?.totalGeral || madeiraAjustada + imposto || 0),
+        baseDescricao: baseConfig.descricao,
+        fatorBase: baseConfig.fator
+    };
+}
+
+function obterDestinatarioNotaConciliacao(registro = {}) {
+    return {
+        nome: String(registro.ia?.destinatario || registro.destinatario || '').trim(),
+        documento: normalizarDocumentoPessoaConciliacao(registro.ia?.destinatarioCnpj || registro.destinatarioCnpj || '')
+    };
+}
+
+function obterDataNotaConciliacao(registro = {}) {
+    return String(registro.dataEmissao || registro.emissao || obterDataFinanceiroExibicao(registro) || '').slice(0, 10);
+}
+
+function obterNumeroNotaConciliacao(registro = {}) {
+    return String(registro.ia?.numeroDocumento || registro.numeroDocumento || '').trim();
+}
+
+function obterChaveNotaConciliacao(registro = {}) {
+    return normalizarDocumentoPessoaConciliacao(registro.ia?.chaveNfe || registro.ia?.chaveNFe || registro.chaveNfe || '');
+}
+
+function obterClienteDaNotaConciliacao(nota = {}, clientes = []) {
+    const destinatario = obterDestinatarioNotaConciliacao(nota);
+    const nome = normalizarTextoConciliacao(destinatario.nome);
+    const porDocumento = destinatario.documento
+        ? clientes.find(cliente => obterDocumentoClienteConciliacao(cliente) === destinatario.documento)
+        : null;
+    if (porDocumento) return { cliente: porDocumento, confianca: 'alta', motivo: 'CNPJ/CPF do destinatário' };
+    const porNome = nome
+        ? clientes.filter(cliente => normalizarTextoConciliacao(cliente.nome) === nome)
+        : [];
+    if (porNome.length === 1) return { cliente: porNome[0], confianca: 'media', motivo: 'nome exato do destinatário' };
+    return { cliente: null, confianca: 'baixa', motivo: destinatario.nome ? 'cliente não localizado pelo CNPJ/nome' : 'NF-e sem destinatário identificado' };
+}
+
+function romaneioJaTemNotaConciliacao(romaneio = {}, chaveNfe = '', financeiroId = '') {
+    const links = Array.isArray(romaneio.documentosFinanceirosVinculados) ? romaneio.documentosFinanceirosVinculados : [];
+    return links.some(link => {
+        const mesmaChave = chaveNfe && normalizarDocumentoPessoaConciliacao(link.chaveNfe || '') === chaveNfe;
+        const mesmoFinanceiro = financeiroId && String(link.financeiroId || '') === String(financeiroId);
+        return mesmaChave || mesmoFinanceiro;
+    });
+}
+
+function criarSugestoesNfeRomaneio(nota = {}, clientes = [], romaneios = []) {
+    const clienteInfo = obterClienteDaNotaConciliacao(nota, clientes);
+    const destinatario = obterDestinatarioNotaConciliacao(nota);
+    const cliente = clienteInfo.cliente;
+    const nomeNota = normalizarTextoConciliacao(destinatario.nome);
+    const dataNota = obterDataNotaConciliacao(nota);
+    const valorNota = Number(nota.valor || 0);
+    const chaveNfe = obterChaveNotaConciliacao(nota);
+    const romaneiosElegiveis = romaneios.filter(romaneio => {
+        if (romaneioJaTemNotaConciliacao(romaneio, chaveNfe, nota.id)) return false;
+        const mesmoId = cliente?.id && String(romaneio.clienteId || '') === String(cliente.id);
+        const mesmoNome = nomeNota && normalizarTextoConciliacao(obterNomeClienteRomaneioConciliacao(romaneio)) === nomeNota;
+        return Boolean(mesmoId || mesmoNome);
+    });
+
+    const candidatos = romaneiosElegiveis.map(romaneio => {
+        const dataRomaneio = obterDataRomaneioConciliacao(romaneio);
+        const dias = diferencaDiasFinanceiro(dataNota, dataRomaneio);
+        if (dias !== null && dias > 90) return null;
+        const resumo = obterResumoFiscalRomaneioConciliacao(romaneio, cliente || {});
+        const diferenca = Math.abs(valorNota - resumo.esperadoNf);
+        const baseComparacao = Math.max(Math.abs(resumo.esperadoNf), Math.abs(valorNota), 1);
+        const diferencaPercentual = diferenca / baseComparacao;
+        let pontuacao = cliente?.id && String(romaneio.clienteId || '') === String(cliente.id) ? 80 : 60;
+        const motivos = [clienteInfo.motivo];
+        if (dias === null) {
+            motivos.push('data não informada');
+        } else if (dias <= 1) {
+            pontuacao += 25;
+            motivos.push('mesma data ou data seguinte');
+        } else if (dias <= 7) {
+            pontuacao += 18;
+            motivos.push(`${Math.round(dias)} dias de diferença`);
+        } else if (dias <= 30) {
+            pontuacao += 10;
+            motivos.push(`${Math.round(dias)} dias de diferença`);
+        } else {
+            pontuacao += 2;
+            motivos.push(`${Math.round(dias)} dias de diferença`);
+        }
+        if (resumo.esperadoNf > 0 && valorNota > 0) {
+            if (diferenca <= 0.5) {
+                pontuacao += 30;
+                motivos.push('valor da NF confere com a base calculada');
+            } else if (diferencaPercentual <= 0.02) {
+                pontuacao += 22;
+                motivos.push('valor da NF próximo da base calculada');
+            } else if (diferencaPercentual <= 0.1) {
+                pontuacao += 12;
+                motivos.push('valor com pequena diferença');
+            } else if (diferencaPercentual <= 0.25) {
+                pontuacao += 4;
+                motivos.push('valor precisa ser conferido');
+            }
+        }
+        const confianca = pontuacao >= 130 ? 'alta' : (pontuacao >= 105 ? 'media' : 'baixa');
+        return {
+            notaId: nota.id,
+            romaneioId: romaneio.id,
+            clienteId: cliente?.id || romaneio.clienteId || '',
+            clienteNome: cliente?.nome || obterNomeClienteRomaneioConciliacao(romaneio) || destinatario.nome || 'Cliente não identificado',
+            numeroNota: obterNumeroNotaConciliacao(nota),
+            chaveNfe,
+            valorNota,
+            dataNota,
+            numeroRomaneio: String(romaneio.numero || romaneio.numeroCarga || romaneio.romaneio || '-'),
+            dataRomaneio,
+            valorEsperadoNf: resumo.esperadoNf,
+            valorRomaneio: resumo.totalRomaneio,
+            diferencaValor: diferenca,
+            diferencaPercentual,
+            baseDescricao: resumo.baseDescricao,
+            fatorBase: resumo.fatorBase,
+            taxaNF: resumo.taxa,
+            pontuacao,
+            confianca,
+            motivos,
+            romaneio
+        };
+    }).filter(Boolean)
+        .filter(candidato => candidato.pontuacao >= 90)
+        .sort((a, b) => b.pontuacao - a.pontuacao)
+        .slice(0, 3);
+
+    return {
+        nota,
+        cliente,
+        clienteInfo,
+        destinatario,
+        candidatos
+    };
+}
+
+function fecharModalConciliacaoNfe() {
+    document.getElementById('financeiroConciliacaoNfeModal')?.remove();
+}
+
+window.confirmarVinculoNfeRomaneio = async function(financeiroId, romaneioId, sugestao = {}) {
+    if (window.App?.userData?.modoTeste) {
+        alert('A confirmação de vínculos exige uma sessão real, fora do modo teste local.');
+        return false;
+    }
+    if (!window.FS) {
+        alert('A conexão com o banco de dados ainda não está disponível.');
+        return false;
+    }
+    const lista = obterLancamentosFinanceiros();
+    const financeiro = lista.find(item => item.id === financeiroId);
+    if (!financeiro) {
+        alert('A NF-e não foi encontrada na lista financeira.');
+        return false;
+    }
+    if (financeiro.vinculoRomaneioId) {
+        alert(`Esta NF-e já está vinculada ao romaneio ${financeiro.vinculoRomaneio?.numeroRomaneio || ''}.`);
+        return false;
+    }
+
+    const romaneio = await window.FS.getDoc('romaneios', romaneioId);
+    if (!romaneio) {
+        alert('O romaneio não foi encontrado. Atualize a lista e tente novamente.');
+        return false;
+    }
+    const linksAntigos = Array.isArray(romaneio.documentosFinanceirosVinculados)
+        ? romaneio.documentosFinanceirosVinculados.slice()
+        : [];
+    const outrosLinks = linksAntigos.filter(link => String(link.financeiroId || '') !== String(financeiroId));
+    if (outrosLinks.length) {
+        const continuar = confirm(`O romaneio ${sugestao.numeroRomaneio || romaneio.numero || '-'} já possui outra NF-e vinculada. Deseja acrescentar esta nota sem remover a anterior?`);
+        if (!continuar) return false;
+    }
+
+    const agora = new Date().toISOString();
+    const chaveNfe = sugestao.chaveNfe || obterChaveNotaConciliacao(financeiro);
+    const vinculo = {
+        financeiroId,
+        chaveNfe,
+        numeroNota: sugestao.numeroNota || obterNumeroNotaConciliacao(financeiro),
+        serie: String(financeiro.ia?.serie || financeiro.serie || ''),
+        valorNota: Number(financeiro.valor || sugestao.valorNota || 0),
+        dataEmissao: obterDataNotaConciliacao(financeiro),
+        baseNF: sugestao.baseDescricao || '',
+        fatorBase: Number(sugestao.fatorBase || 1),
+        taxaNF: Number(sugestao.taxaNF || 0),
+        valorEsperadoNf: Number(sugestao.valorEsperadoNf || 0),
+        vinculadoEm: agora
+    };
+    const novoLink = [...outrosLinks, vinculo];
+    const ultimaConciliacaoAnterior = romaneio.ultimaConciliacaoFiscalEm || null;
+
+    try {
+        await window.FS.updateDoc('romaneios', romaneioId, {
+            documentosFinanceirosVinculados: novoLink,
+            ultimaConciliacaoFiscalEm: agora
+        });
+        const atualizado = {
+            ...financeiro,
+            vinculoRomaneioId: romaneioId,
+            vinculoRomaneio: {
+                romaneioId,
+                numeroRomaneio: sugestao.numeroRomaneio || romaneio.numero || romaneio.numeroCarga || '',
+                clienteId: sugestao.clienteId || romaneio.clienteId || '',
+                cliente: sugestao.clienteNome || romaneio.cliente || '',
+                chaveNfe,
+                baseNF: sugestao.baseDescricao || '',
+                fatorBase: Number(sugestao.fatorBase || 1),
+                taxaNF: Number(sugestao.taxaNF || 0),
+                valorEsperadoNf: Number(sugestao.valorEsperadoNf || 0),
+                confirmadoEm: agora
+            },
+            atualizadoEm: agora
+        };
+        await salvarFinanceiroNuvem(atualizado);
+        Object.assign(financeiro, atualizado);
+        salvarLancamentosFinanceiros(lista);
+        window.renderFinanceiro();
+        return true;
+    } catch (error) {
+        try {
+            await window.FS.updateDoc('romaneios', romaneioId, {
+                documentosFinanceirosVinculados: linksAntigos,
+                ultimaConciliacaoFiscalEm: ultimaConciliacaoAnterior
+            });
+        } catch (rollbackError) {
+            console.error('Falha ao desfazer vínculo parcial de NF-e/romaneio:', rollbackError);
+        }
+        console.error('Falha ao confirmar vínculo entre NF-e e romaneio:', error);
+        alert('Não foi possível confirmar o vínculo. Os lançamentos originais foram preservados.');
+        return false;
+    }
+};
+
+window.conciliarNfeComRomaneios = async function() {
+    if (window.App?.userData?.modoTeste) {
+        alert('A conciliação exige uma sessão real, fora do modo teste local.');
+        return { encontrados: 0, somenteLeitura: true };
+    }
+    if (!window.FS) {
+        alert('A conexão com o banco de dados ainda não está disponível.');
+        return { encontrados: 0 };
+    }
+    try {
+        const [clientes, romaneios] = await Promise.all([
+            window.FS.getCollection('clientes'),
+            window.FS.getCollection('romaneios')
+        ]);
+        const notas = obterLancamentosFinanceiros().filter(item => financeiroEhNotaFiscal(item) && !item.vinculoRomaneioId);
+        if (!notas.length) {
+            alert('Nenhuma NF-e pendente de vínculo foi encontrada na lista financeira.');
+            return { encontrados: 0 };
+        }
+        const resultados = notas.map(nota => criarSugestoesNfeRomaneio(nota, clientes, romaneios));
+        const encontrados = resultados.reduce((total, resultado) => total + resultado.candidatos.length, 0);
+        const modal = document.createElement('div');
+        modal.id = 'financeiroConciliacaoNfeModal';
+        modal.className = 'financeiro-import-modal';
+        modal.innerHTML = `
+            <div class="financeiro-import-box" style="width:min(1120px,96vw); max-height:90vh; overflow:auto;">
+                <div class="financeiro-import-head">
+                    <div>
+                        <h3><i class="fa-solid fa-file-circle-check"></i> Conciliação de NF-e com romaneios</h3>
+                        <small>${notas.length} NF-e pendente(s) analisada(s) · ${encontrados} sugestão(ões) encontrada(s). Nenhum vínculo é confirmado automaticamente.</small>
+                    </div>
+                    <button type="button" class="btn-secondary" data-action="fechar"><i class="fa-solid fa-xmark"></i> Fechar</button>
+                </div>
+                <div style="margin:14px 0 10px; padding:10px 12px; border-radius:8px; background:rgba(14,165,163,.12); border:1px solid rgba(14,165,163,.28); color:#d7fffb; font-size:.82rem;">
+                    A comparação usa o cliente pelo CNPJ/CPF, a data e o valor esperado da NF. Para a LOUV PALLETS, a base será meia nota somente se essa regra estiver salva no cadastro ou no romaneio.
+                </div>
+                <div style="display:grid; gap:10px; margin-top:12px;">
+                    ${resultados.map(resultado => {
+                        const nota = resultado.nota;
+                        const numero = obterNumeroNotaConciliacao(nota) || '-';
+                        const nome = resultado.destinatario.nome || 'Destinatário não identificado';
+                        const notaResumo = `<strong>NF-e ${escapeHtmlFinanceiro(numero)}</strong><small>${escapeHtmlFinanceiro(nome)} · ${dataBR(obterDataNotaConciliacao(nota))} · ${formatarMoeda(nota.valor)}</small>`;
+                        if (!resultado.candidatos.length) {
+                            return `<div style="padding:12px; border:1px solid rgba(248,113,113,.35); border-radius:8px; background:rgba(127,29,29,.14);"><div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">${notaResumo}<span style="color:#fecaca; font-weight:800;">Sem sugestão segura</span></div><small style="display:block; margin-top:5px; color:#fecaca;">${escapeHtmlFinanceiro(resultado.clienteInfo.motivo)}. Confira o cliente ou o romaneio manualmente.</small></div>`;
+                        }
+                        return resultado.candidatos.map((candidato, indice) => `
+                            <div data-conciliacao-row="${escapeHtmlFinanceiro(`${nota.id}-${candidato.romaneioId}-${indice}`)}" style="padding:12px; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.46);">
+                                <div style="display:grid; grid-template-columns:minmax(220px,1.1fr) minmax(250px,1.5fr) auto; gap:12px; align-items:center;">
+                                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">${notaResumo}<small style="color:#cbd5e1;">${escapeHtmlFinanceiro(candidato.clienteNome)} · confiança ${escapeHtmlFinanceiro(candidato.confianca)}</small></div>
+                                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0;"><strong>Romaneio ${escapeHtmlFinanceiro(candidato.numeroRomaneio)}</strong><small>${escapeHtmlFinanceiro(candidato.dataRomaneio ? dataBR(candidato.dataRomaneio) : '-')} · esperado NF ${formatarMoeda(candidato.valorEsperadoNf)}</small><small style="color:#fcd34d;">Base: ${escapeHtmlFinanceiro(candidato.baseDescricao)} · ${Number(candidato.taxaNF || 0).toLocaleString('pt-BR')}% · diferença ${formatarMoeda(candidato.diferencaValor)}</small></div>
+                                    <button type="button" class="btn-primary" data-action="confirmar" data-financeiro-id="${escapeHtmlFinanceiro(nota.id)}" data-romaneio-id="${escapeHtmlFinanceiro(candidato.romaneioId)}" style="white-space:nowrap;"><i class="fa-solid fa-link"></i> Confirmar vínculo</button>
+                                </div>
+                                <small style="display:block; margin-top:8px; color:#94a3b8;">${escapeHtmlFinanceiro(candidato.motivos.join(' · '))}</small>
+                            </div>
+                        `).join('');
+                    }).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('[data-action="fechar"]')?.addEventListener('click', fecharModalConciliacaoNfe);
+        modal.querySelectorAll('[data-action="confirmar"]').forEach(botao => {
+            botao.addEventListener('click', async () => {
+                botao.disabled = true;
+                botao.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
+                const resultado = resultados.find(item => item.nota.id === botao.dataset.financeiroId);
+                const sugestao = resultado?.candidatos.find(item => item.romaneioId === botao.dataset.romaneioId) || {};
+                const ok = await window.confirmarVinculoNfeRomaneio(botao.dataset.financeiroId, botao.dataset.romaneioId, sugestao);
+                if (ok) {
+                    botao.closest('[data-conciliacao-row]')?.remove();
+                    const restantes = modal.querySelectorAll('[data-action="confirmar"]').length;
+                    if (!restantes) fecharModalConciliacaoNfe();
+                } else {
+                    botao.disabled = false;
+                    botao.innerHTML = '<i class="fa-solid fa-link"></i> Confirmar vínculo';
+                }
+            });
+        });
+        modal.addEventListener('click', event => {
+            if (event.target === modal) fecharModalConciliacaoNfe();
+        });
+        return { encontrados, analisados: notas.length };
+    } catch (error) {
+        console.error('Falha ao conciliar NF-e com romaneios:', error);
+        alert('Não foi possível consultar clientes e romaneios para a conciliação.');
+        return { encontrados: 0, erro: true };
+    }
+};
+
 function atualizarBotaoCollapseFinanceiro(targetId, oculto) {
     document.querySelectorAll(`[onclick*="${targetId}"]`).forEach(botao => {
         botao.classList.toggle('is-collapsed', oculto);
@@ -2584,6 +3156,9 @@ window.renderFinanceiro = function() {
         const dataExibicao = obterDataFinanceiroExibicao(item);
         const sugestaoVinculo = Array.isArray(item.processoVinculoSugestao) ? item.processoVinculoSugestao[0] : null;
         const processoVinculado = Boolean(item.processoVinculoId && item.processoVinculoStatus === 'CONFIRMADO');
+        const vinculoRomaneio = item.vinculoRomaneioId
+            ? `<small class="financeiro-ia-line"><i class="fa-solid fa-file-circle-check"></i> NF-e vinculada ao romaneio ${escapeHtmlFinanceiro(item.vinculoRomaneio?.numeroRomaneio || item.vinculoRomaneioId)}</small>`
+            : '';
         const vinculoResumo = processoVinculado
             ? '<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Processo financeiro vinculado</small>'
             : (sugestaoVinculo
@@ -2599,7 +3174,7 @@ window.renderFinanceiro = function() {
             <tr class="financeiro-row ${duplicado ? 'financeiro-row-duplicado' : ''}" title="${tooltipLancamento}" onclick="window.toggleFinanceiroLinha('${escapeJsStringFinanceiro(item.id)}', event)">
                 <td><input type="checkbox" class="financeiro-check" value="${item.id}" onchange="window.atualizarSelecaoFinanceiro()"></td>
                 <td><span class="financeiro-tipo-pill">${escapeHtmlFinanceiro(item.tipo || 'Documento')}</span></td>
-                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}${vinculoResumo}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
+                <td class="financeiro-descricao-cell"><strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>${duplicado ? '<span class="financeiro-duplicado-badge"><i class="fa-solid fa-copy"></i> Possível duplicado</span>' : ''}${item.ia ? `<small class="financeiro-ia-line"><i class="fa-solid fa-wand-magic-sparkles"></i> IA ${escapeHtmlFinanceiro(item.ia.confianca || 'media')}${item.ia.fornecedor ? ` - ${escapeHtmlFinanceiro(item.ia.fornecedor)}` : ''}</small>` : ''}${vinculoRomaneio}${vinculoResumo}<small>${escapeHtmlFinanceiro(item.observacao || '')}</small></td>
                 <td>${dataBR(dataExibicao)}${ehNota ? '<small>Emissão fiscal</small>' : ''}</td>
                 <td><strong>${formatarMoeda(item.valor)}</strong></td>
                 <td><span class="financeiro-status-badge ${status.classe}">${status.label}</span></td>
@@ -2679,21 +3254,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
             if (!silencioso) alert('Não foi possível identificar os dados deste documento.');
             return false;
         }
-        const dadosIA = usouIA ? {
-            confianca: dados.confiancaIA || 'media',
-            fornecedor: dados.fornecedor || '',
-            cnpj: dados.cnpj || '',
-            numeroDocumento: dados.numeroDocumento || '',
-            chaveNfe: dados.chaveNfe || dados.chaveNFe || dados.chave || '',
-            linhaDigitavel: dados.linhaDigitavel || '',
-            codigoBarras: dados.codigoBarras || '',
-            banco: dados.banco || '',
-            nossoNumero: dados.nossoNumero || dados.nossoNumeroBoleto || '',
-            produtos: dados.produtos || [],
-            confiancaData: dados.confiancaData || 'media',
-            fonteVencimento: dados.fonteVencimento || '',
-            observacao: dados.observacaoIA || ''
-        } : item.ia || null;
+        const dadosIA = normalizarMetadadosLeituraFinanceira(dados, anexo);
         const ehNota = financeiroEhNotaFiscal(dados);
         const atualizado = {
             ...item,
@@ -3549,7 +4110,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('financeiroArquivosInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroPastaInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
+    document.getElementById('financeiroSigewinInput')?.addEventListener('change', event => {
+        const arquivos = Array.from(event.target.files || []).filter(file => /\.xml$/i.test(file.name));
+        if (arquivos.length) window.importarPastaFinanceira(arquivos);
+        else alert('Nenhum XML de NF-e foi encontrado na pasta selecionada do SIGEWIN.');
+        event.target.value = '';
+    });
     document.getElementById('financeiroFilaInput')?.addEventListener('change', event => window.importarFilaMonitorFinanceiro(event.target.files));
+    iniciarSincronizacaoSigeWinFinanceiro();
     window.limparFinanceiroForm();
     aplicarEstadoVisualFinanceiro();
     migrarArquivosFinanceirosLocal()

@@ -54,16 +54,20 @@
 
                 <div class="glass-panel financeiro-list-card">
                     <div class="financeiro-list-header hide-on-print">
-                        <div><h3 id="financeiroTituloLista" style="margin:0;">Documentos financeiros</h3><small id="financeiroResumoLista" style="color:var(--text-muted);">0 registros encontrados</small></div>
+                        <div><h3 id="financeiroTituloLista" style="margin:0;">Documentos financeiros</h3><small id="financeiroResumoLista" style="color:var(--text-muted);">0 registros encontrados</small><small id="financeiroSigewinStatus" style="display:block; margin-top:4px; color:var(--text-muted);">SIGEWIN local: verificando conexão somente leitura...</small></div>
                         <div class="financeiro-list-actions">
                             <input type="file" id="financeiroArquivosInput" multiple accept=".pdf,.xml,text/xml,application/xml,image/*" style="display:none;">
                             <input type="file" id="financeiroPastaInput" webkitdirectory directory multiple accept=".pdf,.xml,text/xml,application/xml,image/*" style="display:none;">
+                            <input type="file" id="financeiroSigewinInput" webkitdirectory directory multiple accept=".xml,text/xml,application/xml" style="display:none;">
                             <input type="file" id="financeiroFilaInput" multiple accept=".json,application/json" style="display:none;">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Importar arquivos</button>
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroPastaInput')?.click()" title="Importa todos os PDFs/XMLs da pasta selecionada"><i class="fa-solid fa-folder-open"></i> Importar pasta</button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroSigewinInput')?.click()" title="Lê somente os XMLs selecionados do SIGEWIN; os arquivos originais não são alterados"><i class="fa-solid fa-file-import"></i> Importar NF-e do SIGEWIN</button>
+                            <button type="button" class="btn-secondary" onclick="window.sincronizarSigeWinFinanceiro?.()" title="Busca novos XMLs no conector local somente leitura"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar SIGEWIN</button>
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroFilaInput')?.click()" title="Importa os arquivos JSON gerados pelo monitor local na pasta FINANCEIRO\\FILA"><i class="fa-solid fa-list-check"></i> Importar fila</button>
                             <button type="button" class="btn-secondary" onclick="window.limparDuplicadosFinanceiros()" title="Mantém o primeiro lançamento e remove cópias repetidas"><i class="fa-solid fa-copy"></i> Limpar duplicados</button>
                             <button type="button" class="btn-secondary" onclick="window.recalcularSugestoesVinculoFinanceiro()" title="Procura possíveis vínculos entre notas, boletos e comprovantes"><i class="fa-solid fa-link"></i> Encontrar vínculos</button>
+                            <button type="button" class="btn-secondary" onclick="window.conciliarNfeComRomaneios()" title="Sugere vínculos entre NF-e importadas e romaneios existentes"><i class="fa-solid fa-file-circle-check"></i> Conciliar NF-e / romaneios</button>
                             <button type="button" class="btn-danger" id="btnExcluirFinanceiroSelecionados" onclick="window.excluirFinanceiroSelecionados()" style="display:none;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                             <button type="button" class="btn-secondary financeiro-btn-report" onclick="window.abrirRelatorioFinanceiro()"><i class="fa-solid fa-file-lines"></i> Gerar relatório</button>
                             <button type="button" class="financeiro-collapse-icon" onclick="window.toggleFinanceiroBloco('financeiroListaBody', this)" title="Ocultar ou mostrar lista"><i class="fa-solid fa-chevron-up"></i></button>
