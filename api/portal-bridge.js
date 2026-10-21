@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const FIREBASE_PROJECT_ID = 'serraria-bcf36';
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const PORTAL_URL = process.env.ORQUESTRA_PORTAL_URL || 'https://portal.orquestracs.com';
+const PORTAL_CONNECTOR_SECRET = process.env.ORQUESTRA_CONNECTOR_SHARED_SECRET || process.env.ORQUESTRA_PORTAL_CONNECTOR_SECRET || '';
 const ADMIN_ROLES = new Set(['admin', 'administrador', 'gerente', 'gerente geral']);
 const MAX_BODY_BYTES = 12 * 1024;
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
@@ -198,7 +199,7 @@ function jsonBody(req) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-    if (!process.env.ORQUESTRA_PORTAL_CONNECTOR_SECRET) return res.status(503).json({ error: 'Ponte do Portal não configurada.' });
+    if (!PORTAL_CONNECTOR_SECRET) return res.status(503).json({ error: 'Ponte do Portal não configurada.' });
 
     try {
         const body = await jsonBody(req);
@@ -225,7 +226,7 @@ module.exports = async function handler(req, res) {
             method: 'POST',
             headers: {
                 'content-type': 'application/json',
-                'x-orquestra-connector-secret': process.env.ORQUESTRA_PORTAL_CONNECTOR_SECRET
+                'x-orquestra-connector-secret': PORTAL_CONNECTOR_SECRET
             },
             body: JSON.stringify({
                 eventId,
