@@ -367,6 +367,7 @@
                                 <i class="fa-solid fa-user-plus"></i> Novo Usuario
                             </button>
                         </div>
+                        <p style="margin: -8px 0 16px; color: var(--text-muted); font-size: 12px;">Banir ou excluir o acesso encerra a entrada do usuário. Para voltar, será necessário um novo convite ou código; o histórico permanece preservado.</p>
 
                         <div id="usuariosPresenceResumo" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
                             <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; background:rgba(255,255,255,0.02);">

@@ -9,7 +9,7 @@ console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
-const DEVELOPER_EMAILS = ['limaalecsander@gmail.com'];
+const DEVELOPER_EMAILS = ['orquestracs@gmail.com'];
 const LOCAL_TEST_MODE_KEY = 'orquestra_local_test_mode';
 
 function isLocalTestModeRequested() {
@@ -208,6 +208,8 @@ function getAdminBootstrapPayload(user) {
         cargo: 'Gerente Geral',
         cargoNormalizado: 'gerente',
         empresaId: DEFAULT_EMPRESA_ID,
+        acessoStatus: 'ATIVO',
+        acessoBloqueado: false,
         permissoes: {
             allowedSections,
             allowedSubsections,
@@ -230,9 +232,28 @@ function isDeveloperUser(user = auth.currentUser) {
     return DEVELOPER_EMAILS.includes(String(email || '').trim().toLowerCase());
 }
 
+function isDeveloperSystemAccount(userData = {}) {
+    return DEVELOPER_EMAILS.includes(String(userData.email || '').trim().toLowerCase());
+}
+
+function isAccessBlocked(userData = {}) {
+    const status = String(userData.acessoStatus || '').trim().toUpperCase();
+    return userData.acessoBloqueado === true || ['BANIDO', 'BLOQUEADO', 'EXCLUIDO'].includes(status);
+}
+
 function isCurrentUserAdminManager(appRef) {
     return normalizeRole(appRef?.userRole) === 'gerente'
         || isAdminBootstrapEmail(auth.currentUser?.email || appRef?.userData?.email || '');
+}
+
+const PROTECTED_SYSTEM_EMAILS = new Set([
+    'orquestracs@gmail.com',
+    'escritoriovanmarte@gmail.com',
+    'escritoriovanmarte@hotmail.com'
+]);
+
+function isProtectedSystemUser(userData = {}) {
+    return PROTECTED_SYSTEM_EMAILS.has(String(userData.email || '').trim().toLowerCase());
 }
 
 function getRoleDisplayName(role) {
@@ -1366,6 +1387,12 @@ const App = {
                 try {
                     const userRef = doc(db, 'usuarios', user.uid);
                     let userSnap = await getDoc(userRef);
+
+                    if (userSnap.exists() && isAccessBlocked(userSnap.data())) {
+                        alert('Seu acesso foi bloqueado pelo responsável do sistema. Solicite um novo convite ou código de acesso.');
+                        await this.logout();
+                        return;
+                    }
                     
                     if (!userSnap.exists()) {
                         // Tenta buscar pré-cadastro por email
@@ -1392,6 +1419,8 @@ const App = {
                                 nome: (user.displayName || user.email.split('@')[0]).toUpperCase(),
                                 email: user.email,
                                 cargo: 'PENDENTE',
+                                acessoStatus: 'PENDENTE',
+                                acessoBloqueado: false,
                                 empresaId: DEFAULT_EMPRESA_ID,
                                 criadoEm: new Date().toISOString()
                             });
@@ -1408,6 +1437,11 @@ const App = {
                         }
                         
                         const userData = snapshot.data();
+                        if (isAccessBlocked(userData)) {
+                            alert('Seu acesso foi bloqueado pelo responsável do sistema. Solicite um novo convite ou código de acesso.');
+                            this.logout();
+                            return;
+                        }
                         if (isAdminBootstrapEmail(user.email) && normalizeRole(userData.cargo) === 'PENDENTE') {
                             setDoc(userRef, getAdminBootstrapPayload(user), { merge: true }).catch(error => {
                                 console.error('Falha ao promover administrador do escritorio:', error);
@@ -1467,7 +1501,7 @@ const App = {
                         }
                         
                         // Direcionar telas de acordo com a permissão atômica atualizada
-                        if (normalizeRole(this.userRole) === 'PENDENTE') {
+                        if (normalizeRole(this.userRole) === 'PENDENTE' && !this.isDeveloper()) {
                             const pendNome = document.getElementById('pendente-user-name');
                             const pendEmail = document.getElementById('pendente-user-email');
                             if (pendNome) pendNome.textContent = this.userName;
@@ -1482,6 +1516,7 @@ const App = {
                                 const perms = this.getCurrentPermissions();
                                 const developerCentralAdminActive = currentSection === 'view-central-admin' && this.isDeveloper();
                                 const sectionNeedsRedirect = !developerCentralAdminActive
+                                    && !this.isDeveloper()
                                     && (cargoMudou || (perms && !perms.allowedSections.includes(currentSection)));
                                 
                                 // Se o cargo mudou ou se o usuário estiver em uma tela proibida, redireciona dinamicamente
@@ -1497,6 +1532,8 @@ const App = {
                                         const link = document.querySelector(`.sidebar nav ul li a[data-target="${nextSection}"]`);
                                         if (link) link.classList.add('active');
                                     }
+                                } else if (this.isDeveloper() && !developerCentralAdminActive) {
+                                    this.showSection('view-central-admin');
                                 }
                             }
                         }
@@ -1585,7 +1622,9 @@ const App = {
         // Mostrar primeira seção permitida por padrão ao carregar
         const permissions = this.getCurrentPermissions();
         const savedSection = localStorage.getItem('appActiveSection');
-        const startSection = savedSection && (permissions.allowedSections || []).includes(savedSection)
+        const startSection = this.isDeveloper()
+            ? 'view-central-admin'
+            : savedSection && (permissions.allowedSections || []).includes(savedSection)
             ? savedSection
             : (permissions.allowedSections[0] || 'view-dashboard');
             
@@ -1729,6 +1768,7 @@ const App = {
                 let html = '';
                 let totalOnline = 0;
                 let totalPendentes = 0;
+                let totalAtivos = 0;
                 this.usuariosConfigById = {};
                 qSnap.forEach(doc => {
                     const u = doc.data();
@@ -1736,17 +1776,29 @@ const App = {
                     this.usuariosConfigById[id] = { id, ...u };
                     const permissions = getEffectivePermissions(u);
                     const cargoFormatado = getRoleDisplayName(u.cargo);
-                    const isPending = normalizeRole(u.cargo) === 'PENDENTE' || (permissions.allowedSections || []).length === 0;
+                    const isBlocked = isAccessBlocked(u);
+                    const accessStatus = String(u.acessoStatus || '').trim().toUpperCase();
+                    const isPending = !isBlocked && (normalizeRole(u.cargo) === 'PENDENTE' || (permissions.allowedSections || []).length === 0);
                     const estaOnline = usuarioEstaOnline(u);
                     if (isPending) totalPendentes += 1;
+                    if (!isPending && !isBlocked) totalAtivos += 1;
                     if (estaOnline) totalOnline += 1;
-                    const statusBadge = isPending 
+                    const statusBadge = isBlocked
+                        ? `<span style="background: rgba(220,38,38,0.16); color: #fca5a5; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(248,113,113,0.34);">${accessStatus === 'EXCLUIDO' ? 'Acesso excluído' : 'Banido'}</span>`
+                        : isPending
                         ? `<span style="background: rgba(230,126,34,0.15); color: #e67e22; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(230,126,34,0.3);">Pendente</span>`
                         : `<span style="background: rgba(46,204,113,0.15); color: #2ecc71; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(46,204,113,0.3);">Ativo</span>`;
                     const presencaBadge = estaOnline
                         ? `<span style="background: rgba(34,197,94,0.15); color: #4ade80; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(34,197,94,0.3);">Online agora</span>`
                         : `<span style="background: rgba(148,163,184,0.15); color: #cbd5e1; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(148,163,184,0.25);">Offline</span>`;
                     const ultimaAtividade = formatarDataHoraCurta(u.ultimaAtividadeEm || u.ultimoAcessoEm);
+                    const protectedUser = isProtectedSystemUser(u) || id === auth.currentUser?.uid;
+                    const accessAction = isBlocked
+                        ? `<button onclick="window.reativarUsuario('${id}')" class="btn-secondary" style="padding: 6px 10px; font-size: 12px;" ${protectedUser ? 'disabled title="Conta protegida"' : ''}><i class="fa-solid fa-key"></i> Novo acesso</button>`
+                        : `<button onclick="window.banirUsuario('${id}')" class="btn-secondary" style="padding: 6px 10px; font-size: 12px; color:#fca5a5; border-color:rgba(248,113,113,.35);" ${protectedUser ? 'disabled title="Conta protegida"' : ''}><i class="fa-solid fa-ban"></i> Banir</button>`;
+                    const deleteAction = !isBlocked
+                        ? `<button onclick="window.excluirUsuario('${id}')" class="btn-danger" style="padding: 6px 10px; font-size: 12px;" ${protectedUser ? 'disabled title="Conta protegida"' : ''}><i class="fa-solid fa-trash"></i> Excluir acesso</button>`
+                        : '';
                     
                     html += `
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
@@ -1764,16 +1816,15 @@ const App = {
                                     <button onclick="window.abrirEditarUsuario('${id}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">
                                         <i class="fa-solid fa-pen"></i> Alterar
                                     </button>
-                                    <button onclick="window.excluirUsuario('${id}')" class="btn-danger" style="padding: 6px 10px; font-size: 12px;">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                                    ${accessAction}
+                                    ${deleteAction}
                                 </div>
                             </td>
                         </tr>
                     `;
                 });
                 if (onlineAgoraEl) onlineAgoraEl.textContent = String(totalOnline);
-                if (ativosTotalEl) ativosTotalEl.textContent = String(Math.max(0, qSnap.size - totalPendentes));
+                if (ativosTotalEl) ativosTotalEl.textContent = String(totalAtivos);
                 if (pendentesTotalEl) pendentesTotalEl.textContent = String(totalPendentes);
                 tbody.innerHTML = html;
             }, (error) => {
@@ -1944,6 +1995,11 @@ window.abrirEditarUsuario = function(id, nome, email, cargo) {
     const modal = document.getElementById('modalUsuario');
     const title = document.getElementById('modalUsuarioTitle');
     const usuario = App.usuariosConfigById[id] || { id, nome, email, cargo };
+
+    if (isDeveloperSystemAccount(usuario)) {
+        alert('O perfil do desenvolvedor é protegido e não pode receber permissões operacionais por este painel.');
+        return;
+    }
     
     if (modal && title) {
         document.getElementById('form-user-id').value = id;
@@ -1967,6 +2023,10 @@ window.salvarUsuario = async function() {
     
     if (!nome || !email || !cargo) {
         alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+    if (isDeveloperSystemAccount({ email })) {
+        alert('Este e-mail é reservado para a Central Admin do desenvolvedor.');
         return;
     }
 
@@ -2012,6 +2072,8 @@ window.salvarUsuario = async function() {
                 cargoNormalizado: normalizeRole(cargo),
                 permissoes: permissoes,
                 empresaId: window.AppUserContext?.empresaId || DEFAULT_EMPRESA_ID,
+                acessoStatus: normalizeRole(cargo) === 'PENDENTE' ? 'PENDENTE' : 'ATIVO',
+                acessoBloqueado: false,
                 criadoEm: new Date().toISOString()
             });
             alert("Pré-cadastro realizado com sucesso! Quando o funcionário acessar com este e-mail, ele já terá o cargo definido.");
@@ -2031,18 +2093,82 @@ window.salvarUsuario = async function() {
     }
 };
 
-window.excluirUsuario = async function(id) {
-    const autorizado = await window.confirmarExclusaoComSenha("Tem certeza que deseja excluir o cadastro e acesso deste usuário?");
+window.banirUsuario = async function(id) {
+    const usuario = App.usuariosConfigById[id];
+    if (!usuario || isProtectedSystemUser(usuario) || id === auth.currentUser?.uid) {
+        alert('Esta conta é protegida e não pode ser banida por este painel.');
+        return;
+    }
+    const autorizado = await window.confirmarExclusaoComSenha('Banir este usuário? O acesso será encerrado e ele precisará de um novo convite ou código para retornar.');
     if (!autorizado) return;
     try {
-        await deleteDoc(doc(db, 'usuarios', id));
-        alert("Usuário excluído com sucesso!");
-        if (App && typeof App.carregarTabelaUsuarios === 'function') {
-            App.carregarTabelaUsuarios();
-        }
+        await updateDoc(doc(db, 'usuarios', id), {
+            acessoStatus: 'BANIDO',
+            acessoBloqueado: true,
+            bloqueadoEm: new Date().toISOString(),
+            bloqueadoPor: auth.currentUser?.email || 'responsável do sistema',
+            atualizadoEm: new Date().toISOString()
+        });
+        alert('Usuário banido. O acesso será encerrado assim que a sessão for sincronizada.');
     } catch (err) {
-        console.error("Erro ao excluir usuário:", err);
-        alert("Erro ao excluir usuário.");
+        console.error('Erro ao banir usuário:', err);
+        alert('Erro ao banir usuário.');
+    }
+};
+
+window.reativarUsuario = async function(id) {
+    const usuario = App.usuariosConfigById[id];
+    if (!usuario || isProtectedSystemUser(usuario) || id === auth.currentUser?.uid) {
+        alert('Esta conta é protegida e não pode ser reativada por este painel.');
+        return;
+    }
+    const confirmado = window.confirm('Liberar este usuário para um novo convite/código? Ele voltará como Pendente e continuará sem acesso operacional até ser aprovado novamente.');
+    if (!confirmado) return;
+    try {
+        await updateDoc(doc(db, 'usuarios', id), {
+            cargo: 'PENDENTE',
+            cargoNormalizado: 'PENDENTE',
+            permissoes: {
+                allowedSections: ['view-pendente'],
+                allowedSubsections: {},
+                writeSections: [],
+                deleteSections: [],
+                readOnly: true
+            },
+            acessoStatus: 'PENDENTE',
+            acessoBloqueado: false,
+            reativadoEm: new Date().toISOString(),
+            reativadoPor: auth.currentUser?.email || 'responsável do sistema',
+            atualizadoEm: new Date().toISOString()
+        });
+        alert('Usuário liberado para novo convite/código e colocado como Pendente.');
+    } catch (err) {
+        console.error('Erro ao liberar novo acesso:', err);
+        alert('Erro ao liberar novo acesso.');
+    }
+};
+
+window.excluirUsuario = async function(id) {
+    const usuario = App.usuariosConfigById[id];
+    if (!usuario || isProtectedSystemUser(usuario) || id === auth.currentUser?.uid) {
+        alert('Esta conta é protegida e não pode ser excluída por este painel.');
+        return;
+    }
+    const autorizado = await window.confirmarExclusaoComSenha('Excluir o acesso deste usuário? O histórico será preservado, o acesso será bloqueado e um novo convite/código será exigido para qualquer retorno.');
+    if (!autorizado) return;
+    try {
+        await updateDoc(doc(db, 'usuarios', id), {
+            acessoStatus: 'EXCLUIDO',
+            acessoBloqueado: true,
+            excluidoEm: new Date().toISOString(),
+            bloqueadoEm: new Date().toISOString(),
+            bloqueadoPor: auth.currentUser?.email || 'responsável do sistema',
+            atualizadoEm: new Date().toISOString()
+        });
+        alert('Acesso excluído e bloqueado. O histórico foi preservado para auditoria.');
+    } catch (err) {
+        console.error('Erro ao excluir acesso do usuário:', err);
+        alert('Erro ao excluir acesso do usuário.');
     }
 };
 

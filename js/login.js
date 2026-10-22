@@ -10,8 +10,7 @@ import {
 // ======================================================
 const ADMIN_EMAILS = [
     'escritoriovanmarte@hotmail.com',
-    'escritoriovanmarte@gmail.com',
-    'limaalecsander@gmail.com'
+    'escritoriovanmarte@gmail.com'
 ];
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const LOGIN_SOUND_PATH = 'assets/audio/login_sound.mp3';
@@ -340,6 +339,8 @@ if (registerForm) {
                 nome: nome,
                 email: email,
                 cargo: cargoInicial,
+                acessoStatus: cargoInicial === 'PENDENTE' ? 'PENDENTE' : 'ATIVO',
+                acessoBloqueado: false,
                 empresaId: DEFAULT_EMPRESA_ID,
                 criadoEm: new Date().toISOString()
             });

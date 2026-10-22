@@ -10,8 +10,24 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
     }
 
+    function currentUserAccessBlocked() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && (
+          userDoc().data.get('acessoBloqueado', false) == true
+          || userDoc().data.get('acessoStatus', 'ATIVO') in ['BANIDO', 'BLOQUEADO', 'EXCLUIDO']
+        );
+    }
+
+    function isCentralAdminDeveloper() {
+      return signedIn()
+        && request.auth.token.email == 'orquestracs@gmail.com'
+        && !currentUserAccessBlocked();
+    }
+
     function isAdmin() {
       return signedIn()
+        && !currentUserAccessBlocked()
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
         && (
           userDoc().data.cargo in ['ADMIN', 'admin', 'gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL']
@@ -21,7 +37,8 @@ service cloud.firestore {
 
     function isBootstrapAdmin() {
       return signedIn()
-        && request.auth.token.email in ['limaalecsander@gmail.com', 'escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
+        && !currentUserAccessBlocked()
+        && request.auth.token.email in ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
     }
 
     function isBackupOperator() {
@@ -45,6 +62,7 @@ service cloud.firestore {
 
     function isApprovedUser() {
       return signedIn()
+        && !currentUserAccessBlocked()
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
         && !(userDoc().data.cargo in ['PENDENTE', 'pendente']);
     }
@@ -312,10 +330,10 @@ service cloud.firestore {
 
     match /usuarios/{userId} {
       allow create: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserCreate(userId);
-      allow read: if signedIn() && (userId == request.auth.uid || isAdmin() || isBootstrapAdmin());
-      allow list: if isAdmin() || isBootstrapAdmin();
-      allow update: if isAdmin() || isBootstrapAdmin() || isSafeSelfUserUpdate(userId);
-      allow delete: if isAdmin() || isBootstrapAdmin();
+      allow read: if signedIn() && (userId == request.auth.uid || isAdmin() || isBootstrapAdmin() || isCentralAdminDeveloper());
+      allow list: if isAdmin() || isBootstrapAdmin() || isCentralAdminDeveloper();
+      allow update: if ((isAdmin() || isBootstrapAdmin()) && resource.data.email != 'orquestracs@gmail.com') || isSafeSelfUserUpdate(userId);
+      allow delete: if (isAdmin() || isBootstrapAdmin()) && resource.data.email != 'orquestracs@gmail.com';
 
       match /seguranca/{document} {
         allow read, write: if signedIn() && userId == request.auth.uid;
@@ -333,7 +351,7 @@ service cloud.firestore {
     }
 
     match /auditoria_logs/{document} {
-      allow read: if isBackupOperator() && sameEmpresaOnRead();
+      allow read: if (isBackupOperator() || isCentralAdminDeveloper()) && sameEmpresaOnRead();
       allow create: if isApprovedUser() && sameEmpresaOnWrite();
       allow update, delete: if false;
     }

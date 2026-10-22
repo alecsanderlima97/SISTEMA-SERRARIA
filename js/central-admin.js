@@ -1,6 +1,6 @@
 import { auth, db, collection, getDocs } from './firebase-init.js';
 
-const DEVELOPER_EMAILS = new Set(['limaalecsander@gmail.com']);
+const DEVELOPER_EMAILS = new Set(['orquestracs@gmail.com']);
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const PORTAL_ADMIN_URL = 'https://portal.orquestracs.com/central-admin';
 const state = {

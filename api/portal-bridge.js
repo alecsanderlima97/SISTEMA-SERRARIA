@@ -5,6 +5,7 @@ const DEFAULT_EMPRESA_ID = 'vanmarte';
 const PORTAL_URL = process.env.ORQUESTRA_PORTAL_URL || 'https://portal.orquestracs.com';
 const PORTAL_CONNECTOR_SECRET = process.env.ORQUESTRA_CONNECTOR_SHARED_SECRET || process.env.ORQUESTRA_PORTAL_CONNECTOR_SECRET || '';
 const ADMIN_ROLES = new Set(['admin', 'administrador', 'gerente', 'gerente geral']);
+const CENTRAL_ADMIN_EMAIL = 'orquestracs@gmail.com';
 const MAX_BODY_BYTES = 12 * 1024;
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -233,7 +234,10 @@ module.exports = async function handler(req, res) {
         if (!profile) return res.status(403).json({ error: 'Perfil do sistema não encontrado.' });
 
         const role = normalizeRole(fieldValue(profile, 'cargoNormalizado') || fieldValue(profile, 'cargo'));
-        if (!ADMIN_ROLES.has(role)) return res.status(403).json({ error: 'Apenas o administrador do sistema pode sincronizar o resumo.' });
+        const requesterEmail = String(fieldValue(profile, 'email') || '').trim().toLowerCase();
+        if (!ADMIN_ROLES.has(role) && requesterEmail !== CENTRAL_ADMIN_EMAIL) {
+            return res.status(403).json({ error: 'Apenas o administrador do sistema ou o desenvolvedor autorizado pode sincronizar o resumo.' });
+        }
 
         const empresaId = String(fieldValue(profile, 'empresaId') || DEFAULT_EMPRESA_ID).trim();
         if (!empresaId || empresaId.length > 120) return res.status(422).json({ error: 'Empresa do sistema não identificada.' });
