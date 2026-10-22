@@ -36,6 +36,10 @@ function fieldValue(document, name) {
     return firestoreValue(fieldsOf(document)[name]);
 }
 
+function isCentralAdminProfile(profile) {
+    return String(fieldValue(profile, 'email') || '').trim().toLowerCase() === CENTRAL_ADMIN_EMAIL;
+}
+
 function parseDate(value) {
     if (!value) return null;
     const parsed = new Date(value);
@@ -147,8 +151,9 @@ function isPending(profile) {
 }
 
 function summarizeUsers(documents, cutoffMs) {
+    const clientDocuments = documents.filter((profile) => !isCentralAdminProfile(profile));
     const summary = {
-        totalUsers: documents.length,
+        totalUsers: clientDocuments.length,
         owners: 0,
         administrators: 0,
         staff: 0,
@@ -160,7 +165,7 @@ function summarizeUsers(documents, cutoffMs) {
         lastActivityAt: null
     };
     let latestActivityMs = 0;
-    documents.forEach((profile) => {
+    clientDocuments.forEach((profile) => {
         const cargo = normalizeRole(fieldValue(profile, 'cargoNormalizado') || fieldValue(profile, 'cargo'));
         if (isPending(profile)) summary.pendingInvitations += 1;
         if (cargo === 'proprietario' || cargo === 'dono' || cargo === 'owner') summary.owners += 1;
@@ -181,7 +186,7 @@ function summarizeUsers(documents, cutoffMs) {
 }
 
 function snapshotUsers(documents) {
-    return documents.map((profile) => {
+    return documents.filter((profile) => !isCentralAdminProfile(profile)).map((profile) => {
         const documentName = String(profile?.name || '');
         const externalUserId = documentName.split('/').pop() || crypto.createHash('sha256').update(documentName).digest('hex');
         const lastActivityAt = fieldValue(profile, 'ultimaAtividadeEm') || fieldValue(profile, 'ultimoAcessoEm');
