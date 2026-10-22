@@ -6,6 +6,21 @@
                 </div>
 
                 <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+
+                    <div class="glass-panel central-admin-dev-only" data-developer-only hidden style="grid-column: 1 / -1; border-color: rgba(14, 165, 233, .34); background: linear-gradient(135deg, rgba(224, 242, 254, .92), rgba(255, 255, 255, .94));">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                                <i class="fa-solid fa-code" style="font-size:24px; color:#0369a1;"></i>
+                                <div>
+                                    <h2 style="margin:0; font-size:20px; color:#0f172a;">Central Admin do Desenvolvedor</h2>
+                                    <p style="margin:5px 0 0; color:#475569; font-size:12px;">Area exclusiva para administrar clientes e acompanhar os dados internos da plataforma.</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-primary" onclick="window.abrirCentralAdminDev && window.abrirCentralAdminDev()" style="background:#0369a1; border-color:#0369a1; white-space:nowrap;">
+                                <i class="fa-solid fa-shield-halved"></i> Abrir Central Admin
+                            </button>
+                        </div>
+                    </div>
                     
                     <div class="glass-panel" data-subsection-permission="view-configuracoes:perfil">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">

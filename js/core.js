@@ -9,6 +9,7 @@ console.log("Core: Inicializando sistema de segurança e navegação...");
 
 const DEFAULT_EMPRESA_ID = 'vanmarte';
 const ADMIN_BOOTSTRAP_EMAILS = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
+const DEVELOPER_EMAILS = ['limaalecsander@gmail.com'];
 const LOCAL_TEST_MODE_KEY = 'orquestra_local_test_mode';
 
 function isLocalTestModeRequested() {
@@ -222,6 +223,11 @@ function getAdminBootstrapPayload(user) {
 
 function isAdminBootstrapEmail(email = '') {
     return ADMIN_BOOTSTRAP_EMAILS.includes(String(email || '').toLowerCase());
+}
+
+function isDeveloperUser(user = auth.currentUser) {
+    const email = typeof user === 'string' ? user : user?.email;
+    return DEVELOPER_EMAILS.includes(String(email || '').trim().toLowerCase());
 }
 
 function isCurrentUserAdminManager(appRef) {
@@ -749,6 +755,10 @@ const App = {
     cloudSnapshotAgendado: false,
     emitenteCarregamentoAgendado: false,
 
+    isDeveloper() {
+        return isDeveloperUser(this.user || auth.currentUser);
+    },
+
     activateLocalTestMode() {
         const allowedSections = [...ROLE_PERMISSIONS.gerente.allowedSections];
         const allowedSubsections = Object.fromEntries(
@@ -1133,6 +1143,11 @@ const App = {
             if (sectionId && subId) {
                 el.style.display = this.canAccessSubsection(sectionId, subId) ? '' : 'none';
             }
+        });
+        document.querySelectorAll('[data-developer-only]').forEach(el => {
+            const visible = this.isDeveloper();
+            el.hidden = !visible;
+            el.setAttribute('aria-hidden', visible ? 'false' : 'true');
         });
         if (typeof window.atualizarPermissoesEntrada === 'function') {
             window.atualizarPermissoesEntrada();
@@ -1572,6 +1587,11 @@ const App = {
     showSection(id) {
         const currentRole = this.userRole || 'PENDENTE';
         const permissions = this.getCurrentPermissions();
+
+        if (id === 'view-central-admin' && !this.isDeveloper()) {
+            console.warn('Core: acesso negado a Central Admin para o usuario atual.');
+            return this.showSection('view-configuracoes');
+        }
         
         if (permissions && !permissions.allowedSections.includes(id)) {
             console.warn(`Core: Acesso negado à seção ${id} para o cargo ${currentRole}`);
@@ -1777,6 +1797,7 @@ window.desconectarOutlook = () => App.desconectarOutlook();
 window.carregarMensagensOutlook = () => App.carregarMensagensOutlook();
 window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
 window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
+window.isOrquestraDeveloper = () => App.isDeveloper();
 window.navegarPara = function(targetId) {
     if (App && typeof App.showSection === 'function') {
         targetId = App.showSection(targetId);
