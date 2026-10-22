@@ -1,11 +1,20 @@
 import { auth, db, collection, getDocs } from './firebase-init.js';
 
 const DEVELOPER_EMAILS = new Set(['limaalecsander@gmail.com']);
+const DEFAULT_EMPRESA_ID = 'vanmarte';
+const PORTAL_ADMIN_URL = 'https://portal.orquestracs.com/central-admin';
 const state = {
-    clientes: [],
+    client: {
+        id: DEFAULT_EMPRESA_ID,
+        nome: 'Vanmarte',
+        email: 'escritoriovanmarte@gmail.com',
+        produto: 'Orquestra MAD360',
+        sourceSystem: 'mad360',
+        externalTenantId: DEFAULT_EMPRESA_ID
+    },
     usuarios: [],
     expandedId: null,
-    editingId: null,
+    lastSyncAt: null,
     loaded: false
 };
 
@@ -30,78 +39,100 @@ function valueToDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function formatDate(value) {
+function formatDate(value, fallback = 'Sem registro') {
     const date = valueToDate(value);
-    return date ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem registro';
+    return date ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : fallback;
 }
 
-function formatMoney(value) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return 'R$ 0,00';
-    return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function normalizeRole(value) {
+    return String(value || '')
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
 }
 
-function parseNumber(value) {
-    const normalized = String(value ?? '').replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
-    const number = Number(normalized);
-    return Number.isFinite(number) ? number : 0;
+function roleLabel(user) {
+    const role = normalizeRole(user.cargoNormalizado || user.cargo);
+    if (['proprietario', 'dono', 'owner'].includes(role)) return 'Responsável principal';
+    if (['admin', 'administrador', 'gerente', 'gerente geral'].includes(role)) return 'Administrador';
+    if (role === 'pendente') return 'Convite pendente';
+    return user.cargo || 'Usuário do sistema';
 }
 
-function clientStatus(client) {
-    const status = String(client.status || client.situacao || 'ativo').trim().toLowerCase();
-    if (['inativo', 'cancelado', 'bloqueado'].includes(status)) return { label: 'Inativo', className: 'warning' };
-    if (['pausado', 'pendente'].includes(status)) return { label: 'Pausado', className: 'warning' };
-    return { label: 'Ativo', className: '' };
+function isOnline(user) {
+    const lastActivity = valueToDate(user.ultimaAtividadeEm || user.ultimoAcessoEm || user.onlineAtualizadoEm);
+    return user.online === true && (!lastActivity || Date.now() - lastActivity.getTime() <= 2 * 60 * 1000);
 }
 
-function baseNFLabel(value) {
-    const base = String(value || 'INTEIRA').toUpperCase();
-    if (base === 'MEIA' || base === '0.5') return 'Meia nota';
-    if (base === '1/3') return '1/3 da nota';
-    if (base === '1/4') return '1/4 da nota';
-    return 'Nota inteira';
+function getLatestUserActivity() {
+    return state.usuarios
+        .map(user => valueToDate(user.ultimaAtividadeEm || user.ultimoAcessoEm || user.onlineAtualizadoEm))
+        .filter(Boolean)
+        .sort((a, b) => b - a)[0] || null;
 }
 
-function getFilteredClients() {
+function getPrimaryUser() {
+    return state.usuarios.find(user => String(user.email || '').toLowerCase() === state.client.email)
+        || state.usuarios.find(user => ['proprietario', 'dono', 'owner'].includes(normalizeRole(user.cargoNormalizado || user.cargo)))
+        || state.usuarios.find(user => ['admin', 'administrador', 'gerente', 'gerente geral'].includes(normalizeRole(user.cargoNormalizado || user.cargo)))
+        || state.usuarios[0]
+        || null;
+}
+
+function getFilteredClient() {
     const query = String(document.getElementById('centralAdminBusca')?.value || '').trim().toLowerCase();
-    return [...state.clientes]
-        .filter(client => {
-            if (!query) return true;
-            return [client.nome, client.cnpj, client.cidade, client.contato, client.email]
-                .some(value => String(value || '').toLowerCase().includes(query));
-        })
-        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+    if (!query) return state.client;
+    const fields = [state.client.nome, state.client.email, state.client.produto, state.client.externalTenantId];
+    return fields.some(value => String(value || '').toLowerCase().includes(query)) ? state.client : null;
 }
 
-function detailRow(client) {
-    const matchingUsers = state.usuarios.filter(user => client.empresaId && user.empresaId === client.empresaId);
-    const usersLabel = matchingUsers.length ? `${matchingUsers.length} usuario(s) vinculado(s)` : 'Nenhum vinculo direto informado';
+function syncStatus() {
+    return state.lastSyncAt ? { label: 'Sincronizado', className: '' } : { label: 'Pendente', className: 'warning' };
+}
+
+function detailUsersHtml() {
+    if (!state.usuarios.length) return '<p class="central-admin-empty-inline">Nenhum usuário vinculado à empresa vanmarte.</p>';
+    return `<div class="central-admin-user-list">${state.usuarios.map(user => `
+        <div class="central-admin-user-item">
+            <span class="central-admin-user-icon"><i class="fa-solid fa-user"></i></span>
+            <div class="central-admin-user-copy">
+                <strong>${escapeHtml(user.nome || user.displayName || user.email || 'Usuário')}</strong>
+                <small>${escapeHtml(roleLabel(user))} · ${escapeHtml(user.email || 'E-mail não informado')}</small>
+            </div>
+            <span class="central-admin-pill ${isOnline(user) ? '' : 'neutral'}">${isOnline(user) ? 'Online' : 'Offline'}</span>
+        </div>`).join('')}</div>`;
+}
+
+function detailRow() {
+    const latest = getLatestUserActivity();
+    const online = state.usuarios.filter(isOnline).length;
+    const primary = getPrimaryUser();
+    const sync = syncStatus();
+    const adminCount = state.usuarios.filter(user => ['admin', 'administrador', 'gerente', 'gerente geral'].includes(normalizeRole(user.cargoNormalizado || user.cargo))).length;
     return `
         <tr class="central-admin-details-row">
-            <td colspan="7">
+            <td colspan="10">
                 <div class="central-admin-details">
                     <div class="central-admin-details-head">
-                        <div><strong>Detalhes operacionais</strong><small>${escapeHtml(client.nome || 'Cliente')} · atualizacao ${escapeHtml(formatDate(client.atualizadoEm || client.criadoEm))}</small></div>
-                        <span class="central-admin-pill neutral">Abrir detalhes</span>
+                        <div><strong>Detalhes operacionais</strong><small>${escapeHtml(state.client.nome)} · fonte ${escapeHtml(state.client.sourceSystem)} · ${escapeHtml(formatDate(latest, 'Sem atividade registrada'))}</small></div>
+                        <button type="button" class="central-admin-detail-link" data-central-action="edit" data-client-id="${escapeHtml(state.client.id)}">Abrir dados no Portal</button>
                     </div>
                     <div class="central-admin-details-grid">
                         <section class="central-admin-detail-card">
-                            <h3><i class="fa-solid fa-file-invoice-dollar"></i> Regras comerciais</h3>
+                            <div class="central-admin-card-heading"><h3><i class="fa-solid fa-arrows-rotate"></i> Sincronização com Portal</h3><span class="central-admin-pill ${sync.className}">${escapeHtml(sync.label)}</span></div>
                             <dl>
-                                <dt>Base da nota</dt><dd>${escapeHtml(baseNFLabel(client.baseNF))}</dd>
-                                <dt>Porcentagem NF</dt><dd>${escapeHtml(String(client.porcentagemNF ?? 0).replace('.', ','))}%</dd>
-                                <dt>Frete por m3</dt><dd>${escapeHtml(formatMoney(client.valorFrete))}</dd>
-                                <dt>Pagamento</dt><dd>${escapeHtml(client.formaPagamento || 'Nao informado')}</dd>
+                                <dt>Identificador externo</dt><dd>${escapeHtml(state.client.externalTenantId)}</dd>
+                                <dt>Sistema de origem</dt><dd>${escapeHtml(state.client.produto)}</dd>
+                                <dt>Última sincronização</dt><dd>${escapeHtml(state.lastSyncAt ? formatDate(state.lastSyncAt) : 'Ainda não confirmada')}</dd>
+                                <dt>Cobrança e plano</dt><dd>Administrados no Portal Orquestra.cs</dd>
                             </dl>
                         </section>
                         <section class="central-admin-detail-card">
-                            <h3><i class="fa-solid fa-address-card"></i> Cadastro e acesso</h3>
-                            <dl>
-                                <dt>CNPJ / CPF</dt><dd>${escapeHtml(client.cnpj || 'Nao informado')}</dd>
-                                <dt>Contato</dt><dd>${escapeHtml(client.contato || 'Nao informado')}</dd>
-                                <dt>Cidade</dt><dd>${escapeHtml(client.cidade || 'Nao informado')}</dd>
-                                <dt>Usuarios</dt><dd>${escapeHtml(usersLabel)}</dd>
-                            </dl>
+                            <div class="central-admin-card-heading"><h3><i class="fa-solid fa-users"></i> Usuários e acessos</h3><span class="central-admin-detail-count">Administradores: ${adminCount}</span></div>
+                            ${primary ? `<div class="central-admin-primary-user"><span class="central-admin-user-icon"><i class="fa-solid fa-crown"></i></span><div><small>Responsável principal</small><strong>${escapeHtml(primary.nome || primary.email || 'Usuário')}</strong><span>${escapeHtml(primary.email || 'E-mail não informado')}</span></div></div>` : ''}
+                            ${detailUsersHtml()}
+                            <div class="central-admin-access-summary"><span>${state.usuarios.length} usuário(s) vinculado(s)</span><span>${online} online agora</span></div>
                         </section>
                     </div>
                 </div>
@@ -110,60 +141,64 @@ function detailRow(client) {
 }
 
 function renderSummary() {
-    const total = state.clientes.length;
-    const emails = state.clientes.filter(client => String(client.email || '').trim()).length;
-    const totalUsers = state.usuarios.length;
-    const latest = state.clientes.map(client => valueToDate(client.atualizadoEm || client.criadoEm)).filter(Boolean).sort((a, b) => b - a)[0];
-    const totalEl = document.getElementById('centralAdminTotalClientes');
-    const emailsEl = document.getElementById('centralAdminTotalEmails');
-    const usersEl = document.getElementById('centralAdminTotalUsuarios');
-    const latestEl = document.getElementById('centralAdminUltimaAtualizacao');
-    const statusEl = document.getElementById('centralAdminStatusResumo');
-    if (totalEl) totalEl.textContent = String(total);
-    if (emailsEl) emailsEl.textContent = String(emails);
-    if (usersEl) usersEl.textContent = String(totalUsers);
-    if (latestEl) latestEl.textContent = latest ? latest.toLocaleDateString('pt-BR') : '--';
-    if (statusEl) statusEl.textContent = `Atualizado em ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    const latest = getLatestUserActivity();
+    const online = state.usuarios.filter(isOnline).length;
+    const sync = syncStatus();
+    const values = {
+        centralAdminTotalClientes: '1',
+        centralAdminTotalEmails: state.usuarios.length.toString(),
+        centralAdminTotalUsuarios: online.toString(),
+        centralAdminUltimaAtualizacao: sync.label,
+        centralAdminStatusResumo: latest ? `Último acesso ${formatDate(latest)}` : 'Aguardando atividade do cliente'
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
 }
 
 function renderTable() {
     const tbody = document.getElementById('centralAdminClientesBody');
     if (!tbody) return;
-    const clients = getFilteredClients();
-    if (!clients.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="central-admin-empty">Nenhum cliente encontrado.</td></tr>';
+    const client = getFilteredClient();
+    if (!client) {
+        tbody.innerHTML = '<tr><td colspan="10" class="central-admin-empty">Nenhum cliente encontrado.</td></tr>';
         return;
     }
-    tbody.innerHTML = clients.map(client => {
-        const id = escapeHtml(client.id);
-        const status = clientStatus(client);
-        const expanded = state.expandedId === client.id;
-        return `
-            <tr class="central-admin-client-row">
-                <td><span class="central-admin-client-name">${escapeHtml(client.nome || 'Cliente sem nome')}</span><span class="central-admin-secondary">${escapeHtml(client.email || client.cnpj || 'Cadastro sem e-mail')}</span></td>
-                <td>${escapeHtml(baseNFLabel(client.baseNF))}<span class="central-admin-secondary">NF: ${escapeHtml(String(client.porcentagemNF ?? 0).replace('.', ','))}%</span></td>
-                <td><span class="central-admin-pill ${status.className}">${escapeHtml(status.label)}</span></td>
-                <td>${escapeHtml(formatDate(client.criadoEm))}</td>
-                <td>${escapeHtml(formatDate(client.atualizadoEm || client.criadoEm))}</td>
-                <td>${escapeHtml(client.contato || client.cidade || 'Nao informado')}</td>
-                <td><div class="central-admin-row-actions">
-                    <button type="button" class="central-admin-icon-button" data-central-action="details" data-client-id="${id}" title="${expanded ? 'Fechar detalhes' : 'Abrir detalhes'}"><i class="fa-solid fa-${expanded ? 'chevron-up' : 'eye'}"></i></button>
-                    <button type="button" class="central-admin-icon-button edit" data-central-action="edit" data-client-id="${id}" title="Editar cliente"><i class="fa-solid fa-pen"></i></button>
-                </div></td>
-            </tr>${expanded ? detailRow(client) : ''}`;
-    }).join('');
+    const expanded = state.expandedId === client.id;
+    const latest = getLatestUserActivity();
+    const online = state.usuarios.filter(isOnline).length;
+    const sync = syncStatus();
+    tbody.innerHTML = `
+        <tr class="central-admin-client-row">
+            <td><span class="central-admin-client-name">${escapeHtml(client.nome)}</span><span class="central-admin-secondary">${escapeHtml(client.email)}</span><span class="central-admin-secondary">Cliente pagante Orquestra.cs</span></td>
+            <td><span class="central-admin-plan">Não informado</span><span class="central-admin-secondary">Configurado no Portal</span></td>
+            <td><span class="central-admin-pill">Ativo</span></td>
+            <td>Portal<span class="central-admin-secondary">Cadastro comercial</span></td>
+            <td>Portal<span class="central-admin-secondary">Vencimento no Portal</span></td>
+            <td><span class="central-admin-pill ${sync.className}">${escapeHtml(sync.label)}</span></td>
+            <td>${escapeHtml(formatDate(latest))}</td>
+            <td><span class="central-admin-pill ${online ? '' : 'neutral'}">${online}/${state.usuarios.length || 0}</span></td>
+            <td><span class="central-admin-portal-value">Portal</span><span class="central-admin-secondary">Créditos administrados no Portal</span></td>
+            <td><div class="central-admin-row-actions">
+                <button type="button" class="central-admin-icon-button" data-central-action="details" data-client-id="${escapeHtml(client.id)}" title="${expanded ? 'Fechar detalhes' : 'Abrir detalhes'}"><i class="fa-solid fa-${expanded ? 'chevron-up' : 'eye'}"></i></button>
+                <button type="button" class="central-admin-icon-button edit" data-central-action="edit" data-client-id="${escapeHtml(client.id)}" title="Abrir dados no Portal"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="central-admin-icon-button portal" data-central-action="portal" title="Abrir Central Admin do Portal"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+            </div></td>
+        </tr>${expanded ? detailRow() : ''}`;
     tbody.querySelectorAll('[data-central-action]').forEach(button => {
         button.addEventListener('click', () => {
-            const id = button.dataset.clientId;
-            if (button.dataset.centralAction === 'details') window.centralAdminAlternarDetalhes(id);
-            if (button.dataset.centralAction === 'edit') window.centralAdminEditar(id);
+            const action = button.dataset.centralAction;
+            if (action === 'details') window.centralAdminAlternarDetalhes(button.dataset.clientId);
+            if (action === 'edit') window.centralAdminEditar(button.dataset.clientId);
+            if (action === 'portal') window.centralAdminAbrirPortal();
         });
     });
 }
 
 function setFeedback(message, isError = false) {
     const tbody = document.getElementById('centralAdminClientesBody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="${isError ? 'central-admin-error' : 'central-admin-loading'}">${escapeHtml(message)}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="${isError ? 'central-admin-error' : 'central-admin-loading'}">${escapeHtml(message)}</td></tr>`;
 }
 
 async function loadCentralAdmin() {
@@ -171,105 +206,86 @@ async function loadCentralAdmin() {
         setFeedback('Acesso restrito ao desenvolvedor do sistema.', true);
         return;
     }
-    setFeedback('Carregando dados administrativos...');
+    setFeedback('Carregando usuários vinculados a Vanmarte...');
     try {
-        const [clientsSnap, usersSnap] = await Promise.all([
-            getDocs(collection(db, 'clientes')),
-            getDocs(collection(db, 'usuarios'))
-        ]);
-        state.clientes = clientsSnap.docs.map(item => ({ id: item.id, ...item.data() }));
-        state.usuarios = usersSnap.docs.map(item => ({ id: item.id, ...item.data() }));
+        const usersSnap = await getDocs(collection(db, 'usuarios'));
+        state.usuarios = usersSnap.docs
+            .map(item => ({ id: item.id, ...item.data() }))
+            .filter(user => String(user.empresaId || '').trim().toLowerCase() === DEFAULT_EMPRESA_ID);
         state.loaded = true;
         renderSummary();
         renderTable();
     } catch (error) {
-        console.error('Central Admin: erro ao carregar dados', error);
-        setFeedback(error?.code === 'permission-denied' ? 'Acesso negado pelas regras do Firebase.' : 'Nao foi possivel carregar os dados administrativos.', true);
+        console.error('Central Admin: erro ao carregar usuários do cliente pagante', error);
+        setFeedback(error?.code === 'permission-denied' ? 'Acesso negado pelas regras do Firebase.' : 'Não foi possível carregar os usuários de Vanmarte.', true);
     }
-}
-
-function getClientById(id) {
-    return state.clientes.find(client => client.id === id);
 }
 
 function openEdit(id) {
     if (!isDeveloper()) return alert('Acesso restrito ao desenvolvedor do sistema.');
-    const client = getClientById(id);
-    if (!client) return;
-    state.editingId = id;
+    if (id !== state.client.id) return;
     const values = {
-        centralAdminNome: client.nome || '',
-        centralAdminCnpj: client.cnpj || '',
-        centralAdminContato: client.contato || '',
-        centralAdminEmail: client.email || '',
-        centralAdminCidade: client.cidade || '',
-        centralAdminStatus: client.status || client.situacao || 'ativo',
-        centralAdminBaseNF: client.baseNF || 'INTEIRA',
-        centralAdminPorcentagemNF: client.porcentagemNF ?? '',
-        centralAdminFrete: window.formatCurrencyValue ? window.formatCurrencyValue(client.valorFrete) : client.valorFrete || '',
-        centralAdminPagamento: client.formaPagamento || '',
-        centralAdminObservacao: client.observacao || ''
+        centralAdminEmpresaNome: state.client.nome,
+        centralAdminEmpresaEmail: state.client.email,
+        centralAdminEmpresaProduto: state.client.produto,
+        centralAdminEmpresaId: state.client.externalTenantId,
+        centralAdminEmpresaStatus: 'Ativo no MAD360',
+        centralAdminEmpresaPlano: 'Administrado no Portal',
+        centralAdminEmpresaCobranca: 'Acessar Central Admin do Portal'
     };
     Object.entries(values).forEach(([fieldId, value]) => {
         const field = document.getElementById(fieldId);
         if (field) field.value = value;
     });
     document.getElementById('centralAdminModal')?.removeAttribute('hidden');
-    document.getElementById('centralAdminNome')?.focus();
+    document.getElementById('centralAdminEmpresaNome')?.focus();
 }
 
 function closeModal() {
-    state.editingId = null;
     document.getElementById('centralAdminModal')?.setAttribute('hidden', 'hidden');
 }
 
-async function saveClient(event) {
-    event.preventDefault();
-    if (!isDeveloper() || !state.editingId) return;
-    const button = document.getElementById('centralAdminSalvarCliente');
+function openPortal() {
+    if (!isDeveloper()) return alert('Acesso restrito ao desenvolvedor do sistema.');
+    window.open(PORTAL_ADMIN_URL, '_blank', 'noopener,noreferrer');
+}
+
+async function syncPortal() {
+    if (!isDeveloper()) return alert('Acesso restrito ao desenvolvedor do sistema.');
+    const user = auth.currentUser;
+    if (!user) return alert('Sessão do desenvolvedor não encontrada. Faça login novamente.');
+    const button = document.getElementById('centralAdminSincronizar');
     const original = button?.innerHTML || '';
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Salvando...';
+        button.innerHTML = '<span class="saw-loader" aria-hidden="true"></span> Sincronizando...';
     }
-    const payload = {
-        nome: document.getElementById('centralAdminNome')?.value.trim().toUpperCase() || '',
-        cnpj: document.getElementById('centralAdminCnpj')?.value.trim() || '',
-        contato: document.getElementById('centralAdminContato')?.value.trim() || '',
-        email: document.getElementById('centralAdminEmail')?.value.trim() || '',
-        cidade: document.getElementById('centralAdminCidade')?.value.trim() || '',
-        status: document.getElementById('centralAdminStatus')?.value || 'ativo',
-        baseNF: document.getElementById('centralAdminBaseNF')?.value || 'INTEIRA',
-        porcentagemNF: parseNumber(document.getElementById('centralAdminPorcentagemNF')?.value),
-        valorFrete: parseNumber(document.getElementById('centralAdminFrete')?.value),
-        formaPagamento: document.getElementById('centralAdminPagamento')?.value.trim() || '',
-        observacao: document.getElementById('centralAdminObservacao')?.value.trim() || '',
-        atualizadoEm: new Date().toISOString()
-    };
     try {
-      if (typeof window.FS?.updateDoc !== 'function') {
-        throw new Error('Serviço de atualização do sistema indisponível.');
-      }
-
-      await window.FS.updateDoc('clientes', state.editingId, payload);
-        const current = getClientById(state.editingId);
-        if (current) Object.assign(current, payload);
-        closeModal();
+        const response = await fetch('/api/portal-bridge', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ idToken: await user.getIdToken(true) })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'O Portal não confirmou a sincronização.');
+        state.lastSyncAt = new Date();
         renderSummary();
         renderTable();
-        alert('Cliente atualizado com sucesso.');
+        alert(`Sincronização confirmada para Vanmarte. ${result.users || state.usuarios.length} usuário(s) enviados.`);
     } catch (error) {
-        console.error('Central Admin: erro ao atualizar cliente', error);
-        alert(error?.code === 'permission-denied' ? 'O Firebase recusou esta alteracao.' : 'Nao foi possivel atualizar o cliente.');
+        console.error('Central Admin: sincronização com Portal falhou', error);
+        alert(error.message || 'Não foi possível sincronizar com o Portal agora.');
     } finally {
         if (button) {
             button.disabled = false;
-            button.innerHTML = original || '<i class="fa-solid fa-floppy-disk"></i> Salvar alteracoes';
+            button.innerHTML = original || '<i class="fa-solid fa-arrows-rotate"></i> Sincronizar Portal';
         }
     }
 }
 
 window.centralAdminCarregar = loadCentralAdmin;
+window.centralAdminSincronizarPortal = syncPortal;
+window.centralAdminAbrirPortal = openPortal;
 window.centralAdminAlternarDetalhes = function(id) {
     if (!isDeveloper()) return alert('Acesso restrito ao desenvolvedor do sistema.');
     state.expandedId = state.expandedId === id ? null : id;
@@ -283,7 +299,7 @@ window.centralAdminVoltarConfiguracoes = function() {
     else window.App?.showSection('view-configuracoes');
 };
 window.abrirCentralAdminDev = function() {
-    if (!isDeveloper()) return alert('Esta area e exclusiva do desenvolvedor do sistema.');
+    if (!isDeveloper()) return alert('Esta área é exclusiva do desenvolvedor do sistema.');
     if (typeof window.navegarPara === 'function') window.navegarPara('view-central-admin');
     else window.App?.showSection('view-central-admin');
     loadCentralAdmin();
@@ -291,7 +307,6 @@ window.abrirCentralAdminDev = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('centralAdminBusca')?.addEventListener('input', renderTable);
-    document.getElementById('centralAdminClienteForm')?.addEventListener('submit', saveClient);
 });
 
 window.isOrquestraDeveloper = isDeveloper;

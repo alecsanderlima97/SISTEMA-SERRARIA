@@ -13,7 +13,7 @@
                                 <i class="fa-solid fa-code" style="font-size:24px; color:#0369a1;"></i>
                                 <div>
                                     <h2 style="margin:0; font-size:20px; color:#0f172a;">Central Admin do Desenvolvedor</h2>
-                                    <p style="margin:5px 0 0; color:#475569; font-size:12px;">Area exclusiva para administrar clientes e acompanhar os dados internos da plataforma.</p>
+                                    <p style="margin:5px 0 0; color:#475569; font-size:12px;">Area exclusiva para administrar o cliente pagante da Orquestra.cs e os usuarios vinculados ao MAD360.</p>
                                 </div>
                             </div>
                             <button type="button" class="btn-primary" onclick="window.abrirCentralAdminDev && window.abrirCentralAdminDev()" style="background:#0369a1; border-color:#0369a1; white-space:nowrap;">

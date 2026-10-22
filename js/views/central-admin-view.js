@@ -3,42 +3,46 @@
         <section id="view-central-admin" class="view-section central-admin-view" style="display: none;">
             <div class="main-header">
                 <div>
-                    <h1><i class="fa-solid fa-shield-halved"></i> Central Admin Orquestra MAD360</h1>
-                    <p>Area exclusiva do desenvolvedor para acompanhar clientes, configuracoes comerciais e acessos do sistema.</p>
+                    <h1><i class="fa-solid fa-shield-halved"></i> Central Admin Orquestra.cs</h1>
+                    <p>Central exclusiva da Orquestra.cs para clientes pagantes, planos, acessos e sincronização.</p>
                 </div>
                 <span class="central-admin-dev-badge"><i class="fa-solid fa-code"></i> Acesso do desenvolvedor</span>
             </div>
 
             <div class="central-admin-toolbar">
                 <div class="central-admin-toolbar-copy">
-                    <strong>Administracao central da serraria</strong>
-                    <small>Os dados abaixo sao carregados do Firestore e podem ser revisados sem alterar a operacao diaria.</small>
+                    <strong>Admin Orquestra.cs</strong>
+                    <small>Controle comercial dos clientes, convites, planos e status de assinatura.</small>
+                    <span class="central-admin-notice"><i class="fa-solid fa-circle-info"></i> O cliente pagante atual é Vanmarte. Dados de cobrança ficam no Portal Orquestra.cs.</span>
                 </div>
                 <div class="central-admin-toolbar-actions">
                     <button type="button" class="btn-secondary" onclick="window.centralAdminVoltarConfiguracoes()">
-                        <i class="fa-solid fa-arrow-left"></i> Configuracoes
+                        <i class="fa-solid fa-arrow-left"></i> Configurações
                     </button>
-                    <button type="button" class="btn-primary" onclick="window.centralAdminCarregar(true)">
-                        <i class="fa-solid fa-rotate"></i> Atualizar
+                    <button type="button" class="btn-secondary" onclick="window.centralAdminAbrirPortal()">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Portal
+                    </button>
+                    <button type="button" class="btn-primary" id="centralAdminSincronizar" onclick="window.centralAdminSincronizarPortal()">
+                        <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Portal
                     </button>
                 </div>
             </div>
 
             <div class="central-admin-summary" aria-label="Resumo administrativo">
-                <div class="central-admin-stat"><small>Clientes cadastrados</small><strong id="centralAdminTotalClientes">0</strong><span>Registros na colecao de clientes</span></div>
-                <div class="central-admin-stat"><small>Clientes com e-mail</small><strong id="centralAdminTotalEmails">0</strong><span>Contatos comerciais preenchidos</span></div>
-                <div class="central-admin-stat"><small>Usuarios do sistema</small><strong id="centralAdminTotalUsuarios">0</strong><span>Perfis registrados no acesso</span></div>
-                <div class="central-admin-stat"><small>Ultima atualizacao</small><strong id="centralAdminUltimaAtualizacao">--</strong><span id="centralAdminStatusResumo">Aguardando carregamento</span></div>
+                <div class="central-admin-stat"><small>Cliente pagante</small><strong id="centralAdminTotalClientes">1</strong><span>Empresa administrada pela Orquestra.cs</span></div>
+                <div class="central-admin-stat"><small>Usuários vinculados</small><strong id="centralAdminTotalEmails">0</strong><span>Usuários da empresa Vanmarte</span></div>
+                <div class="central-admin-stat"><small>Online agora</small><strong id="centralAdminTotalUsuarios">0</strong><span>Presença registrada no MAD360</span></div>
+                <div class="central-admin-stat"><small>Sincronização</small><strong id="centralAdminUltimaAtualizacao">Pendente</strong><span id="centralAdminStatusResumo">Aguardando carregamento</span></div>
             </div>
 
-            <section class="central-admin-list-panel" aria-label="Clientes cadastrados">
+            <section class="central-admin-list-panel" aria-label="Clientes Orquestra.cs">
                 <div class="central-admin-list-head">
                     <div>
-                        <h2><i class="fa-solid fa-building"></i> Clientes cadastrados</h2>
-                        <p>Abra os detalhes operacionais ou edite os dados comerciais do cliente.</p>
+                        <h2><i class="fa-solid fa-building"></i> Clientes Orquestra.cs</h2>
+                        <p>Os clientes comerciais da serraria não aparecem aqui. Esta tela administra apenas o vínculo com a plataforma Orquestra.cs.</p>
                     </div>
                     <div class="central-admin-list-actions">
-                        <input id="centralAdminBusca" class="central-admin-search" type="search" placeholder="Buscar por nome, CNPJ ou cidade..." autocomplete="off">
+                        <input id="centralAdminBusca" class="central-admin-search" type="search" placeholder="Buscar por nome ou e-mail..." autocomplete="off">
                     </div>
                 </div>
                 <div class="central-admin-table-wrap">
@@ -46,16 +50,19 @@
                         <thead>
                             <tr>
                                 <th>Cliente</th>
-                                <th>Base NF</th>
+                                <th>Plano</th>
                                 <th>Status</th>
-                                <th>Cadastro</th>
-                                <th>Ultima atualizacao</th>
-                                <th>Contato</th>
-                                <th>Acao</th>
+                                <th>Inscrição</th>
+                                <th>Vencimento</th>
+                                <th>Situação calculada</th>
+                                <th>Último acesso</th>
+                                <th>Online</th>
+                                <th>Créditos IA</th>
+                                <th>Ação</th>
                             </tr>
                         </thead>
                         <tbody id="centralAdminClientesBody">
-                            <tr><td colspan="7" class="central-admin-loading"><span class="saw-loader" aria-hidden="true"></span> Carregando dados...</td></tr>
+                            <tr><td colspan="10" class="central-admin-loading"><span class="saw-loader" aria-hidden="true"></span> Carregando dados de Vanmarte...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -65,27 +72,24 @@
                 <div class="central-admin-modal" role="dialog" aria-modal="true" aria-labelledby="centralAdminModalTitle">
                     <div class="central-admin-modal-head">
                         <div>
-                            <h2 id="centralAdminModalTitle">Editar cliente</h2>
-                            <p>Atualize somente os dados comerciais necessarios.</p>
+                            <small class="central-admin-modal-eyebrow">CADASTRO COMPLETO DO CLIENTE</small>
+                            <h2 id="centralAdminModalTitle">Dados de Vanmarte</h2>
+                            <p>O cadastro comercial, plano e cobrança são editados na Central Admin do Portal.</p>
                         </div>
                         <button type="button" class="central-admin-modal-close" title="Fechar" onclick="window.centralAdminFecharModal()"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <form id="centralAdminClienteForm" class="central-admin-form">
-                        <div class="input-group"><label for="centralAdminNome">Nome do cliente</label><input id="centralAdminNome" name="nome" required></div>
-                        <div class="input-group"><label for="centralAdminCnpj">CNPJ / CPF</label><input id="centralAdminCnpj" name="cnpj"></div>
-                        <div class="input-group"><label for="centralAdminContato">Contato</label><input id="centralAdminContato" name="contato"></div>
-                        <div class="input-group"><label for="centralAdminEmail">E-mail</label><input id="centralAdminEmail" name="email" type="email"></div>
-                        <div class="input-group"><label for="centralAdminCidade">Cidade</label><input id="centralAdminCidade" name="cidade"></div>
-                        <div class="input-group"><label for="centralAdminStatus">Status</label><select id="centralAdminStatus" name="status"><option value="ativo">Ativo</option><option value="pausado">Pausado</option><option value="inativo">Inativo</option></select></div>
-                        <div class="input-group"><label for="centralAdminBaseNF">Base da nota</label><select id="centralAdminBaseNF" name="baseNF"><option value="INTEIRA">Nota inteira</option><option value="MEIA">Meia nota</option><option value="1/3">1/3 da nota</option><option value="1/4">1/4 da nota</option></select></div>
-                        <div class="input-group"><label for="centralAdminPorcentagemNF">Porcentagem NF</label><input id="centralAdminPorcentagemNF" name="porcentagemNF" inputmode="decimal" placeholder="9,3"></div>
-                        <div class="input-group"><label for="centralAdminFrete">Frete por m3</label><input id="centralAdminFrete" name="valorFrete" inputmode="decimal" placeholder="R$ 0,00"></div>
-                        <div class="input-group"><label for="centralAdminPagamento">Forma de pagamento</label><input id="centralAdminPagamento" name="formaPagamento"></div>
-                        <div class="input-group full"><label for="centralAdminObservacao">Observacoes internas</label><textarea id="centralAdminObservacao" name="observacao"></textarea></div>
-                    </form>
+                    <div class="central-admin-form">
+                        <div class="input-group"><label for="centralAdminEmpresaNome">Nome da empresa</label><input id="centralAdminEmpresaNome" readonly></div>
+                        <div class="input-group"><label for="centralAdminEmpresaEmail">E-mail comercial</label><input id="centralAdminEmpresaEmail" type="email" readonly></div>
+                        <div class="input-group"><label for="centralAdminEmpresaProduto">Produto conectado</label><input id="centralAdminEmpresaProduto" readonly></div>
+                        <div class="input-group"><label for="centralAdminEmpresaId">Identificador externo</label><input id="centralAdminEmpresaId" readonly></div>
+                        <div class="input-group"><label for="centralAdminEmpresaStatus">Status do acesso</label><input id="centralAdminEmpresaStatus" readonly></div>
+                        <div class="input-group"><label for="centralAdminEmpresaPlano">Plano comercial</label><input id="centralAdminEmpresaPlano" readonly></div>
+                        <div class="input-group full"><label for="centralAdminEmpresaCobranca">Área responsável pela cobrança</label><input id="centralAdminEmpresaCobranca" readonly></div>
+                    </div>
                     <div class="central-admin-modal-actions">
-                        <button type="button" class="btn-secondary" onclick="window.centralAdminFecharModal()">Cancelar</button>
-                        <button type="submit" form="centralAdminClienteForm" class="btn-primary" id="centralAdminSalvarCliente"><i class="fa-solid fa-floppy-disk"></i> Salvar alteracoes</button>
+                        <button type="button" class="btn-secondary" onclick="window.centralAdminFecharModal()">Fechar</button>
+                        <button type="button" class="btn-primary" onclick="window.centralAdminFecharModal(); window.centralAdminAbrirPortal()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Editar no Portal</button>
                     </div>
                 </div>
             </div>

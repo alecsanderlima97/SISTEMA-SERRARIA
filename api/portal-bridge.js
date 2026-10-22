@@ -179,6 +179,27 @@ function summarizeUsers(documents, cutoffMs) {
     return summary;
 }
 
+function snapshotUsers(documents) {
+    return documents.map((profile) => {
+        const documentName = String(profile?.name || '');
+        const externalUserId = documentName.split('/').pop() || crypto.createHash('sha256').update(documentName).digest('hex');
+        const lastActivityAt = fieldValue(profile, 'ultimaAtividadeEm') || fieldValue(profile, 'ultimoAcessoEm');
+        return {
+            externalUserId,
+            name: String(fieldValue(profile, 'nome') || fieldValue(profile, 'displayName') || fieldValue(profile, 'email') || 'Usuario').trim(),
+            email: String(fieldValue(profile, 'email') || '').trim().toLowerCase(),
+            role: String(fieldValue(profile, 'cargoNormalizado') || fieldValue(profile, 'cargo') || 'usuario').trim(),
+            active: fieldValue(profile, 'ativo') !== false,
+            lastActivityAt: parseDate(lastActivityAt)?.toISOString() || null,
+            lastSeenAt: parseDate(lastActivityAt)?.toISOString() || null,
+            lastLoginAt: parseDate(fieldValue(profile, 'ultimoAcessoEm'))?.toISOString() || null,
+            deviceType: fieldValue(profile, 'tipoDispositivo') || null,
+            operatingSystem: fieldValue(profile, 'sistemaOperacional') || null,
+            browser: fieldValue(profile, 'navegador') || null
+        };
+    });
+}
+
 function jsonBody(req) {
     return new Promise((resolve, reject) => {
         let raw = '';
@@ -220,6 +241,18 @@ module.exports = async function handler(req, res) {
         const summary = summarizeUsers(userDocuments, Date.now());
         const auditDocuments = await runAuditQuery(empresaId, Date.now() - THIRTY_DAYS_MS, idToken);
         summary.recentChangesLast30Days = auditDocuments.length;
+        const generatedAt = new Date().toISOString();
+        const companyName = String(
+            fieldValue(profile, 'empresaNome')
+            || fieldValue(profile, 'nomeEmpresa')
+            || fieldValue(profile, 'razaoSocial')
+            || (empresaId === DEFAULT_EMPRESA_ID ? 'Vanmarte' : empresaId)
+        ).trim();
+        const companyEmail = String(
+            fieldValue(profile, 'empresaEmail')
+            || fieldValue(profile, 'emailEmpresa')
+            || (empresaId === DEFAULT_EMPRESA_ID ? 'escritoriovanmarte@gmail.com' : '')
+        ).trim().toLowerCase();
 
         const eventId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
         const portalResponse = await fetch(`${PORTAL_URL.replace(/\/$/, '')}/api/connectors/mad360/events`, {
@@ -233,12 +266,39 @@ module.exports = async function handler(req, res) {
                 sourceSystem: 'mad360',
                 externalTenantId: empresaId,
                 status: 'online',
-                generatedAt: new Date().toISOString(),
+                generatedAt,
                 usageSummary: summary
             })
         });
         if (!portalResponse.ok) return res.status(502).json({ error: 'O Portal não confirmou o resumo.' });
-        return res.status(200).json({ ok: true, sent: true });
+
+        const users = snapshotUsers(userDocuments);
+        const snapshotResponse = await fetch(`${PORTAL_URL.replace(/\/$/, '')}/api/connectors/snapshot`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                'x-orquestra-connector-secret': PORTAL_CONNECTOR_SECRET
+            },
+            body: JSON.stringify({
+                sourceSystem: 'mad360',
+                snapshotId: eventId,
+                generatedAt,
+                tenants: [{
+                    externalTenantId: empresaId,
+                    companyName,
+                    customer: { companyName, tradeName: companyName, contactEmail: companyEmail, ownerGoogleEmail: companyEmail },
+                    contract: {},
+                    lastActivityAt: summary.lastActivityAt,
+                    onlineUserCount: summary.onlineUsers,
+                    presenceTracking: true,
+                    recentChangesLast30Days: summary.recentChangesLast30Days,
+                    activeUsersLast30Days: summary.activeUsersLast30Days,
+                    users
+                }]
+            })
+        });
+        if (!snapshotResponse.ok) return res.status(502).json({ error: 'O Portal não confirmou os clientes do sistema.' });
+        return res.status(200).json({ ok: true, sent: true, clients: 1, users: users.length });
     } catch (error) {
         if (error?.message === 'body_too_large') return res.status(413).json({ error: 'Solicitação acima do limite permitido.' });
         if (error?.message === 'invalid_json') return res.status(400).json({ error: 'Solicitação inválida.' });

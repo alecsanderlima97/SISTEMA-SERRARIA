@@ -531,3 +531,219 @@
         max-height: calc(100vh - 20px);
     }
 }
+
+/* Central Admin Orquestra.cs: contrato de dados do cliente pagante e Portal. */
+.central-admin-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    background: #fff4c7;
+    color: #8a5a00;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.central-admin-table {
+    min-width: 1260px;
+}
+
+.central-admin-table th:nth-child(1),
+.central-admin-table td:nth-child(1) { width: 19%; }
+.central-admin-table th:nth-child(2),
+.central-admin-table td:nth-child(2) { width: 10%; }
+.central-admin-table th:nth-child(3),
+.central-admin-table td:nth-child(3) { width: 9%; }
+.central-admin-table th:nth-child(4),
+.central-admin-table td:nth-child(4) { width: 10%; }
+.central-admin-table th:nth-child(5),
+.central-admin-table td:nth-child(5) { width: 10%; }
+.central-admin-table th:nth-child(6),
+.central-admin-table td:nth-child(6) { width: 12%; }
+.central-admin-table th:nth-child(7),
+.central-admin-table td:nth-child(7) { width: 12%; }
+.central-admin-table th:nth-child(8),
+.central-admin-table td:nth-child(8) { width: 7%; }
+.central-admin-table th:nth-child(9),
+.central-admin-table td:nth-child(9) { width: 13%; }
+.central-admin-table th:nth-child(10),
+.central-admin-table td:nth-child(10) { width: 9%; }
+
+.central-admin-plan,
+.central-admin-portal-value {
+    display: block;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.central-admin-icon-button.portal {
+    color: #047857;
+}
+
+.central-admin-detail-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.central-admin-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.central-admin-card-heading h3 {
+    margin-bottom: 0;
+}
+
+.central-admin-detail-count {
+    color: #0e7490;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.central-admin-primary-user,
+.central-admin-user-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.central-admin-primary-user {
+    margin-bottom: 10px;
+    padding: 9px;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    background: #f0fdfa;
+}
+
+.central-admin-primary-user small,
+.central-admin-primary-user strong,
+.central-admin-primary-user span:not(.central-admin-user-icon) {
+    display: block;
+}
+
+.central-admin-primary-user small {
+    color: #0e7490;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.central-admin-primary-user strong {
+    margin-top: 2px;
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.central-admin-primary-user span:not(.central-admin-user-icon) {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.central-admin-user-list {
+    display: grid;
+    gap: 8px;
+    max-height: 170px;
+    overflow: auto;
+}
+
+.central-admin-user-item {
+    padding: 7px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.central-admin-user-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #cffafe;
+    color: #0e7490;
+}
+
+.central-admin-user-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.central-admin-user-copy strong,
+.central-admin-user-copy small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.central-admin-user-copy strong {
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.central-admin-user-copy small {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.central-admin-access-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid #dbeafe;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.central-admin-empty-inline {
+    margin: 0;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.central-admin-modal-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: #0891b2;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+
+.central-admin-form input[readonly] {
+    background: #f8fafc;
+    color: #334155;
+}
+
+@media (max-width: 620px) {
+    .central-admin-notice {
+        align-items: flex-start;
+        white-space: normal;
+    }
+
+    .central-admin-toolbar-actions .btn-secondary,
+    .central-admin-toolbar-actions .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .central-admin-table-wrap {
+        margin-right: -1px;
+    }
+}
