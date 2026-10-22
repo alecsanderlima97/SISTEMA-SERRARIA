@@ -1086,7 +1086,12 @@ const App = {
     },
 
     getCurrentPermissions() {
-        return this.userPermissions || getEffectivePermissions({ cargo: this.userRole });
+        const permissions = this.userPermissions || getEffectivePermissions({ cargo: this.userRole });
+        if (!this.isDeveloper()) return permissions;
+        return {
+            ...permissions,
+            allowedSections: [...new Set([...(permissions.allowedSections || []), 'view-central-admin'])]
+        };
     },
 
     canAccessSection(sectionId) {
@@ -1475,9 +1480,12 @@ const App = {
                             } else {
                                 const currentSection = document.querySelector('.view-section.active-section')?.id || 'view-dashboard';
                                 const perms = this.getCurrentPermissions();
+                                const developerCentralAdminActive = currentSection === 'view-central-admin' && this.isDeveloper();
+                                const sectionNeedsRedirect = !developerCentralAdminActive
+                                    && (cargoMudou || (perms && !perms.allowedSections.includes(currentSection)));
                                 
                                 // Se o cargo mudou ou se o usuário estiver em uma tela proibida, redireciona dinamicamente
-                                if (cargoMudou || (perms && !perms.allowedSections.includes(currentSection))) {
+                                if (sectionNeedsRedirect) {
                                     if (perms && perms.allowedSections.length > 0) {
                                         console.log(`Core: Redirecionando para a seção permitida "${perms.allowedSections[0]}"`);
                                         const savedSection = localStorage.getItem('appActiveSection');
