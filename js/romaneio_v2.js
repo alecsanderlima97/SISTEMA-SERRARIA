@@ -1574,11 +1574,11 @@ function normalizarRomaneioDocumento(r = {}, clienteObj = {}) {
     const freteBruto = arredondarParaBaixo(totalM3Frete * valorFrete, 2);
     const freteFinal = arredondarParaBaixo(freteBruto + Number(r.logistica?.adicionalFrete || 0), 2);
     const totalCarga = Number(r.financeiro?.totalGeral || subtotalLiquido);
-    return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
+    return { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, baseNFDescricao, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga };
 }
 
 function gerarHtmlDocumentoRomaneio(payload) {
-    const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
+    const { emitente, clienteObj, romaneio: r, pacotes, totalPcts, totalPcs, totalM3Madeira, totalMadeira, totalM3Frete, taxa, baseNF, baseNFDescricao, imposto, subtotalLiquido, valorFrete, freteBruto, freteFinal, totalCarga } = payload;
     const formatarDataDocumento = valor => {
         const partes = String(valor || '').split('-');
         return partes.length === 3 && partes[0].length === 4 ? `${partes[2]}/${partes[1]}/${partes[0]}` : (valor || '-');
