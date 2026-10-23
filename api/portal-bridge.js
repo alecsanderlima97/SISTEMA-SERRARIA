@@ -286,9 +286,13 @@ module.exports = async function handler(req, res) {
             method: 'POST',
             headers: {
                 'content-type': 'application/json',
+                'x-orquestra-contract-version': 'v1',
+                'x-orquestra-source-system': 'mad360',
                 'x-orquestra-connector-secret': PORTAL_CONNECTOR_SECRET
             },
             body: JSON.stringify({
+                contractVersion: 'v1',
+                dataVersion: 1,
                 sourceSystem: 'mad360',
                 snapshotId: eventId,
                 generatedAt,
