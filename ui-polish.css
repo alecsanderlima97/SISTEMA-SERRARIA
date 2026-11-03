@@ -2971,3 +2971,23 @@ body.orq-redimensionando-coluna * {
         display: none !important;
     }
 }
+
+/* Celular: elementos flutuantes nao cobrem o conteudo das telas. */
+@media (max-width: 760px) {
+    /* Faixa de versao e dica de contexto ocupam o rodape inteiro. */
+    #appVersionFooter,
+    .assistant-companion {
+        display: none !important;
+    }
+
+    /* Reserva espaco no fim da pagina para o botao do assistente e a rolagem. */
+    .main-content {
+        padding-bottom: 96px !important;
+    }
+
+    /* Botoes flutuantes ficam juntos no canto, acima da area segura do aparelho. */
+    .assistant-float-button,
+    .scroll-helper-widget {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
