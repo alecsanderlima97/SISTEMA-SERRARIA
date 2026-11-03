@@ -962,8 +962,34 @@ table.financeiro-table {
     }
 }
 
-/* Fluxo do Patio recebe uma composicao ainda mais compacta. */
+/* Fluxo do Patio no celular: cards legiveis, rotulos acima dos valores, sem colisao. */
 @media (max-width: 760px) {
+    #panelProducaoPatio {
+        padding: 16px 12px 150px !important;
+    }
+
+    #panelProducaoPatio .fluxo-patio-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    #panelProducaoPatio .fluxo-patio-toolbar .input-group {
+        grid-column: 1 / -1;
+    }
+
+    #panelProducaoPatio .fluxo-patio-toolbar button {
+        width: 100%;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 44px;
+        white-space: normal;
+        padding: 8px 10px;
+    }
+
+    #panelProducaoPatio .fluxo-patio-toolbar > button:last-child {
+        grid-column: 1 / -1;
+    }
+
     #panelProducaoPatio .table-container {
         overflow: visible !important;
         border: 0 !important;
@@ -985,74 +1011,113 @@ table.financeiro-table {
 
     #panelProducaoPatio tbody {
         display: grid;
-        gap: 10px;
+        gap: 12px;
     }
 
     #panelProducaoPatio tbody tr {
         position: relative;
         display: grid;
-        grid-template-columns: 38px minmax(0, 1fr) minmax(72px, auto);
-        gap: 8px 10px;
-        padding: 12px !important;
+        grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px 12px;
+        padding: 14px !important;
         border: 1px solid rgba(109, 84, 47, .28) !important;
-        border-radius: 9px;
+        border-radius: 12px;
         box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+    }
+
+    #panelProducaoPatio tbody tr {
+        text-align: left;
     }
 
     #panelProducaoPatio tbody td {
         padding: 0 !important;
         border: 0 !important;
         white-space: normal !important;
+        min-width: 0;
+        text-align: left !important;
     }
 
-    #panelProducaoPatio tbody td:nth-child(1) {
+    /* Vence o alinhamento centralizado da tabela desktop (mais especifico). */
+    #panelProducaoPatio #producaoPatioLista .fluxo-patio-row-areia td {
+        text-align: left !important;
+    }
+
+    #panelProducaoPatio #producaoPatioLista .fluxo-patio-row-areia td[data-mobile-label="Acoes"] {
+        text-align: right !important;
+    }
+
+    /* Rotulo acima do valor, sempre em uma linha propria. */
+    #panelProducaoPatio tbody td::before {
+        content: attr(data-mobile-label);
+        display: block;
+        margin-bottom: 3px;
+        font-size: .66rem;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    #panelProducaoPatio tbody td.fluxo-patio-selection-cell::before,
+    #panelProducaoPatio tbody td[data-mobile-label="Acoes"]::before {
+        display: none;
+    }
+
+    #panelProducaoPatio tbody td.fluxo-patio-selection-cell {
         grid-column: 1;
-        grid-row: 1 / span 2;
-        align-self: start;
+        grid-row: 1 / span 3;
+        align-self: center;
+        display: flex !important;
+        justify-content: center;
     }
 
-    #panelProducaoPatio tbody td:nth-child(2) {
+    #panelProducaoPatio tbody td.fluxo-patio-selection-cell input {
+        width: 22px;
+        height: 22px;
+    }
+
+    #panelProducaoPatio tbody td[data-mobile-label="Classe"] {
         grid-column: 2;
         grid-row: 1;
     }
 
-    #panelProducaoPatio tbody td:nth-child(3) {
+    #panelProducaoPatio tbody td.fluxo-patio-cubagem {
         grid-column: 2 / -1;
         grid-row: 2;
     }
 
-    #panelProducaoPatio tbody td:nth-child(4),
-    #panelProducaoPatio tbody td:nth-child(5) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 40px;
-        padding: 6px !important;
-        border-radius: 7px !important;
-        background: rgba(255, 255, 255, .52);
-        font-size: .82rem;
+    #panelProducaoPatio tbody td[data-mobile-label="Pacotes"] {
+        grid-column: 2;
+        grid-row: 3;
+        font-size: 1.05rem;
     }
 
-    #panelProducaoPatio tbody td:nth-child(4) { grid-column: 2; }
-    #panelProducaoPatio tbody td:nth-child(5) { grid-column: 3; }
+    #panelProducaoPatio tbody td[data-mobile-label="Volume"] {
+        grid-column: 3;
+        grid-row: 3;
+        font-size: 1.05rem;
+    }
 
-    #panelProducaoPatio tbody td:nth-child(6) {
-        position: static !important;
+    #panelProducaoPatio tbody td[data-mobile-label="Acoes"] {
         grid-column: 1 / -1;
-        display: flex;
+        grid-row: 4;
+        display: flex !important;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 7px;
-        padding-top: 8px !important;
+        gap: 8px;
+        padding-top: 10px !important;
         border-top: 1px solid rgba(109, 84, 47, .18) !important;
         box-shadow: none !important;
         background: transparent !important;
+        text-align: right !important;
     }
 
-    #panelProducaoPatio tbody td:nth-child(6) button {
-        min-width: 42px;
-        min-height: 42px;
-        padding: 8px !important;
+    #panelProducaoPatio tbody td[data-mobile-label="Acoes"] button {
+        width: auto !important;
+        flex: 0 0 auto;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px 12px !important;
     }
 
     #panelProducaoPatio tbody tr.orq-mobile-card-message {
@@ -1064,14 +1129,27 @@ table.financeiro-table {
         text-align: center !important;
     }
 
+    #panelProducaoPatio .fluxo-patio-selection-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
     #panelProducaoPatio .fluxo-patio-selection-actions {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+        margin-left: 0;
+        width: 100%;
     }
 
     #panelProducaoPatio .fluxo-patio-selection-actions button {
         width: 100%;
         min-height: 44px;
+        font-size: .8rem;
+    }
+
+    #panelProducaoPatio #btnLimparTudoFluxoPatio {
+        grid-column: 1 / -1;
     }
 }
 
@@ -1081,14 +1159,21 @@ table.financeiro-table {
     gap: 12px;
     flex-wrap: wrap;
     min-height: 44px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     margin: 0 0 10px;
-    border: 1px solid rgba(109, 84, 47, .22);
-    border-radius: 8px;
-    background: rgba(255, 253, 247, .76);
-    color: #334155;
-    font-size: .78rem;
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, .72);
+    color: #e2e8f0;
+    font-size: .8rem;
     font-weight: 800;
+}
+
+#producaoPatioLista .fluxo-patio-row-areia td[data-mobile-label="Acoes"] {
+    display: grid;
+    grid-template-columns: repeat(2, 38px);
+    justify-content: center;
+    gap: 6px;
 }
 
 .fluxo-patio-select-all { display:inline-flex; align-items:center; gap:7px; cursor:pointer; }
