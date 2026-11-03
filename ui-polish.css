@@ -2991,3 +2991,26 @@ body.orq-redimensionando-coluna * {
         bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
+
+/* Celular: campos com 16px evitam o zoom automatico do iPhone ao focar; alvos de toque com 40px. */
+@media (max-width: 760px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    .financeiro-toggle-btn,
+    .frota-photo-btn,
+    #prevMonth,
+    #nextMonth,
+    #view-financeiro .financeiro-toggle-btn {
+        min-height: 40px !important;
+        min-width: 40px;
+    }
+
+    body #view-calculadoras input,
+    body #view-calculadoras select {
+        font-size: 16px !important;
+    }
+}
