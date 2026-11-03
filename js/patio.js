@@ -1,6 +1,6 @@
 import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
 
-// ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
+// ---- MÓDULO DE CONTROLE DE PÁTIO & ETIQUETAS ----
 
 let itensPatioTemp = [];
 let historicoPatioAtuais = [];
@@ -101,7 +101,7 @@ document.addEventListener('produtosUpdated', () => {
     configuracoesMadeiraPatioCacheEm = 0;
 });
 
-// UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
+// Utilitários de Formatação e Conversão
 function parseDecimal(val) {
     if (val === null || val === undefined) return 0;
     let s = val.toString().trim();
@@ -164,7 +164,7 @@ function instalarSugestoesConfiguracaoPatio() {
     });
 }
 
-// Inicializar Eventos Safely (Independente do momento do carregamento do mÃ³dulo ES)
+// Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
 function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
     const formAdicionar = document.getElementById('formAdicionarItemPatio');
@@ -320,7 +320,7 @@ window.abrirModalPatio = async function() {
     modalPatio.style.display = 'flex';
     document.body.classList.add('modal-open');
 
-    // Preencher Data e Hora Atuais por padrÃ£o
+    // Preencher Data e Hora Atuais por padrão
     const inputData = document.getElementById('patioData');
     const inputHorario = document.getElementById('patioHorario');
     const selectPeriodo = document.getElementById('patioPeriodo');
@@ -1586,7 +1586,7 @@ function formatarResumoPacoteProducao(item) {
     return `(${alturas}x${largura})+${amarras} = ${total} pç`;
 }
 
-// Adicionar Item via FormulÃ¡rio
+// Adicionar Item via Formulário
 function obterDetalhesPacoteEtiqueta(item) {
     const raw = (item.pecasRaw || '').toString().trim();
     const detalhes = {
@@ -1674,7 +1674,7 @@ function adicionarItemAoPatio() {
     const comp = parseDecimal(compRaw);
 
     if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
-        alert("⚠️ Por favor, insira valores vÃ¡lidos e maiores que zero.");
+        alert("⚠️ Por favor, insira valores válidos e maiores que zero.");
         return;
     }
 
@@ -1751,7 +1751,7 @@ function limparTudoPatio() {
     }
 }
 
-// Ações dinÃ¢micas de incremento/decremento (+1 / -)
+// Ações dinâmicas de incremento/decremento (+1 / -)
 window.alterarPacotesPatio = async function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
@@ -1789,8 +1789,8 @@ window.editarItemPatio = function(id) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
 
-    document.getElementById('patioItemTipo').value = item.tipo || 'TÃBUA';
-    selecionarClassePatio(document.getElementById('patioItemClasse'), item.classe || '1Âª CLASSE');
+    document.getElementById('patioItemTipo').value = item.tipo || 'TÁBUA';
+    selecionarClassePatio(document.getElementById('patioItemClasse'), item.classe || '1ª CLASSE');
     const especieInput = document.querySelector(`input[name="patioItemEspecie"][value="${item.especie || 'EUCALIPTO'}"]`);
     if (especieInput) especieInput.checked = true;
 
@@ -2225,7 +2225,7 @@ function renderizarItensPatioTemp() {
                     </div>
                     <small>(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
                 </td>
-                <!-- AÃ‡Ã•ES (Mockup buttons) -->
+                <!-- AÇÕES (Mockup buttons) -->
                 <td class="hide-on-print" style="min-width:225px;">
                     <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
                         ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
@@ -2250,7 +2250,7 @@ function renderizarItensPatioTemp() {
     atualizarConsolidatedStats();
 }
 
-// Atualizar estatÃ­sticas dos cards em tempo real
+// Atualizar estatísticas dos cards em tempo real
 function atualizarConsolidatedStats() {
     let totalPacotes = 0;
     let totalVolume = 0;
@@ -2486,7 +2486,7 @@ function atualizarEstadoEdicaoPatio() {
 
 async function salvarRelatorioPatio() {
     if (itensPatioTemp.length === 0) {
-        alert("⚠️ O pátio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
+        alert("⚠️ O pátio está vazio! Insira pelo menos um lote ou pacote para poder salvar.");
         return;
     }
 
@@ -2496,7 +2496,7 @@ async function salvarRelatorioPatio() {
     const serrandoVal = document.getElementById('patioSerrando').value.toUpperCase().trim();
 
     if (!serrandoVal) {
-        alert("⚠️ Por favor, digite qual madeira estÃ¡ sendo serrada no momento.");
+        alert("⚠️ Por favor, digite qual madeira está sendo serrada no momento.");
         document.getElementById('patioSerrando').focus();
         return;
     }
@@ -2577,7 +2577,7 @@ async function carregarHistoricoPatio(force = false) {
         await carregarRelatoriosPatioCache(force);
 
         if (historicoPatioAtuais.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diÃ¡ria registrada ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diária registrada ainda.</td></tr>';
             return;
         }
 
@@ -2648,7 +2648,7 @@ window.deletarHistoricoPatio = async function(id) {
     if (await window.confirmarExclusaoComSenha("Tem certeza absoluta que deseja excluir este relatorio de contagem do patio?")) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
-            alert("✅ Relatório de pátio excluÃ­do com sucesso!");
+            alert("✅ Relatório de pátio excluído com sucesso!");
             await carregarHistoricoPatio(true);
             
             const dataVal = document.getElementById('patioData').value;
@@ -2979,14 +2979,14 @@ function renderizarFilaEtiquetasAvulsasPatio() {
 
 window.removerEtiquetaAvulsaPatio = removerEtiquetaAvulsaPatio;
 
-// Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)
+// Imprimir etiquetas físicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     if (!Array.isArray(lista)) {
         lista = itensPatioTemp;
     }
 
     if (lista.length === 0) {
-        alert("⚠️ Não hÃ¡ pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
+        alert("⚠️ Não há pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
         return;
     }
 
@@ -3004,7 +3004,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     const telefoneSerraria = emitente.telefone || emitente.celular || "(15) 99629-7072";
     const emailSerraria = emitente.email || "escritoriovanmarte@hotmail.com";
 
-    // Gerar etiquetas individuais por pacote fÃ­sico
+    // Gerar etiquetas individuais por pacote físico
     lista.forEach(item => {
         for (let p = 1; p <= item.pacotes; p++) {
             const zeroPaddedSerial = String(serialGlobal).padStart(3, '0');
@@ -3138,7 +3138,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.focus();
 }
 
-// Gerar layout de fechamento do pátio para impressÃ£o agrupado
+// Gerar layout de fechamento do pátio para impressão agrupado
 function gerarLayoutImpressaoPatio(rel) {
     const dtObj = new Date(rel.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');

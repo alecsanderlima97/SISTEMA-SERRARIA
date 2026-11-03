@@ -988,7 +988,7 @@ function atualizarTituloModalAbastecimento(tipo) {
 function ehItemLubrificante(item = {}) {
     const nome = (item.nome || '').toUpperCase();
     const categoria = (item.categoria || '').toUpperCase();
-    return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('Ã“LEO') || nome.includes('GRAXA');
+    return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('ÓLEO') || nome.includes('GRAXA');
 }
 
 function preencherSelectLubrificantesFrota() {

@@ -3022,11 +3022,11 @@ function gerarHtmlReciboEntrada(en) {
     const dtObj = new Date(en.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
     const reciboFinanceiro = usuarioPodeVerFinanceiroEmpreiteiro()
-        ? `<br><p><strong>Valor Empreiteiro por MÂ³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
+        ? `<br><p><strong>Valor Empreiteiro por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
 <p><strong>Total Empreiteiro:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</p>
-<p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
 <h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`
-        : `<br><p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+        : `<br><p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
 <h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`;
     return `
         <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>Recibo de Entrada de Toras</strong></div></div><div class="doc-title"><h1>Entrada</h1><p><strong>Romaneio ${en.romaneioNum || 'N/A'}</strong></p></div></div>

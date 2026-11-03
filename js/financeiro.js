@@ -73,10 +73,10 @@ function obterPastaFinanceiraItem(item = {}) {
     const desc = normalizarTexto(`${item.descricao || ''} ${item.observacao || ''}`);
     if (item.conferenciaStatus === 'pendente') return 'conferir';
     if (/IMPOSTO|DARF|FGTS|INSS|RECEITA|SINDICATO|TAXA/.test(`${tipo} ${desc}`)) return 'impostos';
-    if (/FUNCIONARIO|FUNCIONÃRIO|HOLERITE|VALE|SALARIO|SALÃRIO/.test(`${tipo} ${desc}`)) return 'funcionarios';
+    if (/FUNCIONARIO|FUNCIONÁRIO|HOLERITE|VALE|SALARIO|SALÁRIO/.test(`${tipo} ${desc}`)) return 'funcionarios';
     if (/ENERGIA|INTERNET|TELEFONE|ALUGUEL|CONTABILIDADE|SISTEMA/.test(desc)) return 'fixas';
-    if (/FORNECEDOR|AIR EXPRESS|MATERIAIS|SERVICO|SERVIÃ‡O/.test(desc)) return 'fornecedores';
-    if (/BOLETO|COBRANCA|COBRANÃ‡A|PARCELA/.test(`${tipo} ${desc}`)) return 'boletos';
+    if (/FORNECEDOR|AIR EXPRESS|MATERIAIS|SERVICO|SERVIÇO/.test(desc)) return 'fornecedores';
+    if (/BOLETO|COBRANCA|COBRANÇA|PARCELA/.test(`${tipo} ${desc}`)) return 'boletos';
     return 'conferir';
 }
 
@@ -1438,7 +1438,7 @@ function limparDescricaoDocumentoFinanceiro(valor) {
         .replace(/^BENEFICI\S*\s*/i, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}.*$/g, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}.*$/g, '')
-        .replace(/\s+(VENCIMENTO|AGENCIA|AGÃŠNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
+        .replace(/\s+(VENCIMENTO|AGENCIA|AGÊNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
         .replace(/\s+(RUA|AV\.?|AVENIDA|RODOVIA)\s+.*$/i, '')
         .replace(/\s{2,}/g, ' ')
         .slice(0, 90)
@@ -1618,7 +1618,7 @@ function extrairDescricaoBoletoFinanceiro(texto) {
 
 function extrairVencimentoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
-    const aposPagavel = limpo.match(/PAG[AÃ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
+    const aposPagavel = limpo.match(/PAG[AÁ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
     const todas = Array.from(limpo.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)).map(match => match[1]);
     return aposPagavel || todas[todas.length - 1] || '';
 }
@@ -1780,7 +1780,7 @@ function extrairDadosTextoFinanceiro(texto) {
         || limpo.match(/R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/)?.[1];
     const favorecido = limparDescricaoDocumentoFinanceiro(
         extrairLinhaAposRotuloFinanceiro(texto, /^(benefici|cedente|favorecido|fornecedor)\b[:\s-]*/i)
-        || limpo.match(/(?:benefici[Ã¡a]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
+        || limpo.match(/(?:benefici[áa]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
         || primeiraLinhaUtilFinanceiro(texto)
     );
     const vencimento = data ? data.split(/[\/.-]/).reverse().join('-') : '';
@@ -1795,7 +1795,7 @@ function extrairDadosTextoFinanceiro(texto) {
     }
     const dadosNota = extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo);
     if (dadosNota) return dadosNota;
-    const isBoleto = /boleto|nosso n[uÃƒÂº]mero|ficha de compensa|linha digitavel|linha digitÃ¡vel/i.test(limpo);
+    const isBoleto = /boleto|nosso n[uú]mero|ficha de compensa|linha digitavel|linha digitável/i.test(limpo);
     if (isBoleto) {
         const vencimentoBoleto = extrairVencimentoBoletoRobustoFinanceiro(texto);
         const valorBoleto = extrairValorBoletoRobustoFinanceiro(texto) || (valor ? parseMoeda(valor) : 0);
