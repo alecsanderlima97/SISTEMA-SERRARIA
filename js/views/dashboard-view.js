@@ -73,7 +73,7 @@
                         <div id="prodPatioConfigSugestao" class="patio-config-suggestion" hidden></div>
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>
-                    <p class="fp-legenda-mobile">Cor = classe: 1ª verde · 2ª amarelo · 3ª laranja. (altura × largura) + amarras = peças por pacote.</p>
+                    <p class="fp-legenda-mobile">Primeiro a 1ª classe, depois a 2ª e a 3ª, da maior cubagem para a menor. Cor = classe: 1ª verde · 2ª amarelo · 3ª vermelho. (altura × largura) + amarras = peças por pacote.</p>
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
                     <div class="fluxo-patio-selection-bar" id="fluxoPatioSelectionBar">
                         <label class="fluxo-patio-select-all"><input type="checkbox" id="fluxoPatioSelecionarTodos" onchange="window.selecionarTodosFluxoPatio(this.checked)"> Selecionar todos</label>
