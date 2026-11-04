@@ -1046,6 +1046,11 @@ table.financeiro-table {
         text-align: right !important;
     }
 
+    /* Cards do patio: a listra de linhas pares do tema nao deve pintar as celulas. */
+    #panelProducaoPatio #producaoPatioLista tr.fluxo-patio-row-areia td {
+        background: transparent !important;
+    }
+
     /* Rotulo acima do valor, sempre em uma linha propria. */
     #panelProducaoPatio tbody td::before {
         content: attr(data-mobile-label);
