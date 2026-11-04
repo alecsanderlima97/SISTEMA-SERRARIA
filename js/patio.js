@@ -800,6 +800,15 @@ async function atualizarResumoFluxoPatioCompleto() {
         })
     ];
     container.innerHTML = cards.join('');
+
+    const resumoMobile = document.getElementById('producaoPatioResumoMobile');
+    if (resumoMobile) {
+        const itens = (producaoPatioRelatorioAtual.itens || []).length;
+        resumoMobile.innerHTML = `
+            <div><b>${totais.pacotes || 0}</b><span>Pacotes</span></div>
+            <div><b>${formatDecimalMockup(totais.volume || 0, 2)} m³</b><span>Volume</span></div>
+            <div><b>${itens}</b><span>Itens</span></div>`;
+    }
 }
 
 function atualizarStatusProducaoPatio(relatorio) {
@@ -1090,7 +1099,7 @@ function renderizarCardsProducaoPatio(itens) {
     const grupos = new Map();
     itens.forEach(item => {
         const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
-        if (!grupos.has(chave)) grupos.set(chave, { cubagem: formatCubagemFluxo(item), primeiroId: item.id, ids: [], classes: new Map() });
+        if (!grupos.has(chave)) grupos.set(chave, { cubagem: formatCubagemFluxo(item).replace(/m$/, ' m'), primeiroId: item.id, ids: [], classes: new Map() });
         const grupo = grupos.get(chave);
         grupo.ids.push(item.id);
         const numero = obterNumeroClasse(obterClasseItemFluxo(item)) || 0;
@@ -1102,14 +1111,13 @@ function renderizarCardsProducaoPatio(itens) {
         const blocos = [...grupo.classes.entries()]
             .sort((a, b) => (a[0] || 99) - (b[0] || 99))
             .map(([numero, lista]) => {
-                const rotuloClasse = numero ? `${numero}a CLASSE` : '-';
                 const pacotes = lista.map(item => {
                     const marcado = itensFluxoPatioSelecionados.has(item.id) ? 'checked' : '';
+                    const qtd = Number(item.pacotes) || 0;
                     return `
                     <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
                         <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar pacote">
-                        <span class="fp-formula">${formatarResumoPacoteProducao(item)}</span>
-                        <span class="fp-qtd">${item.pacotes || 0} pct</span>
+                        <span class="fp-formula">${formatarResumoPacoteProducao(item).replace(/x/g, '×')}${qtd > 1 ? ` <small class="fp-qtd">${qtd} pct</small>` : ''}</span>
                         <span class="fp-acoes">
                             <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Diminuir pacote">−</button>
                             <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar pacote">+</button>
@@ -1118,11 +1126,12 @@ function renderizarCardsProducaoPatio(itens) {
                     </div>`;
                 }).join('');
                 const pecas = lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
+                const nivel = numero >= 1 && numero <= 3 ? numero : 0;
                 return `
-                <div class="fp-classe">
-                    <div class="fp-classe-tit">${badgeClasseFluxo(rotuloClasse)}</div>
+                <div class="fp-classe fp-classe-n${nivel}">
+                    <div class="fp-classe-tit"><span class="fp-badge">${numero ? `${numero}ª classe` : 'Sem classe'}</span></div>
                     ${pacotes}
-                    <div class="fp-subtotal"><span>Subtotal ${numero || '-'}ª</span><b>${pecas} pç</b></div>
+                    <div class="fp-subtotal"><span>Subtotal ${numero ? `${numero}ª` : ''}</span><b>${pecas} pç</b></div>
                 </div>`;
             }).join('');
         return `

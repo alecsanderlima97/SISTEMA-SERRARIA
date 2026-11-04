@@ -40,12 +40,13 @@
                 <div id="panelProducaoPatio" class="glass-panel fluxo-patio-panel" data-dashboard-permission="fluxo-patio" style="display: none; margin-bottom: 25px; padding: 22px; border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 16px;">
                         <div>
-                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Patio</h2>
+                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Pátio</h2>
                             <p id="producaoPatioInfo" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Atualizacao operacional do fluxo do patio.</p>
                             <div id="producaoPatioUltimaAlteracao" class="fluxo-patio-status" style="display:none;"></div>
                         </div>
                         <button type="button" class="btn-secondary" onclick="window.fecharProducaoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
                     </div>
+                    <div id="producaoPatioResumoMobile" class="fp-resumo-mobile" aria-live="polite"></div>
                     <div class="fluxo-patio-toolbar" style="display:grid; grid-template-columns:minmax(240px, 1fr) auto auto; gap:10px; align-items:end; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Madeira sendo serrada</label><input type="text" id="producaoPatioSerrando" class="text-uppercase-input" placeholder="Ex: 1,7/11,0/1,20"></div>
                         <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
@@ -72,6 +73,7 @@
                         <div id="prodPatioConfigSugestao" class="patio-config-suggestion" hidden></div>
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>
+                    <p class="fp-legenda-mobile">Cor = classe: 1ª verde · 2ª amarelo · 3ª laranja. (altura × largura) + amarras = peças por pacote.</p>
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
                     <div class="fluxo-patio-selection-bar" id="fluxoPatioSelectionBar">
                         <label class="fluxo-patio-select-all"><input type="checkbox" id="fluxoPatioSelecionarTodos" onchange="window.selecionarTodosFluxoPatio(this.checked)"> Selecionar todos</label>

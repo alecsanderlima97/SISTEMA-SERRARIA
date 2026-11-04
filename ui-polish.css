@@ -3046,32 +3046,85 @@ body.orq-redimensionando-coluna * {
 
 
 /* ===== Fluxo do Patio: visao mobile em cards (desktop nao usa) ===== */
-#producaoPatioCards {
+#producaoPatioCards,
+#producaoPatioResumoMobile,
+#panelProducaoPatio .fp-legenda-mobile {
     display: none;
 }
 
 @media (max-width: 760px) {
-    #panelProducaoPatio .table-container {
+    #panelProducaoPatio .table-container,
+    #panelProducaoPatio #resumoProducaoPatioClasses {
         display: none !important;
+    }
+
+    /* Resumo: pacotes / volume / itens */
+    #panelProducaoPatio #producaoPatioResumoMobile {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 12px 6px;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+
+    #producaoPatioResumoMobile b {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #1f2933;
+        line-height: 1.2;
+    }
+
+    #producaoPatioResumoMobile span {
+        display: block;
+        margin-top: 4px;
+        font-size: .72rem;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    /* Botoes: Nova cubagem | Atualizar */
+    #panelProducaoPatio .fluxo-patio-toolbar .input-group { order: 0; }
+    #panelProducaoPatio .fluxo-patio-toolbar > button[onclick*="toggleFormProducaoPatio"] { order: 1; }
+    #panelProducaoPatio .fluxo-patio-toolbar > button[onclick*="salvarSerrandoProducaoPatio"] {
+        order: 2;
+        background: transparent !important;
+        border: 1px solid #ea580c !important;
+        color: #f97316 !important;
+        box-shadow: none !important;
+    }
+    #panelProducaoPatio .fluxo-patio-toolbar > button[onclick*="imprimirListaProducaoPatio"] { order: 3; }
+
+    #panelProducaoPatio .fluxo-patio-toolbar > button i { display: none; }
+
+    #panelProducaoPatio .fp-legenda-mobile {
+        display: block;
+        margin: 0 0 12px;
+        font-size: .8rem;
+        line-height: 1.35;
+        color: #94a3b8;
     }
 
     #panelProducaoPatio #producaoPatioCards {
         display: grid;
-        gap: 8px;
+        gap: 10px;
         font-weight: 400;
     }
 
     #producaoPatioCards .fluxo-patio-cards-vazio {
         color: #94a3b8;
-        font-size: 12px;
+        font-size: .85rem;
         text-align: center;
         margin: 12px 0;
     }
 
     #producaoPatioCards .fp-grupo {
         background: #f1dfbd;
-        border-radius: 10px;
-        padding: 8px 10px;
+        border-radius: 12px;
+        padding: 10px 12px 12px;
         color: #1f2933;
     }
 
@@ -3080,87 +3133,112 @@ body.orq-redimensionando-coluna * {
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        padding-bottom: 6px;
+        padding-bottom: 8px;
         border-bottom: 1px solid rgba(109, 84, 47, .3);
     }
 
     #producaoPatioCards .fp-cubagem {
-        font-size: 14px;
+        font-size: 1.1rem;
         font-weight: 500;
+        color: #1f2933;
+    }
+
+    #producaoPatioCards .btn-fluxo-mais-cubagem {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        border-radius: 50%;
+        border: 1.5px solid #15803d;
+        background: #ffffff;
+        color: #15803d;
+        font-size: 1.3rem;
+        line-height: 1;
     }
 
     #producaoPatioCards .fp-classe {
-        margin-top: 6px;
+        --fp-cor: #94a3b8;
+        --fp-cor-bg: #f1f5f9;
+        --fp-cor-tx: #475569;
+        margin-top: 8px;
     }
 
-    #producaoPatioCards .fp-classe-tit {
-        margin-bottom: 2px;
+    #producaoPatioCards .fp-classe-n1 { --fp-cor: #16a34a; --fp-cor-bg: #dcfce7; --fp-cor-tx: #14532d; }
+    #producaoPatioCards .fp-classe-n2 { --fp-cor: #eab308; --fp-cor-bg: #fef9c3; --fp-cor-tx: #713f12; }
+    #producaoPatioCards .fp-classe-n3 { --fp-cor: #ea580c; --fp-cor-bg: #ffedd5; --fp-cor-tx: #7c2d12; }
+
+    #producaoPatioCards .fp-badge {
+        display: inline-block;
+        padding: 1px 10px;
+        border-radius: 999px;
+        border: 1.5px solid var(--fp-cor);
+        background: var(--fp-cor-bg);
+        color: var(--fp-cor-tx);
+        font-size: .78rem;
+        font-weight: 500;
     }
 
-    #producaoPatioCards .fp-classe-tit span {
-        font-size: 10px !important;
-        min-width: 0 !important;
-        padding: 1px 8px !important;
-        font-weight: 500 !important;
-    }
+    #producaoPatioCards .fp-classe-tit { margin-bottom: 4px; }
 
     #producaoPatioCards .fp-pacote {
-        display: grid;
-        grid-template-columns: 18px minmax(0, 1fr) auto;
-        grid-template-areas: "chk formula qtd" "chk acoes acoes";
-        gap: 2px 8px;
+        display: flex;
         align-items: center;
-        padding: 5px 0 5px 7px;
-        border-left: 3px solid #16a34a;
-        border-bottom: 1px dashed rgba(109, 84, 47, .3);
+        gap: 10px;
+        padding: 6px 0 6px 12px;
+        border-left: 4px solid var(--fp-cor);
+        border-radius: 2px;
     }
 
-    #producaoPatioCards .fp-classe:nth-of-type(2) .fp-pacote { border-left-color: #eab308; }
+    #producaoPatioCards .fp-pacote + .fp-pacote {
+        border-top: 1px dashed rgba(109, 84, 47, .25);
+    }
 
     #producaoPatioCards .fp-pacote input {
-        grid-area: chk;
-        width: 15px;
-        height: 15px;
+        flex: 0 0 22px;
+        width: 22px;
+        height: 22px;
         margin: 0;
+        accent-color: #15803d;
     }
 
     #producaoPatioCards .fp-formula {
-        grid-area: formula;
-        font-size: 12px;
-        color: #334155;
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 1rem;
+        color: #1f2933;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     #producaoPatioCards .fp-qtd {
-        grid-area: qtd;
-        font-size: 11px;
-        color: #475569;
+        font-size: .75rem;
+        color: #6b5a3e;
     }
 
     #producaoPatioCards .fp-acoes {
-        grid-area: acoes;
+        flex: 0 0 auto;
         display: flex;
-        gap: 4px;
-        justify-content: flex-end;
+        gap: 6px;
     }
 
     #producaoPatioCards .fp-acoes button {
-        height: 24px;
-        min-width: 24px;
-        padding: 0 7px;
-        border-radius: 6px;
-        border: 1px solid #92400e;
+        height: 36px;
+        min-width: 36px;
+        padding: 0 10px;
+        border-radius: 8px;
+        border: 1.5px solid #b45309;
         background: transparent;
-        color: #7c2d12;
-        font-size: 11px;
+        color: #9a3412;
+        font-size: .95rem;
         font-weight: 400;
     }
 
     #producaoPatioCards .fp-subtotal {
         display: flex;
         justify-content: space-between;
-        font-size: 11px;
-        color: #475569;
-        padding: 3px 0 0 10px;
+        font-size: .85rem;
+        color: #57534e;
+        padding: 4px 0 0 16px;
     }
 
     #producaoPatioCards .fp-subtotal b {
@@ -3171,17 +3249,76 @@ body.orq-redimensionando-coluna * {
     #producaoPatioCards .fp-grupo-foot {
         display: flex;
         justify-content: flex-end;
-        margin-top: 4px;
+        margin-top: 8px;
     }
 
     #producaoPatioCards .fp-excluir {
-        height: 24px;
-        padding: 0 9px;
-        border-radius: 6px;
-        border: 1px solid #991b1b;
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1.5px solid #b91c1c;
         background: transparent;
-        color: #991b1b;
-        font-size: 11px;
+        color: #b91c1c;
+        font-size: .9rem;
         font-weight: 400;
     }
+
+    #producaoPatioCards button:focus-visible,
+    #producaoPatioCards input:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 2px;
+    }
+}
+
+/* Fluxo do Patio mobile: neutraliza regras globais de botao no celular dentro dos cards. */
+@media (max-width: 760px) {
+    #panelProducaoPatio #producaoPatioCards,
+    #producaoPatioCards .fp-grupo {
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    #producaoPatioCards button {
+        width: auto !important;
+        min-height: 0 !important;
+        flex-grow: 0 !important;
+        white-space: nowrap !important;
+        box-shadow: none !important;
+        line-height: 1 !important;
+    }
+
+    #producaoPatioCards .fp-acoes button {
+        height: 34px !important;
+        min-width: 34px !important;
+        padding: 0 8px !important;
+    }
+
+    #producaoPatioCards .btn-fluxo-mais-cubagem {
+        width: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+    }
+
+    #producaoPatioCards .fp-excluir {
+        height: 36px !important;
+        padding: 0 14px !important;
+    }
+
+    #producaoPatioCards .fp-pacote { gap: 8px; padding-left: 8px; }
+    #producaoPatioCards .fp-acoes { gap: 4px; }
+    #producaoPatioCards .fp-acoes button { min-width: 32px !important; height: 32px !important; }
+    #producaoPatioCards .fp-formula {
+        font-size: .92rem;
+        white-space: normal;
+        overflow: visible;
+        letter-spacing: -.01em;
+    }
+    #producaoPatioCards .fp-grupo { padding-left: 10px; padding-right: 10px; }
+    #producaoPatioCards .fp-qtd { display: block; line-height: 1.1; }
+}
+
+@media (max-width: 380px) {
+    #producaoPatioCards .fp-formula { font-size: .84rem; }
+    #producaoPatioCards .fp-acoes button { padding: 0 6px !important; }
 }
