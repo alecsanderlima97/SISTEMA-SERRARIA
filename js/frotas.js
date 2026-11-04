@@ -432,9 +432,12 @@ async function salvarVeiculo() {
     const ano = parseInt(document.getElementById('veicAno').value) || new Date().getFullYear();
     const documento = document.getElementById('veicDocumentoBase64').value;
     const documentoNome = document.getElementById('lblDocumentoNome').textContent;
-    const lerMedida = id => window.parseDecimalValue
-        ? Number(window.parseDecimalValue(document.getElementById(id)?.value || '')) || 0
-        : (parseFloat(String(document.getElementById(id)?.value || '').replace(',', '.')) || 0);
+    // Medidas em metros: ponto ou virgula sao separador decimal (7.20 ou 7,20 = 7,2 m)
+    const lerMedida = id => {
+        const texto = String(document.getElementById(id)?.value || '').trim().replace(/\s|m$/gi, '').replace(',', '.');
+        const valor = parseFloat(texto);
+        return Number.isFinite(valor) && valor > 0 ? valor : 0;
+    };
     const medidas = {
         alt: lerMedida('veicAlturaCarga'),
         larg: lerMedida('veicLarguraCarga'),
@@ -479,6 +482,11 @@ async function salvarVeiculo() {
     window.switchTabFrotas('lista');
 }
 
+function formatarMedidaCampo(valor) {
+    const n = Number(valor);
+    return Number.isFinite(n) && n > 0 ? String(n).replace('.', ',') : '';
+}
+
 window.editarVeiculo = function(id) {
     const v = frota.find(item => item.id === id);
     if (!v) return;
@@ -493,9 +501,9 @@ window.editarVeiculo = function(id) {
     document.getElementById('veicGrupo').value = v.grupo;
     document.getElementById('veicStatus').value = v.statusOperacional || 'OK';
     document.getElementById('veicAno').value = v.ano;
-    document.getElementById('veicAlturaCarga').value = v.medidas?.alt || '';
-    document.getElementById('veicLarguraCarga').value = v.medidas?.larg || '';
-    document.getElementById('veicComprimentoCarga').value = v.medidas?.comp || '';
+    document.getElementById('veicAlturaCarga').value = formatarMedidaCampo(v.medidas?.alt);
+    document.getElementById('veicLarguraCarga').value = formatarMedidaCampo(v.medidas?.larg);
+    document.getElementById('veicComprimentoCarga').value = formatarMedidaCampo(v.medidas?.comp);
     document.getElementById('veicDocumentoBase64').value = v.documento || '';
     document.getElementById('lblDocumentoNome').textContent = v.documentoNome || 'Sem Anexo';
 
