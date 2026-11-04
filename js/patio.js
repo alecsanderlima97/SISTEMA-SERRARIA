@@ -904,6 +904,7 @@ async function renderizarProducaoPatio(options = {}) {
             </tr>
         `}).join('') : '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
         atualizarResumoSelecaoFluxoPatio();
+        renderizarCardsProducaoPatio(atual.itens);
         await atualizarResumoFluxoPatioCompleto();
     } catch (error) {
         console.error('Erro na producao do patio:', error);
@@ -1074,6 +1075,92 @@ window.editarCubagemProducaoPatio = function(id) {
     setFormProducaoPatioAberto(true);
     atualizarResumoNovaCubagemProducaoPatio();
     document.getElementById('prodPatioEsp')?.focus();
+};
+
+// Visao mobile do Fluxo do Patio: cards agrupados por cubagem e, dentro de cada cubagem, por classe.
+// Usa os mesmos dados e as mesmas funcoes de acao da tabela (desktop).
+function renderizarCardsProducaoPatio(itens) {
+    const box = document.getElementById('producaoPatioCards');
+    if (!box) return;
+    if (!Array.isArray(itens) || !itens.length) {
+        box.innerHTML = '<p class="fluxo-patio-cards-vazio">Sem cubagens neste controle.</p>';
+        return;
+    }
+
+    const grupos = new Map();
+    itens.forEach(item => {
+        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        if (!grupos.has(chave)) grupos.set(chave, { cubagem: formatCubagemFluxo(item), primeiroId: item.id, ids: [], classes: new Map() });
+        const grupo = grupos.get(chave);
+        grupo.ids.push(item.id);
+        const numero = obterNumeroClasse(obterClasseItemFluxo(item)) || 0;
+        if (!grupo.classes.has(numero)) grupo.classes.set(numero, []);
+        grupo.classes.get(numero).push(item);
+    });
+
+    box.innerHTML = [...grupos.values()].map(grupo => {
+        const blocos = [...grupo.classes.entries()]
+            .sort((a, b) => (a[0] || 99) - (b[0] || 99))
+            .map(([numero, lista]) => {
+                const rotuloClasse = numero ? `${numero}a CLASSE` : '-';
+                const pacotes = lista.map(item => {
+                    const marcado = itensFluxoPatioSelecionados.has(item.id) ? 'checked' : '';
+                    return `
+                    <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
+                        <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar pacote">
+                        <span class="fp-formula">${formatarResumoPacoteProducao(item)}</span>
+                        <span class="fp-qtd">${item.pacotes || 0} pct</span>
+                        <span class="fp-acoes">
+                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Diminuir pacote">−</button>
+                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar pacote">+</button>
+                            <button type="button" onclick="window.editarCubagemProducaoPatio('${item.id}')">Editar</button>
+                        </span>
+                    </div>`;
+                }).join('');
+                const pecas = lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
+                return `
+                <div class="fp-classe">
+                    <div class="fp-classe-tit">${badgeClasseFluxo(rotuloClasse)}</div>
+                    ${pacotes}
+                    <div class="fp-subtotal"><span>Subtotal ${numero || '-'}ª</span><b>${pecas} pç</b></div>
+                </div>`;
+            }).join('');
+        return `
+        <section class="fp-grupo">
+            <header class="fp-grupo-head">
+                <span class="fp-cubagem">${grupo.cubagem}</span>
+                <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar pacote com esta cubagem" title="Adicionar pacote com esta cubagem">+</button>
+            </header>
+            ${blocos}
+            <footer class="fp-grupo-foot">
+                <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.ids.join(',')}')">Excluir grupo</button>
+            </footer>
+        </section>`;
+    }).join('');
+}
+
+window.renderizarCardsProducaoPatio = renderizarCardsProducaoPatio;
+
+window.excluirGrupoCubagemProducaoPatio = async function(idsCsv) {
+    if (!producaoPatioRelatorioAtual) return;
+    const ids = String(idsCsv || '').split(',').filter(Boolean);
+    const alvo = (producaoPatioRelatorioAtual.itens || []).filter(i => ids.includes(i.id));
+    if (!alvo.length) return;
+
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${alvo.length} pacote(s) da cubagem ${formatCubagemFluxo(alvo[0])} do Fluxo do Patio?`);
+    if (!autorizado) return;
+
+    try {
+        const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual.itens || []);
+        producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => !ids.includes(i.id));
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu cubagem ${formatCubagemFluxo(alvo[0])}`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        await renderizarProducaoPatio({ recarregar: false });
+        registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
+    } catch (error) {
+        console.error('Erro ao excluir grupo de cubagem do fluxo do patio:', error);
+        alert('Nao foi possivel excluir esta cubagem agora.');
+    }
 };
 
 window.excluirCubagemProducaoPatio = async function(id) {

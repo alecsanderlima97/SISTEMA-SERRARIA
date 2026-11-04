@@ -88,6 +88,7 @@
                             <tbody id="producaoPatioLista"><tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
                         </table>
                     </div>
+                    <div id="producaoPatioCards" class="fluxo-patio-cards" aria-live="polite"></div>
                 </div>
 
                 <!-- Cards de Resumo -->
