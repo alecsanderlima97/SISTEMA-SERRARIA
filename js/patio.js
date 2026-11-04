@@ -1086,8 +1086,9 @@ window.editarCubagemProducaoPatio = function(id) {
     document.getElementById('prodPatioEsp')?.focus();
 };
 
-// Visao mobile do Fluxo do Patio: cards agrupados por cubagem e, dentro de cada cubagem, por classe.
-// Usa os mesmos dados e as mesmas funcoes de acao da tabela (desktop).
+// Visao mobile do Fluxo do Patio: uma lista por classe (1a, depois 2a, depois 3a) e, dentro de cada
+// classe, um card por cubagem da maior para a menor (mesma regra de ordenarItensPatio: comprimento,
+// espessura e largura decrescentes). Usa os mesmos dados e funcoes de acao da tabela (desktop).
 function renderizarCardsProducaoPatio(itens) {
     const box = document.getElementById('producaoPatioCards');
     if (!box) return;
@@ -1096,22 +1097,26 @@ function renderizarCardsProducaoPatio(itens) {
         return;
     }
 
-    const grupos = new Map();
-    itens.forEach(item => {
-        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
-        if (!grupos.has(chave)) grupos.set(chave, { cubagem: formatCubagemFluxo(item).replace(/m$/, ' m'), primeiroId: item.id, ids: [], classes: new Map() });
-        const grupo = grupos.get(chave);
-        grupo.ids.push(item.id);
+    const classes = new Map();
+    ordenarItensPatio(itens).forEach(item => {
         const numero = obterNumeroClasse(obterClasseItemFluxo(item)) || 0;
-        if (!grupo.classes.has(numero)) grupo.classes.set(numero, []);
-        grupo.classes.get(numero).push(item);
+        if (!classes.has(numero)) classes.set(numero, new Map());
+        const cubagens = classes.get(numero);
+        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        if (!cubagens.has(chave)) cubagens.set(chave, { cubagem: formatCubagemFluxo(item).replace(/m$/, ' m'), primeiroId: item.id, itens: [] });
+        cubagens.get(chave).itens.push(item);
     });
 
-    box.innerHTML = [...grupos.values()].map(grupo => {
-        const blocos = [...grupo.classes.entries()]
-            .sort((a, b) => (a[0] || 99) - (b[0] || 99))
-            .map(([numero, lista]) => {
-                const pacotes = lista.map(item => {
+    const pecasDe = lista => lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
+    const pacotesDe = lista => lista.reduce((soma, item) => soma + (Number(item.pacotes) || 0), 0);
+
+    box.innerHTML = [...classes.entries()]
+        .sort((a, b) => (a[0] || 99) - (b[0] || 99))
+        .map(([numero, cubagens]) => {
+            const nivel = numero >= 1 && numero <= 3 ? numero : 0;
+            const todos = [...cubagens.values()].flatMap(grupo => grupo.itens);
+            const cards = [...cubagens.values()].map(grupo => {
+                const pacotes = grupo.itens.map(item => {
                     const marcado = itensFluxoPatioSelecionados.has(item.id) ? 'checked' : '';
                     const qtd = Number(item.pacotes) || 0;
                     return `
@@ -1125,27 +1130,28 @@ function renderizarCardsProducaoPatio(itens) {
                         </span>
                     </div>`;
                 }).join('');
-                const pecas = lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
-                const nivel = numero >= 1 && numero <= 3 ? numero : 0;
                 return `
-                <div class="fp-classe fp-classe-n${nivel}">
-                    <div class="fp-classe-tit"><span class="fp-badge">${numero ? `${numero}ª classe` : 'Sem classe'}</span></div>
+                <section class="fp-grupo">
+                    <header class="fp-grupo-head">
+                        <span class="fp-cubagem">${grupo.cubagem}</span>
+                        <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar pacote com esta cubagem" title="Adicionar pacote com esta cubagem">+</button>
+                    </header>
                     ${pacotes}
-                    <div class="fp-subtotal"><span>Subtotal ${numero ? `${numero}ª` : ''}</span><b>${pecas} pç</b></div>
-                </div>`;
+                    <div class="fp-subtotal"><span>Subtotal</span><b>${pecasDe(grupo.itens)} pç</b></div>
+                    <footer class="fp-grupo-foot">
+                        <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.itens.map(i => i.id).join(',')}')">Excluir grupo</button>
+                    </footer>
+                </section>`;
             }).join('');
-        return `
-        <section class="fp-grupo">
-            <header class="fp-grupo-head">
-                <span class="fp-cubagem">${grupo.cubagem}</span>
-                <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar pacote com esta cubagem" title="Adicionar pacote com esta cubagem">+</button>
-            </header>
-            ${blocos}
-            <footer class="fp-grupo-foot">
-                <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.ids.join(',')}')">Excluir grupo</button>
-            </footer>
-        </section>`;
-    }).join('');
+            return `
+            <div class="fp-classe fp-classe-n${nivel}">
+                <div class="fp-classe-tit">
+                    <span class="fp-badge">${numero ? `${numero}ª classe` : 'Sem classe'}</span>
+                    <span class="fp-classe-total">${pacotesDe(todos)} pct · ${pecasDe(todos)} pç</span>
+                </div>
+                ${cards}
+            </div>`;
+        }).join('');
 }
 
 window.renderizarCardsProducaoPatio = renderizarCardsProducaoPatio;

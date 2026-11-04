@@ -3164,7 +3164,7 @@ body.orq-redimensionando-coluna * {
 
     #producaoPatioCards .fp-classe-n1 { --fp-cor: #16a34a; --fp-cor-bg: #dcfce7; --fp-cor-tx: #14532d; }
     #producaoPatioCards .fp-classe-n2 { --fp-cor: #eab308; --fp-cor-bg: #fef9c3; --fp-cor-tx: #713f12; }
-    #producaoPatioCards .fp-classe-n3 { --fp-cor: #ea580c; --fp-cor-bg: #ffedd5; --fp-cor-tx: #7c2d12; }
+    #producaoPatioCards .fp-classe-n3 { --fp-cor: #dc2626; --fp-cor-bg: #fee2e2; --fp-cor-tx: #7f1d1d; }
 
     #producaoPatioCards .fp-badge {
         display: inline-block;
@@ -3321,4 +3321,49 @@ body.orq-redimensionando-coluna * {
 @media (max-width: 380px) {
     #producaoPatioCards .fp-formula { font-size: .84rem; }
     #producaoPatioCards .fp-acoes button { padding: 0 6px !important; }
+}
+
+/* Fluxo do Patio mobile: uma lista por classe, cards de cubagem dentro dela. */
+@media (max-width: 760px) {
+    #producaoPatioCards .fp-classe {
+        display: grid;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    #producaoPatioCards .fp-classe + .fp-classe {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(148, 163, 184, .25);
+    }
+
+    #producaoPatioCards .fp-classe-tit {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 0;
+    }
+
+    #producaoPatioCards .fp-classe-tit .fp-badge {
+        font-size: .9rem;
+        padding: 3px 12px;
+    }
+
+    #producaoPatioCards .fp-classe-total {
+        font-size: .8rem;
+        color: #cbd5e1;
+    }
+
+    #producaoPatioCards .fp-grupo {
+        border-top: 4px solid var(--fp-cor);
+    }
+
+    #producaoPatioCards .fp-grupo-head {
+        margin-bottom: 4px;
+    }
+
+    #producaoPatioCards .fp-subtotal {
+        padding-left: 12px;
+    }
 }
