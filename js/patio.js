@@ -879,7 +879,7 @@ async function renderizarProducaoPatio(options = {}) {
                 ? badgeClasseFluxo(classeItem)
                 : '<span style="color:#334155; font-weight:900;">*</span>';
             const cubagemHtml = primeiraCubagem
-                ? `<div style="font-weight:900; color:${corClasse} !important;">${formatCubagemFluxo(item)}</div>
+                ? `<div style="font-weight:900; color:${corClasse} !important; display:flex; align-items:center; gap:6px;">${formatCubagemFluxo(item)}<button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${item.id}')" title="Adicionar pacote com esta cubagem e classe" aria-label="Adicionar pacote com esta cubagem">+</button></div>
                    <small style="display:block; margin-top:3px; color:#334155; font-size:0.74rem; font-weight:800;">* ${formatarResumoPacoteProducao(item)}</small>`
                 : `<small style="display:block; color:#334155; font-size:0.78rem; font-weight:900;">* ${formatarResumoPacoteProducao(item)}</small>`;
             return `
@@ -1033,6 +1033,26 @@ window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
     } finally {
         window.__salvandoFluxoPatio = false;
     }
+};
+
+window.novoPacoteMesmaCubagemProducaoPatio = function(id) {
+    if (!producaoPatioRelatorioAtual) return;
+    const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
+    if (!item) return;
+
+    // Preenche o formulario com a cubagem e a classe do grupo. A configuracao do pacote (alturas, largura, amarras) fica para a pessoa informar.
+    document.getElementById('prodPatioClasse').value = item.classe || '1a CLASSE';
+    document.getElementById('prodPatioEsp').value = formatDecimal(item.espessura, 1);
+    document.getElementById('prodPatioLarg').value = formatDecimal(item.largura, 1);
+    document.getElementById('prodPatioComp').value = formatDecimal(item.comprimento, 2);
+    document.getElementById('prodPatioPacotes').value = 1;
+    document.getElementById('prodPatioAlturas').value = '';
+    document.getElementById('prodPatioLarguraPacote').value = '';
+    document.getElementById('prodPatioAmarras').value = 0;
+
+    setFormProducaoPatioAberto(true);
+    atualizarResumoNovaCubagemProducaoPatio();
+    document.getElementById('prodPatioAlturas')?.focus();
 };
 
 window.editarCubagemProducaoPatio = function(id) {
