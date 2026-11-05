@@ -1599,6 +1599,17 @@ const App = {
 
     async logout() {
         try {
+            try {
+                const resultado = await Promise.race([
+                    window.prepararSaidaFinanceiro?.() || Promise.resolve(null),
+                    new Promise(resolve => setTimeout(() => resolve(null), 8000))
+                ]);
+                if (resultado && resultado.limpo === false && resultado.falhas) {
+                    console.warn(`Financeiro: ${resultado.falhas} lancamento(s) nao sincronizado(s); copia local mantida.`);
+                }
+            } catch (error) {
+                console.warn('Financeiro: nao foi possivel conferir a copia local antes de sair.', error);
+            }
             this.pararPresencaUsuario();
             await signOut(auth);
             window.location.href = 'login.html';

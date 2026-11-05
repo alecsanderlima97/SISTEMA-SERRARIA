@@ -1068,6 +1068,37 @@ window.atualizarLembretesFinanceirosPorPermissao = async function() {
     mostrarLembretesFinanceiros();
 };
 
+// Ao sair do sistema: envia ao banco os lancamentos que so existem neste navegador e,
+// se tudo subiu, apaga a copia local (em aparelho compartilhado ela ficava para o proximo usuario).
+// Se algo nao subir, mantem a copia para nao perder dado.
+window.prepararSaidaFinanceiro = async function() {
+    const locais = obterLancamentosFinanceiros();
+    if (!locais.length) {
+        localStorage.removeItem(FINANCEIRO_RELATORIOS_KEY);
+        return { limpo: true };
+    }
+    if (!window.FS) return { limpo: false };
+    let idsNuvem = null;
+    try {
+        idsNuvem = new Set((await window.FS.getCollection(FINANCEIRO_COLLECTION)).map(item => item.id));
+    } catch (_) {
+        idsNuvem = null; // usuario sem leitura do financeiro (ex.: frota): tenta enviar os itens dele
+    }
+    const pendentes = locais.filter(item => item?.id && (!idsNuvem || !idsNuvem.has(item.id)));
+    let falhas = 0;
+    for (const item of pendentes) {
+        try {
+            await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, prepararFinanceiroParaNuvem(item));
+        } catch (_) {
+            falhas++;
+        }
+    }
+    if (falhas) return { limpo: false, falhas };
+    localStorage.removeItem(FINANCEIRO_KEY);
+    localStorage.removeItem(FINANCEIRO_RELATORIOS_KEY);
+    return { limpo: true };
+};
+
 window.alternarListaLembretesFinanceiros = function() {
     document.getElementById('btnHeaderNotifications')?.click();
 };
