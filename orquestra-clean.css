@@ -692,3 +692,51 @@ body .app-version-footer {
         font-weight: 600 !important;
     }
 }
+
+/* Fluxo do Patio aberto: ocupa a tela sozinho (sem pedacos do Inicio) para qualquer usuario */
+body.fluxo-patio-foco #view-dashboard > :not(#panelProducaoPatio) {
+    display: none !important;
+}
+
+body.fluxo-patio-foco #view-dashboard #panelProducaoPatio {
+    margin-top: 0 !important;
+}
+
+/* Linha do pacote: quantidade de pacotes e configuracao em destaque; pecas e m3 como detalhe */
+@media (max-width: 760px) {
+    #producaoPatioCards .fp-linha-principal {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+    }
+
+    #producaoPatioCards .fp-qtd-pacotes {
+        font-size: 1.05rem;
+        color: #1c1917;
+    }
+
+    #producaoPatioCards .fp-qtd-pacotes b {
+        font-size: 1.35rem;
+        font-weight: 800;
+    }
+
+    #producaoPatioCards .fp-config {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: #1c1917 !important;
+        letter-spacing: .01em;
+    }
+
+    #producaoPatioCards .fp-am {
+        font-size: .62em;
+        font-weight: 700;
+        vertical-align: super;
+        margin-left: 1px;
+    }
+
+    #producaoPatioCards .fp-formula .fp-qtd {
+        font-size: .76rem !important;
+        color: #78716c !important;
+    }
+}

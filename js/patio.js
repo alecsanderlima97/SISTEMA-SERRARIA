@@ -566,11 +566,11 @@ window.abrirProducaoPatio = async function() {
     const panel = document.getElementById('panelProducaoPatio');
     if (!panel) return;
     panel.style.display = 'block';
+    // O Fluxo do Patio abre sozinho na tela (sem pedacos do Inicio em volta) para qualquer usuario.
+    document.body.classList.add('fluxo-patio-foco');
     setFormProducaoPatioAberto(ehFluxoPatioOperacionalExclusivo());
     aplicarPermissoesDashboardPatio();
-    if (!ehFluxoPatioOperacionalExclusivo()) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
     // Apenas abrir o Fluxo nao deve criar uma lista vazia nem substituir a lista ativa.
     if (!producaoPatioRelatorioAtual?.id) {
         producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
@@ -616,6 +616,7 @@ function registrarDesfazerListaPatio(itensAnteriores, descricao) {
 
 window.fecharProducaoPatio = function() {
     setFormProducaoPatioAberto(false);
+    document.body.classList.remove('fluxo-patio-foco');
     const panel = document.getElementById('panelProducaoPatio');
     if (panel) panel.style.display = 'none';
 };
@@ -1154,13 +1155,17 @@ function renderizarCardsProducaoPatio(itens) {
                     const qtd = Number(item.pacotes) || 0;
                     const d = obterDetalhesPacoteEtiqueta(item);
                     const pecasPacote = Number(d.totalPecas || item.pecas || 0);
-                    const config = `${d.alturas || 0} alt × ${d.largura || 0} lado${Number(d.amarras) ? ` + ${d.amarras} amarras` : ''} = ${fmtInt(pecasPacote)} pç/pacote`;
+                    const amarras = Number(d.amarras) || 0;
+                    const config = `(${d.alturas || 0}×${d.largura || 0})${amarras ? ` + ${amarras}<small class="fp-am">am</small>` : ''}`;
                     return `
                     <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
                         <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar esta configuração">
                         <div class="fp-formula">
-                            <span class="fp-config">${config}</span>
-                            <span class="fp-qtd"><b>${qtd}</b> pacote(s) · <b>${fmtInt(pecasDe([item]))}</b> pç · <b>${fmtM3(item.volume)}</b></span>
+                            <div class="fp-linha-principal">
+                                <span class="fp-qtd-pacotes"><b>${qtd}</b> ${qtd === 1 ? 'pacote' : 'pacotes'}</span>
+                                <span class="fp-config">${config}</span>
+                            </div>
+                            <span class="fp-qtd">${fmtInt(pecasPacote)} pç/pacote · ${fmtInt(pecasDe([item]))} pç · ${fmtM3(item.volume)}</span>
                         </div>
                         <div class="fp-acoes">
                             <button type="button" class="fp-btn-qtd" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Tirar 1 pacote">−1</button>
