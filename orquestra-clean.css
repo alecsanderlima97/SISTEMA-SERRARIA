@@ -268,3 +268,53 @@ body .frota-card-operacao {
 body .app-version-footer {
     display: none !important;
 }
+
+/* ---------- Formularios longos no celular: campos curtos lado a lado ---------- */
+@media (max-width: 760px) {
+    /* Conferencia de Cargas */
+    body #formEntrada {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        column-gap: 10px !important;
+    }
+
+    body #formEntrada > * {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    body #formEntrada > .input-group:has(#entRomaneio),
+    body #formEntrada > .input-group:has(#entMotorista),
+    body #formEntrada > .input-group:has(#entData),
+    body #formEntrada > .input-group:has(#entHorario),
+    body #formEntrada > .input-group:has(#entComp),
+    body #formEntrada > .input-group:has(#entLarg) {
+        grid-column: auto;
+    }
+
+    /* Venda de Subprodutos */
+    body #formCavaco .sub-recibo-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    body #formCavaco .sub-recibo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        column-gap: 10px !important;
+    }
+
+    body #formCavaco .sub-recibo-grid > * {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    body #formCavaco .sub-recibo-grid > :has(#calcCavDoc),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavIE),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavRomaneio),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavRomaneioCliente),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavPlacaCaminhao),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavPlacaCarreta),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavQtd),
+    body #formCavaco .sub-recibo-grid > :has(#calcCavValor) {
+        grid-column: auto;
+    }
+}
