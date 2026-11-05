@@ -1001,8 +1001,11 @@ function atualizarResumoSelecaoFluxoPatio() {
 window.toggleSelecionarItemFluxoPatio = function(id, checked) {
     if (checked) itensFluxoPatioSelecionados.add(id);
     else itensFluxoPatioSelecionados.delete(id);
-    const linha = document.querySelector(`[data-fluxo-patio-id="${id}"]`);
-    if (linha) linha.classList.toggle('is-selected', checked);
+    document.querySelectorAll(`[data-fluxo-patio-id="${id}"]`).forEach(linha => {
+        linha.classList.toggle('is-selected', checked);
+        const caixa = linha.querySelector('input[type="checkbox"]');
+        if (caixa) caixa.checked = checked;
+    });
     atualizarResumoSelecaoFluxoPatio();
 };
 
@@ -1132,6 +1135,8 @@ function renderizarCardsProducaoPatio(itens) {
 
     const pecasDe = lista => lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
     const pacotesDe = lista => lista.reduce((soma, item) => soma + (Number(item.pacotes) || 0), 0);
+    const volumeDe = lista => lista.reduce((soma, item) => soma + (Number(item.volume) || 0), 0);
+    const resumoDe = lista => `${pacotesDe(lista)} pct · ${pecasDe(lista)} pç · ${formatDecimalMockup(volumeDe(lista))} m³`;
 
     box.innerHTML = [...classes.entries()]
         .sort((a, b) => (a[0] || 99) - (b[0] || 99))
@@ -1145,11 +1150,14 @@ function renderizarCardsProducaoPatio(itens) {
                     return `
                     <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
                         <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar pacote">
-                        <span class="fp-formula">${formatarResumoPacoteProducao(item).replace(/x/g, '×')}${qtd > 1 ? ` <small class="fp-qtd">${qtd} pct</small>` : ''}</span>
+                        <span class="fp-formula">${formatarResumoPacoteProducao(item).replace(/x/g, '×')}
+                            <small class="fp-qtd">${qtd} pct · ${pecasDe([item])} pç · ${formatDecimalMockup(Number(item.volume) || 0)} m³</small>
+                        </span>
                         <span class="fp-acoes">
-                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Diminuir pacote">−</button>
-                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar pacote">+</button>
+                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Tirar 1 pacote">−</button>
+                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar 1 pacote">+</button>
                             <button type="button" onclick="window.editarCubagemProducaoPatio('${item.id}')">Editar</button>
+                            <button type="button" class="fp-excluir-linha" onclick="window.excluirCubagemProducaoPatio('${item.id}')" aria-label="Excluir esta linha">Excluir</button>
                         </span>
                     </div>`;
                 }).join('');
@@ -1160,7 +1168,7 @@ function renderizarCardsProducaoPatio(itens) {
                         <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar pacote com esta cubagem" title="Adicionar pacote com esta cubagem">+</button>
                     </header>
                     ${pacotes}
-                    <div class="fp-subtotal"><span>Subtotal</span><b>${pecasDe(grupo.itens)} pç</b></div>
+                    <div class="fp-subtotal"><span>Subtotal da cubagem</span><b>${resumoDe(grupo.itens)}</b></div>
                     <footer class="fp-grupo-foot">
                         <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.itens.map(i => i.id).join(',')}')">Excluir grupo</button>
                     </footer>
@@ -1170,7 +1178,7 @@ function renderizarCardsProducaoPatio(itens) {
             <div class="fp-classe fp-classe-n${nivel}">
                 <div class="fp-classe-tit">
                     <span class="fp-badge">${numero ? `${numero}ª classe` : 'Sem classe'}</span>
-                    <span class="fp-classe-total">${pacotesDe(todos)} pct · ${pecasDe(todos)} pç</span>
+                    <span class="fp-classe-total">${resumoDe(todos)}</span>
                 </div>
                 ${cards}
             </div>`;
