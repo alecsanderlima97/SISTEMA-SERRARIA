@@ -3053,9 +3053,25 @@ body.orq-redimensionando-coluna * {
 }
 
 @media (max-width: 760px) {
-    #panelProducaoPatio .table-container,
-    #panelProducaoPatio #resumoProducaoPatioClasses {
+    #panelProducaoPatio .table-container {
         display: none !important;
+    }
+
+    /* Totais por classe (pacotes e m3) continuam visiveis, compactos */
+    #panelProducaoPatio #resumoProducaoPatioClasses {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    #panelProducaoPatio #resumoProducaoPatioClasses > div {
+        min-height: 0 !important;
+        padding: 10px !important;
+    }
+
+    #panelProducaoPatio #resumoProducaoPatioClasses > div > div:last-child {
+        font-size: .95rem !important;
+        margin-top: 4px !important;
     }
 
     /* Resumo: pacotes / volume / itens */
@@ -3365,5 +3381,34 @@ body.orq-redimensionando-coluna * {
 
     #producaoPatioCards .fp-subtotal {
         padding-left: 12px;
+    }
+}
+
+
+/* Fluxo do Patio mobile: linha do pacote com detalhes e botao de excluir a linha */
+@media (max-width: 760px) {
+    #producaoPatioCards .fp-formula .fp-qtd {
+        display: block;
+        font-size: .74rem;
+        color: #57534e;
+        margin-top: 2px;
+        white-space: normal;
+    }
+
+    #producaoPatioCards .fp-pacote {
+        flex-wrap: wrap;
+    }
+
+    #producaoPatioCards .fp-acoes {
+        margin-left: auto;
+    }
+
+    #producaoPatioCards .fp-acoes .fp-excluir-linha {
+        border-color: #b91c1c !important;
+        color: #b91c1c !important;
+    }
+
+    #producaoPatioCards .fp-subtotal b {
+        text-align: right;
     }
 }
