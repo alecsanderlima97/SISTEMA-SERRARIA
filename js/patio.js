@@ -2345,7 +2345,7 @@ function renderizarItensPatioTemp() {
         const pcPacote = d.totalPecas || item.pecas || 0;
         const totalPc = Number(item.totalPecas) || (Number(item.pacotes) || 0) * pcPacote;
         const volUn = Number(item.volumeUnidade) || ((Number(item.pacotes) || 0) ? (Number(item.volume) || 0) / Number(item.pacotes) : 0);
-        const etiqueta = item.etiquetado ? '<span class="cp-etiqueta" title="Etiqueta impressa"><i class="fa-solid fa-tag"></i> etiquetado</span>' : '';
+        const etiqueta = item.etiquetado ? '<span class="cp-etiqueta" title="Etiqueta impressa"><i class="fa-solid fa-tag"></i><span class="cp-etiqueta-txt"> etiquetado</span></span>' : '';
         const ultimoUso = item.ultimoUsoRomaneio;
         const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
         const usoHtml = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000
@@ -2393,8 +2393,8 @@ function renderizarItensPatioTemp() {
                             <div class="fp-grupo-total"><b>${fmtInt(t.pacotes)}</b> pct · ${fmtInt(t.pecas)} pç · <b>${fmtM3(t.volume)}</b> m³</div>
                         </div>
                         <div class="cp-grupo-acoes hide-on-print">
-                            <button type="button" class="cp-btn-texto cp-btn-azul" onclick="editarGrupoCubagemPatio('${ref.id}', 'controle')" title="Editar a cubagem inteira"><i class="fa-solid fa-pen-ruler"></i> Editar cubagem</button>
-                            <button type="button" class="cp-btn-texto cp-btn-vermelho" onclick="excluirCubagemControlePatio(${JSON.stringify(ids).replace(/"/g, '&quot;')})" title="Excluir a cubagem inteira"><i class="fa-solid fa-trash-can"></i> Excluir cubagem</button>
+                            <button type="button" class="cp-btn-texto cp-btn-azul" onclick="editarGrupoCubagemPatio('${ref.id}', 'controle')" title="Editar a cubagem inteira"><i class="fa-solid fa-pen-ruler"></i> Editar<span class="cp-txt-desk"> cubagem</span></button>
+                            <button type="button" class="cp-btn-texto cp-btn-vermelho" onclick="excluirCubagemControlePatio(${JSON.stringify(ids).replace(/"/g, '&quot;')})" title="Excluir a cubagem inteira"><i class="fa-solid fa-trash-can"></i> Excluir<span class="cp-txt-desk"> cubagem</span></button>
                         </div>
                     </header>
                     <div class="cp-linhas">${itens.map(linhaHtml).join('')}</div>
