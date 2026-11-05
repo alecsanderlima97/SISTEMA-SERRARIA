@@ -801,3 +801,32 @@ body.fluxo-patio-foco #view-dashboard #panelProducaoPatio {
 @media print {
     #listaItensPatioTemp .cp-classe { break-inside: avoid; }
 }
+
+/* Controle de Producao no celular: menos moldura, mais conteudo */
+@media (max-width: 760px) {
+    #modalControleProducao.modal-v2 { padding: 0 !important; }
+    #modalControleProducao .modal-content-v2 { padding: 8px 6px !important; border-radius: 0 !important; }
+    #modalControleProducao .glass-panel:has(#listaItensPatioTemp) { padding: 10px 6px !important; }
+    #listaItensPatioTemp, #listaItensPatioTemp * { min-width: 0; box-sizing: border-box; }
+    #listaItensPatioTemp { gap: 12px; }
+    #listaItensPatioTemp .fp-classe-tit { padding: 8px 10px; }
+    #listaItensPatioTemp .fp-classe-lista { padding: 6px 4px; gap: 8px; }
+    #listaItensPatioTemp .cp-grupo { padding: 8px 8px 4px; }
+    #listaItensPatioTemp .cp-grupo-topo { flex-wrap: nowrap; align-items: center; gap: 6px; padding-bottom: 6px; }
+    #listaItensPatioTemp .cp-grupo-topo > div:first-child { flex: 1 1 auto; }
+    #listaItensPatioTemp .fp-cubagem { font-size: 1.08rem; }
+    #listaItensPatioTemp .fp-grupo-total { font-size: .8rem; }
+    #listaItensPatioTemp .cp-grupo-acoes { width: auto; display: flex; flex: 0 0 auto; gap: 4px; }
+    #listaItensPatioTemp .cp-btn-texto { height: 32px; padding: 0 8px; font-size: .76rem; gap: 4px; }
+    #listaItensPatioTemp .cp-txt-desk { display: none; }
+    #listaItensPatioTemp .cp-linha { grid-template-columns: 22px minmax(0,1fr); gap: 6px 8px; padding: 8px 0 8px 8px; }
+    #listaItensPatioTemp .cp-sel input { width: 20px; height: 20px; }
+    #listaItensPatioTemp .fp-linha-principal { gap: 2px 10px; }
+    #listaItensPatioTemp .fp-qtd-pacotes b { font-size: 1.3rem; }
+    #listaItensPatioTemp .fp-config { font-size: 1.05rem; }
+    #listaItensPatioTemp .cp-etiqueta { padding: 1px 6px; }
+    #listaItensPatioTemp .cp-etiqueta-txt { display: none; }
+    #listaItensPatioTemp .fp-qtd { font-size: .78rem; }
+    #listaItensPatioTemp .cp-acoes { grid-template-columns: 36px 36px repeat(3, minmax(0,1fr)); gap: 4px; }
+    #listaItensPatioTemp .cp-acoes button { height: 34px; font-size: .76rem; overflow: hidden; text-overflow: ellipsis; }
+}
