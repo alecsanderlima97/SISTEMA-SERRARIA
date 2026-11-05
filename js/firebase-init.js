@@ -450,6 +450,36 @@ window.FS = {
             throw err;
         }
     },
+    // Saldo de estoque: sempre le o valor atual do banco e aplica a diferenca numa transacao,
+    // para dois aparelhos nao sobrescreverem a baixa um do outro.
+    // opcoes: { campos, custoMedioEntrada, minimo, itemBase, absoluto }
+    async ajustarQuantidadeEstoque(itemId, delta, opcoes = {}) {
+        const ref = doc(db, 'estoque', String(itemId));
+        return runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(ref);
+            const atual = snap.exists() ? snap.data() : { ...(opcoes.itemBase || {}), quantidade: 0 };
+            const saldoAnterior = Number(atual.quantidade || 0);
+            const quantidade = opcoes.absoluto !== undefined && opcoes.absoluto !== null
+                ? Number(opcoes.absoluto)
+                : saldoAnterior + Number(delta || 0);
+            if (opcoes.minimo !== undefined && quantidade < opcoes.minimo) {
+                const erro = new Error('SALDO_INSUFICIENTE');
+                erro.saldoAtual = saldoAnterior;
+                erro.itemNome = atual.nome || '';
+                throw erro;
+            }
+            const extra = { ...(opcoes.campos || {}) };
+            if (opcoes.custoMedioEntrada !== undefined && Number(delta) > 0) {
+                const unitarioAnterior = Number(atual.unitario || 0);
+                extra.unitario = quantidade > 0
+                    ? ((Math.max(saldoAnterior, 0) * unitarioAnterior) + (Number(delta) * Number(opcoes.custoMedioEntrada || 0))) / Math.max(quantidade, Number(delta))
+                    : Number(opcoes.custoMedioEntrada || 0);
+            }
+            const novo = { ...atual, ...extra, id: String(itemId), quantidade, atualizadoEm: new Date().toISOString() };
+            transaction.set(ref, withTenantMeta(novo, !snap.exists()));
+            return novo;
+        });
+    },
     async ajustarQuantidadeProduto(produtoId, delta) {
         try {
             const meta = getCurrentUserMeta();

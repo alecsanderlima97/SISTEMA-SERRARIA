@@ -146,6 +146,22 @@ function obterBanco(key, defaults = []) {
     return JSON.parse(dados);
 }
 
+// Saldo do almoxarifado pela Frota: grava no banco por transacao (antes ficava so neste aparelho).
+async function ajustarSaldoEstoqueFrota(item, delta) {
+    if (typeof window.aplicarSaldoEstoque === 'function') {
+        try {
+            return await window.aplicarSaldoEstoque(item, delta);
+        } catch (err) {
+            console.error('Erro ao ajustar saldo do estoque pela frota:', err);
+            alert(`Nao foi possivel atualizar o saldo de ${item.nome || 'estoque'} agora. Confira no Controle de Estoque.`);
+            return null;
+        }
+    }
+    item.quantidade = Number(item.quantidade || 0) + Number(delta || 0);
+    salvarBanco(KEYS.ESTOQUE, estoque);
+    return item;
+}
+
 function salvarBanco(key, dados) {
     localStorage.setItem(key, JSON.stringify(dados));
 }
@@ -1099,6 +1115,7 @@ async function salvarAbastecimento() {
                 observacao: `Abastecimento diesel serraria. Horimetro/KM: ${horimetro}. Lancado por: ${usuario.nome}`
             });
             if (!itemAtualizado) return;
+            novo.estoqueItemId = itemAtualizado.id;
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
         }
     } else if (tipo === 'LUBRIFICANTE') {
@@ -1120,6 +1137,7 @@ async function salvarAbastecimento() {
                 observacao: `Lancamento de lubrificante. Horimetro/KM: ${horimetro}. Lancado por: ${usuario.nome}`
             });
             if (!itemAtualizado) return;
+            novo.estoqueItemId = itemAtualizado.id;
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
         }
     } else if (tipo === 'DIESEL_POSTO') {
@@ -1181,16 +1199,15 @@ window.excluirAbastecimento = async function(id, veiculoId) {
     if (ab) {
         if (ab.tipo === 'DIESEL' || ab.tipo === 'LUBRIFICANTE') {
             estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
-            let itemEstoque = ab.tipo === 'DIESEL'
-                ? estoque.find(i => i.nome === 'DIESEL COMUM')
+            let itemEstoque = (ab.estoqueItemId && estoque.find(i => i.id === ab.estoqueItemId)) || (ab.tipo === 'DIESEL'
+                ? (estoque.find(i => i.nome === 'DIESEL COMUM') || estoque.find(i => (i.categoria || '').toUpperCase() === 'DIESEL'))
                 : estoque.find(i => {
                     const nome = (i.nome || '').toUpperCase();
                     const categoria = (i.categoria || '').toUpperCase();
                     return categoria.includes('LUBR') || nome.includes('LUBR') || nome.includes('OLEO') || nome.includes('ÓLEO');
-                });
+                }));
             if (itemEstoque) {
-                itemEstoque.quantidade += ab.qtd;
-                salvarBanco(KEYS.ESTOQUE, estoque);
+                await ajustarSaldoEstoqueFrota(itemEstoque, Number(ab.qtd || 0));
                 if (window.registrarMovimentacaoEstoque) {
                     const v = frota.find(item => item.id === veiculoId);
                     window.registrarMovimentacaoEstoque({ tipo: 'ENTRADA', itemId: itemEstoque.id, itemNome: itemEstoque.nome, categoria: itemEstoque.categoria, quantidade: ab.qtd, unitario: ab.preco, frotaId: veiculoId, frotaPlaca: v ? `${v.modelo} (${v.placa})` : 'FROTA', destino: `Estorno Consumo: ${v ? v.modelo : 'Veiculo'}`, observacao: `Estorno de ${tipoAbastecimentoLabel(ab.tipo).toLowerCase()} via controle de frotas.` });
@@ -1454,13 +1471,13 @@ async function salvarManutencao() {
     // --- INTEGRAR E DEDUZIR PEÇAS DO ESTOQUE DEFINITIVAMENTE ---
     estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
 
-    pecasManutencaoTemp.forEach(p => {
+    for (const p of pecasManutencaoTemp) {
         const itemEstoque = estoque.find(i => i.id === p.id);
         if (itemEstoque) {
             if (itemEstoque.quantidade < p.qtd) {
                 console.warn(`Alerta de Estoque Baixo para ${p.nome}: Saldo ficará negativo.`);
             }
-            itemEstoque.quantidade -= p.qtd;
+            await ajustarSaldoEstoqueFrota(itemEstoque, -Number(p.qtd || 0));
 
             // Registrar transação de saída no log de estoque
             if (window.registrarMovimentacaoEstoque) {
@@ -1479,9 +1496,9 @@ async function salvarManutencao() {
                 });
             }
         }
-    });
+    }
 
-    salvarBanco(KEYS.ESTOQUE, estoque);
+    estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
     manutencoes.push(nova);
     salvarBanco(KEYS.MANUTENCOES, manutencoes);
     await salvarDocFrota(FROTA_COLLECTIONS.MANUTENCOES, nova);
@@ -1537,10 +1554,10 @@ window.excluirManutencao = async function(id, veiculoId) {
     if (m && m.pecas && m.pecas.length > 0) {
         // Devolver peças
         estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
-        m.pecas.forEach(p => {
+        for (const p of m.pecas) {
             const itemEstoque = estoque.find(i => i.id === p.id);
             if (itemEstoque) {
-                itemEstoque.quantidade += p.qtd;
+                await ajustarSaldoEstoqueFrota(itemEstoque, Number(p.qtd || 0));
 
                 // Registrar transação de entrada de estorno no log de estoque
                 if (window.registrarMovimentacaoEstoque) {
@@ -1559,8 +1576,8 @@ window.excluirManutencao = async function(id, veiculoId) {
                     });
                 }
             }
-        });
-        salvarBanco(KEYS.ESTOQUE, estoque);
+        }
+        estoque = obterBanco(KEYS.ESTOQUE, DEFAULT_ESTOQUE);
     }
 
     manutencoes = manutencoes.filter(item => item.id !== id);

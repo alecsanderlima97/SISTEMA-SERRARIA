@@ -1,4 +1,4 @@
-import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc, runTransaction } from './firebase-init.js';
 
 // ---- MÓDULO DE CONTROLE DE PÁTIO & ETIQUETAS ----
 
@@ -840,7 +840,30 @@ async function salvarRelatorioProducaoPatio(relatorio) {
         atualizadoEm: new Date().toISOString()
     };
     delete dados.id;
-    await updateDoc(doc(db, 'patio_relatorios', relatorio.id), dados);
+    // Grava so se o patio nao mudou no banco desde que esta tela leu (ex.: um romaneio baixou
+    // pacotes ou outro aparelho lancou). Se mudou, recarrega em vez de sobrescrever.
+    const ref = doc(db, 'patio_relatorios', relatorio.id);
+    const versaoLida = relatorio.atualizadoEm || null;
+    try {
+        await runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(ref);
+            const versaoBanco = snap.exists() ? (snap.data().atualizadoEm || null) : null;
+            if (versaoLida && versaoBanco && versaoBanco !== versaoLida) {
+                const conflito = new Error('PATIO_ALTERADO');
+                conflito.code = 'PATIO_ALTERADO';
+                throw conflito;
+            }
+            transaction.update(ref, dados);
+        });
+    } catch (error) {
+        if (error?.code === 'PATIO_ALTERADO') {
+            patioRelatoriosCacheEm = 0;
+            alert('O patio foi alterado por outro lancamento (romaneio ou outro aparelho) enquanto esta tela estava aberta. A lista foi atualizada; confira e refaca a ultima acao.');
+            try { await renderizarProducaoPatio({ recarregar: true }); } catch (_) {}
+            error.avisado = true;
+        }
+        throw error;
+    }
     producaoPatioRelatorioAtual = { id: relatorio.id, ...dados };
     patioRelatoriosCacheEm = 0;
 }
@@ -1039,7 +1062,7 @@ window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
         registrarDesfazerFluxoPatio(itensAnteriores, `${delta > 0 ? 'Pacote adicionado' : 'Pacote removido'} no Fluxo do Patio.`);
     } catch (error) {
         console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
-        alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
+        if (!error?.avisado) alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
     } finally {
         window.__salvandoFluxoPatio = false;
     }
@@ -1174,7 +1197,7 @@ window.excluirGrupoCubagemProducaoPatio = async function(idsCsv) {
         registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
     } catch (error) {
         console.error('Erro ao excluir grupo de cubagem do fluxo do patio:', error);
-        alert('Nao foi possivel excluir esta cubagem agora.');
+        if (!error?.avisado) alert('Nao foi possivel excluir esta cubagem agora.');
     }
 };
 
@@ -1195,7 +1218,7 @@ window.excluirCubagemProducaoPatio = async function(id) {
         registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
     } catch (error) {
         console.error('Erro ao excluir cubagem do fluxo do patio:', error);
-        alert('Nao foi possivel excluir esta cubagem agora.');
+        if (!error?.avisado) alert('Nao foi possivel excluir esta cubagem agora.');
     }
 };
 
@@ -1681,7 +1704,7 @@ window.salvarEdicaoGrupoCubagemPatio = async function() {
         window.fecharEdicaoGrupoCubagemPatio();
     } catch (error) {
         console.error('Erro ao editar cubagem em grupo:', error);
-        alert('Nao foi possivel salvar a edicao da cubagem agora.');
+        if (!error?.avisado) alert('Nao foi possivel salvar a edicao da cubagem agora.');
     }
 };
 

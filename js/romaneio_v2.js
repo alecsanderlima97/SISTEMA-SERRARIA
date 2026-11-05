@@ -1,4 +1,4 @@
-﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js?v=romaneio-salvamento-seguro-2';
+﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc, runTransaction } from './firebase-init.js?v=romaneio-salvamento-seguro-2';
 
 console.log("Romaneio V2: Script carregado");
 
@@ -577,10 +577,13 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
     });
 
     const relatoriosAfetados = [...new Set(vinculados.map(p => p.patioRelatorioId))];
+    // Cada relatorio do patio e lido e gravado numa transacao: se o empilhadeirista mexer no
+    // fluxo ao mesmo tempo, o Firestore repete a operacao com o saldo atual em vez de sobrescrever.
     for (const relatorioId of relatoriosAfetados) {
         const ref = doc(db, 'patio_relatorios', relatorioId);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) continue;
+        await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(ref);
+        if (!snap.exists()) return;
 
         const dados = snap.data();
         const itens = Array.isArray(dados.itens) ? [...dados.itens] : [];
@@ -629,7 +632,7 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
             }
         }
 
-        await updateDoc(ref, {
+        transaction.update(ref, {
             itens,
             totais: recalcularTotaisPatioItens(itens),
             atualizadoEm: new Date().toISOString(),
@@ -640,6 +643,7 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
                 usuario: contexto.usuario || contexto.cliente || 'Romaneio',
                 dataHora: new Date().toISOString()
             }
+        });
         });
     }
 }

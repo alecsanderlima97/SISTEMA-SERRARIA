@@ -173,15 +173,39 @@ function obterEstoque() {
     return itensEstoque;
 }
 
+// Atualiza so a copia local. Antes, gravava TODOS os itens no banco a partir desta copia:
+// um aparelho com copia velha (ou com os itens padrao) sobrescrevia os saldos reais.
 function salvarEstoque(dados) {
     itensEstoque = dados || [];
     localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
-    if (window.FS) {
-        itensEstoque.forEach(item => window.FS.setDoc('estoque', item.id, item).catch(err => {
-            console.error('Erro ao sincronizar item de estoque:', err);
-        }));
-    }
 }
+
+// Grava um item (cadastro/dados, sem mexer no saldo de outros aparelhos).
+async function salvarItemEstoqueNuvem(item) {
+    if (!window.FS || !item?.id) return;
+    await window.FS.setDoc('estoque', item.id, item);
+}
+
+// Altera o saldo pelo banco (transacao) e atualiza a copia local com o valor real.
+async function aplicarSaldoEstoque(item, delta, opcoes = {}) {
+    if (!item) return null;
+    let atualizado;
+    if (window.FS?.ajustarQuantidadeEstoque) {
+        atualizado = await window.FS.ajustarQuantidadeEstoque(item.id, delta, { itemBase: item, ...opcoes });
+    } else {
+        const quantidade = opcoes.absoluto !== undefined ? Number(opcoes.absoluto) : Number(item.quantidade || 0) + Number(delta || 0);
+        atualizado = { ...item, ...(opcoes.campos || {}), quantidade, atualizadoEm: new Date().toISOString() };
+    }
+    itensEstoque = obterEstoque();
+    const lista = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+    const base = lista.length ? lista : itensEstoque;
+    const idx = base.findIndex(i => i.id === item.id);
+    if (idx >= 0) base[idx] = { ...base[idx], ...atualizado }; else base.push(atualizado);
+    salvarEstoque(base);
+    Object.assign(item, atualizado);
+    return atualizado;
+}
+window.aplicarSaldoEstoque = aplicarSaldoEstoque;
 
 async function carregarDadosDoFirestore() {
     try {
@@ -423,21 +447,27 @@ window.confirmarEntradaNotaFiscalEstoque = async function() {
             const codigoNormalizado = normalizarTextoEstoque(linha.codigo);
             const existente = itensEstoque.find(item => (codigoNormalizado && normalizarTextoEstoque(item.codigoProduto) === codigoNormalizado) || (normalizarTextoEstoque(item.nome) === nomeNormalizado && item.categoria === linha.categoria));
             if (existente) {
-                const saldoAnterior = Number(existente.quantidade || 0);
-                const saldoNovo = saldoAnterior + quantidadeEstoque;
-                existente.unitario = saldoNovo > 0 ? ((saldoAnterior * Number(existente.unitario || 0)) + (quantidadeEstoque * unitarioEstoque)) / saldoNovo : unitarioEstoque;
-                existente.quantidade = saldoNovo;
-                existente.atualizadoEm = new Date().toISOString();
-                if (codigoNormalizado) existente.codigoProduto = linha.codigo;
-                if (quantidadeGaloes !== null) existente.quantidadeGaloes = Number(existente.quantidadeGaloes || 0) + quantidadeGaloes;
-                movimentos.push({ linha, itemId: existente.id, quantidadeEstoque, unitarioEstoque });
+                const campos = {};
+                if (codigoNormalizado) campos.codigoProduto = linha.codigo;
+                if (quantidadeGaloes !== null) campos.quantidadeGaloes = Number(existente.quantidadeGaloes || 0) + quantidadeGaloes;
+                movimentos.push({ linha, itemId: existente.id, quantidadeEstoque, unitarioEstoque, existente, campos });
             } else {
                 const novo = { id: 'est_nf_' + Date.now() + '_' + Math.floor(Math.random() * 10000), nome: linha.descricao, categoria: linha.categoria, quantidade: quantidadeEstoque, unitario: unitarioEstoque, limite_alerta: null, unidadeCompra: linha.unidade, codigoProduto: linha.codigo || '', ncm: linha.ncm || '', origemCadastro: 'IMPORTACAO_NFE', ultimaNotaFiscal: nota.numero || '', criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() };
                 if (quantidadeGaloes !== null) { novo.quantidadeGaloes = quantidadeGaloes; novo.litrosPorGalao = litrosPorGalao; }
                 itensEstoque.push(novo);
-                movimentos.push({ linha, itemId: novo.id, quantidadeEstoque, unitarioEstoque });
+                movimentos.push({ linha, itemId: novo.id, quantidadeEstoque, unitarioEstoque, novo });
             }
         });
+        for (const movimento of movimentos) {
+            if (movimento.novo) {
+                await salvarItemEstoqueNuvem(movimento.novo);
+            } else {
+                await aplicarSaldoEstoque(movimento.existente, movimento.quantidadeEstoque, {
+                    campos: movimento.campos,
+                    custoMedioEntrada: movimento.unitarioEstoque
+                });
+            }
+        }
         salvarEstoque(itensEstoque);
         for (const movimento of movimentos) {
             const linha = movimento.linha;
@@ -800,7 +830,7 @@ window.excluirItemEstoque = async function(id) {
             removidoEm: new Date().toISOString()
         };
 
-        if (window.FS) await window.FS.setDoc('estoque', id, itemAtualizado);
+        if (window.FS) await window.FS.updateDoc('estoque', id, { ativo: false, removidoEm: itemAtualizado.removidoEm });
         itensEstoque = todos.length
             ? todos.map(i => i.id === id ? itemAtualizado : i)
             : itensEstoque.map(i => i.id === id ? itemAtualizado : i);
@@ -878,6 +908,7 @@ function obterItemDieselEstoque(criarSeNaoExistir = true) {
         };
         itensEstoque.push(diesel);
         salvarEstoque(itensEstoque);
+        salvarItemEstoqueNuvem(diesel).catch(err => console.error('Erro ao criar item diesel:', err));
     }
 
     return diesel;
@@ -1060,9 +1091,13 @@ window.ajustarNivelTanqueDieselEstoque = async function() {
         return;
     }
 
-    diesel.quantidade = novoNivel;
-    diesel.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
+    try {
+        await aplicarSaldoEstoque(diesel, novoNivel - nivelAnterior, { absoluto: novoNivel });
+    } catch (err) {
+        console.error('Erro ao gravar nivel do tanque:', err);
+        alert('Nao foi possivel gravar o nivel do tanque agora. Tente novamente.');
+        return;
+    }
 
     try {
         await window.registrarMovimentacaoEstoque({
@@ -1142,12 +1177,13 @@ window.salvarReabastecimentoTanqueEstoque = async function() {
         return;
     }
 
-    diesel.nome = descricao || diesel.nome || 'DIESEL COMUM';
-    diesel.categoria = 'DIESEL';
-    diesel.quantidade = novoNivel;
-    diesel.unitario = unit;
-    diesel.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
+    try {
+        await aplicarSaldoEstoque(diesel, qtd, { campos: { nome: descricao || diesel.nome || 'DIESEL COMUM', categoria: 'DIESEL', unitario: unit } });
+    } catch (err) {
+        console.error('Erro ao gravar reabastecimento:', err);
+        alert('Nao foi possivel gravar o reabastecimento agora. Tente novamente.');
+        return;
+    }
     salvarConfigTanqueDiesel({ descricaoDiesel: diesel.nome });
 
     try {
@@ -1277,10 +1313,15 @@ window.registrarSaidaEstoqueFrota = async function({
         return null;
     }
 
-    item.quantidade -= qtd;
-    item.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
-    if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+    try {
+        await aplicarSaldoEstoque(item, -qtd, { minimo: 0 });
+    } catch (err) {
+        if (err.message === 'SALDO_INSUFICIENTE') {
+            alert(`Não é possível abastecer ${qtd.toLocaleString('pt-BR')} L. Saldo atual de ${item.nome}: ${Number(err.saldoAtual || 0).toLocaleString('pt-BR')} L (outro lançamento foi feito antes).`);
+            return null;
+        }
+        throw err;
+    }
 
     await window.registrarMovimentacaoEstoque({
         tipo: 'SAÍDA',
@@ -1376,14 +1417,13 @@ window.excluirMovimentacaoEstoque = async function(id) {
         itensEstoque = obterEstoque();
         const item = itensEstoque.find(i => i.id === mov.itemId);
         if (item) {
+            let delta = 0;
             if (mov.tipo === 'ENTRADA') {
-                item.quantidade = Number(item.quantidade || 0) - Number(mov.quantidade || 0);
+                delta = -Number(mov.quantidade || 0);
             } else if ((mov.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'SAIDA') {
-                item.quantidade = Number(item.quantidade || 0) + Number(mov.quantidade || 0);
+                delta = Number(mov.quantidade || 0);
             }
-            item.atualizadoEm = new Date().toISOString();
-            salvarEstoque(itensEstoque);
-            if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+            if (delta) await aplicarSaldoEstoque(item, delta);
         } else {
             alert('Aviso: o item original foi excluido. O lancamento sera removido, mas o estoque nao pode ser revertido.');
         }
@@ -1550,7 +1590,7 @@ window.onChangeMovFuncionario = function() {
 };
 
 // Form submit event for new manual transaction
-function salvarNovaMovimentacaoManual(e) {
+async function salvarNovaMovimentacaoManual(e) {
     e.preventDefault();
 
     const tipo = document.getElementById('movTipo').value;
@@ -1599,16 +1639,16 @@ function salvarNovaMovimentacaoManual(e) {
                 return;
             }
         }
-        item.quantidade -= quantidade;
-    } else {
-        item.quantidade += quantidade;
     }
 
-    // Save stock changes
-    salvarEstoque(itensEstoque);
-    if (window.FS) window.FS.setDoc('estoque', item.id, item).catch(err => {
-        console.error('Erro ao sincronizar item de estoque:', err);
-    });
+    // Grava o saldo pelo banco (transacao)
+    try {
+        await aplicarSaldoEstoque(item, tipo === 'SAÍDA' ? -quantidade : quantidade);
+    } catch (err) {
+        console.error('Erro ao gravar movimentacao de estoque:', err);
+        alert('Nao foi possivel gravar a movimentacao agora. Tente novamente.');
+        return;
+    }
 
     // Save transaction entry
     window.registrarMovimentacaoEstoque({
