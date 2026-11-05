@@ -231,6 +231,8 @@ function financeiroGeraCobranca(item = {}) {
     return true;
 }
 
+window.financeiroGeraCobranca = financeiroGeraCobranca;
+
 function obterDataFinanceiroExibicao(item = {}) {
     if (financeiroEhNotaFiscal(item)) return item.dataEmissao || item.emissao || '';
     return item.vencimento || item.dataEmissao || '';
