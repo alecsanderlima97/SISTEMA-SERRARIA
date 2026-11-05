@@ -2304,120 +2304,128 @@ function ordenarItensPatioTemp() {
     itensPatioTemp = ordenarItensPatio(itensPatioTemp);
 }
 
-// Renderizar lista do pátio exatamente igual ao mockup
+// Renderizar lista do Controle de Produção Geral: blocos por classe > cubagem (maior para menor)
 function renderizarItensPatioTemp() {
-    const tbody = document.getElementById('listaItensPatioTemp');
-    if (!tbody) return;
+    const lista = document.getElementById('listaItensPatioTemp');
+    if (!lista) return;
 
     ordenarItensPatioTemp();
 
     if (itensPatioTemp.length === 0) {
         itensPatioSelecionados.clear();
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
-                    Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.
-                </td>
-            </tr>
-        `;
+        lista.innerHTML = `<div class="cp-vazio">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</div>`;
         atualizarConsolidatedStats();
         atualizarResumoSelecaoPatio();
         return;
     }
 
-    let html = '';
-    let ultimaChaveCubagem = '';
+    const fmtInt = n => (Number(n) || 0).toLocaleString('pt-BR');
+    const fmtM3 = n => formatDecimalMockup(Number(n) || 0);
+    const classes = new Map();
     itensPatioTemp.forEach(item => {
-        // Tag badge da classe
-        let classeBadge = '';
-        const numeroClasse = obterNumeroClasse(item.classe);
-        if (numeroClasse === 1) {
-            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1&ordf;</span>`;
-        } else if (numeroClasse === 2) {
-            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2&ordf;</span>`;
-        } else {
-            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3&ordf;</span>`;
-        }
-
-        const chaveCubagem = `${obterNumeroClasse(item.classe)}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
-        const primeiraCubagem = chaveCubagem !== ultimaChaveCubagem;
-        ultimaChaveCubagem = chaveCubagem;
-        const classeHtml = primeiraCubagem ? classeBadge : '<span style="color:#e2e8f0; font-weight:900;">↳</span>';
-        const corClasseCubagem = coresClasseFluxo(item.classe).color;
-        const configTexto = `${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m³`;
-        const etiquetaIcone = item.etiquetado
-            ? '<span title="Etiqueta impressa" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(22,163,74,.14); color:#16a34a; font-size:.72rem; margin-left:6px;"><i class="fa-solid fa-tag"></i></span>'
-            : '';
-        const ultimoUso = item.ultimoUsoRomaneio;
-        const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
-        const mostrarUsoRomaneio = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000;
-        const usoRomaneioHtml = mostrarUsoRomaneio ? `<div style="margin-top:4px; color:#0f766e; font-size:.72rem; font-weight:800;"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>` : '';
-        const medidasHtml = primeiraCubagem
-            ? `
-                <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}${etiquetaIcone}</div>
-                <div class="patio-lista-config">
-                    <span>*</span>
-                    <span>${configTexto}</span>
-                </div>${usoRomaneioHtml}`
-            : `
-                <div class="patio-lista-config">
-                    <span>*</span>
-                    <span>${configTexto}${etiquetaIcone}</span>
-                </div>${usoRomaneioHtml}`;
-
-        html += `
-            <tr class="patio-lista-row ${item.id === itemPatioEditandoId ? 'patio-linha-editando' : ''}">
-                <td class="hide-on-print" style="text-align:center;">
-                    <input type="checkbox" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)" title="Selecionar para imprimir" style="width:18px; height:18px; accent-color:#16a34a;">
-                </td>
-                <!-- CLASSE -->
-                <td>
-                    ${classeHtml}
-                </td>
-                <!-- MEDIDAS + CONFIGURACAO DO PACOTE -->
-                <td>
-                    ${medidasHtml}
-                </td>
-                <!-- PACOTES -->
-                <td>
-                    <div class="patio-lista-numero">${item.pacotes}</div>
-                </td>
-                <!-- TOTAL PECAS -->
-                <td>
-                    <div class="patio-lista-numero">${item.totalPecas || 0}</div>
-                    <small>pçs</small>
-                </td>
-                <!-- VOLUME TOTAL -->
-                <td>
-                    <div class="patio-lista-numero patio-lista-volume">
-                        <span>${formatDecimalMockup(item.volume)}</span>
-                    </div>
-                    <small>(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
-                </td>
-                <!-- AÇÕES (Mockup buttons) -->
-                <td class="hide-on-print" style="min-width:225px;">
-                    <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
-                        ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
-                        ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
-                        <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar este pacote e sua configuracao">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button type="button" onclick="imprimirEtiquetaItemPatio('${item.id}')" style="background:none; border:none; color: #16a34a; cursor:pointer; font-size: 1rem; transition: color 0.15s;" title="Imprimir Etiqueta">
-                            <i class="fa-solid fa-print"></i>
-                        </button>
-                        <button type="button" onclick="removerLinhaPatio('${item.id}')" style="background:none; border:none; color: #94a3b8; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="Excluir Lote">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
+        const numero = obterNumeroClasse(item.classe) || 3;
+        if (!classes.has(numero)) classes.set(numero, new Map());
+        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        const grupos = classes.get(numero);
+        if (!grupos.has(chave)) grupos.set(chave, []);
+        grupos.get(chave).push(item);
     });
 
-    tbody.innerHTML = html;
+    const somar = itens => itens.reduce((acc, item) => {
+        acc.pacotes += Number(item.pacotes) || 0;
+        acc.pecas += Number(item.totalPecas) || (Number(item.pacotes) || 0) * (obterDetalhesPacoteEtiqueta(item).totalPecas || Number(item.pecas) || 0);
+        acc.volume += Number(item.volume) || 0;
+        return acc;
+    }, { pacotes: 0, pecas: 0, volume: 0 });
+
+    const linhaHtml = item => {
+        const d = obterDetalhesPacoteEtiqueta(item);
+        const amarras = Number(d.amarras) || 0;
+        const config = `(${d.alturas || 0}×${d.largura || 0})${amarras ? ` + ${amarras}<small class="fp-am">am</small>` : ''}`;
+        const pcPacote = d.totalPecas || item.pecas || 0;
+        const totalPc = Number(item.totalPecas) || (Number(item.pacotes) || 0) * pcPacote;
+        const volUn = Number(item.volumeUnidade) || ((Number(item.pacotes) || 0) ? (Number(item.volume) || 0) / Number(item.pacotes) : 0);
+        const etiqueta = item.etiquetado ? '<span class="cp-etiqueta" title="Etiqueta impressa"><i class="fa-solid fa-tag"></i> etiquetado</span>' : '';
+        const ultimoUso = item.ultimoUsoRomaneio;
+        const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
+        const usoHtml = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000
+            ? `<div class="cp-uso"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>`
+            : '';
+        return `
+            <div class="cp-linha ${item.id === itemPatioEditandoId ? 'patio-linha-editando' : ''}">
+                <label class="cp-sel hide-on-print" title="Selecionar">
+                    <input type="checkbox" data-patio-sel="${item.id}" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)">
+                </label>
+                <div class="cp-info">
+                    <div class="fp-linha-principal">
+                        <span class="fp-qtd-pacotes"><b>${fmtInt(item.pacotes)}</b> ${Number(item.pacotes) === 1 ? 'pacote' : 'pacotes'}</span>
+                        <span class="fp-config">${config}</span>
+                        ${etiqueta}
+                    </div>
+                    <div class="fp-qtd">${fmtInt(pcPacote)} pç/pacote · ${fmtInt(totalPc)} pç · ${fmtM3(item.volume)} m³ <span class="cp-un">(${fmtM3(volUn)} m³/pct)</span></div>
+                    ${usoHtml}
+                </div>
+                <div class="cp-acoes hide-on-print">
+                    <button type="button" class="fp-btn-qtd" onclick="alterarPacotesPatio('${item.id}', -1)" title="Diminuir 1 pacote" aria-label="Diminuir 1 pacote">−1</button>
+                    <button type="button" class="fp-btn-qtd" onclick="alterarPacotesPatio('${item.id}', 1)" title="Aumentar 1 pacote" aria-label="Aumentar 1 pacote">+1</button>
+                    <button type="button" class="fp-btn-editar" onclick="editarItemPatio('${item.id}')" title="Editar esta linha" aria-label="Editar esta linha"><i class="fa-solid fa-pen"></i> Editar</button>
+                    <button type="button" class="cp-btn-etiqueta" onclick="imprimirEtiquetaItemPatio('${item.id}')" title="Imprimir etiqueta" aria-label="Imprimir etiqueta"><i class="fa-solid fa-print"></i> Etiqueta</button>
+                    <button type="button" class="fp-btn-excluir" onclick="removerLinhaPatio('${item.id}')" title="Excluir esta linha" aria-label="Excluir esta linha"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                </div>
+            </div>`;
+    };
+
+    let html = '';
+    [...classes.keys()].sort((a, b) => a - b).forEach(numero => {
+        const grupos = classes.get(numero);
+        const todos = [...grupos.values()].flat();
+        const tc = somar(todos);
+        let gruposHtml = '';
+        grupos.forEach(itens => {
+            const ref = itens[0];
+            const t = somar(itens);
+            const ids = itens.map(i => i.id);
+            gruposHtml += `
+                <section class="fp-grupo cp-grupo">
+                    <header class="cp-grupo-topo">
+                        <div>
+                            <div class="fp-cubagem">${formatDecimal(ref.espessura, 1)} × ${formatDecimal(ref.largura, 1)} × ${formatDecimal(ref.comprimento, 2)}</div>
+                            <div class="fp-grupo-total"><b>${fmtInt(t.pacotes)}</b> pct · ${fmtInt(t.pecas)} pç · <b>${fmtM3(t.volume)}</b> m³</div>
+                        </div>
+                        <div class="cp-grupo-acoes hide-on-print">
+                            <button type="button" class="cp-btn-texto cp-btn-azul" onclick="editarGrupoCubagemPatio('${ref.id}', 'controle')" title="Editar a cubagem inteira"><i class="fa-solid fa-pen-ruler"></i> Editar cubagem</button>
+                            <button type="button" class="cp-btn-texto cp-btn-vermelho" onclick="excluirCubagemControlePatio(${JSON.stringify(ids).replace(/"/g, '&quot;')})" title="Excluir a cubagem inteira"><i class="fa-solid fa-trash-can"></i> Excluir cubagem</button>
+                        </div>
+                    </header>
+                    <div class="cp-linhas">${itens.map(linhaHtml).join('')}</div>
+                </section>`;
+        });
+        html += `
+            <div class="fp-classe fp-classe-n${numero} cp-classe">
+                <div class="fp-classe-tit">
+                    <span class="fp-classe-badge">${numero}ª CLASSE</span>
+                    <span class="fp-classe-tot"><b>${fmtInt(tc.pacotes)}</b> pct · ${fmtInt(tc.pecas)} pç · <b>${fmtM3(tc.volume)}</b> m³</span>
+                </div>
+                <div class="fp-classe-lista">${gruposHtml}</div>
+            </div>`;
+    });
+
+    lista.innerHTML = html;
     atualizarResumoSelecaoPatio();
     atualizarConsolidatedStats();
 }
+
+window.excluirCubagemControlePatio = async function(ids) {
+    const alvo = new Set((ids || []).filter(id => itensPatioTemp.some(item => item.id === id)));
+    if (!alvo.size) return;
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir a cubagem inteira (${alvo.size} linha(s)) da lista do Patio?`);
+    if (!autorizado) return;
+    const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
+    itensPatioTemp = itensPatioTemp.filter(item => !alvo.has(item.id));
+    alvo.forEach(id => itensPatioSelecionados.delete(id));
+    renderizarItensPatioTemp();
+    registrarDesfazerListaPatio(itensAnteriores, 'Cubagem removida da lista do Patio.');
+};
 
 // Atualizar estatísticas dos cards em tempo real
 function atualizarConsolidatedStats() {
