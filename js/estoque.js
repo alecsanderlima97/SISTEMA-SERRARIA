@@ -196,9 +196,8 @@ async function aplicarSaldoEstoque(item, delta, opcoes = {}) {
         const quantidade = opcoes.absoluto !== undefined ? Number(opcoes.absoluto) : Number(item.quantidade || 0) + Number(delta || 0);
         atualizado = { ...item, ...(opcoes.campos || {}), quantidade, atualizadoEm: new Date().toISOString() };
     }
-    itensEstoque = obterEstoque();
     const lista = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
-    const base = lista.length ? lista : itensEstoque;
+    const base = lista.length ? lista : [...(itensEstoque || [])];
     const idx = base.findIndex(i => i.id === item.id);
     if (idx >= 0) base[idx] = { ...base[idx], ...atualizado }; else base.push(atualizado);
     salvarEstoque(base);
@@ -490,7 +489,9 @@ window.confirmarEntradaNotaFiscalEstoque = async function() {
                 });
             }
         }
-        salvarEstoque(itensEstoque);
+        const listaLocal = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+        movimentos.filter(m => m.novo && !listaLocal.some(i => i.id === m.novo.id)).forEach(m => listaLocal.push(m.novo));
+        salvarEstoque(listaLocal);
         for (const movimento of movimentos) {
             const linha = movimento.linha;
             await window.registrarMovimentacaoEstoque({ tipo: 'ENTRADA', itemId: movimento.itemId, itemNome: linha.descricao, categoria: linha.categoria, quantidade: movimento.quantidadeEstoque, unitario: movimento.unitarioEstoque, observacao: `Entrada por NF-e ${nota.numero || 'sem numero'}${nota.serie ? ` serie ${nota.serie}` : ''} · ${nota.emitente || 'emitente nao informado'} · codigo ${linha.codigo || '-'} · NCM ${linha.ncm || '-'} · origem XML` });
