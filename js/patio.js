@@ -1138,49 +1138,60 @@ function renderizarCardsProducaoPatio(itens) {
     const volumeDe = lista => lista.reduce((soma, item) => soma + (Number(item.volume) || 0), 0);
     const resumoDe = lista => `${pacotesDe(lista)} pct · ${pecasDe(lista)} pç · ${formatDecimalMockup(volumeDe(lista))} m³`;
 
+    const fmtInt = n => Number(n || 0).toLocaleString('pt-BR');
+    const fmtM3 = n => `${formatDecimalMockup(Number(n) || 0)} m³`;
+
+    // Cada classe e um bloco proprio (1a em cima, 2a embaixo...). Dentro dele, cada cubagem mostra
+    // primeiro o total daquela madeira (pacotes, pecas, m3) e depois as configuracoes de pacote.
     box.innerHTML = [...classes.entries()]
         .sort((a, b) => (a[0] || 99) - (b[0] || 99))
         .map(([numero, cubagens]) => {
             const nivel = numero >= 1 && numero <= 3 ? numero : 0;
             const todos = [...cubagens.values()].flatMap(grupo => grupo.itens);
             const cards = [...cubagens.values()].map(grupo => {
-                const pacotes = grupo.itens.map(item => {
+                const linhas = grupo.itens.map(item => {
                     const marcado = itensFluxoPatioSelecionados.has(item.id) ? 'checked' : '';
                     const qtd = Number(item.pacotes) || 0;
+                    const d = obterDetalhesPacoteEtiqueta(item);
+                    const pecasPacote = Number(d.totalPecas || item.pecas || 0);
+                    const config = `${d.alturas || 0} alt × ${d.largura || 0} lado${Number(d.amarras) ? ` + ${d.amarras} amarras` : ''} = ${fmtInt(pecasPacote)} pç/pacote`;
                     return `
                     <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
-                        <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar pacote">
-                        <span class="fp-formula">${formatarResumoPacoteProducao(item).replace(/x/g, '×')}
-                            <small class="fp-qtd">${qtd} pct · ${pecasDe([item])} pç · ${formatDecimalMockup(Number(item.volume) || 0)} m³</small>
-                        </span>
-                        <span class="fp-acoes">
-                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Tirar 1 pacote">−</button>
-                            <button type="button" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar 1 pacote">+</button>
-                            <button type="button" onclick="window.editarCubagemProducaoPatio('${item.id}')">Editar</button>
-                            <button type="button" class="fp-excluir-linha" onclick="window.excluirCubagemProducaoPatio('${item.id}')" aria-label="Excluir esta linha">Excluir</button>
-                        </span>
+                        <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar esta configuração">
+                        <div class="fp-formula">
+                            <span class="fp-config">${config}</span>
+                            <span class="fp-qtd"><b>${qtd}</b> pacote(s) · <b>${fmtInt(pecasDe([item]))}</b> pç · <b>${fmtM3(item.volume)}</b></span>
+                        </div>
+                        <div class="fp-acoes">
+                            <button type="button" class="fp-btn-qtd" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Tirar 1 pacote">−1</button>
+                            <button type="button" class="fp-btn-qtd" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar 1 pacote">+1</button>
+                            <button type="button" class="fp-btn-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')">Editar</button>
+                            <button type="button" class="fp-btn-excluir" onclick="window.excluirCubagemProducaoPatio('${item.id}')" aria-label="Excluir só esta configuração">Excluir</button>
+                        </div>
                     </div>`;
                 }).join('');
                 return `
                 <section class="fp-grupo">
                     <header class="fp-grupo-head">
-                        <span class="fp-cubagem">${grupo.cubagem}</span>
-                        <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar pacote com esta cubagem" title="Adicionar pacote com esta cubagem">+</button>
+                        <div class="fp-grupo-titulo">
+                            <span class="fp-cubagem">${grupo.cubagem}</span>
+                            <span class="fp-grupo-total"><b>${fmtInt(pacotesDe(grupo.itens))}</b> pacotes · <b>${fmtInt(pecasDe(grupo.itens))}</b> pç · <b>${fmtM3(volumeDe(grupo.itens))}</b></span>
+                        </div>
+                        <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar nova configuração com esta cubagem" title="Adicionar nova configuração com esta cubagem">+</button>
                     </header>
-                    ${pacotes}
-                    <div class="fp-subtotal"><span>Subtotal da cubagem</span><b>${resumoDe(grupo.itens)}</b></div>
+                    ${linhas}
                     <footer class="fp-grupo-foot">
-                        <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.itens.map(i => i.id).join(',')}')">Excluir grupo</button>
+                        <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.itens.map(i => i.id).join(',')}')">Excluir cubagem inteira</button>
                     </footer>
                 </section>`;
             }).join('');
             return `
             <div class="fp-classe fp-classe-n${nivel}">
                 <div class="fp-classe-tit">
-                    <span class="fp-badge">${numero ? `${numero}ª classe` : 'Sem classe'}</span>
-                    <span class="fp-classe-total">${resumoDe(todos)}</span>
+                    <span class="fp-badge">${numero ? `${numero}ª CLASSE` : 'SEM CLASSE'}</span>
+                    <span class="fp-classe-total">${fmtInt(pacotesDe(todos))} pacotes · ${fmtInt(pecasDe(todos))} pç · ${fmtM3(volumeDe(todos))}</span>
                 </div>
-                ${cards}
+                <div class="fp-classe-lista">${cards}</div>
             </div>`;
         }).join('');
 }
