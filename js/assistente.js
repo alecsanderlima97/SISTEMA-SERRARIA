@@ -103,16 +103,18 @@ function ajudaAssistenteAtiva() {
     return preferenciaLigada(ASSISTANT_HELP_ENABLED_KEY, true);
 }
 
+// Guia da tela removido a pedido do cliente.
 function guiaAssistenteAtivo() {
-    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_SCREEN_GUIDE_KEY, true);
+    return false;
 }
 
 function assistenteFlutuanteAtivo() {
     return preferenciaLigada(ASSISTANT_FLOAT_ENABLED_KEY, true);
 }
 
+// Acompanhante de tela removido a pedido do cliente.
 function companionAssistenteAtivo() {
-    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_COMPANION_ENABLED_KEY, true);
+    return false;
 }
 
 const GUIAS_TELA = {

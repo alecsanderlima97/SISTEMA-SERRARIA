@@ -5,10 +5,6 @@
         <span id="chatFloatUnreadBadge" class="communication-float-badge" hidden>0</span>
     </button>
 
-    <button type="button" id="assistantCompanion" class="assistant-companion hide-on-print" onclick="window.mostrarGuiaDaTelaAtual && window.mostrarGuiaDaTelaAtual(true)" title="Abrir guia da tela atual">
-        <span class="assistant-companion-avatar" aria-hidden="true"><span>O</span></span>
-        <span class="assistant-companion-text"><strong id="assistantCompanionTitle">Guia da tela</strong><small id="assistantCompanionHint">Clique para ver orientações rápidas.</small></span>
-    </button>
 
     <aside id="assistantPanel" class="assistant-panel communication-center hide-on-print" aria-hidden="true">
         <div class="assistant-panel-header">

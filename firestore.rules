@@ -31,7 +31,7 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
         && (
           userDoc().data.cargo in ['ADMIN', 'admin', 'gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL']
-          || userDoc().data.cargoNormalizado in ['admin', 'gerente', 'gerente geral']
+          || userDoc().data.get('cargoNormalizado', '') in ['admin', 'gerente', 'gerente geral']
         );
     }
 
@@ -64,13 +64,13 @@ service cloud.firestore {
       return signedIn()
         && !currentUserAccessBlocked()
         && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
-        && !(userDoc().data.cargo in ['PENDENTE', 'pendente']);
+        && !(userDoc().data.get('cargo', 'PENDENTE') in ['PENDENTE', 'pendente']);
     }
 
     function userRole() {
-      return userDoc().data.cargoNormalizado != null
-        ? userDoc().data.cargoNormalizado
-        : userDoc().data.cargo;
+      return userDoc().data.get('cargoNormalizado', null) != null
+        ? userDoc().data.get('cargoNormalizado', null)
+        : userDoc().data.get('cargo', 'PENDENTE');
     }
 
     function hasRole(roles) {
@@ -83,33 +83,51 @@ service cloud.firestore {
         && userDoc().data.permissoes[listName] is list;
     }
 
+    // Colecoes que cada tela realmente usa (inclui dependencias: ex. o romaneio le clientes,
+    // produtos e transportes e baixa pacotes do patio). Mantido em sincronia com o codigo das telas.
     function collectionMatchesSections(collection, sections) {
       return
         ((collection in ['clientes']) && 'view-clientes' in sections)
-        || ((collection in ['clientes_subprodutos', 'vendas_subprodutos', 'fechamentos_subprodutos']) && 'view-cavaco' in sections)
-        || ((collection in ['romaneios']) && 'view-romaneio-v2' in sections)
-        || ((collection in ['historico', 'romaneios', 'vendas_subprodutos']) && 'view-historico' in sections)
+        || ((collection in ['clientes', 'clientes_subprodutos', 'vendas_subprodutos', 'fechamentos_subprodutos', 'contas_receber']) && 'view-cavaco' in sections)
+        || ((collection in ['romaneios', 'clientes', 'produtos', 'transportes', 'patio_relatorios', 'contas_receber']) && 'view-romaneio-v2' in sections)
+        || ((collection in ['historico', 'romaneios', 'vendas_subprodutos', 'clientes']) && 'view-historico' in sections)
         || ((collection in ['transportes']) && 'view-transportes' in sections)
-        || ((collection in ['empreiteiros', 'entradas', 'fechamentos_salvos']) && 'view-entrada' in sections)
-        || ((collection in ['mapa_matos']) && 'view-mapa' in sections)
+        || ((collection in ['empreiteiros', 'entradas', 'fechamentos_salvos', 'frotas', 'funcionarios', 'mapa_matos']) && 'view-entrada' in sections)
+        || ((collection in ['mapa_matos', 'entradas']) && 'view-mapa' in sections)
         || ((collection in ['produtos']) && 'view-produtos' in sections)
-        || ((collection in ['estoque', 'estoque_movimentacoes']) && 'view-estoque' in sections)
-        || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes']) && 'view-frotas' in sections)
-        || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais', 'contas_receber']) && 'view-financeiro' in sections)
+        || ((collection in ['estoque', 'estoque_movimentacoes', 'funcionarios']) && 'view-estoque' in sections)
+        || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'frota_relatos']) && 'view-frotas' in sections)
+        || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais', 'contas_receber', 'clientes', 'romaneios', 'funcionarios']) && 'view-financeiro' in sections)
         || ((collection in ['funcionarios']) && 'view-rh' in sections)
         || ((collection in ['agenda']) && 'view-agenda' in sections)
-        || ((collection in ['patio_relatorios']) && ('view-dashboard' in sections || 'view-romaneio-v2' in sections))
+        || ((collection in ['patio_relatorios', 'produtos', 'romaneios']) && 'view-dashboard' in sections)
         || ((collection in ['auditoria_logs']) && 'view-configuracoes' in sections)
         || ((collection in ['usuarios']) && 'view-configuracoes' in sections);
     }
 
+    // Indicadores do Inicio leem as fontes de todas as areas. Liberado so para quem pode ver os
+    // indicadores (sem matriz de subsecoes para o Inicio = acesso completo, igual ao sistema).
+    function canReadDashboardIndicators(collection) {
+      return collection in ['romaneios', 'clientes', 'entradas', 'vendas_subprodutos', 'funcionarios', 'estoque',
+          'financeiro_lancamentos', 'contas_receber', 'fechamentos_subprodutos', 'financeiro_relatorios_mensais']
+        && hasCustomPermissionList('allowedSections')
+        && 'view-dashboard' in userDoc().data.permissoes.allowedSections
+        && (
+          !('allowedSubsections' in userDoc().data.permissoes)
+          || !('view-dashboard' in userDoc().data.permissoes.allowedSubsections)
+          || 'indicadores' in userDoc().data.permissoes.allowedSubsections['view-dashboard']
+        );
+    }
+
     function canReadByCustomPermission(collection) {
-      return hasCustomPermissionList('allowedSections')
+      return isApprovedUser()
+        && hasCustomPermissionList('allowedSections')
         && collectionMatchesSections(collection, userDoc().data.permissoes.allowedSections);
     }
 
     function canWriteByCustomPermission(collection) {
-      return hasCustomPermissionList('writeSections')
+      return isApprovedUser()
+        && hasCustomPermissionList('writeSections')
         && collectionMatchesSections(collection, userDoc().data.permissoes.writeSections);
     }
 
@@ -117,7 +135,7 @@ service cloud.firestore {
       return collection == 'patio_relatorios'
         && isApprovedUser()
         && (
-          hasRole(['empilhaderista', 'EMPILHADEIRISTA', 'Empilhaderista'])
+          hasRole(['empilhaderista', 'EMPILHADERISTA', 'Empilhaderista', 'empilhadeirista', 'EMPILHADEIRISTA', 'Empilhadeirista'])
           || (
             'permissoes' in userDoc().data
             && 'allowedSections' in userDoc().data.permissoes
@@ -138,7 +156,7 @@ service cloud.firestore {
     }
 
     function canAccessFrotasData(collection) {
-      return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'estoque', 'estoque_movimentacoes', 'financeiro_lancamentos']
+      return collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'frota_relatos', 'estoque', 'estoque_movimentacoes', 'financeiro_lancamentos']
         && isApprovedUser()
         && 'permissoes' in userDoc().data
         && 'allowedSections' in userDoc().data.permissoes
@@ -146,7 +164,8 @@ service cloud.firestore {
     }
 
     function canDeleteByCustomPermission(collection) {
-      return hasCustomPermissionList('deleteSections')
+      return isApprovedUser()
+        && hasCustomPermissionList('deleteSections')
         && collectionMatchesSections(collection, userDoc().data.permissoes.deleteSections);
     }
 
@@ -171,6 +190,7 @@ service cloud.firestore {
         'frotas',
         'frota_abastecimentos',
         'frota_manutencoes',
+            'frota_relatos',
         'financeiro_lancamentos',
         'financeiro_relatorios_mensais',
         'contas_receber'
@@ -179,9 +199,9 @@ service cloud.firestore {
 
     function canReadCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
-        || (signedIn() && isOperationalCollection(collection))
         || canAccessFrotasData(collection)
         || canReadByCustomPermission(collection)
+        || (isApprovedUser() && canReadDashboardIndicators(collection))
         || (
         isApprovedUser() && (
           hasRole(['patrao', 'PATRÃO', 'Patrao', 'PATRÃO'])
@@ -189,17 +209,27 @@ service cloud.firestore {
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes',
+            'frota_relatos',
             'estoque',
             'estoque_movimentacoes',
             'financeiro_lancamentos'
           ])
           || (hasRole(['muqueiro', 'MUQUEIRO', 'Muqueiro']) && collection in [
             'empreiteiros',
-            'entradas'
+            'entradas',
+            'fechamentos_salvos',
+            'frotas',
+            'funcionarios'
+          ])
+          || (hasRole(['empilhaderista', 'EMPILHADERISTA', 'Empilhaderista', 'empilhadeirista', 'EMPILHADEIRISTA', 'Empilhadeirista']) && collection in [
+            'patio_relatorios',
+            'produtos',
+            'romaneios'
           ])
           || (hasRole(['estoquista', 'ESTOQUISTA', 'Estoquista']) && collection in [
             'estoque',
             'estoque_movimentacoes',
+            'funcionarios',
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes'
@@ -224,6 +254,7 @@ service cloud.firestore {
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes',
+            'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
             'contas_receber'
@@ -234,7 +265,6 @@ service cloud.firestore {
 
     function canWriteCollection(collection) {
       return isAdmin() || isBootstrapAdmin()
-        || (signedIn() && isOperationalCollection(collection))
         || canWriteFluxoPatio(collection)
         || canAccessFrotasData(collection)
         || canWriteByCustomPermission(collection)
@@ -244,13 +274,15 @@ service cloud.firestore {
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes',
+            'frota_relatos',
             'estoque',
             'estoque_movimentacoes',
             'financeiro_lancamentos'
           ])
           || (hasRole(['muqueiro', 'MUQUEIRO', 'Muqueiro']) && collection in [
             'empreiteiros',
-            'entradas'
+            'entradas',
+            'fechamentos_salvos'
           ])
           || (hasRole(['estoquista', 'ESTOQUISTA', 'Estoquista']) && collection in [
             'estoque',
@@ -276,6 +308,7 @@ service cloud.firestore {
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes',
+            'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
             'contas_receber'
@@ -308,6 +341,7 @@ service cloud.firestore {
             'frotas',
             'frota_abastecimentos',
             'frota_manutencoes',
+            'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
             'contas_receber'
@@ -410,7 +444,7 @@ service cloud.firestore {
 
     match /{collection}/{document} {
       allow read: if canReadCollection(collection)
-        && (sameEmpresaOnRead() || collection == 'patio_relatorios' || (signedIn() && isOperationalCollection(collection)))
+        && (sameEmpresaOnRead() || collection == 'patio_relatorios' || (isApprovedUser() && isOperationalCollection(collection)))
         && collection in [
           'clientes',
           'clientes_subprodutos',
@@ -431,13 +465,14 @@ service cloud.firestore {
           'frotas',
           'frota_abastecimentos',
           'frota_manutencoes',
+            'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
           'contas_receber'
         ];
 
       allow create, update: if canWriteCollection(collection)
-        && (sameEmpresaOnWrite() || collection == 'patio_relatorios' || (signedIn() && isOperationalCollection(collection)))
+        && (sameEmpresaOnWrite() || collection == 'patio_relatorios' || (isApprovedUser() && isOperationalCollection(collection)))
         && collection in [
           'clientes',
           'clientes_subprodutos',
@@ -458,6 +493,7 @@ service cloud.firestore {
           'frotas',
           'frota_abastecimentos',
           'frota_manutencoes',
+            'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
           'contas_receber'
@@ -485,6 +521,7 @@ service cloud.firestore {
           'frotas',
           'frota_abastecimentos',
           'frota_manutencoes',
+            'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
           'contas_receber'

@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
         const nextRefreshToken = tokenData.refresh_token || refreshToken;
 
         const graphUrl = new URL('https://graph.microsoft.com/v1.0/me/messages');
-        graphUrl.searchParams.set('$top', '12');
+        graphUrl.searchParams.set('$top', String(Math.min(Math.max(Number(req.query?.limite || 12), 1), 40)));
         graphUrl.searchParams.set('$orderby', 'receivedDateTime desc');
         graphUrl.searchParams.set('$select', 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview');
 

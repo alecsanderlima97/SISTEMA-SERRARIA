@@ -173,15 +173,38 @@ function obterEstoque() {
     return itensEstoque;
 }
 
+// Atualiza so a copia local. Antes, gravava TODOS os itens no banco a partir desta copia:
+// um aparelho com copia velha (ou com os itens padrao) sobrescrevia os saldos reais.
 function salvarEstoque(dados) {
     itensEstoque = dados || [];
     localStorage.setItem(ESTOQUE_KEY, JSON.stringify(itensEstoque));
-    if (window.FS) {
-        itensEstoque.forEach(item => window.FS.setDoc('estoque', item.id, item).catch(err => {
-            console.error('Erro ao sincronizar item de estoque:', err);
-        }));
-    }
 }
+
+// Grava um item (cadastro/dados, sem mexer no saldo de outros aparelhos).
+async function salvarItemEstoqueNuvem(item) {
+    if (!window.FS || !item?.id) return;
+    await window.FS.setDoc('estoque', item.id, item);
+}
+
+// Altera o saldo pelo banco (transacao) e atualiza a copia local com o valor real.
+async function aplicarSaldoEstoque(item, delta, opcoes = {}) {
+    if (!item) return null;
+    let atualizado;
+    if (window.FS?.ajustarQuantidadeEstoque) {
+        atualizado = await window.FS.ajustarQuantidadeEstoque(item.id, delta, { itemBase: item, ...opcoes });
+    } else {
+        const quantidade = opcoes.absoluto !== undefined ? Number(opcoes.absoluto) : Number(item.quantidade || 0) + Number(delta || 0);
+        atualizado = { ...item, ...(opcoes.campos || {}), quantidade, atualizadoEm: new Date().toISOString() };
+    }
+    const lista = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+    const base = lista.length ? lista : [...(itensEstoque || [])];
+    const idx = base.findIndex(i => i.id === item.id);
+    if (idx >= 0) base[idx] = { ...base[idx], ...atualizado }; else base.push(atualizado);
+    salvarEstoque(base);
+    Object.assign(item, atualizado);
+    return atualizado;
+}
+window.aplicarSaldoEstoque = aplicarSaldoEstoque;
 
 async function carregarDadosDoFirestore() {
     try {
@@ -360,7 +383,7 @@ function renderizarPreviaNotaFiscalEstoque() {
     if (!el || !nota) return;
     const identificacao = [nota.numero ? `NF ${nota.numero}` : 'NF sem numero', nota.serie ? `serie ${nota.serie}` : '', nota.emitente || 'Emitente nao informado'].filter(Boolean).join(' · ');
     el.style.display = 'block';
-    el.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;"><div><strong style="color:white;">${escaparHtmlEstoque(identificacao)}</strong><small style="display:block; color:var(--text-muted); margin-top:4px;">${escaparHtmlEstoque(nota.arquivo)}${nota.chave ? ` · chave ${escaparHtmlEstoque(nota.chave)}` : ''}</small></div><span style="color:var(--text-muted); font-size:0.82rem;">${nota.itens.length} item(ns) identificado(s)</span></div><div class="estoque-nf-preview"><table><thead><tr><th><input type="checkbox" id="checkTodosItensNotaFiscal" checked title="Selecionar todos"></th><th>PRODUTO</th><th>CODIGO / NCM</th><th>QTD.</th><th>UN.</th><th>VALOR UN.</th><th>CATEGORIA</th><th>CLASSIFICACAO</th></tr></thead><tbody>${nota.itens.map((item, indice) => `<tr><td><input type="checkbox" class="check-item-nota-fiscal" data-index="${indice}" ${item.selecionado ? 'checked' : ''}></td><td><input type="text" class="nf-descricao" data-index="${indice}" value="${escaparHtmlEstoque(item.descricao)}" aria-label="Descricao do item"></td><td style="color:var(--text-muted);">${escaparHtmlEstoque(item.codigo || '-')}<small style="display:block;">NCM ${escaparHtmlEstoque(item.ncm || '-')}</small></td><td><input type="number" class="nf-quantidade" data-index="${indice}" min="0.0001" step="0.0001" value="${item.quantidade}" aria-label="Quantidade"></td><td>${escaparHtmlEstoque(item.unidade)}</td><td><input type="number" class="nf-unitario" data-index="${indice}" min="0" step="0.0001" value="${item.unitario.toFixed(4)}" aria-label="Valor unitario"></td><td><select class="nf-categoria" data-index="${indice}" aria-label="Categoria">${opcoesCategoriaNotaFiscalEstoque(item.categoria)}</select></td><td><span class="estoque-nf-confidence ${item.confianca === 'alta' ? 'high' : 'low'}">${item.confianca === 'alta' ? 'Automatica' : 'Revisar'}</span><small style="display:block; color:var(--text-muted); margin-top:3px;">${escaparHtmlEstoque(item.motivo)}</small></td></tr>`).join('')}</tbody></table></div><div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:16px;"><button type="button" class="btn-secondary" onclick="window.descartarNotaFiscalEstoque()" style="padding:10px 15px;"><i class="fa-solid fa-xmark"></i> Descartar leitura</button><button type="button" class="btn-primary" onclick="window.confirmarEntradaNotaFiscalEstoque()" style="padding:10px 17px;"><i class="fa-solid fa-boxes-stacked"></i> Confirmar entrada no estoque</button></div>`;
+    el.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;"><div><strong style="color:white;">${escaparHtmlEstoque(identificacao)}</strong><small style="display:block; color:var(--text-muted); margin-top:4px;">${escaparHtmlEstoque(nota.arquivo)}${nota.chave ? ` · chave ${escaparHtmlEstoque(nota.chave)}` : ''}</small></div><span style="color:var(--text-muted); font-size:0.82rem;">${nota.itens.length} item(ns) identificado(s)</span></div><div class="estoque-nf-preview"><table><thead><tr><th><input type="checkbox" id="checkTodosItensNotaFiscal" checked title="Selecionar todos"></th><th>PRODUTO</th><th>CODIGO / NCM</th><th>QTD.</th><th>UN.</th><th>VALOR UN.</th><th>CATEGORIA</th><th>CLASSIFICACAO</th></tr></thead><tbody>${nota.itens.map((item, indice) => `<tr><td><input type="checkbox" class="check-item-nota-fiscal" data-index="${indice}" ${item.selecionado ? 'checked' : ''}></td><td><input type="text" class="nf-descricao" data-index="${indice}" value="${escaparHtmlEstoque(item.descricao)}" aria-label="Descricao do item"></td><td style="color:var(--text-muted);">${escaparHtmlEstoque(item.codigo || '-')}<small style="display:block;">NCM ${escaparHtmlEstoque(item.ncm || '-')}</small></td><td><input type="number" class="nf-quantidade" data-index="${indice}" min="0.0001" step="0.0001" value="${item.quantidade}" aria-label="Quantidade"></td><td>${escaparHtmlEstoque(item.unidade)}</td><td><input type="number" class="nf-unitario" data-index="${indice}" min="0" step="0.0001" value="${(Number(item.unitario) || 0).toFixed(4)}" aria-label="Valor unitario"></td><td><select class="nf-categoria" data-index="${indice}" aria-label="Categoria">${opcoesCategoriaNotaFiscalEstoque(item.categoria)}</select></td><td><span class="estoque-nf-confidence ${item.confianca === 'alta' ? 'high' : 'low'}">${item.confianca === 'alta' ? 'Automatica' : 'Revisar'}</span><small style="display:block; color:var(--text-muted); margin-top:3px;">${escaparHtmlEstoque(item.motivo)}</small></td></tr>`).join('')}</tbody></table></div><div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:16px;"><button type="button" class="btn-secondary" onclick="window.descartarNotaFiscalEstoque()" style="padding:10px 15px;"><i class="fa-solid fa-xmark"></i> Descartar leitura</button><button type="button" class="btn-primary" onclick="window.confirmarEntradaNotaFiscalEstoque()" style="padding:10px 17px;"><i class="fa-solid fa-boxes-stacked"></i> Confirmar entrada no estoque</button></div>`;
     document.getElementById('checkTodosItensNotaFiscal')?.addEventListener('change', event => document.querySelectorAll('.check-item-nota-fiscal').forEach(check => { check.checked = event.target.checked; }));
 }
 
@@ -384,8 +407,30 @@ window.processarNotaFiscalEstoque = async function() {
 };
 window.__estoqueNFProcessadorReal = true;
 
+// Recebe o XML de uma NF-e vinda do Financeiro e abre a previa de entrada no Estoque
+// (mesma conferencia da importacao manual: nada entra no estoque sem confirmar).
+window.abrirNotaFiscalNoEstoque = function(xmlTexto, nomeArquivo = 'nfe.xml', financeiroId = null) {
+    window.__nfOrigemFinanceiroId = financeiroId;
+    try {
+        notaFiscalPendenteEstoque = analisarXmlNotaFiscalEstoque(xmlTexto, nomeArquivo);
+    } catch (error) {
+        alert(error.message || 'Nao foi possivel ler o XML desta nota.');
+        return false;
+    }
+    const link = document.querySelector('a[data-target="view-estoque"]');
+    if (link) link.click();
+    setTimeout(() => {
+        window.switchTabEstoque?.('nota-fiscal');
+        renderizarPreviaNotaFiscalEstoque();
+        definirStatusNotaFiscalEstoque('Nota recebida do Financeiro. Revise descricao, quantidade e categoria antes de confirmar.', 'ok');
+        document.getElementById('previaNotaFiscalEstoque')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+    return true;
+};
+
 window.descartarNotaFiscalEstoque = function() {
     notaFiscalPendenteEstoque = null;
+    window.__nfOrigemFinanceiroId = null;
     const previa = document.getElementById('previaNotaFiscalEstoque');
     if (previa) { previa.innerHTML = ''; previa.style.display = 'none'; }
     definirStatusNotaFiscalEstoque('Leitura descartada. Nenhuma alteracao foi feita no estoque.', 'ok');
@@ -423,22 +468,30 @@ window.confirmarEntradaNotaFiscalEstoque = async function() {
             const codigoNormalizado = normalizarTextoEstoque(linha.codigo);
             const existente = itensEstoque.find(item => (codigoNormalizado && normalizarTextoEstoque(item.codigoProduto) === codigoNormalizado) || (normalizarTextoEstoque(item.nome) === nomeNormalizado && item.categoria === linha.categoria));
             if (existente) {
-                const saldoAnterior = Number(existente.quantidade || 0);
-                const saldoNovo = saldoAnterior + quantidadeEstoque;
-                existente.unitario = saldoNovo > 0 ? ((saldoAnterior * Number(existente.unitario || 0)) + (quantidadeEstoque * unitarioEstoque)) / saldoNovo : unitarioEstoque;
-                existente.quantidade = saldoNovo;
-                existente.atualizadoEm = new Date().toISOString();
-                if (codigoNormalizado) existente.codigoProduto = linha.codigo;
-                if (quantidadeGaloes !== null) existente.quantidadeGaloes = Number(existente.quantidadeGaloes || 0) + quantidadeGaloes;
-                movimentos.push({ linha, itemId: existente.id, quantidadeEstoque, unitarioEstoque });
+                const campos = {};
+                if (codigoNormalizado) campos.codigoProduto = linha.codigo;
+                if (quantidadeGaloes !== null) campos.quantidadeGaloes = Number(existente.quantidadeGaloes || 0) + quantidadeGaloes;
+                movimentos.push({ linha, itemId: existente.id, quantidadeEstoque, unitarioEstoque, existente, campos });
             } else {
                 const novo = { id: 'est_nf_' + Date.now() + '_' + Math.floor(Math.random() * 10000), nome: linha.descricao, categoria: linha.categoria, quantidade: quantidadeEstoque, unitario: unitarioEstoque, limite_alerta: null, unidadeCompra: linha.unidade, codigoProduto: linha.codigo || '', ncm: linha.ncm || '', origemCadastro: 'IMPORTACAO_NFE', ultimaNotaFiscal: nota.numero || '', criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() };
                 if (quantidadeGaloes !== null) { novo.quantidadeGaloes = quantidadeGaloes; novo.litrosPorGalao = litrosPorGalao; }
                 itensEstoque.push(novo);
-                movimentos.push({ linha, itemId: novo.id, quantidadeEstoque, unitarioEstoque });
+                movimentos.push({ linha, itemId: novo.id, quantidadeEstoque, unitarioEstoque, novo });
             }
         });
-        salvarEstoque(itensEstoque);
+        for (const movimento of movimentos) {
+            if (movimento.novo) {
+                await salvarItemEstoqueNuvem(movimento.novo);
+            } else {
+                await aplicarSaldoEstoque(movimento.existente, movimento.quantidadeEstoque, {
+                    campos: movimento.campos,
+                    custoMedioEntrada: movimento.unitarioEstoque
+                });
+            }
+        }
+        const listaLocal = JSON.parse(localStorage.getItem(ESTOQUE_KEY) || '[]');
+        movimentos.filter(m => m.novo && !listaLocal.some(i => i.id === m.novo.id)).forEach(m => listaLocal.push(m.novo));
+        salvarEstoque(listaLocal);
         for (const movimento of movimentos) {
             const linha = movimento.linha;
             await window.registrarMovimentacaoEstoque({ tipo: 'ENTRADA', itemId: movimento.itemId, itemNome: linha.descricao, categoria: linha.categoria, quantidade: movimento.quantidadeEstoque, unitario: movimento.unitarioEstoque, observacao: `Entrada por NF-e ${nota.numero || 'sem numero'}${nota.serie ? ` serie ${nota.serie}` : ''} · ${nota.emitente || 'emitente nao informado'} · codigo ${linha.codigo || '-'} · NCM ${linha.ncm || '-'} · origem XML` });
@@ -449,6 +502,10 @@ window.confirmarEntradaNotaFiscalEstoque = async function() {
         document.getElementById('previaNotaFiscalEstoque').innerHTML = '';
         document.getElementById('previaNotaFiscalEstoque').style.display = 'none';
         definirStatusNotaFiscalEstoque(`${linhas.length} item(ns) confirmado(s) e lancado(s) no estoque.`, 'ok');
+        if (window.__nfOrigemFinanceiroId) {
+            window.marcarEntradaEstoqueFinanceiro?.(window.__nfOrigemFinanceiroId);
+            window.__nfOrigemFinanceiroId = null;
+        }
         agendarRenderEstoque(0);
     } catch (error) {
         console.error('Erro ao confirmar entrada da NF-e:', error);
@@ -601,7 +658,7 @@ function renderizarEstoque() {
     }
 
     tbody.innerHTML = filtrados.map(item => {
-        const total = item.quantidade * item.unitario;
+        const total = (Number(item.quantidade) || 0) * (Number(item.unitario) || 0);
         const limite = item.limite_alerta !== undefined && item.limite_alerta !== null ? item.limite_alerta : (item.categoria === 'DIESEL' ? 1000 : item.categoria === 'LUBRIFICANTES' ? 40 : 3);
         
         let statusBadge = '';
@@ -637,7 +694,7 @@ function renderizarEstoque() {
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">
                     ${limite.toFixed(0)} ${unidade}
                 </td>
-                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: white;">R$ ${item.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 12px 8px; text-align: center; vertical-align: middle; color: white;">R$ ${(Number(item.unitario) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 12px 8px; text-align: center; vertical-align: middle;">
                     <div style="display: flex; gap: 7px; justify-content: center; flex-wrap: nowrap; align-items: center;">
@@ -800,7 +857,7 @@ window.excluirItemEstoque = async function(id) {
             removidoEm: new Date().toISOString()
         };
 
-        if (window.FS) await window.FS.setDoc('estoque', id, itemAtualizado);
+        if (window.FS) await window.FS.updateDoc('estoque', id, { ativo: false, removidoEm: itemAtualizado.removidoEm });
         itensEstoque = todos.length
             ? todos.map(i => i.id === id ? itemAtualizado : i)
             : itensEstoque.map(i => i.id === id ? itemAtualizado : i);
@@ -878,6 +935,7 @@ function obterItemDieselEstoque(criarSeNaoExistir = true) {
         };
         itensEstoque.push(diesel);
         salvarEstoque(itensEstoque);
+        salvarItemEstoqueNuvem(diesel).catch(err => console.error('Erro ao criar item diesel:', err));
     }
 
     return diesel;
@@ -1060,9 +1118,13 @@ window.ajustarNivelTanqueDieselEstoque = async function() {
         return;
     }
 
-    diesel.quantidade = novoNivel;
-    diesel.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
+    try {
+        await aplicarSaldoEstoque(diesel, novoNivel - nivelAnterior, { absoluto: novoNivel });
+    } catch (err) {
+        console.error('Erro ao gravar nivel do tanque:', err);
+        alert('Nao foi possivel gravar o nivel do tanque agora. Tente novamente.');
+        return;
+    }
 
     try {
         await window.registrarMovimentacaoEstoque({
@@ -1142,12 +1204,13 @@ window.salvarReabastecimentoTanqueEstoque = async function() {
         return;
     }
 
-    diesel.nome = descricao || diesel.nome || 'DIESEL COMUM';
-    diesel.categoria = 'DIESEL';
-    diesel.quantidade = novoNivel;
-    diesel.unitario = unit;
-    diesel.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
+    try {
+        await aplicarSaldoEstoque(diesel, qtd, { campos: { nome: descricao || diesel.nome || 'DIESEL COMUM', categoria: 'DIESEL', unitario: unit } });
+    } catch (err) {
+        console.error('Erro ao gravar reabastecimento:', err);
+        alert('Nao foi possivel gravar o reabastecimento agora. Tente novamente.');
+        return;
+    }
     salvarConfigTanqueDiesel({ descricaoDiesel: diesel.nome });
 
     try {
@@ -1277,10 +1340,15 @@ window.registrarSaidaEstoqueFrota = async function({
         return null;
     }
 
-    item.quantidade -= qtd;
-    item.atualizadoEm = new Date().toISOString();
-    salvarEstoque(itensEstoque);
-    if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+    try {
+        await aplicarSaldoEstoque(item, -qtd, { minimo: 0 });
+    } catch (err) {
+        if (err.message === 'SALDO_INSUFICIENTE') {
+            alert(`Não é possível abastecer ${qtd.toLocaleString('pt-BR')} L. Saldo atual de ${item.nome}: ${Number(err.saldoAtual || 0).toLocaleString('pt-BR')} L (outro lançamento foi feito antes).`);
+            return null;
+        }
+        throw err;
+    }
 
     await window.registrarMovimentacaoEstoque({
         tipo: 'SAÍDA',
@@ -1376,14 +1444,13 @@ window.excluirMovimentacaoEstoque = async function(id) {
         itensEstoque = obterEstoque();
         const item = itensEstoque.find(i => i.id === mov.itemId);
         if (item) {
+            let delta = 0;
             if (mov.tipo === 'ENTRADA') {
-                item.quantidade = Number(item.quantidade || 0) - Number(mov.quantidade || 0);
+                delta = -Number(mov.quantidade || 0);
             } else if ((mov.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'SAIDA') {
-                item.quantidade = Number(item.quantidade || 0) + Number(mov.quantidade || 0);
+                delta = Number(mov.quantidade || 0);
             }
-            item.atualizadoEm = new Date().toISOString();
-            salvarEstoque(itensEstoque);
-            if (window.FS) await window.FS.setDoc('estoque', item.id, item);
+            if (delta) await aplicarSaldoEstoque(item, delta);
         } else {
             alert('Aviso: o item original foi excluido. O lancamento sera removido, mas o estoque nao pode ser revertido.');
         }
@@ -1550,7 +1617,7 @@ window.onChangeMovFuncionario = function() {
 };
 
 // Form submit event for new manual transaction
-function salvarNovaMovimentacaoManual(e) {
+async function salvarNovaMovimentacaoManual(e) {
     e.preventDefault();
 
     const tipo = document.getElementById('movTipo').value;
@@ -1599,16 +1666,16 @@ function salvarNovaMovimentacaoManual(e) {
                 return;
             }
         }
-        item.quantidade -= quantidade;
-    } else {
-        item.quantidade += quantidade;
     }
 
-    // Save stock changes
-    salvarEstoque(itensEstoque);
-    if (window.FS) window.FS.setDoc('estoque', item.id, item).catch(err => {
-        console.error('Erro ao sincronizar item de estoque:', err);
-    });
+    // Grava o saldo pelo banco (transacao)
+    try {
+        await aplicarSaldoEstoque(item, tipo === 'SAÍDA' ? -quantidade : quantidade);
+    } catch (err) {
+        console.error('Erro ao gravar movimentacao de estoque:', err);
+        alert('Nao foi possivel gravar a movimentacao agora. Tente novamente.');
+        return;
+    }
 
     // Save transaction entry
     window.registrarMovimentacaoEstoque({
@@ -1699,7 +1766,7 @@ window.renderizarMovimentacoesEstoque = function() {
                 <td style="padding: 10px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: white;">
                     ${mov.quantidade.toFixed(1)} ${unidade}
                 </td>
-                <td style="padding: 10px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">R$ ${mov.unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 10px 8px; text-align: center; vertical-align: middle; color: var(--text-muted);">R$ ${(Number(mov.unitario) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 10px 8px; text-align: center; vertical-align: middle; font-weight: bold; color: var(--accent-color);">R$ ${totalVal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td style="padding: 10px 8px; color: #60a5fa; font-weight: 500; text-align: center; vertical-align: middle; line-height: 1.25;">
                     ${mov.frotaPlaca ? `<i class="fa-solid fa-truck-pickup" style="font-size: 0.75rem;"></i> ${mov.frotaPlaca}` : mov.destino || 'Uso Geral'}
