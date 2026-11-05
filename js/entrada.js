@@ -868,7 +868,10 @@ window.importarFeriadosNacionais = async function() {
         alert(`${automaticos.length} feriado(s) nacional(is) de ${ano} foram atualizados. Feriados estaduais e municipais cadastrados foram preservados.`);
     } catch (error) {
         console.error('Erro ao importar feriados nacionais:', error);
-        alert('Não foi possível atualizar os feriados nacionais agora. Seus feriados manuais foram mantidos.');
+        const semPermissao = /permission|insufficient/i.test(String(error?.code || error?.message || ''));
+        alert(semPermissao
+            ? 'Os feriados foram consultados, mas seu usuário não tem permissão para salvar as regras de pagamento. Peça a um gerente ou administrador.'
+            : 'Não foi possível consultar o calendário nacional agora (internet ou serviço fora do ar). Seus feriados manuais foram mantidos.');
     } finally {
         if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Atualizar feriados nacionais'; }
     }

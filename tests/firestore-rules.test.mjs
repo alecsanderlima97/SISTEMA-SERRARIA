@@ -18,7 +18,7 @@ const users = {
 await env.withSecurityRulesDisabled(async c => {
   const db = c.firestore();
   for (const [id,u] of Object.entries(users)) await setDoc(doc(db,'usuarios',id), u);
-  for (const col of ['financeiro_lancamentos','funcionarios','patio_relatorios','clientes','produtos','romaneios','transportes','estoque','frotas','frota_relatos','entradas','fechamentos_salvos','contas_receber'])
+  for (const col of ['financeiro_lancamentos','funcionarios','patio_relatorios','clientes','produtos','romaneios','transportes','estoque','frotas','frota_relatos','entradas','fechamentos_salvos','contas_receber','configuracoes_sistema','estoque_config'])
     await setDoc(doc(db,col,'d1'), { x:1 });
 });
 const cases = [
@@ -37,6 +37,8 @@ const cases = [
   ['muqueiro','w','entradas',true], ['muqueiro','w','fechamentos_salvos',true], ['muqueiro','r','frotas',true], ['muqueiro','r','financeiro_lancamentos',false],
   ['mecanico','w','frota_relatos',true], ['mecanico','r','funcionarios',false],
   ['patrao','r','financeiro_lancamentos',true], ['patrao','w','financeiro_lancamentos',false],
+  ['admin','w','configuracoes_sistema',true], ['muqueiro','r','configuracoes_sistema',true], ['muqueiro','w','configuracoes_sistema',false], ['pendente','r','configuracoes_sistema',false],
+  ['frota_custom','w','estoque_config',true], ['romaneio_custom','w','estoque_config',false],
 ];
 let fail=0;
 for (const [u,op,col,exp] of cases) {

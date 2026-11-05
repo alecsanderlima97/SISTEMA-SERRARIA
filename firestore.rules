@@ -390,6 +390,34 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Regras de pagamento de descarga e feriados (Configuracoes > Regras de pagamento e feriados).
+    // Todos os usuarios aprovados leem (calendario, conferencia e RH usam); so gerente/admin ou quem
+    // tem a subsecao "regras-pagamento" grava.
+    function canEditRegrasPagamento() {
+      return isAdmin() || isBootstrapAdmin()
+        || (isApprovedUser() && hasRole(['gerente', 'GERENTE', 'Gerente Geral', 'GERENTE GERAL', 'gerente geral', 'admin', 'ADMIN']))
+        || (
+          isApprovedUser()
+          && 'permissoes' in userDoc().data
+          && 'allowedSubsections' in userDoc().data.permissoes
+          && 'view-configuracoes' in userDoc().data.permissoes.allowedSubsections
+          && 'regras-pagamento' in userDoc().data.permissoes.allowedSubsections['view-configuracoes']
+        );
+    }
+
+    match /configuracoes_sistema/{document} {
+      allow read: if isApprovedUser() || isAdmin() || isBootstrapAdmin();
+      allow create, update: if canEditRegrasPagamento();
+      allow delete: if isAdmin() || isBootstrapAdmin();
+    }
+
+    // Configuracao do tanque de diesel: mesmo acesso de gravacao do estoque.
+    match /estoque_config/{document} {
+      allow read: if isApprovedUser() || isAdmin() || isBootstrapAdmin();
+      allow create, update: if canWriteCollection('estoque');
+      allow delete: if isAdmin() || isBootstrapAdmin();
+    }
+
     match /mapa_matos/{document} {
       allow read: if (isAdmin() || isBootstrapAdmin() || canReadByCustomPermission('mapa_matos'))
         && sameEmpresaOnRead();
