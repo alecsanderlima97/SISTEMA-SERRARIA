@@ -906,15 +906,12 @@ function obterBoletosAVencerFinanceiro() {
         .sort((a, b) => a.diasVencimento - b.diasVencimento || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR'));
 }
 
+// Lembretes de vencimento so aparecem para quem tem acesso ao Financeiro no seu nivel de permissao.
+// (Exibicao apenas; o acesso aos dados continua protegido pelas regras do Firestore.)
 function usuarioPodeVerLembreteFinanceiro() {
-    const emailsPermitidos = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
-    const email = String(
-        window.App?.userData?.email ||
-        window.auth?.currentUser?.email ||
-        document.getElementById('perfilEmail')?.value ||
-        ''
-    ).toLowerCase().trim();
-    return emailsPermitidos.includes(email);
+    const permissoes = window.App?.userPermissions;
+    const secoes = Array.isArray(permissoes?.allowedSections) ? permissoes.allowedSections : [];
+    return secoes.includes('view-financeiro');
 }
 
 function textoVencimentoLembrete(item) {
@@ -1054,6 +1051,20 @@ function mostrarLembretesFinanceiros() {
     linkFinanceiro?.classList.add('financeiro-menu-alerta');
     document.body.classList.add('financeiro-tem-alerta');
 }
+
+// Chamado pelo core quando as permissoes do usuario logado sao carregadas/alteradas:
+// quem tem Financeiro ve os lembretes ja no login; quem nao tem, nao ve nada.
+window.atualizarLembretesFinanceirosPorPermissao = async function() {
+    if (usuarioPodeVerLembreteFinanceiro() && !financeiroNuvemCarregada && window.FS) {
+        try {
+            const nuvem = await window.FS.getCollection(FINANCEIRO_COLLECTION);
+            if (nuvem.length > 0) salvarLancamentosFinanceiros(nuvem);
+        } catch (error) {
+            console.warn('Lembretes financeiros: usando cache local.', error);
+        }
+    }
+    mostrarLembretesFinanceiros();
+};
 
 window.alternarListaLembretesFinanceiros = function() {
     document.getElementById('btnHeaderNotifications')?.click();

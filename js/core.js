@@ -1490,6 +1490,7 @@ const App = {
                         inicializarMascarasPerfil();
                         atualizarResumoBackup();
                         this.applyPermissionVisibility();
+                        window.atualizarLembretesFinanceirosPorPermissao?.();
                         if (canRunCloudSnapshotForRole(novoCargo) && window.FS?.gerarSnapshotNuvem && !this.cloudSnapshotAgendado) {
                             this.cloudSnapshotAgendado = true;
                             window.setTimeout(() => {

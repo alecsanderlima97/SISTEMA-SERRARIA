@@ -132,21 +132,9 @@
                         </div>
 
                         <div class="config-preferences-grid">
-                            <label class="config-pref-toggle" for="configAjudaVisual">
-                                <span><i class="fa-solid fa-circle-question"></i><strong>Ajuda ao passar o mouse</strong><small>Mostra explicacoes em botoes, indicadores e menus.</small></span>
-                                <input type="checkbox" id="configAjudaVisual" data-pref-key="orquestra_help_enabled" checked>
-                            </label>
-                            <label class="config-pref-toggle" for="configGuiaAutomatico">
-                                <span><i class="fa-solid fa-route"></i><strong>Guia da tela</strong><small>Exibe orientacoes rapidas conforme a aba aberta.</small></span>
-                                <input type="checkbox" id="configGuiaAutomatico" data-pref-key="orquestra_screen_guide_enabled" checked>
-                            </label>
                             <label class="config-pref-toggle" for="configAssistenteFlutuante">
                                 <span><i class="fa-solid fa-brain"></i><strong>Assistente flutuante</strong><small>Mantem o botao de IA disponivel no sistema.</small></span>
                                 <input type="checkbox" id="configAssistenteFlutuante" data-pref-key="orquestra_assistant_float_enabled" checked>
-                            </label>
-                            <label class="config-pref-toggle" for="configAssistenteCompanion">
-                                <span><i class="fa-solid fa-compass"></i><strong>Acompanhante de tela</strong><small>Mostra um lembrete discreto da tela atual.</small></span>
-                                <input type="checkbox" id="configAssistenteCompanion" data-pref-key="orquestra_assistant_companion_enabled" checked>
                             </label>
                             <label class="config-pref-toggle" for="configMovimentoFundo">
                                 <span><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Movimento suave</strong><small>Aplica um movimento discreto na imagem escolhida.</small></span>
