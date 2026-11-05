@@ -488,3 +488,207 @@ body .app-version-footer {
         min-width: 220px;
     }
 }
+
+/* =====================================================================
+   Fluxo do Patio no celular: uma lista por classe, leitura de vendedor
+   Verde so na 1a classe; botoes com cores proprias; linhas separadoras.
+   ===================================================================== */
+@media (max-width: 760px) {
+    #producaoPatioCards .fp-classe {
+        display: block !important;
+        margin: 0 0 18px !important;
+        padding: 0 0 10px !important;
+        border: 2px solid var(--fp-cor) !important;
+        border-radius: 12px !important;
+        background: var(--fp-cor-bg) !important;
+        overflow: hidden;
+    }
+
+    #producaoPatioCards .fp-classe + .fp-classe {
+        border-top: 2px solid var(--fp-cor) !important;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    #producaoPatioCards .fp-classe-tit {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 0 10px !important;
+        padding: 10px 12px !important;
+        background: var(--fp-cor) !important;
+    }
+
+    #producaoPatioCards .fp-classe-tit .fp-badge {
+        background: transparent !important;
+        border: 0 !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
+        font-weight: 800 !important;
+        letter-spacing: .04em;
+        padding: 0 !important;
+    }
+
+    #producaoPatioCards .fp-classe-total {
+        color: #ffffff !important;
+        font-size: .82rem !important;
+        font-weight: 600;
+    }
+
+    /* 2a classe: amarelo pede texto escuro */
+    #producaoPatioCards .fp-classe-n2 .fp-classe-tit .fp-badge,
+    #producaoPatioCards .fp-classe-n2 .fp-classe-total {
+        color: #422006 !important;
+    }
+
+    #producaoPatioCards .fp-classe-lista {
+        display: grid;
+        gap: 10px;
+        padding: 0 8px;
+    }
+
+    #producaoPatioCards .fp-grupo {
+        border-top: 0 !important;
+        border: 1px solid rgba(68, 51, 28, .25) !important;
+        border-radius: 10px !important;
+        background: #f6ead2 !important;
+        padding: 10px !important;
+    }
+
+    #producaoPatioCards .fp-grupo-head {
+        align-items: flex-start !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+        border-bottom: 2px solid rgba(68, 51, 28, .25) !important;
+    }
+
+    #producaoPatioCards .fp-grupo-titulo {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    #producaoPatioCards .fp-cubagem {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: #1c1917 !important;
+    }
+
+    #producaoPatioCards .fp-grupo-total {
+        font-size: .86rem;
+        color: #44403c;
+    }
+
+    #producaoPatioCards .fp-grupo-total b,
+    #producaoPatioCards .fp-qtd b {
+        color: #1c1917;
+        font-weight: 700;
+    }
+
+    /* Botao de nova configuracao: neutro, nao verde */
+    #producaoPatioCards .btn-fluxo-mais-cubagem {
+        background: #292524 !important;
+        border: 0 !important;
+        color: #ffffff !important;
+        width: 36px !important;
+        height: 36px !important;
+        flex: 0 0 36px !important;
+        font-size: 1.2rem !important;
+    }
+
+    #producaoPatioCards .fp-pacote {
+        display: grid !important;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 6px 10px !important;
+        padding: 10px 0 10px 10px !important;
+        border-left: 4px solid var(--fp-cor) !important;
+        border-top: 0 !important;
+    }
+
+    #producaoPatioCards .fp-pacote + .fp-pacote {
+        border-top: 1px solid rgba(68, 51, 28, .22) !important;
+    }
+
+    #producaoPatioCards .fp-pacote input {
+        accent-color: #292524 !important;
+        width: 20px !important;
+        height: 20px !important;
+        margin-top: 2px !important;
+    }
+
+    #producaoPatioCards .fp-pacote.is-selected {
+        background: rgba(29, 78, 216, .08);
+        border-radius: 6px;
+    }
+
+    #producaoPatioCards .fp-formula {
+        display: grid !important;
+        gap: 3px;
+        white-space: normal !important;
+        overflow: visible !important;
+    }
+
+    #producaoPatioCards .fp-config {
+        font-size: .92rem;
+        font-weight: 600;
+        color: #1c1917;
+    }
+
+    #producaoPatioCards .fp-formula .fp-qtd {
+        display: block !important;
+        font-size: .82rem !important;
+        color: #57534e !important;
+        margin: 0 !important;
+    }
+
+    #producaoPatioCards .fp-acoes {
+        grid-column: 1 / -1;
+        display: grid !important;
+        grid-template-columns: 44px 44px 1fr 1fr;
+        gap: 6px !important;
+        margin: 0 !important;
+    }
+
+    #producaoPatioCards .fp-acoes button {
+        width: 100% !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        border-radius: 8px !important;
+        font-size: .85rem !important;
+        font-weight: 600 !important;
+        padding: 0 6px !important;
+    }
+
+    #producaoPatioCards .fp-btn-qtd {
+        background: #f5f5f4 !important;
+        border: 1.5px solid #57534e !important;
+        color: #292524 !important;
+    }
+
+    #producaoPatioCards .fp-btn-editar {
+        background: #eff6ff !important;
+        border: 1.5px solid #1d4ed8 !important;
+        color: #1d4ed8 !important;
+    }
+
+    #producaoPatioCards .fp-btn-excluir {
+        background: #fef2f2 !important;
+        border: 1.5px solid #b91c1c !important;
+        color: #b91c1c !important;
+    }
+
+    #producaoPatioCards .fp-grupo-foot {
+        margin-top: 8px !important;
+        padding-top: 8px;
+        border-top: 1px dashed rgba(68, 51, 28, .3);
+    }
+
+    #producaoPatioCards .fp-excluir {
+        background: #fef2f2 !important;
+        border: 1.5px solid #b91c1c !important;
+        color: #b91c1c !important;
+        font-weight: 600 !important;
+    }
+}
