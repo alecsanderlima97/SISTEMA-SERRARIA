@@ -1,0 +1,270 @@
+/* =====================================================================
+   Orquestra MAD360 - limpeza visual global
+   Carregado por ultimo. So reduz excessos (titulos, cards, botoes, abas)
+   e melhora celular/tablet. Nao muda cores de marca nem comportamento.
+   ===================================================================== */
+
+/* ---------- Cabecalho das telas: menor, alinhado, sem caixa alta ---------- */
+body .main-header {
+    text-align: left;
+    margin-bottom: 14px;
+}
+
+body .main-header h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: clamp(1.25rem, 1.6vw, 1.6rem) !important;
+    line-height: 1.15;
+    letter-spacing: 0;
+}
+
+body .main-header h1 i {
+    font-size: .85em;
+}
+
+body .main-header p {
+    margin: 4px 0 0;
+    font-size: .82rem !important;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    opacity: .85;
+}
+
+/* ---------- KPIs: menos espaco, sem pulo no hover ---------- */
+body .dashboard-grid {
+    gap: 10px !important;
+    margin-bottom: 16px;
+}
+
+body .kpi-card {
+    min-height: 0 !important;
+    padding: 10px 12px !important;
+    gap: 10px;
+}
+
+body .kpi-card:hover {
+    transform: none;
+}
+
+body .kpi-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px;
+    font-size: .95rem;
+    box-shadow: none !important;
+}
+
+body .kpi-data h3 {
+    font-size: 1.05rem !important;
+    line-height: 1.15;
+}
+
+body .kpi-data p {
+    font-size: .72rem !important;
+}
+
+/* ---------- Abas: compactas ---------- */
+body .tabs-container {
+    gap: 6px !important;
+    margin-bottom: 16px !important;
+    padding-bottom: 6px !important;
+}
+
+body .tabs-container > button {
+    padding: 8px 12px !important;
+    font-size: .85rem !important;
+    min-height: 0 !important;
+}
+
+/* ---------- Paineis e titulos de secao ---------- */
+body .glass-panel {
+    border-radius: 10px;
+}
+
+body .section-title h2 {
+    font-size: 1.05rem;
+}
+
+/* ---------- Botoes: tamanho padrao mais contido ---------- */
+body .btn-primary,
+body .btn-secondary,
+body .btn-danger,
+body .btn-action-card {
+    min-height: 36px;
+    padding: 8px 14px;
+    font-size: .88rem;
+    border-radius: 8px;
+}
+
+/* =====================================================================
+   Tablet (ate 1024px)
+   ===================================================================== */
+@media (max-width: 1024px) {
+    body .main-content {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    body .dashboard-grid:has(> .kpi-card) {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    }
+
+    body .glass-panel {
+        padding: 16px !important;
+    }
+}
+
+/* =====================================================================
+   Celular (ate 760px)
+   ===================================================================== */
+@media (max-width: 760px) {
+    body .main-header {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+    }
+
+    body .main-header h1 {
+        font-size: 1.25rem !important;
+    }
+
+    body .main-header p {
+        font-size: .78rem !important;
+    }
+
+    /* KPIs em 2 colunas, mais baixos */
+    body .dashboard-grid:has(> .kpi-card) {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    body .kpi-card {
+        padding: 8px 10px !important;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    body .kpi-icon {
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px;
+        font-size: .8rem;
+    }
+
+    body .kpi-data {
+        min-width: 0;
+    }
+
+    body .kpi-data h3 {
+        font-size: .95rem !important;
+        overflow-wrap: anywhere;
+    }
+
+    body .kpi-data p {
+        font-size: .68rem !important;
+        line-height: 1.2;
+    }
+
+    /* Abas numa linha so, rolando de lado */
+    body .tabs-container {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        justify-content: flex-start !important;
+    }
+
+    body .tabs-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    body .tabs-container > button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 8px 10px !important;
+        font-size: .82rem !important;
+    }
+
+    /* Paineis com menos recuo */
+    body .glass-panel {
+        padding: 12px !important;
+    }
+
+    body .section-title {
+        margin-bottom: 10px;
+    }
+
+    body .section-title h2 {
+        font-size: 1rem;
+    }
+
+    body .btn-primary,
+    body .btn-secondary,
+    body .btn-danger,
+    body .btn-action-card {
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: .86rem;
+    }
+}
+
+/* ---------- Ajustes pontuais no celular ---------- */
+@media (max-width: 760px) {
+    /* Financeiro: titulo e descricao um embaixo do outro */
+    body #view-financeiro .main-header {
+        display: block !important;
+    }
+
+    /* Frota: filtros de setor quebram em chips, sem cortar palavra */
+    body #view-frotas [id^="btn-frota-"] {
+        padding: 6px 10px !important;
+        font-size: .78rem !important;
+        min-height: 34px;
+        white-space: nowrap;
+        word-break: normal;
+        flex: 0 0 auto;
+    }
+
+    body #view-frotas div:has(> #btn-frota-todos) {
+        flex-wrap: wrap;
+    }
+
+    /* Estoque: resumo em 2 colunas, cards baixos */
+    body #subview-estoque-resumo > div:first-child {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    body #subview-estoque-resumo > div:first-child > .glass-panel {
+        padding: 10px !important;
+    }
+
+    body #subview-estoque-resumo > div:first-child strong {
+        font-size: 1.1rem !important;
+        margin-top: 2px !important;
+    }
+}
+
+/* Botao de rolagem sobrepunha o assistente no canto; no celular a rolagem por toque ja basta. */
+@media (max-width: 760px) {
+    body .scroll-helper-widget {
+        display: none !important;
+    }
+}
+
+/* Frota: sem foto, o espaco reservado fica baixo (so o botao de adicionar foto). */
+body .frota-card-foto-vazia {
+    height: 56px !important;
+}
+
+body .frota-card-operacao {
+    padding: 14px !important;
+}
+
+/* Etiqueta fixa de versao (desatualizada) ocupava o rodape em todas as telas. */
+body .app-version-footer {
+    display: none !important;
+}
