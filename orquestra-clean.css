@@ -740,3 +740,64 @@ body.fluxo-patio-foco #view-dashboard #panelProducaoPatio {
         color: #78716c !important;
     }
 }
+
+/* =====================================================================
+   Controle de Producao Geral: lista por classe > cubagem (maior p/ menor)
+   Mesma leitura do Fluxo do Patio, com mais detalhe. Desktop e celular.
+   ===================================================================== */
+#listaItensPatioTemp { display: grid; gap: 16px; }
+#listaItensPatioTemp .cp-vazio { padding: 28px; text-align: center; color: #78716c; border: 1px dashed rgba(68,51,28,.3); border-radius: 10px; }
+#listaItensPatioTemp .fp-classe-n1 { --fp-cor: #16a34a; --fp-cor-bg: #dcfce7; }
+#listaItensPatioTemp .fp-classe-n2 { --fp-cor: #eab308; --fp-cor-bg: #fef9c3; }
+#listaItensPatioTemp .fp-classe-n3 { --fp-cor: #dc2626; --fp-cor-bg: #fee2e2; }
+#listaItensPatioTemp .cp-classe { border: 2px solid var(--fp-cor); border-radius: 12px; background: var(--fp-cor-bg); overflow: hidden; }
+#listaItensPatioTemp .fp-classe-tit { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 10px 14px; background: var(--fp-cor); color: #fff; }
+#listaItensPatioTemp .fp-classe-badge { font-weight: 800; font-size: 1rem; letter-spacing: .04em; }
+#listaItensPatioTemp .fp-classe-tot { font-size: .88rem; font-weight: 600; }
+#listaItensPatioTemp .fp-classe-n2 .fp-classe-tit { color: #422006; }
+#listaItensPatioTemp .fp-classe-lista { display: grid; gap: 10px; padding: 10px; }
+#listaItensPatioTemp .cp-grupo { background: #f6ead2; border: 1px solid rgba(68,51,28,.25); border-radius: 10px; padding: 10px 12px; }
+#listaItensPatioTemp .cp-grupo-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 2px solid rgba(68,51,28,.25); }
+#listaItensPatioTemp .fp-cubagem { font-size: 1.2rem; font-weight: 700; color: #1c1917; }
+#listaItensPatioTemp .fp-grupo-total { font-size: .88rem; color: #44403c; }
+#listaItensPatioTemp .fp-grupo-total b, #listaItensPatioTemp .fp-classe-tot b { font-weight: 800; }
+#listaItensPatioTemp .cp-grupo-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+#listaItensPatioTemp .cp-btn-texto { height: 34px; padding: 0 10px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+#listaItensPatioTemp .cp-btn-azul, #listaItensPatioTemp .fp-btn-editar { background: #eff6ff; border: 1.5px solid #1d4ed8; color: #1d4ed8; }
+#listaItensPatioTemp .cp-btn-vermelho, #listaItensPatioTemp .fp-btn-excluir { background: #fef2f2; border: 1.5px solid #b91c1c; color: #b91c1c; }
+#listaItensPatioTemp .cp-linha { display: grid; grid-template-columns: 26px minmax(0,1fr) auto; align-items: center; gap: 8px 12px; padding: 10px 0 10px 10px; border-left: 4px solid var(--fp-cor); }
+#listaItensPatioTemp .cp-linha + .cp-linha { border-top: 1px solid rgba(68,51,28,.22); }
+#listaItensPatioTemp .cp-linha.patio-linha-editando { background: rgba(29,78,216,.08); border-radius: 6px; }
+#listaItensPatioTemp .cp-sel input { width: 20px; height: 20px; accent-color: #292524; cursor: pointer; }
+#listaItensPatioTemp .fp-linha-principal { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
+#listaItensPatioTemp .fp-qtd-pacotes { font-size: 1.05rem; color: #1c1917; }
+#listaItensPatioTemp .fp-qtd-pacotes b { font-size: 1.4rem; font-weight: 800; }
+#listaItensPatioTemp .fp-config { font-size: 1.15rem; font-weight: 700; color: #1c1917; }
+#listaItensPatioTemp .fp-am { font-size: .7em; font-weight: 600; vertical-align: super; margin-left: 1px; }
+#listaItensPatioTemp .fp-qtd { font-size: .84rem; color: #57534e; margin-top: 2px; }
+#listaItensPatioTemp .cp-un { color: #78716c; }
+#listaItensPatioTemp .cp-etiqueta { font-size: .74rem; font-weight: 700; color: #0f766e; background: rgba(15,118,110,.1); border-radius: 999px; padding: 2px 8px; }
+#listaItensPatioTemp .cp-uso { margin-top: 4px; color: #0f766e; font-size: .76rem; font-weight: 700; }
+#listaItensPatioTemp .cp-acoes { display: flex; gap: 6px; }
+#listaItensPatioTemp .cp-acoes button { min-width: 40px; height: 36px; border-radius: 8px; font-size: .88rem; font-weight: 700; cursor: pointer; padding: 0 8px; }
+#listaItensPatioTemp .fp-btn-qtd { background: #f5f5f4; border: 1.5px solid #57534e; color: #292524; }
+#listaItensPatioTemp .cp-btn-etiqueta { background: #f0fdfa; border: 1.5px solid #0f766e; color: #0f766e; }
+#listaItensPatioTemp button:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+
+@media (max-width: 760px) {
+    #listaItensPatioTemp .fp-classe-lista { padding: 8px; }
+    #listaItensPatioTemp .cp-grupo { padding: 10px; }
+    #listaItensPatioTemp .cp-grupo-acoes { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+    #listaItensPatioTemp .cp-btn-texto { justify-content: center; }
+    #listaItensPatioTemp .cp-linha { grid-template-columns: 24px minmax(0,1fr); }
+    #listaItensPatioTemp .cp-acoes { grid-column: 1 / -1; display: grid; grid-template-columns: 40px 40px repeat(3, minmax(0,1fr)); gap: 5px; }
+    #listaItensPatioTemp .cp-acoes button { width: 100%; min-width: 0; padding: 0 2px; font-size: .78rem; white-space: nowrap; }
+    #listaItensPatioTemp .cp-acoes button i { display: none; }
+    #listaItensPatioTemp .fp-config { font-size: 1.1rem; }
+    .patio-selection-toolbar { flex-wrap: wrap; }
+    .patio-selection-toolbar #btnEditarSelecionadosPatio { margin-left: 0 !important; }
+}
+
+@media print {
+    #listaItensPatioTemp .cp-classe { break-inside: avoid; }
+}
