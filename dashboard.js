@@ -602,7 +602,7 @@ function lancamentoFinanceiroGeraDespesa(item = {}) {
     const texto = [item.tipo, item.descricao, item.documento?.nome].filter(Boolean).join(' ').toUpperCase();
     const categoria = String(item.documento?.categoria || item.categoriaDocumento || '').toLowerCase();
     return !(categoria === 'nota_fiscal' || categoria === 'xml' || item.situacaoDocumento === 'AGUARDANDO_BOLETO'
-        || /NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E/.test(texto));
+        || /(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(texto));
 }
 
 function getVolumeRomaneio(r) {

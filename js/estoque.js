@@ -408,8 +408,30 @@ window.processarNotaFiscalEstoque = async function() {
 };
 window.__estoqueNFProcessadorReal = true;
 
+// Recebe o XML de uma NF-e vinda do Financeiro e abre a previa de entrada no Estoque
+// (mesma conferencia da importacao manual: nada entra no estoque sem confirmar).
+window.abrirNotaFiscalNoEstoque = function(xmlTexto, nomeArquivo = 'nfe.xml', financeiroId = null) {
+    window.__nfOrigemFinanceiroId = financeiroId;
+    try {
+        notaFiscalPendenteEstoque = analisarXmlNotaFiscalEstoque(xmlTexto, nomeArquivo);
+    } catch (error) {
+        alert(error.message || 'Nao foi possivel ler o XML desta nota.');
+        return false;
+    }
+    const link = document.querySelector('a[data-target="view-estoque"]');
+    if (link) link.click();
+    setTimeout(() => {
+        window.switchTabEstoque?.('nota-fiscal');
+        renderizarPreviaNotaFiscalEstoque();
+        definirStatusNotaFiscalEstoque('Nota recebida do Financeiro. Revise descricao, quantidade e categoria antes de confirmar.', 'ok');
+        document.getElementById('previaNotaFiscalEstoque')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+    return true;
+};
+
 window.descartarNotaFiscalEstoque = function() {
     notaFiscalPendenteEstoque = null;
+    window.__nfOrigemFinanceiroId = null;
     const previa = document.getElementById('previaNotaFiscalEstoque');
     if (previa) { previa.innerHTML = ''; previa.style.display = 'none'; }
     definirStatusNotaFiscalEstoque('Leitura descartada. Nenhuma alteracao foi feita no estoque.', 'ok');
@@ -479,6 +501,10 @@ window.confirmarEntradaNotaFiscalEstoque = async function() {
         document.getElementById('previaNotaFiscalEstoque').innerHTML = '';
         document.getElementById('previaNotaFiscalEstoque').style.display = 'none';
         definirStatusNotaFiscalEstoque(`${linhas.length} item(ns) confirmado(s) e lancado(s) no estoque.`, 'ok');
+        if (window.__nfOrigemFinanceiroId) {
+            window.marcarEntradaEstoqueFinanceiro?.(window.__nfOrigemFinanceiroId);
+            window.__nfOrigemFinanceiroId = null;
+        }
         agendarRenderEstoque(0);
     } catch (error) {
         console.error('Erro ao confirmar entrada da NF-e:', error);

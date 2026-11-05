@@ -318,3 +318,173 @@ body .app-version-footer {
         grid-column: auto;
     }
 }
+
+/* =====================================================================
+   Financeiro: caixa de conferencia e menu "Mais acoes"
+   ===================================================================== */
+#financeiroCaixaConferencia {
+    margin: 0 auto 14px;
+    padding: 14px 16px !important;
+}
+
+#financeiroCaixaConferencia .fin-caixa-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+#financeiroCaixaConferencia h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+#financeiroCaixaConferencia h3 {
+    color: var(--fin-heading, inherit);
+}
+
+#financeiroCaixaConferencia .fin-caixa-head small,
+#financeiroCaixaConferencia .fin-caixa-vazia span {
+    color: var(--fin-muted, var(--text-muted));
+    font-size: .8rem;
+}
+
+#financeiroCaixaConferencia .fin-caixa-vazia {
+    font-size: .88rem;
+}
+
+#financeiroCaixaConferencia .fin-caixa-lista {
+    display: grid;
+    gap: 8px;
+}
+
+#financeiroCaixaConferencia .fin-caixa-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--fin-line, rgba(148, 163, 184, .25));
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    background: var(--fin-card-soft, transparent);
+}
+
+#financeiroCaixaConferencia .fin-caixa-item.is-pronto {
+    border-left-color: #16a34a;
+}
+
+#financeiroCaixaConferencia .fin-caixa-info {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+#financeiroCaixaConferencia .fin-caixa-info strong {
+    font-size: .9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#financeiroCaixaConferencia .fin-caixa-info small {
+    color: var(--fin-muted, var(--text-muted));
+    font-size: .76rem;
+}
+
+#financeiroCaixaConferencia .fin-caixa-tag {
+    justify-self: start;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+#financeiroCaixaConferencia .fin-caixa-tag.ok { background: rgba(22, 163, 74, .15); color: #16a34a; }
+#financeiroCaixaConferencia .fin-caixa-tag.falta { background: rgba(245, 158, 11, .16); color: #d97706; }
+#financeiroCaixaConferencia .fin-caixa-tag.vinculo { background: rgba(59, 130, 246, .15); color: #3b82f6; }
+
+#financeiroCaixaConferencia .fin-caixa-valor {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#financeiroCaixaConferencia .fin-caixa-acoes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#financeiroCaixaConferencia .fin-caixa-acoes button {
+    min-height: 32px !important;
+    padding: 5px 10px !important;
+    font-size: .8rem !important;
+}
+
+#financeiroCaixaConferencia .fin-caixa-mais {
+    margin-top: 8px;
+    background: none;
+    border: 0;
+    color: var(--fin-accent, var(--accent-color));
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.financeiro-mais-acoes {
+    position: relative;
+    display: inline-block;
+}
+
+.financeiro-mais-acoes > summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.financeiro-mais-acoes > summary::-webkit-details-marker {
+    display: none;
+}
+
+.financeiro-mais-acoes-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 30;
+    display: grid;
+    gap: 6px;
+    min-width: 240px;
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--fin-card, #fffdf7);
+    border: 1px solid var(--fin-border, rgba(148, 163, 184, .3));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .3);
+}
+
+.financeiro-mais-acoes-menu button {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+@media (max-width: 760px) {
+    #financeiroCaixaConferencia .fin-caixa-item {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    #financeiroCaixaConferencia .fin-caixa-acoes {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .financeiro-mais-acoes-menu {
+        right: auto;
+        left: 0;
+        min-width: 220px;
+    }
+}

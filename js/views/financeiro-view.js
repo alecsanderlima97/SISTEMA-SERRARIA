@@ -13,6 +13,8 @@
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroListaBody', this)"><i class="fa-solid fa-list"></i> Ver lista</button>
                 </div>
 
+                <div id="financeiroCaixaConferencia" class="financeiro-list-card financeiro-caixa-conferencia hide-on-print" aria-live="polite"></div>
+
                 <div id="financeiroKpisWrap" class="dashboard-grid financeiro-kpis financeiro-collapsible hide-on-print" style="margin-bottom: 22px;">
                     <div class="kpi-card glass-panel"><div class="kpi-icon" style="background: rgba(239,68,68,0.12); color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-data"><h3 id="financeiroKpiVencidos">R$ 0,00</h3><p>Atrasado para pagar</p></div></div>
                     <div class="kpi-card glass-panel"><div class="kpi-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;"><i class="fa-solid fa-calendar-day"></i></div><div class="kpi-data"><h3 id="financeiroKpiAberto">R$ 0,00</h3><p>Em aberto (total)</p></div></div>
@@ -60,7 +62,11 @@
                             <input type="file" id="financeiroPastaInput" webkitdirectory directory multiple accept=".pdf,.xml,text/xml,application/xml,image/*" style="display:none;">
                             <input type="file" id="financeiroSigewinInput" webkitdirectory directory multiple accept=".xml,text/xml,application/xml" style="display:none;">
                             <input type="file" id="financeiroFilaInput" multiple accept=".json,application/json" style="display:none;">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Importar arquivos</button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Importar documentos</button>
+                            <button type="button" class="btn-secondary" onclick="window.importarAnexosOutlookFinanceiro()"><i class="fa-solid fa-envelope-open-text"></i> Buscar no e-mail</button>
+                            <details class="financeiro-mais-acoes">
+                            <summary class="btn-secondary"><i class="fa-solid fa-ellipsis"></i> Mais ações</summary>
+                            <div class="financeiro-mais-acoes-menu">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroPastaInput')?.click()"><i class="fa-solid fa-folder-open"></i> Importar pasta</button>
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroSigewinInput')?.click()"><i class="fa-solid fa-file-import"></i> Importar NF-e do SIGEWIN</button>
                             <button type="button" class="btn-secondary" onclick="window.sincronizarSigeWinFinanceiro?.()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar SIGEWIN</button>
@@ -68,6 +74,8 @@
                             <button type="button" class="btn-secondary" onclick="window.limparDuplicadosFinanceiros()"><i class="fa-solid fa-copy"></i> Limpar duplicados</button>
                             <button type="button" class="btn-secondary" onclick="window.recalcularSugestoesVinculoFinanceiro()"><i class="fa-solid fa-link"></i> Encontrar vínculos</button>
                             <button type="button" class="btn-secondary" onclick="window.conciliarNfeComRomaneios()"><i class="fa-solid fa-file-circle-check"></i> Conciliar NF-e / romaneios</button>
+                            </div>
+                            </details>
                             <button type="button" class="btn-danger" id="btnExcluirFinanceiroSelecionados" onclick="window.excluirFinanceiroSelecionados()" style="display:none;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                             <button type="button" class="btn-secondary financeiro-btn-report" onclick="window.abrirRelatorioFinanceiro()"><i class="fa-solid fa-file-lines"></i> Gerar relatório</button>
                             <button type="button" class="financeiro-collapse-icon" onclick="window.toggleFinanceiroBloco('financeiroListaBody', this)" title="Ocultar ou mostrar lista"><i class="fa-solid fa-chevron-up"></i></button>
