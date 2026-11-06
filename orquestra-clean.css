@@ -830,3 +830,59 @@ body.fluxo-patio-foco #view-dashboard #panelProducaoPatio {
     #listaItensPatioTemp .cp-acoes { grid-template-columns: 36px 36px repeat(3, minmax(0,1fr)); gap: 4px; }
     #listaItensPatioTemp .cp-acoes button { height: 34px; font-size: .76rem; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* Ler foto da contagem: botao e previa de conferencia */
+#panelProducaoPatio .fluxo-patio-toolbar > .btn-foto-contagem { background: #1d4ed8 !important; border-color: #1d4ed8 !important; color: #fff !important; }
+@media (max-width: 760px) {
+    #panelProducaoPatio .fluxo-patio-toolbar > .btn-foto-contagem { order: 1; }
+}
+.foto-patio-modal { position: fixed; inset: 0; z-index: 10050; display: none; align-items: center; justify-content: center; background: rgba(12,10,9,.72); padding: 12px; }
+.foto-patio-caixa { width: min(860px, 100%); max-height: calc(100vh - 24px); display: flex; flex-direction: column; background: #fbf5e9; color: #1c1917; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+.foto-patio-topo { display: flex; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 1px solid rgba(68,51,28,.2); }
+.foto-patio-topo h3 { margin: 0; font-size: 1.1rem; color: #1c1917; }
+.foto-patio-topo p { margin: 2px 0 0; font-size: .85rem; color: #57534e; }
+.foto-patio-fechar { background: none; border: 0; font-size: 1.6rem; line-height: 1; cursor: pointer; color: #44403c; width: 40px; height: 40px; }
+.foto-patio-conteudo { overflow-y: auto; padding: 12px; display: grid; gap: 12px; }
+.foto-patio-vazio { padding: 30px 12px; text-align: center; color: #57534e; font-weight: 600; }
+.foto-patio-erro { color: #b91c1c !important; font-weight: 700; }
+.foto-patio-classe { border: 2px solid var(--fp-cor); border-radius: 12px; background: var(--fp-cor-bg); overflow: hidden; }
+.foto-patio-classe.fp-classe-n1 { --fp-cor: #16a34a; --fp-cor-bg: #dcfce7; }
+.foto-patio-classe.fp-classe-n2 { --fp-cor: #eab308; --fp-cor-bg: #fef9c3; }
+.foto-patio-classe.fp-classe-n3 { --fp-cor: #dc2626; --fp-cor-bg: #fee2e2; }
+.foto-patio-classe-tit { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 12px; background: var(--fp-cor); color: #fff; font-size: .9rem; }
+.foto-patio-classe.fp-classe-n2 .foto-patio-classe-tit { color: #422006; }
+.foto-patio-classe-tit .foto-patio-erro { color: #fff !important; background: #b91c1c; border-radius: 6px; padding: 0 6px; }
+.foto-patio-linha { margin: 8px; padding: 10px; background: #f6ead2; border: 1px solid rgba(68,51,28,.25); border-left: 4px solid var(--fp-cor); border-radius: 8px; display: grid; gap: 8px; }
+.foto-patio-linha.is-alerta { border-color: #b91c1c; box-shadow: 0 0 0 1px #b91c1c inset; }
+.foto-patio-medida, .foto-patio-config { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.foto-patio-linha label { display: grid; gap: 2px; font-size: .72rem; font-weight: 700; color: #57534e; text-transform: uppercase; }
+.foto-patio-linha input, .foto-patio-linha select { height: 38px; border: 1.5px solid #a8a29e; border-radius: 6px; background: #fff; color: #1c1917; font-size: 1rem; font-weight: 600; padding: 0 6px; width: 74px; }
+.foto-patio-linha select { width: 64px; }
+.foto-patio-formula { display: inline-flex; align-items: center; gap: 4px; font-size: 1.1rem; font-weight: 700; }
+.foto-patio-formula input { width: 56px; }
+.foto-patio-formula small { font-size: .7em; vertical-align: super; }
+.foto-patio-remover { margin-left: auto; height: 38px; padding: 0 10px; border-radius: 6px; border: 1.5px solid #b91c1c; background: #fef2f2; color: #b91c1c; font-weight: 700; cursor: pointer; }
+.foto-patio-conferencia { font-size: .82rem; color: #44403c; }
+.foto-patio-rodape { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(68,51,28,.2); }
+.foto-patio-btn { min-height: 42px; padding: 0 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.foto-patio-btn-sec { background: #f5f5f4; border: 1.5px solid #57534e; color: #292524; }
+.foto-patio-btn-alerta { background: #fef2f2; border: 1.5px solid #b91c1c; color: #b91c1c; }
+.foto-patio-btn-ok { background: #1d4ed8; border: 1.5px solid #1d4ed8; color: #fff; }
+.foto-patio-modal.is-lendo .foto-patio-rodape .foto-patio-btn-ok,
+.foto-patio-modal.is-lendo .foto-patio-rodape .foto-patio-btn-alerta { opacity: .4; pointer-events: none; }
+.foto-patio-btn:focus-visible, .foto-patio-fechar:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+@media (max-width: 760px) {
+    .foto-patio-modal { padding: 0; }
+    .foto-patio-caixa { max-height: 100vh; height: 100%; border-radius: 0; }
+    .foto-patio-conteudo { padding: 8px; }
+    .foto-patio-linha { margin: 6px; padding: 8px; }
+    .foto-patio-rodape { display: grid; grid-template-columns: 1fr 1fr; }
+    .foto-patio-rodape .foto-patio-btn-ok { grid-column: 1 / -1; order: -1; }
+}
+body #modalFotoContagemPatio .foto-patio-linha input:not([type="checkbox"]),
+body #modalFotoContagemPatio .foto-patio-linha select { background: #fff !important; color: #1c1917 !important; -webkit-text-fill-color: #1c1917; border: 1.5px solid #a8a29e !important; width: 74px; min-height: 38px; padding: 0 6px; font-size: 1rem; }
+body #modalFotoContagemPatio .foto-patio-linha select { width: 64px; }
+body #modalFotoContagemPatio .foto-patio-formula input:not([type="checkbox"]) { width: 56px; }
+@media (max-width: 760px) {
+    #panelProducaoPatio .fluxo-patio-toolbar > button[onclick*="imprimirListaProducaoPatio"] { grid-column: auto !important; }
+}

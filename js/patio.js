@@ -3638,3 +3638,277 @@ function gerarLayoutImpressaoPatio(rel) {
     win.document.close();
     win.print();
 }
+
+// ---- LEITURA DA FOTO DA CONTAGEM (folha escrita a mao) ----
+// A foto vai para /api/patio-foto, volta como linhas e o usuario confere antes de lancar.
+let leituraFotoPatio = [];
+
+function redimensionarFotoContagemPatio(file, maxLado = 1800) {
+    return new Promise((resolve, reject) => {
+        const leitor = new FileReader();
+        leitor.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+        leitor.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Arquivo nao e uma imagem valida.'));
+            img.onload = () => {
+                const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * escala);
+                canvas.height = Math.round(img.height * escala);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.src = leitor.result;
+        };
+        leitor.readAsDataURL(file);
+    });
+}
+
+function numeroFotoPatio(valor) {
+    return Number(String(valor ?? '').trim().replace(',', '.')) || 0;
+}
+
+function converterMedidaFotoPatio(medida) {
+    const partes = String(medida || '').split(/[\/\\|]/).map(p => p.trim()).filter(Boolean);
+    if (partes.length < 3) return null;
+    const ler = (valor, divisor) => {
+        if (/[.,]/.test(valor)) return numeroFotoPatio(valor);
+        const n = Number(valor.replace(/\D/g, ''));
+        return n ? n / divisor : 0;
+    };
+    return { espessura: ler(partes[0], 10), largura: ler(partes[1], 10), comprimento: ler(partes[2], 1000) };
+}
+
+function normalizarLeituraFotoPatio(dados) {
+    const linhas = [];
+    (dados?.classes || []).forEach(grupo => {
+        const classe = [1, 2, 3].includes(Number(grupo.classe)) ? Number(grupo.classe) : 1;
+        (grupo.linhas || []).forEach(linha => {
+            const medida = converterMedidaFotoPatio(linha.medida) || { espessura: 0, largura: 0, comprimento: 0 };
+            const configs = (linha.configuracoes || []).map(c => ({
+                pacotes: Number(c.pacotes) || 0,
+                alturas: Number(c.alturas) || 0,
+                largura: Number(c.largura) || 0,
+                amarras: Number(c.amarras) || 0
+            }));
+            linhas.push({
+                classe,
+                totalCirculo: grupo.totalCirculo ?? null,
+                ...medida,
+                totalLinha: linha.totalLinha ?? null,
+                duvida: !!linha.duvida,
+                observacao: String(linha.observacao || ''),
+                configs: configs.length ? configs : [{ pacotes: 1, alturas: 0, largura: 0, amarras: 0 }]
+            });
+        });
+    });
+    return linhas;
+}
+
+function escapeHtmlFotoPatio(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function garantirModalFotoPatio() {
+    let modal = document.getElementById('modalFotoContagemPatio');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'modalFotoContagemPatio';
+    modal.className = 'foto-patio-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'fotoPatioTitulo');
+    modal.innerHTML = `
+        <div class="foto-patio-caixa">
+            <header class="foto-patio-topo">
+                <div>
+                    <h3 id="fotoPatioTitulo">Conferir leitura da foto</h3>
+                    <p>Confira cada linha. Corrija o que estiver errado antes de lançar.</p>
+                </div>
+                <button type="button" class="foto-patio-fechar" onclick="window.fecharFotoContagemPatio()" aria-label="Fechar">×</button>
+            </header>
+            <div id="fotoPatioConteudo" class="foto-patio-conteudo"></div>
+            <footer class="foto-patio-rodape">
+                <button type="button" class="foto-patio-btn foto-patio-btn-sec" onclick="window.fecharFotoContagemPatio()">Cancelar</button>
+                <button type="button" class="foto-patio-btn foto-patio-btn-alerta" onclick="window.aplicarFotoContagemPatio('substituir')">Substituir contagem do pátio</button>
+                <button type="button" class="foto-patio-btn foto-patio-btn-ok" onclick="window.aplicarFotoContagemPatio('somar')">Somar ao pátio</button>
+            </footer>
+        </div>`;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function renderizarPreviaFotoPatio() {
+    const alvo = document.getElementById('fotoPatioConteudo');
+    if (!alvo) return;
+    if (!leituraFotoPatio.length) {
+        alvo.innerHTML = '<div class="foto-patio-vazio">Nenhuma linha foi lida na foto.</div>';
+        return;
+    }
+    const num = (v, passo = '1') => `value="${v === null || v === undefined ? '' : v}" inputmode="decimal" step="${passo}"`;
+    const porClasse = new Map();
+    leituraFotoPatio.forEach((linha, i) => {
+        if (!porClasse.has(linha.classe)) porClasse.set(linha.classe, []);
+        porClasse.get(linha.classe).push({ linha, i });
+    });
+    let html = '';
+    [...porClasse.keys()].sort((a, b) => a - b).forEach(classe => {
+        const itens = porClasse.get(classe);
+        const somaClasse = itens.reduce((s, { linha }) => s + linha.configs.reduce((a, c) => a + (Number(c.pacotes) || 0), 0), 0);
+        const circulo = itens.find(({ linha }) => linha.totalCirculo !== null && linha.totalCirculo !== undefined)?.linha.totalCirculo;
+        const okClasse = circulo === undefined || circulo === null || Number(circulo) === somaClasse;
+        html += `<section class="foto-patio-classe fp-classe-n${classe}">
+            <div class="foto-patio-classe-tit"><b>${classe}ª CLASSE</b>
+                <span class="${okClasse ? '' : 'foto-patio-erro'}">${somaClasse} pct${circulo !== undefined && circulo !== null ? ` · folha: ${circulo}${okClasse ? ' ✓' : ' ✗ não bate'}` : ''}</span>
+            </div>`;
+        itens.forEach(({ linha, i }) => {
+            const soma = linha.configs.reduce((a, c) => a + (Number(c.pacotes) || 0), 0);
+            const okLinha = linha.totalLinha === null || linha.totalLinha === undefined || Number(linha.totalLinha) === soma;
+            html += `<div class="foto-patio-linha ${okLinha && !linha.duvida ? '' : 'is-alerta'}">
+                <div class="foto-patio-medida">
+                    <label>Classe<select onchange="window.editarFotoPatio(${i}, null, 'classe', this.value)">
+                        ${[1, 2, 3].map(n => `<option value="${n}" ${n === linha.classe ? 'selected' : ''}>${n}ª</option>`).join('')}
+                    </select></label>
+                    <label>Esp.<input type="number" ${num(linha.espessura, '0.1')} onchange="window.editarFotoPatio(${i}, null, 'espessura', this.value)"></label>
+                    <label>Larg.<input type="number" ${num(linha.largura, '0.1')} onchange="window.editarFotoPatio(${i}, null, 'largura', this.value)"></label>
+                    <label>Comp.<input type="number" ${num(linha.comprimento, '0.01')} onchange="window.editarFotoPatio(${i}, null, 'comprimento', this.value)"></label>
+                    <button type="button" class="foto-patio-remover" onclick="window.removerLinhaFotoPatio(${i})" aria-label="Remover linha">Remover</button>
+                </div>
+                ${linha.configs.map((c, j) => `
+                <div class="foto-patio-config">
+                    <label>Pacotes<input type="number" ${num(c.pacotes)} onchange="window.editarFotoPatio(${i}, ${j}, 'pacotes', this.value)"></label>
+                    <span class="foto-patio-formula">(<input type="number" ${num(c.alturas)} aria-label="Alturas" onchange="window.editarFotoPatio(${i}, ${j}, 'alturas', this.value)">×<input type="number" ${num(c.largura)} aria-label="Largura do pacote" onchange="window.editarFotoPatio(${i}, ${j}, 'largura', this.value)">) +<input type="number" ${num(c.amarras)} aria-label="Amarras" onchange="window.editarFotoPatio(${i}, ${j}, 'amarras', this.value)"><small>am</small></span>
+                </div>`).join('')}
+                <div class="foto-patio-conferencia ${okLinha ? '' : 'foto-patio-erro'}">
+                    Soma: <b>${soma}</b> pct${linha.totalLinha !== null && linha.totalLinha !== undefined ? ` · folha: ${linha.totalLinha}${okLinha ? ' ✓' : ' ✗ não bate'}` : ''}
+                    ${linha.duvida ? ' · <span class="foto-patio-erro">leitura com dúvida</span>' : ''}
+                    ${linha.observacao ? ` · ${escapeHtmlFotoPatio(linha.observacao)}` : ''}
+                </div>
+            </div>`;
+        });
+        html += '</section>';
+    });
+    alvo.innerHTML = html;
+}
+
+window.editarFotoPatio = function(i, j, campo, valor) {
+    const linha = leituraFotoPatio[i];
+    if (!linha) return;
+    if (j === null) {
+        linha[campo] = campo === 'classe' ? Number(valor) : numeroFotoPatio(valor);
+    } else if (linha.configs[j]) {
+        linha.configs[j][campo] = parseInt(valor, 10) || 0;
+    }
+    if (campo === 'pacotes' || campo === 'classe') renderizarPreviaFotoPatio();
+};
+
+window.removerLinhaFotoPatio = function(i) {
+    leituraFotoPatio.splice(i, 1);
+    renderizarPreviaFotoPatio();
+};
+
+window.fecharFotoContagemPatio = function() {
+    const modal = document.getElementById('modalFotoContagemPatio');
+    if (modal) modal.style.display = 'none';
+};
+
+window.abrirFotoContagemPatio = function() {
+    let input = document.getElementById('inputFotoContagemPatio');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.setAttribute('capture', 'environment');
+        input.id = 'inputFotoContagemPatio';
+        input.style.display = 'none';
+        input.addEventListener('change', () => {
+            const arquivo = input.files?.[0];
+            input.value = '';
+            if (arquivo) lerFotoContagemPatio(arquivo);
+        });
+        document.body.appendChild(input);
+    }
+    input.click();
+};
+
+async function lerFotoContagemPatio(arquivo) {
+    const modal = garantirModalFotoPatio();
+    const conteudo = document.getElementById('fotoPatioConteudo');
+    modal.style.display = 'flex';
+    modal.classList.add('is-lendo');
+    conteudo.innerHTML = '<div class="foto-patio-vazio" aria-live="polite">Lendo a foto… pode levar até 30 segundos.</div>';
+    try {
+        const imagem = await redimensionarFotoContagemPatio(arquivo);
+        const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) throw new Error('Sessao expirada. Entre novamente.');
+        const resposta = await fetch('/api/patio-foto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagem, idToken })
+        });
+        const retorno = await resposta.json().catch(() => ({}));
+        if (!resposta.ok) throw new Error(retorno.error || 'Nao foi possivel ler a foto.');
+        leituraFotoPatio = normalizarLeituraFotoPatio(retorno.dados);
+        renderizarPreviaFotoPatio();
+    } catch (error) {
+        leituraFotoPatio = [];
+        conteudo.innerHTML = `<div class="foto-patio-vazio foto-patio-erro">${escapeHtmlFotoPatio(error.message || 'Erro ao ler a foto.')}</div>`;
+    } finally {
+        modal.classList.remove('is-lendo');
+    }
+}
+
+window.aplicarFotoContagemPatio = async function(modo) {
+    const itensNovos = [];
+    for (const linha of leituraFotoPatio) {
+        for (const c of linha.configs) {
+            const pecas = (c.alturas || 0) * (c.largura || 0) + (c.amarras || 0);
+            if (!(linha.espessura > 0 && linha.largura > 0 && linha.comprimento > 0 && c.pacotes > 0 && pecas > 0)) {
+                alert(`Linha ${formatDecimal(linha.espessura || 0, 1)} / ${formatDecimal(linha.largura || 0, 1)} / ${formatDecimal(linha.comprimento || 0, 2)} está incompleta. Corrija ou remova antes de lançar.`);
+                return;
+            }
+            itensNovos.push({ linha, c, pecas });
+        }
+    }
+    if (!itensNovos.length) {
+        alert('Nada para lançar.');
+        return;
+    }
+    if (modo === 'substituir' && !confirm('Substituir toda a contagem atual do Fluxo do Pátio pela leitura da foto? (Dá para desfazer depois.)')) return;
+
+    try {
+        await garantirRelatorioProducaoPatioAtual();
+        await sincronizarRelatorioProducaoPatioAtual();
+        const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual?.itens || []);
+        if (modo === 'substituir') producaoPatioRelatorioAtual.itens = [];
+        const dataRaw = producaoPatioRelatorioAtual.data || new Date().toISOString().slice(0, 10);
+        itensNovos.forEach(({ linha, c, pecas }, idx) => {
+            const volumeUnidade = (linha.espessura / 100) * (linha.largura / 100) * linha.comprimento * pecas;
+            mesclarCubagemProducaoPatio({
+                id: `${Date.now()}${idx}${Math.random().toString(36).slice(2, 6)}`,
+                dataRaw,
+                dataFormatted: new Date(`${dataRaw}T12:00:00`).toLocaleDateString('pt-BR'),
+                tipo: 'MADEIRA',
+                classe: `${linha.classe}a CLASSE`,
+                especie: 'EUCALIPTO',
+                espessura: linha.espessura,
+                largura: linha.largura,
+                comprimento: linha.comprimento,
+                pacotes: c.pacotes,
+                pecas,
+                pecasRaw: `${c.alturas}x${c.largura}${c.amarras > 0 ? `+${c.amarras}` : ''}`,
+                totalPecas: c.pacotes * pecas,
+                volumeUnidade,
+                volume: volumeUnidade * c.pacotes
+            });
+        });
+        const totalPct = itensNovos.reduce((s, { c }) => s + c.pacotes, 0);
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${modo === 'substituir' ? 'Substituiu a contagem' : 'Somou contagem'} pela foto (${totalPct} pct)`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        window.fecharFotoContagemPatio();
+        await renderizarProducaoPatio({ recarregar: false });
+        registrarDesfazerFluxoPatio(itensAnteriores, `Contagem da foto ${modo === 'substituir' ? 'substituiu' : 'somou'} ${totalPct} pacote(s) no Fluxo do Patio.`);
+    } catch (error) {
+        if (!error?.avisado) alert('Não foi possível lançar a contagem da foto. Tente novamente.');
+    }
+};
