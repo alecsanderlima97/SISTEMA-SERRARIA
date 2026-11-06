@@ -1,3 +1,4 @@
+const { exigirUsuario } = require('./_firebase-auth');
 const OPENAI_INPUT_USD_PER_1M = 0.05;
 const OPENAI_OUTPUT_USD_PER_1M = 0.40;
 
@@ -41,6 +42,7 @@ module.exports = async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        if (!(await exigirUsuario(req, body))) return res.status(401).json({ error: 'Sessao invalida. Entre novamente no sistema.' });
         const textoDocumento = String(body.textoDocumento || '').slice(0, 14000);
         const imagemDocumento = String(body.imagemDocumento || '');
         const nomeArquivo = String(body.nomeArquivo || 'documento');

@@ -1,4 +1,6 @@
-﻿console.log("Modulo Financeiro: inicializando...");
+﻿import { auth } from './firebase-init.js';
+
+console.log("Modulo Financeiro: inicializando...");
 
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
@@ -1607,9 +1609,10 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
     try {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), 30000);
+        const idToken = await auth.currentUser?.getIdToken();
         const response = await fetch('/api/financeiro-ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken || ''}` },
             signal: controller.signal,
             body: JSON.stringify({
                 nomeArquivo: anexo?.nome || '',
