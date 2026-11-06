@@ -1,3 +1,4 @@
+import { auth } from './firebase-init.js';
 const KEYS_ASSISTENTE = {
     estoque: 'orquestra_estoque',
     frotas: 'orquestra_frota',
@@ -481,9 +482,10 @@ async function executarComandoAgenteOrquestra(comando) {
 }
 
 async function responderPerguntaOpenAI(pergunta) {
+    const idToken = await auth.currentUser?.getIdToken();
     const response = await fetch('/api/assistente', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken || ''}` },
         body: JSON.stringify({
             pergunta,
             contexto: coletarContexto()

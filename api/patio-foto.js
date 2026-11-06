@@ -2,7 +2,7 @@
 // Nada e gravado aqui: a tela mostra uma previa para o usuario conferir antes de lancar.
 
 const TAMANHO_MAXIMO_IMAGEM = 6 * 1024 * 1024; // data URL (base64)
-const FIREBASE_WEB_API_KEY = process.env.FIREBASE_WEB_API_KEY || 'AIzaSyBJBUSmLTTvBriPk4R_Mt4zQq4w9CoP-pk';
+const { exigirUsuario } = require('./_firebase-auth');
 
 const INSTRUCOES = `Voce le a folha de contagem do patio de uma serraria, escrita a mao, e devolve SOMENTE JSON valido.
 
@@ -29,20 +29,6 @@ function extrairJson(texto) {
     const fim = limpo.lastIndexOf('}');
     if (inicio >= 0 && fim > inicio) return JSON.parse(limpo.slice(inicio, fim + 1));
     return JSON.parse(limpo);
-}
-
-async function validarUsuarioFirebase(idToken) {
-    if (!idToken || typeof idToken !== 'string' || idToken.length > 4096) return null;
-    const resposta = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-    });
-    if (!resposta.ok) return null;
-    const dados = await resposta.json().catch(() => ({}));
-    const usuario = dados.users?.[0];
-    if (!usuario?.localId || usuario.disabled) return null;
-    return { uid: usuario.localId, email: usuario.email || '' };
 }
 
 async function lerComClaude(imagem, apiKey) {
@@ -104,7 +90,7 @@ module.exports = async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-        const usuario = await validarUsuarioFirebase(body.idToken);
+        const usuario = await exigirUsuario(req, body);
         if (!usuario) return res.status(401).json({ error: 'Sessao invalida. Entre novamente no sistema.' });
 
         const imagem = String(body.imagem || '');
