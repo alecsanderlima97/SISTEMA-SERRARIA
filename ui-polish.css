@@ -375,7 +375,7 @@ table.financeiro-table {
 }
 
 .fluxo-patio-toolbar {
-    grid-template-columns: minmax(180px, 320px) auto auto auto !important;
+    grid-template-columns: minmax(180px, 320px) auto auto auto auto !important;
 }
 
 #producaoPatioSerrando {
