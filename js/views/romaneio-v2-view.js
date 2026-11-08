@@ -192,6 +192,12 @@
                         </div>
                     </div>
 
+                    <div class="romaneio-montagem-acao">
+                        <button type="button" id="btn-v2-montagem-carga" class="btn-v2 btn-secondary-v2" onclick="window.abrirMontagemCarga?.()">
+                            <i class="fa-solid fa-truck-ramp-box"></i> Ver montagem no caminhão
+                        </button>
+                    </div>
+
                     <!-- 3. Lista de Pacotes Agrupados -->
                     <div id="v2-lista-classes">
                         <!-- Gerado dinamicamente pelo JS -->
