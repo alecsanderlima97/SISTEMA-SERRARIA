@@ -1806,7 +1806,15 @@ window.romaneioDocActions = {
 
 window.modalDetalhesActions = window.romaneioDocActions;
 
+// Leitura para a Montagem de Carga (js/montagem-carga.js). Copia: o desenho nao altera o romaneio.
+window.obterRomaneioParaMontagem = () => ({
+    pacotes: JSON.parse(JSON.stringify(romaneioAtual.pacotes || [])),
+    placa: (document.getElementById('v2-placa')?.value || romaneioAtual.logistica?.placa || '').trim(),
+    caminhao: (document.getElementById('v2-caminhao')?.value || romaneioAtual.logistica?.caminhao || '').trim()
+});
+
 function renderizarTabelaPacotes() {
+    setTimeout(() => document.dispatchEvent(new Event('romaneioPacotesAlterados')), 0);
     const container = document.getElementById('v2-lista-classes');
     if (!container) return;
     if (romaneioAtual.pacotes.length === 0) {
