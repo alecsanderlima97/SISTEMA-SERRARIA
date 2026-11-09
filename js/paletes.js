@@ -38,7 +38,7 @@ function modeloPBR() {
         componentes: [
             { id: novoId(), posicao: 'superior', produtoId: '', esp: 1.9, larg: 11, comp: 1.2, qtd: 8 },
             { id: novoId(), posicao: 'ligacao', produtoId: '', esp: 1.9, larg: 12.5, comp: 1.0, qtd: 3 },
-            { id: novoId(), posicao: 'bloco', produtoId: '', esp: 8.0, larg: 10, comp: 0.10, qtd: 9 },
+            { id: novoId(), posicao: 'bloco', produtoId: '', esp: 8.0, larg: 11, comp: 0.10, qtd: 9 },
             { id: novoId(), posicao: 'inferior', produtoId: '', esp: 1.9, larg: 11, comp: 1.2, qtd: 3 }
         ]
     };
@@ -134,7 +134,7 @@ function htmlEditor() {
         <label>Nome do modelo<input id="palNome" type="text" value="${esc(m.nome)}"></label>
         <label>Largura (m)<input id="palLarg" type="number" step="0.01" value="${m.largura}"></label>
         <label>Comprimento (m)<input id="palComp" type="number" step="0.01" value="${m.comprimento}"></label>
-        <label>Pregos por palete<input id="palPregos" type="number" step="1" min="0" value="${m.pregos || 0}"></label>
+        <label>Pregos por palete<span class="pal-inline"><input id="palPregos" type="number" step="1" min="0" value="${m.pregos || 0}"><button type="button" class="pal-btn" id="palSugerirPregos" title="Conta 2 pregos por cruzamento: tábua de cima × ligação e tábua de baixo × blocos">Sugerir</button></span></label>
       </div>
       <div class="pal-tabela-wrap">
         <table class="pal-tabela">
@@ -171,6 +171,7 @@ function htmlPedido() {
       <div class="pal-pedido-topo">
         <label>Quantos paletes o cliente quer?<input id="palQtdPedido" type="number" min="1" step="1" value="${qtd}"></label>
         <div class="pal-total"><b>${fmt(p.m3Pecas, 3)} m³</b><span>de madeira nas peças do palete</span></div>
+        <div class="pal-total"><b>${(Number(editando.pregos || 0) * qtd).toLocaleString('pt-BR')}</b><span>pregos (${editando.pregos || 0} por palete)</span></div>
       </div>
       ${resumo ? `<ul class="pal-resumo">${resumo}</ul>` : '<p class="pal-aviso">Vincule cada componente a uma madeira cadastrada para calcular os pacotes.</p>'}
       <div class="pal-tabela-wrap">
@@ -179,7 +180,7 @@ function htmlPedido() {
           <tbody>${linhas}</tbody>
         </table>
       </div>
-      <p class="pal-nota">Rendimento: quantas peças saem de uma peça da madeira (ex.: bloco de 0,15 m de uma viga de 2,40 = 16), sem contar perda de serra. Pacotes arredondados para cima na hora de carregar.</p>`;
+      <p class="pal-nota">Rendimento: quantos toquinhos saem de uma peça da madeira (ex.: viga de 7,2 ou 8,0 × 11 × 2,40 cortada em blocos de 0,10 m = 24), sem contar perda de serra. Pacotes arredondados para cima na hora de carregar.</p>`;
 }
 
 function render() {
@@ -231,7 +232,23 @@ function instalarEventos() {
         if (t.dataset.abrir) { editando = JSON.parse(JSON.stringify(modelos.find(m => m.id === t.dataset.abrir))); render(); return; }
         if (t.id === 'palAddComp') { lerTopo(); editando.componentes.push({ id: novoId(), posicao: 'outro', produtoId: '', esp: 1.7, larg: 10, comp: 1.0, qtd: 1 }); atualizarParcial(); return; }
         if (t.dataset.remover !== undefined) { lerTopo(); editando.componentes.splice(Number(t.dataset.remover), 1); atualizarParcial(); return; }
-        if (t.id === 'pal3D') { lerTopo(); window.abrirPalete3D?.(editando); return; }
+        if (t.id === 'pal3D') {
+            lerTopo();
+            const lista = madeiras();
+            const comOrigem = JSON.parse(JSON.stringify(editando));
+            comOrigem.componentes.forEach(c => {
+                const prod = lista.find(p => p.id === c.produtoId);
+                if (prod) c.origem = { comp: num(prod.comprimentoReal) || num(prod.comprimentoVenda), esp: num(prod.espessura), larg: num(prod.largura) };
+            });
+            window.abrirPalete3D?.(comOrigem);
+            return;
+        }
+        if (t.id === 'palSugerirPregos') {
+            lerTopo();
+            const n = window.sugerirPregosPalete?.(editando);
+            if (n) { editando.pregos = n; atualizarParcial(); }
+            return;
+        }
         if (t.id === 'palSalvar') {
             lerTopo();
             const lista = modelos.filter(m => m.id !== editando.id).concat([JSON.parse(JSON.stringify(editando))]);
