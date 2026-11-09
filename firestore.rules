@@ -96,6 +96,10 @@ service cloud.firestore {
         || ((collection in ['mapa_matos', 'entradas']) && 'view-mapa' in sections)
         || ((collection in ['produtos']) && 'view-produtos' in sections)
         || ((collection in ['produtos']) && 'view-paletes' in sections)
+        || ((collection in ['paletes_movimentos']) && 'view-paletes' in sections)
+        || ((collection in ['romaneios_paletes', 'paletes_movimentos']) && 'view-romaneio-v2' in sections)
+        || ((collection in ['romaneios_paletes']) && 'view-historico' in sections)
+        || ((collection in ['romaneios_paletes']) && 'view-financeiro' in sections)
         || ((collection in ['estoque', 'estoque_movimentacoes', 'funcionarios']) && 'view-estoque' in sections)
         || ((collection in ['frotas', 'frota_abastecimentos', 'frota_manutencoes', 'frota_relatos']) && 'view-frotas' in sections)
         || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais', 'contas_receber', 'clientes', 'romaneios', 'funcionarios']) && 'view-financeiro' in sections)
@@ -180,6 +184,8 @@ service cloud.firestore {
         'entradas',
         'fechamentos_salvos',
         'romaneios',
+        'romaneios_paletes',
+        'paletes_movimentos',
         'historico',
         'vendas_subprodutos',
         'fechamentos_subprodutos',
@@ -244,6 +250,8 @@ service cloud.firestore {
             'entradas',
             'fechamentos_salvos',
             'romaneios',
+            'romaneios_paletes',
+            'paletes_movimentos',
             'historico',
             'vendas_subprodutos',
             'fechamentos_subprodutos',
@@ -298,6 +306,8 @@ service cloud.firestore {
             'entradas',
             'fechamentos_salvos',
             'romaneios',
+            'romaneios_paletes',
+            'paletes_movimentos',
             'historico',
             'vendas_subprodutos',
             'fechamentos_subprodutos',
@@ -332,6 +342,8 @@ service cloud.firestore {
             'entradas',
             'fechamentos_salvos',
             'romaneios',
+            'romaneios_paletes',
+            'paletes_movimentos',
             'historico',
             'vendas_subprodutos',
             'patio_relatorios',
@@ -483,6 +495,8 @@ service cloud.firestore {
           'entradas',
           'fechamentos_salvos',
           'romaneios',
+          'romaneios_paletes',
+          'paletes_movimentos',
           'historico',
           'vendas_subprodutos',
           'fechamentos_subprodutos',
@@ -511,6 +525,8 @@ service cloud.firestore {
           'entradas',
           'fechamentos_salvos',
           'romaneios',
+          'romaneios_paletes',
+          'paletes_movimentos',
           'historico',
           'vendas_subprodutos',
           'fechamentos_subprodutos',
@@ -539,6 +555,8 @@ service cloud.firestore {
           'entradas',
           'fechamentos_salvos',
           'romaneios',
+          'romaneios_paletes',
+          'paletes_movimentos',
           'historico',
           'vendas_subprodutos',
           'fechamentos_subprodutos',

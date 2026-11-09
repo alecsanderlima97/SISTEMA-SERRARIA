@@ -1070,3 +1070,39 @@ body .v3d-modal .v3d-cfg select { min-height: 36px; height: 36px; background: #f
 body .v3d-modal .v3d-menu button { justify-content: flex-start !important; text-align: left !important; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 10px; border: 0; border-radius: 6px; background: #fff; color: #1f1c18; font-weight: 600; cursor: pointer; }
 body .v3d-modal .v3d-menu button:hover, body .v3d-modal .v3d-menu button:focus-visible { background: #eff6ff; outline: 2px solid #1d4ed8; outline-offset: -2px; }
 .v3d-sel-acoes { display: grid; gap: 6px; }
+
+/* Gerar Romaneio: Madeira serrada / Paletes */
+.rom-tipo-abas { display: flex; gap: 8px; margin: 0 0 16px; flex-wrap: wrap; }
+.rom-tipo-abas[hidden] { display: none !important; }
+.rom-tipo-abas button { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1.5px solid var(--panel-border, #cbd5e1); background: var(--panel-bg, #fff); color: var(--text-color, #1f1c18); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.rom-tipo-abas button[aria-selected="true"] { background: var(--accent-color, #16a34a); border-color: var(--accent-color, #16a34a); color: #fff; }
+.rom-tipo-abas button:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+#secao-romaneio-v2.modo-paletes > :not(.main-header):not(.rom-tipo-abas):not(#romaneioPaletes) { display: none !important; }
+.romaneio-paletes[hidden] { display: none !important; }
+.romaneio-paletes { display: grid; gap: 16px; }
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.rp-campo { display: grid; gap: 4px; font-weight: 600; font-size: .85rem; margin-top: 8px; flex: 1 1 140px; }
+.rp-campo input, .rp-campo select, .rp-itens td input, .rp-itens td select { min-height: 40px; }
+.rp-linha { display: flex; gap: 10px; flex-wrap: wrap; }
+.rp-info { margin: 8px 0 0; font-size: .85rem; opacity: .85; }
+.rp-itens td small { display: block; margin-top: 4px; }
+.rp-rem { min-width: 40px; }
+.rp-rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.rp-total-geral { font-size: 1.2rem; }
+.rp-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.is-negativo, .is-negativo td { color: #b91c1c !important; font-weight: 700; }
+/* modulo Paletes: estoque */
+.pal-est-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.pal-est-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; padding: 14px; border: 1.5px solid var(--panel-border, #cbd5e1); border-radius: 10px; margin-bottom: 16px; }
+.pal-est-form h3, .pal-est-form .pal-est-previa, .pal-est-form .pal-est-botoes, .pal-est-form .pal-est-pacote { grid-column: 1 / -1; margin: 0; }
+.pal-est-form label { display: grid; gap: 4px; font-weight: 600; font-size: .85rem; }
+.pal-est-form label[hidden], .pal-est-pacote[hidden] { display: none !important; }
+.pal-est-pacote { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.pal-est-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.pal-est-previa ul { margin: 4px 0 0; padding-left: 18px; }
+.pal-est-tit { margin: 6px 0 10px; }
+.pal-est-msg { min-height: 1.2em; margin: 0 0 10px; font-weight: 600; color: #15803d; }
+.pal-est-msg.is-erro { color: #b91c1c; }
+.pal-tabela { width: 100%; border-collapse: collapse; }
+.pal-tabela th, .pal-tabela td { padding: 8px 10px; border-bottom: 1px solid var(--panel-border, #e5e7eb); text-align: left; vertical-align: top; }
+body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado .opcao-modulo-paletes { display: none !important; }

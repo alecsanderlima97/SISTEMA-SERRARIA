@@ -14,11 +14,13 @@ const users = {
   muqueiro: { cargo:'muqueiro', email:'q@x.com' },
   mecanico: { cargo:'mecanico', email:'k@x.com' },
   patrao: { cargo:'patrao', email:'t@x.com' },
+  paletes_custom: { cargo:'PALETEIRO', email:'pl@x.com', permissoes:{ allowedSections:['view-paletes'], writeSections:['view-paletes'] } },
+  gerente: { cargo:'gerente', email:'g@x.com' },
 };
 await env.withSecurityRulesDisabled(async c => {
   const db = c.firestore();
   for (const [id,u] of Object.entries(users)) await setDoc(doc(db,'usuarios',id), u);
-  for (const col of ['financeiro_lancamentos','funcionarios','patio_relatorios','clientes','produtos','romaneios','transportes','estoque','frotas','frota_relatos','entradas','fechamentos_salvos','contas_receber','configuracoes_sistema','estoque_config'])
+  for (const col of ['financeiro_lancamentos','funcionarios','patio_relatorios','clientes','produtos','romaneios','transportes','estoque','frotas','frota_relatos','entradas','fechamentos_salvos','contas_receber','configuracoes_sistema','estoque_config','romaneios_paletes','paletes_movimentos'])
     await setDoc(doc(db,col,'d1'), { x:1 });
 });
 const cases = [
@@ -39,6 +41,12 @@ const cases = [
   ['patrao','r','financeiro_lancamentos',true], ['patrao','w','financeiro_lancamentos',false],
   ['admin','w','configuracoes_sistema',true], ['muqueiro','r','configuracoes_sistema',true], ['muqueiro','w','configuracoes_sistema',false], ['pendente','r','configuracoes_sistema',false],
   ['frota_custom','w','estoque_config',true], ['romaneio_custom','w','estoque_config',false],
+  // modulo paletes
+  ['anon','r','romaneios_paletes',false], ['pendente','w','paletes_movimentos',false], ['muqueiro','r','romaneios_paletes',false],
+  ['gerente','w','romaneios_paletes',true], ['gerente','w','paletes_movimentos',true],
+  ['romaneio_custom','w','romaneios_paletes',true], ['romaneio_custom','w','paletes_movimentos',true],
+  ['paletes_custom','w','paletes_movimentos',true], ['paletes_custom','r','romaneios_paletes',false], ['paletes_custom','w','patio_relatorios',false], ['paletes_custom','r','produtos',true],
+  ['financeiro_custom','r','romaneios_paletes',true], ['frota_custom','r','romaneios_paletes',false],
 ];
 let fail=0;
 for (const [u,op,col,exp] of cases) {

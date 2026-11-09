@@ -5,7 +5,7 @@ import { db, doc, getDoc, setDoc } from './firebase-init.js';
 
 // Telas que pertencem a um modulo so. As demais (Clientes, Cadastro de Medidas, Financeiro, Frotas...) sao comuns.
 const TELAS_POR_MODULO = {
-    serraria: ['view-romaneio-v2', 'view-cavaco', 'view-historico', 'view-entrada', 'view-mapa'],
+    serraria: ['view-cavaco', 'view-historico', 'view-entrada', 'view-mapa'],
     paletes: ['view-paletes']
 };
 const PADRAO = { serraria: true, paletes: true };
@@ -21,6 +21,10 @@ function aplicarModulos() {
     // Inicio: os paineis do patio pertencem a serraria
     document.body.classList.toggle('modulo-serraria-desligado', modulos.serraria === false);
     document.body.classList.toggle('modulo-paletes-desligado', modulos.paletes === false);
+    // Gerar Romaneio: Madeira serrada (serraria) e/ou Paletes
+    const abasRom = document.querySelector('#secao-romaneio-v2 .rom-tipo-abas');
+    if (abasRom) abasRom.hidden = modulos.paletes === false || modulos.serraria === false;
+    if (modulos.serraria === false && document.getElementById('secao-romaneio-v2') && !document.getElementById('secao-romaneio-v2').classList.contains('modo-paletes')) window.trocarTipoRomaneio?.('paletes');
     const chkS = document.getElementById('cfgModuloSerraria');
     const chkP = document.getElementById('cfgModuloPaletes');
     if (chkS) chkS.checked = modulos.serraria !== false;
