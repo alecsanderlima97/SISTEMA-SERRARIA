@@ -15,7 +15,14 @@ const m3 = p => (p.esp / 100) * (p.larg / 100) * p.comp * pecas(p);
 const ehViga = p => p.tipo ? p.tipo === 'viga' : p.esp >= 5;
 const peAlt = p => (ehViga(p) ? 1 : 4) * p.esp / 100;
 const fileirasAmarra = p => ehViga(p) ? 0 : Math.max(0, Math.floor((p.alt - 1) / 10));
-const camadaExtra = p => ehViga(p) && p.am > 0 ? 1 : 0;
+// viga de 2,40: pecas a mais formam uma camada por cima; viga de 1,20: so sobe uma camada quando as
+// amarras fecham a camada atravessada do meio (senao vao no vao do meio, inclinadas)
+const camadaExtra = p => {
+  if (!ehViga(p) || !(p.am > 0)) return 0;
+  if (Number(p.comp) > 1.21) return 1;
+  const vao = 1.2 - (p.cam * p.larg) / 100;
+  return vao >= 0.03 && p.am < 2 + Math.max(1, Math.floor(p.comp * 100 / p.larg + 0.001)) ? 0 : 1;
+};
 const altPacote = p => ehViga(p)
   ? ((p.alt + 1 + camadaExtra(p)) * p.esp) / 100
   : ((p.alt + 4 + fileirasAmarra(p)) * p.esp) / 100;

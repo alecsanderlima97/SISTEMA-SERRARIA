@@ -150,6 +150,7 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }, opts = {}) {
 // atravessada no meio da altura e, quando 10 x 11 nao fecha 1,20, 3 vigas da mesma medida no vao do meio
 // em cada metade (de cutelo, uma em cima da outra).
 // Ex.: 12 x 10 + 18 = 2 pezinhos + 10 atravessadas + 3 + 3. Usa no maximo p.am amarras (opts.regra ignora).
+// Viga grossa sem amarra suficiente para a camada do meio: amarras inclinadas no vao (ex.: 11 x 10 + 9 = 2 pezinhos + 7 no vao).
 function vigaCurta(p, origem, opts = {}) {
     const e = p.esp / 100, l = p.larg / 100, L = p.comp;
     const folga = 0.0015;
@@ -164,9 +165,11 @@ function vigaCurta(p, origem, opts = {}) {
     const pe = verba >= 2 ? 1 : 0;
     let y = 0;
     if (pe) { [0.04 + l / 2, L - 0.04 - l / 2].forEach(xc => add(xc, e / 2, W / 2, l - folga, e - folga, W, 2)); verba -= 2; amarras += 2; y = e; }
-    // camada do meio atravessada
+    // camada do meio atravessada, so quando as amarras fecham a camada inteira; senao (viga grossa,
+    // pacote nao pode subir mais) as amarras vao no vao do meio, inclinadas, uma em cima da outra.
     const nMeioRegra = Math.max(1, Math.floor(L / l + 0.001));
-    const nMeio = p.alt >= 2 ? Math.min(nMeioRegra, verba) : 0;
+    const modoVao = !opts.regra && vao > 0 && verba < nMeioRegra;
+    const nMeio = !modoVao && p.alt >= 2 ? Math.min(nMeioRegra, verba) : 0;
     verba -= nMeio;
     const corte = Math.floor(p.alt / 2);
     const zs = [];
@@ -206,7 +209,22 @@ function vigaCurta(p, origem, opts = {}) {
         zs.forEach(z => add(L / 2, y + e / 2, z, L, e - folga, l - folga, (r + Math.round(z * 100)) % 3 === 0 ? 1 : 0));
         y += e;
     }
-    fecharVao(yBloco, y);
+    if (modoVao) {
+        // inclina a viga ate caber na largura do vao (largura horizontal = e*cos + l*sen)
+        let ang = 0;
+        const alvo = vao - 0.006;
+        for (let a = 0; a <= Math.PI / 2; a += 0.01) { if (e * Math.cos(a) + l * Math.sin(a) <= alvo) ang = a; else if (a > 0) break; }
+        if (e > alvo) ang = 0;
+        const vert = e * Math.sin(ang) + l * Math.cos(ang);
+        const zMeio = Math.floor(p.cam / 2) * l + vao / 2;
+        const base = pe ? e : 0;
+        const n = Math.min(verba, Math.max(0, Math.floor((y - base) / vert + 0.001)));
+        tipo = 'amarra';
+        for (let k = 0; k < n; k++) {
+            out.push({ x: origem.x + L / 2, y: origem.y + base + vert * k + vert / 2, z: origem.z + zMeio, sx: L - folga, sy: l - folga, sz: e - folga, tom: 1, k: out.length, tipo, rx: ang });
+        }
+        verba -= n; amarras += n;
+    } else fecharVao(yBloco, y);
     return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
 }
 
@@ -477,9 +495,11 @@ function malhaInstanciada(lista, cor, variacao = true) {
     const mesh = new T.InstancedMesh(geo, mat, lista.length);
     const m = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), esc = new T.Vector3();
     const tons = [new T.Color(cor), new T.Color(cor).offsetHSL(0, -0.05, -0.06), new T.Color(cor).offsetHSL(0.01, 0.02, -0.14)];
+    const giro = new T.Euler();
     lista.forEach((b, i) => {
         pos.set(b.x, b.y, b.z);
         esc.set(b.sx, b.sy, b.sz);
+        if (b.rx) { giro.set(b.rx, 0, 0); q.setFromEuler(giro); } else q.identity();
         m.compose(pos, q, esc);
         mesh.setMatrixAt(i, m);
         mesh.setColorAt(i, variacao ? tons[b.tom || 0] : tons[0]);
