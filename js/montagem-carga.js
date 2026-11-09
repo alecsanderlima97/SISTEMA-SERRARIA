@@ -71,12 +71,43 @@ function montar(listaEntrada, cfg) {
     for (let k = melhor.v; k < melhor.v + melhor.n; k++) alts[k] = melhor.topo + altPacote(p);
     colocados.push({ p, ...melhor });
   });
+  centralizarCamadas(colocados, cacambas.map(cb => cb.vagas), c => altPacote(c.p));
   // Ordem de carregamento: camada de baixo primeiro, da cabine para tras.
   colocados.sort((a, b) => a.topo - b.topo || b.ci - a.ci || b.v - a.v || a.f - b.f)
     .forEach((c, i) => { c.ordem = i + 1; });
   return { cacambas, colocados, sobra, fileiras, largura, altMax, VAGA };
 }
 
+// Cada camada de cada fileira fica centralizada na caçamba: a sobra é dividida por 2,
+// metade na frente e metade atrás (pode ficar no meio de um pacote de baixo). Assim as
+// camadas das duas fileiras ficam alinhadas, a fita passa por cima de todos e o peso não pende.
+// Se em alguma fileira a camada de cima ficaria sem apoio, aquela fileira volta como estava.
+function centralizarCamadas(colocados, vagasPorCacamba, alturaDe) {
+  const grupos = new Map();
+  colocados.forEach(c => { const k = c.ci + '|' + c.f; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(c); });
+  grupos.forEach(lista => {
+    const vagas = vagasPorCacamba[lista[0].ci] || 0;
+    const antes = lista.map(c => c.v);
+    const camadas = new Map();
+    lista.forEach(c => { const k = Math.round(c.topo * 100); if (!camadas.has(k)) camadas.set(k, []); camadas.get(k).push(c); });
+    camadas.forEach(cam => {
+      cam.sort((a, b) => a.v - b.v);
+      const total = cam.reduce((s, c) => s + c.n, 0);
+      let x = Math.max(0, (vagas - total) / 2);
+      cam.forEach(c => { c.v = x; x += c.n; });
+    });
+    const apoiado = lista.every(c => {
+      if (c.topo < 0.01) return true;
+      for (let x = c.v + 0.125; x < c.v + c.n; x += 0.25) {
+        let sup = 0;
+        lista.forEach(o => { if (o !== c && o.topo < c.topo - 0.01 && x > o.v && x < o.v + o.n) sup = Math.max(sup, o.topo + alturaDe(o)); });
+        if (Math.abs(sup - c.topo) > 0.12) return false;
+      }
+      return true;
+    });
+    if (!apoiado) lista.forEach((c, i) => { c.v = antes[i]; });
+  });
+}
 
 // Desenho do caminhao: cabine, chassi, rodas, assoalho e fueiros. Escala real em metros.
 const ESC = 80;            // px por metro
@@ -399,7 +430,7 @@ window.fecharMontagemCarga = function() {
 document.addEventListener('romaneioPacotesAlterados', renderizar);
 
 // Regras do pacote compartilhadas com o visualizador 3D (Gestao de Madeira).
-window.MontagemCargaCalc = { montar, altPacote, largPacote, peAlt, fileirasAmarra, ehViga, vaoMeio, camadaExtra, meio };
+window.MontagemCargaCalc = { montar, centralizarCamadas, altPacote, largPacote, peAlt, fileirasAmarra, ehViga, vaoMeio, camadaExtra, meio };
 
 
 // Montador 3D com os pacotes do romaneio (so os selecionados no romaneio).
