@@ -82,8 +82,8 @@ function montar(listaEntrada, cfg) {
     colocados.push({ p, ...melhor });
   });
   centralizarCamadas(colocados, cacambas.map(cb => cb.comp / VAGA), c => altPacote(c.p), cfg.alinhar || {});
-  // Ordem de carregamento: camada de baixo primeiro, da cabine para tras.
-  colocados.sort((a, b) => a.topo - b.topo || b.ci - a.ci || b.v - a.v || a.f - b.f)
+  // Ordem de carregamento: assoalho motorista, assoalho passageiro, em cima motorista, em cima passageiro; da cabine para tras.
+  colocados.sort((a, b) => a.topo - b.topo || a.f - b.f || b.ci - a.ci || b.v - a.v)
     .forEach((c, i) => { c.ordem = i + 1; });
   return { cacambas, colocados, sobra, fileiras, largura, altMax, VAGA };
 }
@@ -353,8 +353,8 @@ function garantirModal() {
         <div id="mcStatus"></div>
         <h4>Vista de cima</h4><div class="mc-draw" id="mcTopo"></div>
         <h4>Lateral · fileira do motorista</h4><div class="mc-draw" id="mcLado1"></div>
-        <h4>Lateral · fileira do carona</h4><div class="mc-draw" id="mcLado2"></div>
-        <p class="mc-nota">Número no pacote = ordem de carregamento (camada de baixo primeiro, da cabine para trás). A camada de cima vai centralizada para o peso ficar no meio. Listrado = meio pacote. Apenas visualização: nada aqui altera o romaneio.</p>
+        <h4>Lateral · fileira do passageiro</h4><div class="mc-draw" id="mcLado2"></div>
+        <p class="mc-nota">Número no pacote = ordem de carregamento (assoalho do motorista, assoalho do passageiro, depois em cima do motorista e em cima do passageiro, sempre da cabine para trás). A camada de cima vai centralizada para o peso ficar no meio. Listrado = meio pacote. Apenas visualização: nada aqui altera o romaneio.</p>
       </div>
     </div>`;
   document.body.appendChild(modal);

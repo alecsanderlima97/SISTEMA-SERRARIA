@@ -2037,13 +2037,19 @@ function imprimirPlanoCarga() {
     const nomesNivel = ['Assoalho', 'Em cima', 'Chapéu'];
     const niveis = new Map();
     montagem.colocados.forEach(c => { const k = c.ci + '|' + c.f; if (!niveis.has(k)) niveis.set(k, [...new Set(montagem.colocados.filter(o => o.ci + '|' + o.f === k).map(o => Math.round(o.topo * 100)))].sort((a, b) => a - b)); });
-    // ordem: camada de baixo primeiro, da cabine para tras, motorista antes do carona
-    const ordem = [...montagem.colocados].sort((a, b) => a.topo - b.topo || (b.ci - a.ci) || (b.v - a.v) || (a.f - b.f));
+    // ordem: assoalho do motorista, assoalho do passageiro, em cima do motorista, em cima do passageiro...
+    // sempre da cabine para tras
+    const nivelDe = c => Math.min(2, niveis.get(c.ci + '|' + c.f).indexOf(Math.round(c.topo * 100)));
+    const ordem = [...montagem.colocados].sort((a, b) => nivelDe(a) - nivelDe(b) || (a.f - b.f) || (b.ci - a.ci) || (b.v - a.v));
+    // o que separar do patio (o empilhadeirista pega o pacote dessa medida que estiver mais perto)
+    const separar = new Map();
+    ordem.forEach(c => { const p = c.u.p; const k = `${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)} · (${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}`; separar.set(k, (separar.get(k) || 0) + 1); });
+    const listaSeparar = [...separar.entries()].map(([k, n]) => `<li><b>${n}</b> pacote(s) ${k}</li>`).join('');
     const linhas = ordem.map((c, i) => {
         const p = c.u.p;
-        const nivel = Math.min(2, niveis.get(c.ci + '|' + c.f).indexOf(Math.round(c.topo * 100)));
+        const nivel = nivelDe(c);
         const cabine = g.comps[c.ci] - (c.v + c.n) * g.VAGA;
-        return `<tr><td><b>${i + 1}</b></td><td>${nomesNivel[nivel]}</td><td>${g.fileiras > 1 ? (c.f === 0 ? 'Motorista' : 'Carona') : 'Centro'}</td><td>${g.comps.length > 1 ? `Caçamba ${c.ci + 1} · ` : ''}${fmt(Math.max(0, cabine), 2)} m da frente</td><td>${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</td><td>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</td></tr>`;
+        return `<tr><td><b>${i + 1}</b></td><td>${nomesNivel[nivel]}</td><td>${g.fileiras > 1 ? (c.f === 0 ? 'Motorista' : 'Passageiro') : 'Centro'}</td><td>${g.comps.length > 1 ? `Caçamba ${c.ci + 1} · ` : ''}${fmt(Math.max(0, cabine), 2)} m da frente</td><td>${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</td><td>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</td></tr>`;
     }).join('');
     const vol = montagem.colocados.reduce((s, c) => s + (c.u.p.esp / 100) * (c.u.p.larg / 100) * c.u.p.comp * (c.u.p.alt * c.u.p.cam + (c.u.p.am || 0)), 0);
     const img1 = fotoDaCarga(null), img2 = fotoDaCarga([0.001, 1, 0.0001]);
@@ -2052,8 +2058,9 @@ function imprimirPlanoCarga() {
     const html = `<div class="doc-header"><div class="doc-title"><h1>${titulo}</h1>
         <p>${montagem.colocados.length} pacote(s) (${contagemCamadas(montagem.colocados)}) · ${fmt(vol, 3)} m³ · caçamba ${fmt(cam.comp1, 2)}${cam.bitrem ? ` + ${fmt(cam.comp2, 2)}` : ''} × ${fmt(cam.larg, 2)} m · altura máx. ${fmt(cam.alt, 2)} m</p></div></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0;"><img src="${img1}" style="width:100%; border:1px solid #ccc;" alt="Carga em 3D"><img src="${img2}" style="width:100%; border:1px solid #ccc;" alt="Carga vista de cima"></div>
+      <div style="margin:8px 0;"><b>Separar do pátio</b> (pegue o pacote dessa medida que estiver mais perto):<ul style="margin:4px 0 0 18px;">${listaSeparar}</ul></div>
       <table class="doc-table"><thead><tr><th>Ordem</th><th>Camada</th><th>Lado</th><th>Posição</th><th>Pacote</th><th>Config.</th></tr></thead><tbody>${linhas}</tbody></table>
-      <p style="margin-top:10px; font-size:12px;">Carregar na ordem: camada de baixo primeiro, da cabine para trás. Conferir as fitas antes de sair.</p>`;
+      <p style="margin-top:10px; font-size:12px;">Ordem: assoalho do motorista, assoalho do passageiro, depois em cima do motorista e em cima do passageiro, sempre da cabine para trás. Em cada posição vai um pacote da medida indicada (o mais perto no pátio). Conferir as fitas antes de sair.</p>`;
     if (window.DocActions?.printHtml) window.DocActions.printHtml({ title: titulo, contentHtml: html });
     else { const w = window.open('', '_blank'); if (w) { w.document.write(`<html><body>${html}</body></html>`); w.document.close(); w.print(); } }
 }
