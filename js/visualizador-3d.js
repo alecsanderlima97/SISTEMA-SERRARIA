@@ -54,18 +54,30 @@ const COR_CLASSE = { 1: 0x16a34a, 2: 0xeab308, 3: 0xdc2626 };
 
 // ---------- montagem das tabuas de um pacote ----------
 // Eixos: x = comprimento da tabua, y = altura, z = largura do pacote. Unidade: metro.
-function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
+// opts.regra = true: desenha as amarras pela regra (para calcular o padrao), ignorando p.am.
+// Senao, usa no maximo p.am amarras: primeiro o pezinho, depois as fiadas de amarra, depois o vao do meio.
+// Com 0 amarras o pacote fica todo grudado (sem pezinho e sem fiada de amarra).
+function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }, opts = {}) {
     const C = calc();
     const viga = C.ehViga(p);
     const e = p.esp / 100, l = p.larg / 100, L = p.comp;
     const W = C.largPacote(p);
     const vao = C.vaoMeio(p);
     const folga = 0.0015; // separa visualmente as pecas
-    const out = []; // {x,y,z, sx,sy,sz, tom}
-    const add = (x, y, z, sx, sy, sz, tom = 0) => out.push({ x: origem.x + x, y: origem.y + y, z: origem.z + z, sx, sy, sz, tom });
+    const out = []; // {x,y,z, sx,sy,sz, tom, k (numero da peca), tipo}
+    let tipoAtual = 'amarra';
+    const add = (x, y, z, sx, sy, sz, tom = 0) => out.push({ x: origem.x + x, y: origem.y + y, z: origem.z + z, sx, sy, sz, tom, k: out.length, tipo: tipoAtual });
+    const porPonta = L < W - 0.01 ? 2 : 1;
+    const posFileiras = viga ? 0 : Math.max(0, Math.floor((p.alt - 1) / 10));
+    // orcamento de amarras
+    let verba = viga || opts.regra ? Infinity : Math.max(0, Math.round(Number(p.am) || 0));
+    const nPeRegra = viga ? 1 : 4;
+    const nPe = viga ? 1 : Math.min(nPeRegra, Math.floor(verba / 2));
+    if (!viga) verba -= nPe * 2;
+    const nFileiras = viga ? 0 : Math.min(posFileiras, Math.floor(verba / (2 * porPonta)));
+    if (!viga) verba -= nFileiras * 2 * porPonta;
 
     // pezinho: atravessado (ao longo de z) nas duas pontas; tabua: 4 pecas empilhadas, viga: 1 peca
-    const nPe = viga ? 1 : 4;
     [0.04 + l / 2, L - 0.04 - l / 2].forEach(xc => {
         for (let t = 0; t < nPe; t++) add(xc, t * e + e / 2, W / 2, l - folga, e - folga, W, 2);
     });
@@ -84,19 +96,21 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
     }
     let yGrupoInicio = y;
     let amarras = viga ? 0 : nPe * 2;
+    let fileirasFeitas = 0;
     const camadasY = [];
     // vao do meio: 4 tabuinhas em pe em cada bloco de 10 fiadas (contam como amarra)
     const fecharVao = (yIni, yFim) => {
         if (!vao) return;
         const zIni = Math.floor(p.cam / 2) * l;
-        const n = Math.max(1, Math.min(4, Math.floor(vao / e + 0.001)));
+        const n = Math.min(verba, Math.max(1, Math.min(4, Math.floor(vao / e + 0.001))));
+        if (n <= 0) return;
+        verba -= n;
         const passo = vao / n;
         for (let k = 0; k < n; k++) add(L / 2, (yIni + yFim) / 2, zIni + k * passo + passo / 2, L, (yFim - yIni) - folga, e - folga, 1);
         amarras += n;
     };
     // fileira de amarra: tabua atravessada em cada ponta. Se a tabua e mais curta que a largura
     // do pacote (pacote de 1,00 com 1,20 de largura), vao 2 lado a lado em cada ponta.
-    const porPonta = L < W - 0.01 ? 2 : 1;
     const fileiraAmarra = yy => {
         [[0.06 + l / 2, 1], [L - 0.06 - l / 2, -1]].forEach(([xc, dir]) => {
             if (porPonta === 1) add(xc, yy + e / 2, W / 2, l - folga, e - folga, W, 2);
@@ -108,16 +122,20 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
         amarras += 2 * porPonta;
     };
     for (let r = 0; r < p.alt; r++) {
-        if (!viga && r > 0 && r % 10 === 0) {
+        if (!viga && r > 0 && r % 10 === 0 && fileirasFeitas < nFileiras) {
+            tipoAtual = 'amarra';
             fecharVao(yGrupoInicio, y);
             fileiraAmarra(y);
+            fileirasFeitas++;
             y += e;
             yGrupoInicio = y;
         }
         camadasY.push(y + e / 2);
+        tipoAtual = 'tabua';
         zs.forEach(z => add(L / 2, y + e / 2, z, L, e - folga, l - folga, (r + Math.round(z * 100)) % 3 === 0 ? 1 : 0));
         y += e;
     }
+    tipoAtual = 'amarra';
     fecharVao(yGrupoInicio, y);
     // viga: pecas adicionais formam uma camada incompleta por cima
     if (viga && p.am > 0) {
@@ -131,9 +149,9 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
 const texturasEtiqueta = new Map();
 function texturaEtiqueta(p) {
     const T = window.THREE;
-    const pecas = p.alt * p.cam + (p.am || 0);
+    const pecas = p.pecasTotal ?? (p.alt * p.cam + (p.am || 0));
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
-    const chave = [p.classe, p.esp, p.larg, p.comp, p.alt, p.cam, p.am, p.especie].join('|');
+    const chave = [p.classe, p.esp, p.larg, p.comp, p.alt, p.cam, p.am, p.especie, pecas].join('|');
     if (texturasEtiqueta.has(chave)) return texturasEtiqueta.get(chave);
     const em = window.dadosSerrariaEmitente || {};
     const marca = String(em.nomeFantasia || 'VANMARTE').replace(/^SERRARIA\s+/i, '').toUpperCase();
@@ -190,7 +208,7 @@ function colarEtiqueta(dim, origem, p, lado = 1) {
 }
 
 // amarras pela regra da serraria (pezinho + fiadas de amarra + tabuinhas do vao do meio)
-function amarrasPadrao(p) { return tabuasDoPacote(p).amarras; }
+function amarrasPadrao(p) { return tabuasDoPacote(p, undefined, { regra: true }).amarras; }
 window.amarrasPadraoPacote = p => (calc() ? amarrasPadrao(p) : 0);
 
 // numeros para contar: fiadas (1..alt) na quina da ponta e tabuas da fiada de cima (1..cam)
@@ -460,20 +478,75 @@ function desenharTabua(p) {
     return `Tábua única: ${fmt(p.esp, 1)} cm × ${fmt(p.larg, 1)} cm × ${fmt(L, 2)} m · ${fmt(e * l * L, 4)} m³ por peça`;
 }
 
+// Pacote: da para selecionar peca por peca (clique) e tirar as selecionadas.
+// atual.pecaSel = Set de numeros das pecas selecionadas; atual.pecaFora = Set das que foram tiradas.
 function desenharPacote(p) {
     limparConteudo();
+    const T = window.THREE;
     const C = calc();
     const dim = tabuasDoPacote(p, { x: 0, y: 0, z: 0 });
     grade(Math.max(4, Math.ceil(p.comp + 2)), 0.1, 0.5);
     const off = { x: -dim.comprimento / 2, y: 0, z: -dim.largura / 2 };
-    malhaInstanciada(dim.pecas.map(b => ({ ...b, x: b.x + off.x, z: b.z + off.z })), COR_MADEIRA);
+    const fora = atual.pecaFora || new Set(), sel = atual.pecaSel || new Set();
+    const visiveis = dim.pecas.filter(b => !fora.has(b.k)).map(b => ({ ...b, x: b.x + off.x, z: b.z + off.z }));
+    const mesh = malhaInstanciada(visiveis, COR_MADEIRA);
+    cena.pacotePick = { mesh, lista: visiveis };
+    // selecionadas: contorno azul
+    visiveis.filter(b => sel.has(b.k)).forEach(b => {
+        const g = new T.EdgesGeometry(new T.BoxGeometry(b.sx + 0.004, b.sy + 0.004, b.sz + 0.004));
+        const l = new T.LineSegments(g, new T.LineBasicMaterial({ color: 0x1d4ed8 }));
+        l.position.set(b.x, b.y, b.z);
+        cena.conteudo.add(l);
+        const marca = new T.Mesh(new T.BoxGeometry(b.sx + 0.002, b.sy + 0.002, b.sz + 0.002), new T.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.45, depthWrite: false }));
+        marca.position.set(b.x, b.y, b.z);
+        cena.conteudo.add(marca);
+    });
     malhaInstanciada(fitasDoPacote(dim, off), 0x16a34a, false);
     if (!C.ehViga(p)) numerarPacote(dim, off, p);
-    colarEtiqueta(dim, off, p);
-    enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [0.8, 0.45, 1]);
-    const pecas = p.alt * p.cam + p.am;
+    const tiradas = dim.pecas.filter(b => fora.has(b.k));
+    const tabFora = tiradas.filter(b => b.tipo === 'tabua').length, amFora = tiradas.length - tabFora;
+    const pecas = p.alt * p.cam + (p.am || 0) - tiradas.length;
+    colarEtiqueta(dim, off, { ...p, pecasTotal: pecas });
+    if (!atual.manterCamera) enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [0.8, 0.45, 1]);
+    atual.manterCamera = false;
+    atualizarBotoesPecas(sel.size, tiradas.length);
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
-    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!C.ehViga(p) && dim.amarras !== p.am ? ` · desenho tem ${dim.amarras} am (pezinho + amarras + meio)` : ''}`;
+    const menos = tiradas.length ? ` − ${tabFora ? `${tabFora} tábua(s)` : ''}${tabFora && amFora ? ' − ' : ''}${amFora ? `${amFora} amarra(s)` : ''}` : '';
+    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}${menos}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!C.ehViga(p) && dim.amarras !== (p.am || 0) ? ` · desenho tem ${dim.amarras} am (o resto não cabe pela regra)` : ''}${sel.size ? ` · ${sel.size} selecionada(s)` : ''}`;
+}
+
+function atualizarBotoesPecas(nSel, nFora) {
+    const bt = document.getElementById('v3dPecaTirar'), br = document.getElementById('v3dPecaRepor');
+    if (bt) { bt.hidden = !nSel; bt.textContent = `Tirar ${nSel} peça(s) selecionada(s)`; }
+    if (br) { br.hidden = !nFora; br.textContent = `Repor ${nFora} peça(s)`; }
+}
+
+// clique numa peca do pacote (aba Pacote): seleciona / tira selecao
+function instalarSelecaoPecas() {
+    if (!cena || cena.selPecasInstalado) return;
+    cena.selPecasInstalado = true;
+    const T = window.THREE;
+    const el = cena.renderer.domElement;
+    const ray = new T.Raycaster();
+    const ndc = new T.Vector2();
+    let ini = null;
+    el.addEventListener('pointerdown', e => { ini = { x: e.clientX, y: e.clientY, b: e.button }; });
+    el.addEventListener('pointerup', e => {
+        if (!ini || ini.b !== 0 || Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 5) { ini = null; return; }
+        ini = null;
+        if (atual.modo !== 'madeira' || atual.aba !== 'pacote' || !cena.pacotePick?.mesh) return;
+        const r = el.getBoundingClientRect();
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, cena.camera);
+        const hit = ray.intersectObject(cena.pacotePick.mesh, false)[0];
+        if (!hit || hit.instanceId === undefined) return;
+        const peca = cena.pacotePick.lista[hit.instanceId];
+        if (!peca) return;
+        atual.pecaSel = atual.pecaSel || new Set();
+        if (atual.pecaSel.has(peca.k)) atual.pecaSel.delete(peca.k); else atual.pecaSel.add(peca.k);
+        atual.manterCamera = true;
+        desenhar();
+    });
 }
 
 const PISO = 1.25, RODA = 0.52, CAB = 2.5;
@@ -1055,6 +1128,8 @@ function garantirModal() {
             <label>Por fiada<input id="v3dPacCam" type="number" min="1" step="1"></label>
             <label>Amarras<input id="v3dPacAm" type="number" min="0" step="1"></label>
             <button type="button" class="v3d-pac-orig" id="v3dPacOrig">Voltar ao cadastro</button>
+            <button type="button" class="v3d-pac-orig v3d-peca-tirar" id="v3dPecaTirar" hidden>Tirar peças</button>
+            <button type="button" class="v3d-pac-orig" id="v3dPecaRepor" hidden>Repor peças</button>
           </div>
           <div class="v3d-cfg" id="v3dToraCfg" hidden>
             <label class="v3d-check"><input id="v3dToraLado" type="checkbox"> Toras atravessadas (de lado, sem fueiros laterais)</label>
@@ -1075,7 +1150,7 @@ function garantirModal() {
           <aside class="v3d-lista" id="v3dLista" hidden></aside>
           <div class="v3d-palco" id="v3dPalco"><div class="v3d-carregando">Carregando 3D…</div></div>
         </div>
-        <p class="v3d-dica">Arraste para girar · role ou pince para aproximar · arraste com dois dedos (ou botão direito fora do pacote) para mover. No pacote: arraste com a mãozinha; botão direito abre as opções. Grade: quadradinho fino = 10 cm, linha forte = 50 cm (no caminhão: 50 cm e 1 m).</p>
+        <p class="v3d-dica">Arraste para girar · role ou pince para aproximar · arraste com dois dedos (ou botão direito fora do pacote) para mover. Na carga: arraste o pacote com a mãozinha; botão direito abre as opções. Na aba Pacote: clique numa tábua ou amarra para selecionar e tirar. Grade: quadradinho fino = 10 cm, linha forte = 50 cm (no caminhão: 50 cm e 1 m).</p>
       </div>`;
     document.body.appendChild(modal);
     modal.querySelectorAll('[data-aba]').forEach(b => b.addEventListener('click', () => { atual.aba = b.dataset.aba; desenhar(); }));
@@ -1108,10 +1183,25 @@ function garantirModal() {
         const novo = { ...atual.produto, alt, cam };
         if (e?.target?.id !== 'v3dPacAm' && !calc().ehViga(novo)) am = amarrasPadrao(novo);
         atual.produto = { ...novo, am };
+        atual.pecaSel = new Set(); atual.pecaFora = new Set();
+        atual.manterCamera = true;
         desenhar();
     };
-    ['v3dPacAlt', 'v3dPacCam', 'v3dPacAm'].forEach(id => $(id).addEventListener('change', lerPac));
-    $('v3dPacOrig').addEventListener('click', () => { if (atual.produtoOriginal) { atual.produto = { ...atual.produtoOriginal }; desenhar(); } });
+    // muda enquanto digita (com uma pausinha para nao redesenhar a cada tecla)
+    let esperaPac = null;
+    ['v3dPacAlt', 'v3dPacCam', 'v3dPacAm'].forEach(id => $(id).addEventListener('input', e => {
+        clearTimeout(esperaPac);
+        esperaPac = setTimeout(() => { if (String(e.target.value).trim() !== '') lerPac(e); }, 250);
+    }));
+    $('v3dPecaTirar').addEventListener('click', () => {
+        atual.pecaFora = atual.pecaFora || new Set();
+        (atual.pecaSel || new Set()).forEach(k => atual.pecaFora.add(k));
+        atual.pecaSel = new Set();
+        atual.manterCamera = true;
+        desenhar();
+    });
+    $('v3dPecaRepor').addEventListener('click', () => { atual.pecaFora = new Set(); atual.pecaSel = new Set(); atual.manterCamera = true; desenhar(); });
+    $('v3dPacOrig').addEventListener('click', () => { if (atual.produtoOriginal) { atual.produto = { ...atual.produtoOriginal }; atual.pecaSel = new Set(); atual.pecaFora = new Set(); desenhar(); } });
     $('v3dBitrem').addEventListener('change', lerCfg);
     modal.addEventListener('click', e => { if (e.target === modal) window.fecharVisualizador3D(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') window.fecharVisualizador3D(); });
@@ -1231,6 +1321,7 @@ async function abrir(produto) {
     document.getElementById('v3dTitulo').textContent = `${p.nome} · ${p.classe}ª classe · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}`;
     atual.produto = p;
     atual.produtoOriginal = { ...p };
+    atual.pecaSel = new Set(); atual.pecaFora = new Set();
     atual.modo = 'madeira';
     try {
         await garantirThree();
@@ -1240,6 +1331,7 @@ async function abrir(produto) {
     }
     if (!cena) criarCena(document.getElementById('v3dPalco'));
     else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
+    instalarSelecaoPecas();
     desenhar();
 }
 
