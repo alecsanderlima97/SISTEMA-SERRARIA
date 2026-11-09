@@ -462,6 +462,9 @@ window.montarCargaRomaneio3D = function() {
   window.abrirMontadorCarga3D?.(itens, {
     titulo: 'Montar carga do romaneio',
     origem: 'Pacotes do romaneio',
-    caminhao: { comp1: estado.comp1, comp2: estado.comp2, larg: estado.larg, alt: estado.alt, bitrem: estado.bitrem }
+    caminhao: { comp1: estado.comp1, comp2: estado.comp2, larg: estado.larg, alt: estado.alt, bitrem: estado.bitrem },
+    arranjo: dados.montagem3d || null,
+    aoSalvar: arranjo => window.definirMontagem3DRomaneio?.(arranjo),
+    numero: document.getElementById('v2-numero-ordem')?.value || ''
   });
 };

@@ -50,7 +50,8 @@ function saldos(lista = movimentos) {
 async function gravar(mov) {
     const user = auth.currentUser || {};
     const doc = { data: hoje(), ...mov, criadoEm: new Date().toISOString(), usuario: user.email || user.uid || '' };
-    const id = await addDoc(collection(db, COL), doc).then(r => r.id);
+    // grava com a auditoria do sistema quando disponivel
+    const id = window.FS?.addDoc ? await window.FS.addDoc(COL, doc) : await addDoc(collection(db, COL), doc).then(r => r.id);
     movimentos.unshift({ id, ...doc });
     return id;
 }

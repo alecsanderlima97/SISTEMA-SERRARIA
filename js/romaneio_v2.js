@@ -1826,7 +1826,10 @@ window.romaneioDocActions = {
 window.modalDetalhesActions = window.romaneioDocActions;
 
 // Leitura para a Montagem de Carga (js/montagem-carga.js). Copia: o desenho nao altera o romaneio.
+// Montagem 3D da carga (arranjo dos pacotes no caminhao), gravada junto com o romaneio
+window.definirMontagem3DRomaneio = arranjo => { romaneioAtual.montagem3d = arranjo || null; };
 window.obterRomaneioParaMontagem = () => ({
+    montagem3d: romaneioAtual.montagem3d ? JSON.parse(JSON.stringify(romaneioAtual.montagem3d)) : null,
     pacotes: JSON.parse(JSON.stringify(romaneioAtual.pacotes || [])),
     placa: (document.getElementById('v2-placa')?.value || romaneioAtual.logistica?.placa || '').trim(),
     caminhao: (document.getElementById('v2-caminhao')?.value || romaneioAtual.logistica?.caminhao || '').trim()
@@ -2085,6 +2088,7 @@ window.carregarRomaneioParaEdicao = function(r) {
     // 1. Setar o romaneioAtual com os dados carregados
     romaneioAtual = {
         idFirebase: r.id, // Guardamos o ID do Firebase para usar no updateDoc depois
+        montagem3d: r.montagem3d || null,
         numero: r.numero || r.numeroCarga,
         clienteId: r.clienteId || '',
         cliente: r.cliente,
@@ -2343,6 +2347,7 @@ window.finalizarRomaneioV2 = async () => {
         // Resetar o estado sem idFirebase
         romaneioAtual.idFirebase = null;
         romaneioAtual.pacotes = [];
+        romaneioAtual.montagem3d = null;
         romaneioAtual.numero = `ROM-${Date.now().toString().slice(-6)}`;
         if (document.getElementById('v2-numero-ordem')) document.getElementById('v2-numero-ordem').value = romaneioAtual.numero;
         

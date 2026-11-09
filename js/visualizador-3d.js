@@ -47,7 +47,7 @@ function produtoParaPacote(p = {}) {
     if (!alt && cam) alt = Math.max(1, Math.round(((Number(p.pecasPorPacote) || 0) - am) / cam)) || 1;
     const nome = String(p.tipo || '');
     const tipo = /VIGA|TOCO|CAIBRO/i.test(nome) ? 'viga' : (/TABU|RIPA|SARRAFO/i.test(nome) ? 'tabua' : (esp >= 5 ? 'viga' : 'tabua'));
-    return { classe: numeroClasse(p.classe || p.qualidade), esp, larg, comp, alt, cam, am, tipo, nome: nome || 'Madeira', especie: p.especie || '' };
+    return { id: p.id || '', classe: numeroClasse(p.classe || p.qualidade), esp, larg, comp, alt, cam, am, tipo, nome: nome || 'Madeira', especie: p.especie || '' };
 }
 
 const COR_CLASSE = { 1: 0x16a34a, 2: 0xeab308, 3: 0xdc2626 };
@@ -1299,6 +1299,7 @@ function garantirModal() {
             <label>Por fiada<input id="v3dPacCam" type="number" min="1" step="1"></label>
             <label><span id="v3dPacAmRot">Amarras</span><input id="v3dPacAm" type="number" min="0" step="1"></label>
             <button type="button" class="v3d-pac-orig" id="v3dPacOrig">Voltar ao cadastro</button>
+            <button type="button" class="v3d-pac-orig v3d-pac-salvar" id="v3dPacSalvar" hidden>Salvar no cadastro</button>
             <button type="button" class="v3d-pac-orig v3d-peca-tirar" id="v3dPecaTirar" hidden>Tirar peças</button>
             <button type="button" class="v3d-pac-orig" id="v3dPecaRepor" hidden>Repor peças</button>
           </div>
@@ -1370,6 +1371,24 @@ function garantirModal() {
         atual.pecaSel = new Set();
         atual.manterCamera = true;
         desenhar();
+    });
+    // grava a configuracao do pacote no Cadastro de Medidas (com auditoria, pelo FS.updateDoc)
+    $('v3dPacSalvar').addEventListener('click', async () => {
+        const p = atual.produto;
+        if (!p?.id) return;
+        const pecas = p.alt * p.cam + (p.am || 0);
+        if (!confirm(`Salvar no cadastro: ${p.alt} × ${p.cam}${p.am ? ` + ${p.am}` : ''} = ${pecas} peças por pacote?`)) return;
+        const bt = $('v3dPacSalvar');
+        bt.disabled = true;
+        try {
+            await window.FS.updateDoc('produtos', p.id, { alturas: p.alt, larguraPacote: p.cam, amarras: p.am || 0, pecasPorPacote: pecas });
+            atual.produtoOriginal = { ...p };
+            document.dispatchEvent(new Event('produtosAlteradosNo3D'));
+            desenhar();
+            $('v3dInfo').textContent = 'Configuração salva no Cadastro de Medidas. ' + $('v3dInfo').textContent;
+        } catch (e) {
+            alert(e?.code === 'permission-denied' ? 'Sem permissão para alterar o cadastro.' : 'Não foi possível salvar. Tente de novo.');
+        } finally { bt.disabled = false; }
     });
     $('v3dPecaRepor').addEventListener('click', () => { atual.pecaFora = new Set(); atual.pecaSel = new Set(); atual.manterCamera = true; desenhar(); });
     $('v3dPacOrig').addEventListener('click', () => { if (atual.produtoOriginal) { atual.produto = { ...atual.produtoOriginal }; atual.pecaSel = new Set(); atual.pecaFora = new Set(); desenhar(); } });
@@ -1461,7 +1480,9 @@ function desenhar() {
     document.getElementById('v3dPacAm').value = atual.produto.am || 0;
     document.getElementById('v3dPacAmRot').textContent = calc().ehViga(atual.produto) && atual.produto.comp > 1.21 ? 'Peças a mais' : 'Amarras';
     const o = atual.produtoOriginal;
-    document.getElementById('v3dPacOrig').hidden = !o || (o.alt === atual.produto.alt && o.cam === atual.produto.cam && (o.am || 0) === (atual.produto.am || 0));
+    const mudou = !!o && !(o.alt === atual.produto.alt && o.cam === atual.produto.cam && (o.am || 0) === (atual.produto.am || 0));
+    document.getElementById('v3dPacOrig').hidden = !mudou;
+    document.getElementById('v3dPacSalvar').hidden = !mudou || !atual.produto.id;
     const cfg = document.getElementById('v3dCfg');
     cfg.hidden = atual.aba !== 'caminhao';
     const c = atual.caminhao;
@@ -1658,6 +1679,11 @@ function renderListaMontagem() {
           <button type="button" id="v3dAuto">Montar automático</button>
           <button type="button" id="v3dLimpar">Limpar</button>
         </div>
+        <div class="v3d-lista-acoes">
+          <button type="button" id="v3dPlano"><i class="fa-solid fa-print"></i> Imprimir plano</button>
+          ${montagem.aoSalvar ? `<button type="button" id="v3dSalvarArranjo" class="v3d-salvar-arranjo"><i class="fa-solid fa-floppy-disk"></i> Salvar no romaneio</button>` : ''}
+        </div>
+        ${montagem.salvoMsg ? `<p class="v3d-dica-lista v3d-salvo">${montagem.salvoMsg}</p>` : ''}
         ${sel ? `<div class="v3d-sel-acoes"><button type="button" id="v3dTrocarSel"><i class="fa-solid fa-right-left"></i> Trocar com outro</button><button type="button" id="v3dLadoSel"><i class="fa-solid fa-arrows-left-right"></i> Outro lado</button><button type="button" id="v3dRemoverSel" class="v3d-remover"><i class="fa-solid fa-arrow-down"></i> Descer do caminhão</button></div>` : '<p class="v3d-dica-lista">Arraste um pacote (mãozinha) para mudar de lugar: ele anda no comprimento e encaixa na medida. Botão direito no pacote: trocar, outro lado ou descer.</p>'}
       </div>
       <div class="v3d-itens">${linhas || '<p class="v3d-dica-lista">Nenhum pacote para montar.</p>'}</div>`;
@@ -1958,6 +1984,13 @@ function instalarListaEventos() {
             desenharMontagem();
             return;
         }
+        if (b.id === 'v3dPlano') { imprimirPlanoCarga(); return; }
+        if (b.id === 'v3dSalvarArranjo' && montagem.aoSalvar) {
+            montagem.aoSalvar(arranjoAtual());
+            montagem.salvoMsg = 'Montagem guardada. Ela é gravada junto quando você finalizar o romaneio.';
+            renderListaMontagem();
+            return;
+        }
         if (b.id === 'v3dLimpar') { montagem.colocados = []; montagem.selecionado = null; desenharMontagem(); return; }
         if (b.id === 'v3dTrocarSel' && montagem.selecionado) { iniciarTroca(montagem.selecionado); return; }
         if (b.id === 'v3dLadoSel' && montagem.selecionado) { outroLado(montagem.selecionado); return; }
@@ -1968,6 +2001,61 @@ function instalarListaEventos() {
             desenharMontagem();
         }
     });
+}
+
+// ---- arranjo salvo e plano de carregamento impresso ----
+function arranjoAtual() {
+    return {
+        caminhao: { ...atual.caminhao }, alinhar: { ...atual.alinhar }, salvoEm: new Date().toISOString(),
+        pacotes: montagem.colocados.map(c => ({ chave: grupoChave(c.u.p), ci: c.ci, f: c.f, v: c.v, n: c.n, topo: c.topo }))
+    };
+}
+function restaurarArranjo(arr) {
+    if (!arr?.pacotes?.length) return 0;
+    const livres = [...montagem.unidades];
+    montagem.colocados = [];
+    arr.pacotes.forEach(a => {
+        const i = livres.findIndex(u => grupoChave(u.p) === a.chave);
+        if (i < 0) return;
+        const u = livres.splice(i, 1)[0];
+        montagem.colocados.push({ u, ci: a.ci, f: a.f, v: a.v, n: a.n, topo: a.topo });
+    });
+    return montagem.colocados.length;
+}
+function fotoDaCarga(dir) {
+    const cam = cena.camera, ctr = cena.controls;
+    const pos = cam.position.clone(), alvo = ctr.target.clone();
+    if (dir) enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 1.45, dir);
+    cena.renderer.render(cena.scene, cam);
+    const url = cena.renderer.domElement.toDataURL('image/png');
+    cam.position.copy(pos); ctr.target.copy(alvo); ctr.update(); cena.sujo = true;
+    return url;
+}
+function imprimirPlanoCarga() {
+    const g = geometriaMontagem();
+    const C = g.C;
+    const nomesNivel = ['Assoalho', 'Em cima', 'Chapéu'];
+    const niveis = new Map();
+    montagem.colocados.forEach(c => { const k = c.ci + '|' + c.f; if (!niveis.has(k)) niveis.set(k, [...new Set(montagem.colocados.filter(o => o.ci + '|' + o.f === k).map(o => Math.round(o.topo * 100)))].sort((a, b) => a - b)); });
+    // ordem: camada de baixo primeiro, da cabine para tras, motorista antes do carona
+    const ordem = [...montagem.colocados].sort((a, b) => a.topo - b.topo || (b.ci - a.ci) || (b.v - a.v) || (a.f - b.f));
+    const linhas = ordem.map((c, i) => {
+        const p = c.u.p;
+        const nivel = Math.min(2, niveis.get(c.ci + '|' + c.f).indexOf(Math.round(c.topo * 100)));
+        const cabine = g.comps[c.ci] - (c.v + c.n) * g.VAGA;
+        return `<tr><td><b>${i + 1}</b></td><td>${nomesNivel[nivel]}</td><td>${g.fileiras > 1 ? (c.f === 0 ? 'Motorista' : 'Carona') : 'Centro'}</td><td>${g.comps.length > 1 ? `Caçamba ${c.ci + 1} · ` : ''}${fmt(Math.max(0, cabine), 2)} m da frente</td><td>${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</td><td>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</td></tr>`;
+    }).join('');
+    const vol = montagem.colocados.reduce((s, c) => s + (c.u.p.esp / 100) * (c.u.p.larg / 100) * c.u.p.comp * (c.u.p.alt * c.u.p.cam + (c.u.p.am || 0)), 0);
+    const img1 = fotoDaCarga(null), img2 = fotoDaCarga([0.001, 1, 0.0001]);
+    const cam = atual.caminhao;
+    const titulo = `Plano de carregamento${montagem.numero ? ' · ' + montagem.numero : ''}`;
+    const html = `<div class="doc-header"><div class="doc-title"><h1>${titulo}</h1>
+        <p>${montagem.colocados.length} pacote(s) (${contagemCamadas(montagem.colocados)}) · ${fmt(vol, 3)} m³ · caçamba ${fmt(cam.comp1, 2)}${cam.bitrem ? ` + ${fmt(cam.comp2, 2)}` : ''} × ${fmt(cam.larg, 2)} m · altura máx. ${fmt(cam.alt, 2)} m</p></div></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0;"><img src="${img1}" style="width:100%; border:1px solid #ccc;" alt="Carga em 3D"><img src="${img2}" style="width:100%; border:1px solid #ccc;" alt="Carga vista de cima"></div>
+      <table class="doc-table"><thead><tr><th>Ordem</th><th>Camada</th><th>Lado</th><th>Posição</th><th>Pacote</th><th>Config.</th></tr></thead><tbody>${linhas}</tbody></table>
+      <p style="margin-top:10px; font-size:12px;">Carregar na ordem: camada de baixo primeiro, da cabine para trás. Conferir as fitas antes de sair.</p>`;
+    if (window.DocActions?.printHtml) window.DocActions.printHtml({ title: titulo, contentHtml: html });
+    else { const w = window.open('', '_blank'); if (w) { w.document.write(`<html><body>${html}</body></html>`); w.document.close(); w.print(); } }
 }
 
 // itens: [{ p: {classe, esp, larg, comp, alt, cam, am}, qtd }]
@@ -1981,15 +2069,18 @@ window.abrirMontadorCarga3D = async function(itens, opcoes = {}) {
     document.getElementById('v3dTitulo').textContent = opcoes.titulo || 'Montar carga';
     atual.modo = 'montar';
     if (opcoes.caminhao) atual.caminhao = { ...atual.caminhao, ...opcoes.caminhao };
-    montagem = { unidades, colocados: [], selecionado: null, origem: opcoes.origem || 'Pacotes' };
+    montagem = { unidades, colocados: [], selecionado: null, origem: opcoes.origem || 'Pacotes', aoSalvar: opcoes.aoSalvar || null, numero: opcoes.numero || '', salvoMsg: '' };
+    if (opcoes.arranjo?.caminhao) atual.caminhao = { ...atual.caminhao, ...opcoes.arranjo.caminhao };
+    if (opcoes.arranjo?.alinhar) atual.alinhar = { ...atual.alinhar, ...opcoes.arranjo.alinhar };
     try { await garantirThree(); }
     catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
     if (!cena) criarCena(document.getElementById('v3dPalco'));
     else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
     instalarArraste();
     instalarListaEventos();
-    // comeca com a montagem automatica; o usuario ajusta arrastando
-    montarAutomatico();
+    // usa a montagem salva no romaneio; senao comeca com a automatica e o usuario ajusta arrastando
+    if (restaurarArranjo(opcoes.arranjo)) montagem.salvoMsg = 'Montagem salva carregada.';
+    else montarAutomatico();
     desenhar();
     const g = geometriaMontagem();
     enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 2.2, [0.9, 0.7, 1.3]);

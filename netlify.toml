@@ -1,0 +1,3 @@
+# Producao roda na Vercel. Netlify desligado: este comando faz o Netlify pular todo build/preview.
+[build]
+  ignore = "exit 0"

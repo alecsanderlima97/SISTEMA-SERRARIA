@@ -136,7 +136,7 @@ function htmlRomaneio(saldoProntos) {
             <button type="button" class="btn-primary" id="rpSalvar"><i class="fa-solid fa-cloud-arrow-up"></i> Salvar e imprimir</button>
           </div>
         </div>
-        <p id="rpMsg" class="pal-est-msg" role="status"></p>
+        <p id="rpMsg" class="pal-est-msg" role="status">${r.editando ? `Editando o romaneio ${esc(r.editando.numero)}. Ao salvar, o estoque e a cobrança são ajustados.` : ''}</p>
       </div>`;
 }
 
@@ -171,7 +171,9 @@ async function salvar() {
     });
     if (!itens.length) { msg('Adicione pelo menos um palete com quantidade.', true); return; }
     saldoCache = await window.PaletesEstoque?.saldoProntos();
-    const faltas = itens.filter(i => i.qtd > Math.round(saldoCache?.get(i.modeloId)?.qtd || 0));
+    // na edicao, o que ja saiu por este romaneio volta para a conta do saldo
+    const jaSaiu = id => (rom.editando?.itens || []).filter(i => i.modeloId === id).reduce((s, i) => s + int(i.qtd), 0);
+    const faltas = itens.filter(i => i.qtd > Math.round(saldoCache?.get(i.modeloId)?.qtd || 0) + jaSaiu(i.modeloId));
     if (faltas.length && !confirm(`Não há paletes prontos suficientes de: ${faltas.map(f => f.nome).join(', ')}. O estoque vai ficar negativo. Salvar mesmo assim?`)) return;
     const total = itens.reduce((s, i) => s + i.qtd * i.preco, 0);
     const btn = document.getElementById('rpSalvar');
@@ -181,9 +183,18 @@ async function salvar() {
             numero: rom.numero, data: rom.data, clienteId: cli.id, cliente: String(cli.nome || '').toUpperCase(),
             transporteId: rom.transporteId, motorista: rom.motorista, caminhao: rom.caminhao, placa: rom.placa, obs: rom.obs,
             itens, total, formaPagamento: cli.formaPagamento || '', prazoPagamento: cli.prazoPagamento || '',
-            status: 'finalizado', criadoEm: new Date().toISOString(), usuario: auth.currentUser?.email || ''
+            status: 'finalizado', usuario: auth.currentUser?.email || ''
         };
-        const id = await addDoc(collection(db, COL), dados).then(r => r.id);
+        let id;
+        if (rom.editando) {
+            // edicao: grava por cima, devolve ao estoque o que tinha saido e da baixa no novo
+            id = rom.editando.id;
+            await (window.FS?.updateDoc ? window.FS.updateDoc(COL, id, { ...dados, editadoEm: new Date().toISOString() }) : Promise.reject(new Error('FS')));
+            await window.PaletesEstoque.estornarVenda({ romaneioId: id, numero: rom.editando.numero, cliente: rom.editando.cliente, itens: rom.editando.itens || [] });
+        } else {
+            dados.criadoEm = new Date().toISOString();
+            id = window.FS?.addDoc ? await window.FS.addDoc(COL, dados) : await addDoc(collection(db, COL), dados).then(r => r.id);
+        }
         await window.PaletesEstoque.registrarVenda({ romaneioId: id, numero: dados.numero, cliente: dados.cliente, itens });
         await window.ContasReceber?.salvarCobranca?.({
             origem: 'romaneio_palete', origemId: id, codigo: dados.numero, clienteId: cli.id, cliente: dados.cliente, produto: 'Paletes',
@@ -195,7 +206,7 @@ async function salvar() {
         await imprimir({ id, ...dados });
         rom = vazio();
         await render(true);
-        msg(`Romaneio ${dados.numero} salvo. Está no Histórico de Vendas (Paletes) e a cobrança foi para o Financeiro.`);
+        msg(`Romaneio ${dados.numero} salvo. Está no Histórico de Vendas (Paletes) e a cobrança está no Financeiro.`);
     } catch (e) {
         console.error('Romaneio paletes:', e);
         msg(e?.code === 'permission-denied' ? 'Sem permissão para salvar. Confirme as permissões e se as regras do Firestore foram publicadas.' : 'Não foi possível salvar. Nada foi baixado; tente de novo.', true);
@@ -304,16 +315,29 @@ window.HistoricoPaletes = {
             <td>${(r.itens || []).map(i => `${int(i.qtd)} × ${esc(i.nome)}`).join('<br>')}</td><td>${brl(r.total)}</td>
             <td><div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" class="btn-secondary" onclick="window.HistoricoPaletes.imprimir('${esc(r.id)}')"><i class="fa-solid fa-print"></i> Imprimir</button>
+              <button type="button" class="btn-secondary" onclick="window.HistoricoPaletes.editar('${esc(r.id)}')"><i class="fa-solid fa-pen"></i> Editar</button>
               <button type="button" class="btn-secondary" onclick="window.HistoricoPaletes.excluir('${esc(r.id)}')"><i class="fa-solid fa-trash"></i> Excluir</button>
             </div></td></tr>`).join('');
     },
     async imprimir(id) { const r = historico.find(x => x.id === id); if (r) imprimir(r); },
+    async editar(id) {
+        const r = historico.find(x => x.id === id);
+        if (!r) return;
+        rom = {
+            numero: r.numero, clienteId: r.clienteId, data: r.data || hoje(), transporteId: r.transporteId || '', motorista: r.motorista || '',
+            caminhao: r.caminhao || '', placa: r.placa || '', obs: r.obs || '',
+            itens: (r.itens || []).map(i => ({ modeloId: i.modeloId, qtd: int(i.qtd), preco: num(i.preco) })),
+            editando: { id: r.id, numero: r.numero, cliente: r.cliente, itens: r.itens || [] }
+        };
+        document.querySelector('a[data-target="view-romaneio-v2"]')?.click();
+        setTimeout(() => window.trocarTipoRomaneio('paletes'), 300);
+    },
     async excluir(id) {
         const r = historico.find(x => x.id === id);
         if (!r) return;
         if (!confirm(`Excluir o romaneio ${r.numero}? Os paletes voltam para o estoque. A cobrança no Financeiro precisa ser cancelada lá.`)) return;
         try {
-            await deleteDoc(doc(db, COL, r.id)); // primeiro apaga (confere a permissao), depois devolve ao estoque
+            if (window.FS?.deleteDoc) await window.FS.deleteDoc(COL, r.id); else await deleteDoc(doc(db, COL, r.id)); // primeiro apaga (confere a permissao), depois devolve ao estoque
             await window.PaletesEstoque.estornarVenda({ romaneioId: r.id, numero: r.numero, cliente: r.cliente, itens: r.itens || [] });
             historico = historico.filter(x => x.id !== id);
             const tbody = document.getElementById('listaHistorico');

@@ -335,3 +335,4 @@ window.verFormularioMadeira3D = function() {
 atualizarVisualClasseProduto();
 atualizarResumoProduto();
 window.SectionLoader?.register('view-produtos', carregarProdutos);
+document.addEventListener('produtosAlteradosNo3D', () => carregarProdutos());

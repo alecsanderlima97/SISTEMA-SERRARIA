@@ -1123,3 +1123,6 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
   .v3d-lista { max-height: none; }
   .v3d-item-cfg input { width: 46px !important; }
 }
+
+.v3d-lista .v3d-salvar-arranjo { background: #15803d; border-color: #15803d; color: #fff; }
+.v3d-salvo { color: #15803d !important; font-weight: 700; }
