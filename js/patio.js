@@ -3912,3 +3912,17 @@ window.aplicarFotoContagemPatio = async function(modo) {
         if (!error?.avisado) alert('Não foi possível lançar a contagem da foto. Tente novamente.');
     }
 };
+
+
+// Montador 3D com os pacotes do Controle de Producao (somente planejamento, nao grava).
+window.montarCargaPatio3D = function() {
+    const itens = (itensPatioTemp || []).filter(i => Number(i.pacotes) > 0).map(i => {
+        const cfg = parseConfigPacote(i.pecasRaw);
+        const larg = Number(i.largura) || 0;
+        let cam = Number(cfg.cam) || 0, alt = Number(cfg.alt) || 0, am = Number(cfg.am) || 0;
+        if (!cam && larg) cam = Math.max(1, Math.floor(120 / larg + 0.001));
+        if (!alt && cam) { alt = Math.max(1, Math.round((Number(i.pecas) || cam) / cam)); am = 0; }
+        return { qtd: Number(i.pacotes) || 0, p: { classe: obterNumeroClasse(i.classe) || 1, esp: Number(i.espessura) || 0, larg, comp: Number(i.comprimento) || 0, alt, cam, am } };
+    }).filter(x => x.p.esp > 0 && x.p.larg > 0 && x.p.comp > 0);
+    window.abrirMontadorCarga3D?.(itens, { titulo: 'Montar carga do pátio', origem: 'Pacotes do Controle de Produção' });
+};

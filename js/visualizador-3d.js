@@ -767,7 +767,7 @@ function garantirModal() {
             <button type="button" role="tab" data-pvista="caminhao">No caminhão</button>
           </div>
           <div class="v3d-cfg" id="v3dCfg" hidden>
-            <label><span id="v3dQtdRotulo">Pacotes</span><input id="v3dQtd" type="number" min="1" step="1"></label>
+            <label id="v3dWrapQtd"><span id="v3dQtdRotulo">Pacotes</span><input id="v3dQtd" type="number" min="1" step="1"></label>
             <label>Caçamba (m)<input id="v3dComp1" type="number" step="0.1"></label>
             <label class="v3d-check"><input id="v3dBitrem" type="checkbox"> Bitrem</label>
             <label id="v3dWrapComp2" hidden>Caçamba 2 (m)<input id="v3dComp2" type="number" step="0.1"></label>
@@ -775,7 +775,10 @@ function garantirModal() {
             <label>Altura máx. (m)<input id="v3dAlt" type="number" step="0.05"></label>
           </div>
         </div>
-        <div class="v3d-palco" id="v3dPalco"><div class="v3d-carregando">Carregando 3D…</div></div>
+        <div class="v3d-corpo">
+          <aside class="v3d-lista" id="v3dLista" hidden></aside>
+          <div class="v3d-palco" id="v3dPalco"><div class="v3d-carregando">Carregando 3D…</div></div>
+        </div>
         <p class="v3d-dica">Arraste para girar · role ou pince para aproximar · arraste com dois dedos (ou botão direito) para mover. Grade: quadradinho fino = 10 cm, linha forte = 50 cm (no caminhão: 50 cm e 1 m).</p>
       </div>`;
     document.body.appendChild(modal);
@@ -784,8 +787,9 @@ function garantirModal() {
     const $ = id => document.getElementById(id);
     const lerCfg = () => {
         const alvo = atual.modo === 'palete' ? 'caminhaoPalete' : 'caminhao';
+        if (atual.modo === 'montar' && montagem) montagem.recalcular = true;
         atual[alvo] = {
-            qtd: Math.max(1, parseInt($('v3dQtd').value, 10) || 1),
+            qtd: Math.max(1, parseInt($('v3dQtd').value, 10) || (atual[alvo]?.qtd || 1)),
             comp1: Number($('v3dComp1').value) || 7.2,
             comp2: Number($('v3dComp2').value) || 7.2,
             larg: Number($('v3dLarg').value) || 2.4,
@@ -807,6 +811,32 @@ function desenhar() {
     if (!modal || !cena) return;
     const abas = modal.querySelector('.v3d-abas');
     const vistas = document.getElementById('v3dPalVistas');
+    const lista = document.getElementById('v3dLista');
+    if (lista) lista.hidden = atual.modo !== 'montar';
+    document.getElementById('v3dWrapQtd').hidden = atual.modo === 'montar';
+    if (atual.modo === 'montar') {
+        if (abas) abas.hidden = true;
+        if (vistas) vistas.hidden = true;
+        document.getElementById('v3dCfg').hidden = false;
+        const c = atual.caminhao;
+        document.getElementById('v3dComp1').value = c.comp1;
+        document.getElementById('v3dComp2').value = c.comp2;
+        document.getElementById('v3dLarg').value = c.larg;
+        document.getElementById('v3dAlt').value = c.alt;
+        document.getElementById('v3dBitrem').checked = c.bitrem;
+        document.getElementById('v3dWrapComp2').hidden = !c.bitrem;
+        cena.redimensionar();
+        if (montagem?.recalcular) {
+            // mudou o caminhao: recoloca os mesmos pacotes nas vagas novas
+            const antes = montagem.colocados.map(c2 => c2.u);
+            montagem.colocados = [];
+            montagem.selecionado = null;
+            antes.forEach(colocarUnidade);
+            montagem.recalcular = false;
+        }
+        desenharMontagem();
+        return;
+    }
     if (atual.modo === 'tora') {
         if (abas) abas.hidden = true;
         if (vistas) vistas.hidden = true;
@@ -901,4 +931,302 @@ window.abrirPalete3D = async function(modelo) {
 window.fecharVisualizador3D = function() {
     const modal = document.getElementById('modalVisualizador3D');
     if (modal) modal.style.display = 'none';
+};
+
+// ---------- montador de carga (arrastar pacotes no caminhao) ----------
+// Somente planejamento: nada e gravado. Os pacotes vem do romaneio ou do Controle de Producao.
+let montagem = null;
+
+function grupoChave(p) { return [p.classe, p.esp, p.larg, p.comp, p.alt, p.cam, p.am].join('|'); }
+
+function geometriaMontagem() {
+    const C = calc();
+    const c = atual.caminhao;
+    const comps = c.bitrem ? [c.comp1, c.comp2] : [c.comp1];
+    const unidades = montagem.unidades;
+    const VAGA = unidades.length && unidades.every(u => u.p.comp <= 1.0 + 0.001) ? 1.0 : 1.2;
+    const maiorLarg = Math.max(1.0, ...unidades.map(u => C.largPacote(u.p)));
+    const fileiras = Math.max(1, Math.min(2, Math.floor(c.larg / maiorLarg)));
+    return { C, comps, VAGA, fileiras, largura: c.larg, altMax: c.alt, vagas: comps.map(cp => Math.floor(cp / VAGA + 0.001)) };
+}
+
+function nVagas(u, g) { return Math.max(1, Math.round(u.p.comp / g.VAGA)); }
+
+// altura do topo de cada vaga, ignorando um pacote (o que esta sendo arrastado)
+function alturaVaga(g, ci, f, v, ignorar) {
+    let h = 0;
+    montagem.colocados.forEach(c => {
+        if (c === ignorar || c.ci !== ci || c.f !== f) return;
+        if (v >= c.v && v < c.v + c.n) h = Math.max(h, c.topo + g.C.altPacote(c.u.p));
+    });
+    return h;
+}
+
+function avaliarVaga(g, u, ci, f, v, ignorar) {
+    const n = nVagas(u, g);
+    if (ci < 0 || ci >= g.comps.length || f < 0 || f >= g.fileiras || v < 0 || v + n > g.vagas[ci]) return null;
+    const base = Array.from({ length: n }, (_, k) => alturaVaga(g, ci, f, v + k, ignorar));
+    const topo = Math.max(...base);
+    if (base.some(h => Math.abs(h - topo) > 0.12)) return null;           // pacote longo nao apoia em degrau
+    if (topo + g.C.altPacote(u.p) > g.altMax + 0.001) return null;        // passa da altura maxima
+    return { ci, f, v, n, topo };
+}
+
+// mesma regra do automatico: mais baixo, mais no meio, equilibra lados, cruzado
+function melhorVaga(g, u) {
+    let melhor = null, chaveMelhor = null;
+    const cmp = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 0.001) return a[i] - b[i]; return 0; };
+    g.comps.forEach((_, ci) => { for (let f = 0; f < g.fileiras; f++) for (let v = 0; v < g.vagas[ci]; v++) {
+        const r = avaliarVaga(g, u, ci, f, v);
+        if (!r) continue;
+        const centro = (v + r.n / 2) - g.vagas[ci] / 2;
+        const naCamada = montagem.colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - r.topo) < 0.05).length;
+        const chave = [Math.round(r.topo * 100), Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
+        if (!melhor || cmp(chave, chaveMelhor) < 0) { melhor = r; chaveMelhor = chave; }
+    } });
+    return melhor;
+}
+
+function temAlgoEmCima(c) {
+    const g = geometriaMontagem();
+    const topo = c.topo + g.C.altPacote(c.u.p);
+    return montagem.colocados.some(o => o !== c && o.ci === c.ci && o.f === c.f && o.topo >= topo - 0.01 && o.v < c.v + c.n && c.v < o.v + o.n);
+}
+
+function colocarUnidade(u) {
+    const g = geometriaMontagem();
+    const r = melhorVaga(g, u);
+    if (!r) return false;
+    montagem.colocados.push({ u, ...r });
+    return true;
+}
+
+function renderListaMontagem() {
+    const el = document.getElementById('v3dLista');
+    if (!el || !montagem) return;
+    const grupos = new Map();
+    montagem.unidades.forEach(u => {
+        const k = grupoChave(u.p);
+        if (!grupos.has(k)) grupos.set(k, { p: u.p, rotulo: u.rotulo, total: 0, noCaminhao: 0 });
+        grupos.get(k).total++;
+    });
+    montagem.colocados.forEach(c => { grupos.get(grupoChave(c.u.p)).noCaminhao++; });
+    const C = calc();
+    const linhas = [...grupos.entries()].map(([k, gr]) => {
+        const resta = gr.total - gr.noCaminhao;
+        const cor = gr.p.classe === 1 ? '#16a34a' : gr.p.classe === 2 ? '#eab308' : '#dc2626';
+        return `<div class="v3d-item" style="--cor:${cor}">
+          <div class="v3d-item-txt"><b>${fmt(gr.p.esp, 1)} × ${fmt(gr.p.larg, 1)} × ${fmt(gr.p.comp, 2)}</b>
+            <span>${gr.p.classe}ª · (${gr.p.alt}×${gr.p.cam})${gr.p.am ? ` + ${gr.p.am}` : ''} · ${fmt(C.altPacote(gr.p), 2)} m</span>
+            <span class="v3d-item-qtd">${gr.noCaminhao} no caminhão · ${resta} fora</span></div>
+          <div class="v3d-item-btns">
+            <button type="button" data-menos="${k}" ${gr.noCaminhao ? '' : 'disabled'} aria-label="Tirar 1 do caminhão">−1</button>
+            <button type="button" data-mais="${k}" ${resta ? '' : 'disabled'} aria-label="Pôr 1 no caminhão">+1</button>
+          </div></div>`;
+    }).join('');
+    const sel = montagem.selecionado;
+    el.innerHTML = `
+      <div class="v3d-lista-topo">
+        <b>${montagem.origem}</b>
+        <div class="v3d-lista-acoes">
+          <button type="button" id="v3dAuto">Montar automático</button>
+          <button type="button" id="v3dLimpar">Limpar</button>
+        </div>
+        ${sel ? `<button type="button" id="v3dRemoverSel" class="v3d-remover">Tirar o pacote selecionado</button>` : '<p class="v3d-dica-lista">Toque num pacote do caminhão para selecionar. Arraste para mudar de lugar.</p>'}
+      </div>
+      <div class="v3d-itens">${linhas || '<p class="v3d-dica-lista">Nenhum pacote para montar.</p>'}</div>`;
+}
+
+function mundoParaVaga(g, ponto, u) {
+    // pacote centrado no ponteiro: vaga inicial = posicao - metade do pacote
+    const n = nVagas(u, g);
+    let ci = -1;
+    montagem.geo.inicioCacamba.forEach((ini, i) => { if (ponto.x >= ini - 0.6 && ponto.x <= ini + g.comps[i] + 0.6) ci = i; });
+    if (ci < 0) return null;
+    const v = Math.round((ponto.x - montagem.geo.inicioCacamba[ci]) / g.VAGA - n / 2);
+    const faixa = g.largura / g.fileiras;
+    const f = Math.floor((ponto.z - montagem.geo.z0) / faixa);
+    return { ci, v: Math.max(0, Math.min(g.vagas[ci] - n, v)), f: Math.max(0, Math.min(g.fileiras - 1, f)) };
+}
+
+function posicaoMundo(g, c) {
+    const C = g.C;
+    const faixa = g.largura / g.fileiras;
+    const comp = c.u.p.comp, largP = C.largPacote(c.u.p);
+    return {
+        x: montagem.geo.inicioCacamba[c.ci] + c.v * g.VAGA + (c.n * g.VAGA - comp) / 2,
+        y: PISO + c.topo,
+        z: montagem.geo.z0 + c.f * faixa + (faixa - largP) / 2
+    };
+}
+
+function desenharMontagem() {
+    limparConteudo();
+    const T = window.THREE;
+    const g = geometriaMontagem();
+    montagem.geo = desenharVeiculo(g.comps, g.largura, { fueiro: 1.2 });
+    const pecas = [], fitas = [];
+    montagem.alvos = [];
+    montagem.colocados.forEach((c, i) => {
+        const o = posicaoMundo(g, c);
+        const dim = tabuasDoPacote(c.u.p, o);
+        pecas.push(...dim.pecas);
+        fitas.push(...fitasDoPacote(dim, o));
+        // caixa invisivel para clicar/arrastar
+        const alvo = new T.Mesh(new T.BoxGeometry(dim.comprimento, dim.altura, dim.largura), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+        alvo.position.set(o.x + dim.comprimento / 2, o.y + dim.altura / 2, o.z + dim.largura / 2);
+        alvo.userData.colocado = c;
+        cena.conteudo.add(alvo);
+        montagem.alvos.push(alvo);
+        if (c === montagem.selecionado) {
+            const borda = new T.LineSegments(new T.EdgesGeometry(alvo.geometry), new T.LineBasicMaterial({ color: 0x1d4ed8 }));
+            borda.position.copy(alvo.position);
+            borda.scale.set(1.02, 1.02, 1.02);
+            cena.conteudo.add(borda);
+        }
+    });
+    malhaInstanciada(pecas, COR_MADEIRA);
+    malhaInstanciada(fitas, 0x16a34a, false);
+    // linha da altura maxima
+    const yLim = PISO + g.altMax, xa = montagem.geo.inicioCacamba[0], xb = xa + montagem.geo.total;
+    const lg = new T.BufferGeometry().setFromPoints([new T.Vector3(xa, yLim, montagem.geo.z0), new T.Vector3(xb, yLim, montagem.geo.z0), new T.Vector3(xa, yLim, -montagem.geo.z0), new T.Vector3(xb, yLim, -montagem.geo.z0)]);
+    cena.conteudo.add(new T.LineSegments(lg, new T.LineBasicMaterial({ color: 0xdc2626 })));
+    // fantasma usado durante o arraste
+    montagem.fantasma = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.35, depthWrite: false }));
+    montagem.fantasma.visible = false;
+    cena.conteudo.add(montagem.fantasma);
+    const vol = montagem.colocados.reduce((s, c) => s + (c.u.p.esp / 100) * (c.u.p.larg / 100) * c.u.p.comp * (c.u.p.alt * c.u.p.cam + c.u.p.am), 0);
+    const fora = montagem.unidades.length - montagem.colocados.length;
+    document.getElementById('v3dInfo').textContent = `${montagem.colocados.length} de ${montagem.unidades.length} pacote(s) no caminhão · ${fmt(vol, 3)} m³ · ${g.vagas.reduce((s, n) => s + n, 0) * g.fileiras} vagas no piso${fora ? ` · ${fora} fora do caminhão` : ''}`;
+    renderListaMontagem();
+}
+
+function instalarArraste() {
+    if (!cena || cena.arrasteInstalado) return;
+    cena.arrasteInstalado = true;
+    const T = window.THREE;
+    const el = cena.renderer.domElement;
+    const ray = new T.Raycaster();
+    const ndc = new T.Vector2();
+    const plano = new T.Plane(new T.Vector3(0, 1, 0), -PISO);
+    let arraste = null;
+    const lerPonteiro = e => {
+        const r = el.getBoundingClientRect();
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, cena.camera);
+    };
+    el.addEventListener('pointerdown', e => {
+        if (atual.modo !== 'montar' || !montagem || e.button > 0) return;
+        lerPonteiro(e);
+        const hit = ray.intersectObjects(montagem.alvos || [], false)[0];
+        if (!hit) return;
+        const c = hit.object.userData.colocado;
+        montagem.selecionado = c;
+        if (temAlgoEmCima(c)) {
+            document.getElementById('v3dInfo').textContent = 'Este pacote tem outro por cima: tire o de cima primeiro.';
+            desenharMontagem();
+            return;
+        }
+        cena.controls.enabled = false;
+        arraste = { c, moveu: false, alvo: null, x0: e.clientX, y0: e.clientY };
+        el.setPointerCapture?.(e.pointerId);
+        e.stopPropagation();
+    }, true);
+    el.addEventListener('pointermove', e => {
+        if (!arraste) return;
+        if (Math.hypot(e.clientX - arraste.x0, e.clientY - arraste.y0) > 4) arraste.moveu = true;
+        if (!arraste.moveu) return;
+        lerPonteiro(e);
+        const p = new T.Vector3();
+        if (!ray.ray.intersectPlane(plano, p)) return;
+        const g = geometriaMontagem();
+        const cand = mundoParaVaga(g, p, arraste.c.u);
+        const r = cand && avaliarVaga(g, arraste.c.u, cand.ci, cand.f, cand.v, arraste.c);
+        arraste.alvo = r;
+        const f = montagem.fantasma;
+        const base = r || (cand ? { ci: cand.ci, f: cand.f, v: cand.v, n: nVagas(arraste.c.u, g), topo: 0 } : null);
+        if (!base) { f.visible = false; return; }
+        const o = posicaoMundo(g, { ...base, u: arraste.c.u });
+        const L = arraste.c.u.p.comp, H = g.C.altPacote(arraste.c.u.p), Wp = g.C.largPacote(arraste.c.u.p);
+        f.scale.set(L, H, Wp);
+        f.position.set(o.x + L / 2, o.y + H / 2, o.z + Wp / 2);
+        f.material.color.set(r ? 0x16a34a : 0xdc2626);
+        f.visible = true;
+    });
+    const soltar = () => {
+        if (!arraste) return;
+        const { c, moveu, alvo } = arraste;
+        arraste = null;
+        cena.controls.enabled = true;
+        if (moveu && alvo) Object.assign(c, alvo);
+        desenharMontagem();
+    };
+    el.addEventListener('pointerup', soltar);
+    el.addEventListener('pointercancel', soltar);
+}
+
+function instalarListaEventos() {
+    const el = document.getElementById('v3dLista');
+    if (!el || el.dataset.ok) return;
+    el.dataset.ok = '1';
+    el.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b || !montagem) return;
+        if (b.dataset.mais) {
+            const u = montagem.unidades.find(x => grupoChave(x.p) === b.dataset.mais && !montagem.colocados.some(c => c.u === x));
+            if (u && !colocarUnidade(u)) document.getElementById('v3dInfo').textContent = 'Não há vaga para este pacote (altura máxima ou falta de apoio).';
+            else desenharMontagem();
+            return;
+        }
+        if (b.dataset.menos) {
+            const lista = montagem.colocados.filter(c => grupoChave(c.u.p) === b.dataset.menos && !temAlgoEmCima(c));
+            const c = lista[lista.length - 1];
+            if (!c) { document.getElementById('v3dInfo').textContent = 'Os pacotes deste tipo têm outros por cima.'; return; }
+            montagem.colocados.splice(montagem.colocados.indexOf(c), 1);
+            if (montagem.selecionado === c) montagem.selecionado = null;
+            desenharMontagem();
+            return;
+        }
+        if (b.id === 'v3dAuto') {
+            montagem.colocados = [];
+            montagem.selecionado = null;
+            const C = calc();
+            [...montagem.unidades].sort((a, c) => c.p.comp - a.p.comp || (C.meio(a.p) - C.meio(c.p)) || c.p.esp - a.p.esp).forEach(colocarUnidade);
+            desenharMontagem();
+            return;
+        }
+        if (b.id === 'v3dLimpar') { montagem.colocados = []; montagem.selecionado = null; desenharMontagem(); return; }
+        if (b.id === 'v3dRemoverSel' && montagem.selecionado) {
+            if (temAlgoEmCima(montagem.selecionado)) { document.getElementById('v3dInfo').textContent = 'Tire primeiro o pacote de cima.'; return; }
+            montagem.colocados.splice(montagem.colocados.indexOf(montagem.selecionado), 1);
+            montagem.selecionado = null;
+            desenharMontagem();
+        }
+    });
+}
+
+// itens: [{ p: {classe, esp, larg, comp, alt, cam, am}, qtd }]
+window.abrirMontadorCarga3D = async function(itens, opcoes = {}) {
+    const unidades = [];
+    (itens || []).forEach((it, i) => { for (let k = 0; k < (Number(it.qtd) || 0); k++) unidades.push({ uid: `${i}-${k}`, p: it.p }); });
+    if (!unidades.length) { alert('Não há pacotes para montar a carga.'); return; }
+    if (!calc()) { alert('Módulo de montagem ainda carregando. Tente novamente em instantes.'); return; }
+    const modal = garantirModal();
+    modal.style.display = 'flex';
+    document.getElementById('v3dTitulo').textContent = opcoes.titulo || 'Montar carga';
+    atual.modo = 'montar';
+    if (opcoes.caminhao) atual.caminhao = { ...atual.caminhao, ...opcoes.caminhao };
+    montagem = { unidades, colocados: [], selecionado: null, origem: opcoes.origem || 'Pacotes' };
+    try { await garantirThree(); }
+    catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
+    if (!cena) criarCena(document.getElementById('v3dPalco'));
+    else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
+    instalarArraste();
+    instalarListaEventos();
+    // comeca com a montagem automatica; o usuario ajusta arrastando
+    const C = calc();
+    [...unidades].sort((a, c) => c.p.comp - a.p.comp || (C.meio(a.p) - C.meio(c.p)) || c.p.esp - a.p.esp).forEach(colocarUnidade);
+    desenhar();
+    const g = geometriaMontagem();
+    enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 2.2, [0.9, 0.7, 1.3]);
 };
