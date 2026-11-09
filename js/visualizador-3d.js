@@ -258,39 +258,43 @@ function desenharPacote(p) {
 
 const PISO = 1.25, RODA = 0.52, CAB = 2.5;
 
-function desenharCaminhao(p, cfg) {
-    limparConteudo();
-    const C = calc();
-    const lista = Array.from({ length: Math.max(0, cfg.qtd) }, () => p);
-    const comps = cfg.bitrem ? [cfg.comp1, cfg.comp2] : [cfg.comp1];
-    const m = C.montar(lista, { comps, largura: cfg.larg, altMax: cfg.alt });
+// Caminhao (ou bitrem) com carroceria aberta e fueiros. Devolve onde comeca cada cacamba.
+function desenharVeiculo(comps, W, alturaFueiro = 1.0) {
     const GAP = 0.55;
     const total = comps.reduce((s, c) => s + c, 0) + GAP * (comps.length - 1);
     grade(Math.ceil(total + CAB + 6), 0.5, 1);
-    const W = cfg.larg;
     const z0 = -W / 2;
-    // carrocerias
     let x = -total / 2 - CAB / 2;
     const inicioCacamba = [];
-    comps.forEach((comp, ci) => {
+    comps.forEach(comp => {
         inicioCacamba.push(x);
         caixa(x + comp / 2, PISO - 0.08, 0, comp, 0.16, W, 0x8a5a2b);                 // assoalho
         caixa(x + comp / 2, PISO - 0.25, 0, comp, 0.18, 0.9, 0x2b2f36);               // longarina
         const n = Math.max(2, Math.round(comp / 1.2) + 1);
         for (let i = 0; i < n; i++) {
             const fx = x + 0.04 + (comp - 0.08) * (i / (n - 1));
-            [z0 + 0.03, -z0 - 0.03].forEach(fz => caixa(fx, PISO + 0.5, fz, 0.07, 1.0, 0.06, 0x6b7280));
+            [z0 + 0.03, -z0 - 0.03].forEach(fz => caixa(fx, PISO + alturaFueiro / 2, fz, 0.07, alturaFueiro, 0.06, 0x6b7280));
         }
         [1.2, 2.35].forEach(dx => [z0 + 0.25, -z0 - 0.25].forEach(rz => roda(x + dx, RODA, rz, RODA, 0.4)));  // eixo duplo atras
         x += comp + GAP;
     });
-    // cabine na frente (x positivo)
-    const xc = x - GAP + 0.35;
+    const xc = x - GAP + 0.35; // cabine na frente (x positivo)
     caixa(xc + CAB / 2, (RODA + 0.25 + 3.05) / 2, 0, CAB, 3.05 - (RODA + 0.25), W * 0.95, 0x24507a);
     caixa(xc + CAB - 0.02, 2.25, 0, 0.04, 0.8, W * 0.8, 0xa9cbe3);                // para-brisa
     [z0 * 0.95 - 0.01, -z0 * 0.95 + 0.01].forEach(fz => caixa(xc + CAB - 0.8, 2.25, fz, 0.9, 0.7, 0.02, 0xa9cbe3));
     caixa(xc + CAB + 0.05, 0.85, 0, 0.12, 0.3, W * 0.98, 0xb8bec6);                 // para-choque
     [z0 + 0.25, -z0 - 0.25].forEach(rz => roda(xc + CAB - 0.75, RODA, rz, RODA, 0.35));
+    return { total, inicioCacamba, z0, GAP };
+}
+
+function desenharCaminhao(p, cfg) {
+    limparConteudo();
+    const C = calc();
+    const lista = Array.from({ length: Math.max(0, cfg.qtd) }, () => p);
+    const comps = cfg.bitrem ? [cfg.comp1, cfg.comp2] : [cfg.comp1];
+    const m = C.montar(lista, { comps, largura: cfg.larg, altMax: cfg.alt });
+    const W = cfg.larg;
+    const { total, inicioCacamba, z0 } = desenharVeiculo(comps, W);
     // pacotes
     const pecas = [], fitas = [];
     const faixa = W / m.fileiras;
@@ -319,6 +323,89 @@ function desenharCaminhao(p, cfg) {
     if (m.sobra.length) txt += ` · ${m.sobra.length} não couberam`;
     return txt;
 }
+
+// ---------- carga de tora (Entrada) ----------
+// As toras seguem o perfil das 8 alturas medidas (4 de cada lado, da frente para tras).
+function alturaNoPonto(alts, t) {
+    const v = alts.filter(a => a > 0);
+    if (!v.length) return 0;
+    if (alts.length < 2) return v[0];
+    const pos = t * (alts.length - 1), i = Math.min(alts.length - 2, Math.floor(pos)), f = pos - i;
+    const a = alts[i] || v[0], b = alts[i + 1] || a;
+    return a + (b - a) * f;
+}
+function desenharTora(cfg) {
+    limparConteudo();
+    const T = window.THREE;
+    const comp = cfg.comp, W = cfg.larg, d = cfg.diametro || 0.22, r = d / 2;
+    const esq = (cfg.altEsq || []).map(Number), dir = (cfg.altDir || []).map(Number);
+    const maxAlt = Math.max(0.5, ...esq, ...dir);
+    const { inicioCacamba, z0 } = desenharVeiculo([comp], W, Math.min(maxAlt + 0.2, 3.2));
+    const x0 = inicioCacamba[0];
+    const nSeg = Math.max(1, Math.ceil(comp / 3.0));     // toras de ate ~3 m
+    const segL = comp / nSeg;
+    const colunas = Math.max(1, Math.floor(W / d));
+    const lista = [];
+    const passoY = d * 0.87;                               // empilhamento intercalado
+    for (let s = 0; s < nSeg; s++) {
+        const xc = x0 + segL * s + segL / 2;
+        const t = (segL * s + segL / 2) / comp;
+        // altura medida: o caminhao anda para a direita, medida 1 = frente (perto da cabine)
+        const hEsq = alturaNoPonto(esq, 1 - t), hDir = alturaNoPonto(dir, 1 - t);
+        for (let linha = 0; ; linha++) {
+            const yc = PISO + r + linha * passoY;
+            if (yc + r > PISO + Math.max(hEsq, hDir) + 0.001) break;
+            const desloc = linha % 2 ? r : 0;
+            for (let c = 0; c < colunas - (linha % 2 ? 1 : 0); c++) {
+                const zc = z0 + r + desloc + c * d;
+                const fz = (zc - z0) / W;                  // 0 = lado esquerdo, 1 = direito
+                const hLocal = hEsq + (hDir - hEsq) * fz;
+                if (yc + r > PISO + hLocal + 0.001) continue;
+                const variacao = 0.9 + ((s * 7 + linha * 3 + c * 5) % 5) * 0.04;
+                lista.push({ x: xc, y: yc, z: zc, raio: r * variacao, L: segL - 0.03 });
+            }
+        }
+    }
+    if (lista.length) {
+        const geo = new T.CylinderGeometry(1, 1, 1, 14);
+        geo.rotateZ(Math.PI / 2);
+        const mats = [new T.MeshLambertMaterial({ color: 0x6b4a2b }), new T.MeshLambertMaterial({ color: 0xe0b98a }), new T.MeshLambertMaterial({ color: 0xe0b98a })];
+        const mesh = new T.InstancedMesh(geo, mats, lista.length);
+        const m = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), esc = new T.Vector3();
+        lista.forEach((t, i) => { pos.set(t.x, t.y, t.z); esc.set(t.L, t.raio, t.raio); m.compose(pos, q, esc); mesh.setMatrixAt(i, m); });
+        mesh.instanceMatrix.needsUpdate = true;
+        cena.conteudo.add(mesh);
+    }
+    // marcas das 8 medidas: poste vermelho na altura medida de cada ponto
+    [[esq, z0 - 0.05], [dir, -z0 + 0.05]].forEach(([alts, zz]) => alts.forEach((h, i) => {
+        if (!(h > 0)) return;
+        const xx = x0 + comp - (comp / alts.length) * (i + 0.5);
+        caixa(xx, PISO + h / 2, zz, 0.025, h, 0.025, 0xdc2626);
+        caixa(xx, PISO + h, zz, 0.12, 0.025, 0.06, 0xdc2626);
+    }));
+    enquadrar(0, 1.6, 0, (comp + CAB) / 2.2, [0.9, 0.6, 1.3]);
+    const todas = [...esq, ...dir].filter(a => a > 0);
+    const media = todas.length ? Math.trunc(todas.reduce((s, a) => s + a, 0) / todas.length * 100) / 100 : 0;
+    const vol = comp * W * media;
+    return `${cfg.caminhao ? cfg.caminhao + ' · ' : ''}${fmt(comp, 2)} × ${fmt(W, 2)} m · altura média ${fmt(media, 2)} m · ${fmt(vol, 3)} m³ · desenho com toras de ~${Math.round(d * 100)} cm (ilustrativo; o volume vem das medidas)`;
+}
+
+window.abrirCargaTora3D = async function(cfg) {
+    if (!(cfg?.comp > 0 && cfg?.larg > 0) || ![...(cfg.altEsq || []), ...(cfg.altDir || [])].some(a => a > 0)) {
+        alert('Preencha comprimento, largura e as alturas da carga para ver em 3D.');
+        return;
+    }
+    const modal = garantirModal();
+    modal.style.display = 'flex';
+    document.getElementById('v3dTitulo').textContent = 'Carga de tora';
+    atual.modo = 'tora';
+    atual.tora = { ...cfg };
+    try { await garantirThree(); }
+    catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
+    if (!cena) criarCena(document.getElementById('v3dPalco'));
+    else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
+    desenhar();
+};
 
 // ---------- palete montado ----------
 // Eixos: x = comprimento do palete, z = largura. Ordem de baixo para cima: tabuas de baixo, blocos, ligacao, tabuas de cima.
@@ -422,8 +509,51 @@ function desenharCortePalete(m) {
 
 const POS_NOME = { superior: 'Tábua de cima', ligacao: 'Tábua de ligação', bloco: 'Bloco', inferior: 'Tábua de baixo', outro: 'Outro' };
 
+function desenharPaletesCaminhao(m, cfg) {
+    limparConteudo();
+    const comps = cfg.bitrem ? [cfg.comp1, cfg.comp2] : [cfg.comp1];
+    const W = cfg.larg;
+    const base = pecasDoPalete(m);
+    const hPal = base.altura;
+    const { inicioCacamba, z0 } = desenharVeiculo(comps, W);
+    // escolhe a orientacao que cabe mais pilhas no piso
+    const opcoes = [[base.L, base.W, false], [base.W, base.L, true]].map(([px, pz, girado]) => {
+        const porLinha = comps.map(c => Math.floor(c / px + 0.001));
+        const fileiras = Math.floor(W / pz + 0.001);
+        return { px, pz, girado, porLinha, fileiras, pilhas: porLinha.reduce((s, n) => s + n, 0) * fileiras };
+    });
+    const o = opcoes[0].pilhas >= opcoes[1].pilhas ? opcoes[0] : opcoes[1];
+    const porPilha = Math.max(0, Math.floor(cfg.alt / hPal + 0.001));
+    const capacidade = o.pilhas * porPilha;
+    const qtd = Math.min(Math.max(0, cfg.qtd), capacidade);
+    // monta da cabine para tras, pilha cheia por pilha
+    const vagas = [];
+    comps.forEach((c, ci) => { for (let i = o.porLinha[ci] - 1; i >= 0; i--) for (let f = 0; f < o.fileiras; f++) vagas.push({ ci, i, f }); });
+    const pecas = [];
+    let restante = qtd;
+    vagas.forEach(v => {
+        const n = Math.min(porPilha, restante);
+        restante -= n;
+        const sobraX = comps[v.ci] - o.porLinha[v.ci] * o.px, sobraZ = W - o.fileiras * o.pz;
+        const ox = inicioCacamba[v.ci] + sobraX / 2 + v.i * o.px;
+        const oz = z0 + sobraZ / 2 + v.f * o.pz;
+        for (let k = 0; k < n; k++) {
+            const oy = PISO + k * hPal;
+            base.pecas.forEach(b => {
+                const bx = o.girado ? b.z : b.x, bz = o.girado ? b.x : b.z;
+                pecas.push({ x: ox + bx, y: oy + b.y, z: oz + bz, sx: o.girado ? b.sz : b.sx, sy: b.sy, sz: o.girado ? b.sx : b.sz, tom: b.tom });
+            });
+        }
+    });
+    malhaInstanciada(pecas, COR_MADEIRA);
+    const total = comps.reduce((s, c) => s + c, 0);
+    enquadrar(0, 1.6, 0, (total + CAB) / 2.2, [0.9, 0.6, 1.3]);
+    return `Cabem ${capacidade.toLocaleString('pt-BR')} paletes (${o.pilhas} pilhas × ${porPilha} por pilha, palete de ${fmt(hPal * 100, 1)} cm) · desenhados ${qtd.toLocaleString('pt-BR')}${cfg.qtd > capacidade ? ` · ${(cfg.qtd - capacidade).toLocaleString('pt-BR')} não couberam` : ''}`;
+}
+
 function desenharPalete(m, vista = 'montado') {
     if (vista === 'corte') return desenharCortePalete(m);
+    if (vista === 'caminhao') return desenharPaletesCaminhao(m, atual.caminhaoPalete);
     limparConteudo();
     grade(3, 0.1, 0.5);
     const p = pecasDoPalete(m);
@@ -439,7 +569,7 @@ function desenharPalete(m, vista = 'montado') {
 }
 
 // ---------- modal ----------
-let atual = { modo: 'madeira', palete: null, paleteVista: 'montado', produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
+let atual = { modo: 'madeira', palete: null, paleteVista: 'montado', tora: null, caminhaoPalete: { qtd: 216, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false }, produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
 
 function garantirModal() {
     let modal = document.getElementById('modalVisualizador3D');
@@ -466,9 +596,10 @@ function garantirModal() {
             <button type="button" role="tab" data-pvista="montado">Montado</button>
             <button type="button" role="tab" data-pvista="explodido">Peças soltas</button>
             <button type="button" role="tab" data-pvista="corte">Corte das peças</button>
+            <button type="button" role="tab" data-pvista="caminhao">No caminhão</button>
           </div>
           <div class="v3d-cfg" id="v3dCfg" hidden>
-            <label>Pacotes<input id="v3dQtd" type="number" min="1" step="1"></label>
+            <label><span id="v3dQtdRotulo">Pacotes</span><input id="v3dQtd" type="number" min="1" step="1"></label>
             <label>Caçamba (m)<input id="v3dComp1" type="number" step="0.1"></label>
             <label class="v3d-check"><input id="v3dBitrem" type="checkbox"> Bitrem</label>
             <label id="v3dWrapComp2" hidden>Caçamba 2 (m)<input id="v3dComp2" type="number" step="0.1"></label>
@@ -484,7 +615,8 @@ function garantirModal() {
     modal.querySelectorAll('[data-pvista]').forEach(b => b.addEventListener('click', () => { atual.paleteVista = b.dataset.pvista; desenhar(); }));
     const $ = id => document.getElementById(id);
     const lerCfg = () => {
-        atual.caminhao = {
+        const alvo = atual.modo === 'palete' ? 'caminhaoPalete' : 'caminhao';
+        atual[alvo] = {
             qtd: Math.max(1, parseInt($('v3dQtd').value, 10) || 1),
             comp1: Number($('v3dComp1').value) || 7.2,
             comp2: Number($('v3dComp2').value) || 7.2,
@@ -492,7 +624,7 @@ function garantirModal() {
             alt: Number($('v3dAlt').value) || 2.6,
             bitrem: $('v3dBitrem').checked
         };
-        $('v3dWrapComp2').hidden = !atual.caminhao.bitrem;
+        $('v3dWrapComp2').hidden = !atual[alvo].bitrem;
         desenhar();
     };
     ['v3dQtd', 'v3dComp1', 'v3dComp2', 'v3dLarg', 'v3dAlt'].forEach(id => $(id).addEventListener('change', lerCfg));
@@ -507,17 +639,38 @@ function desenhar() {
     if (!modal || !cena) return;
     const abas = modal.querySelector('.v3d-abas');
     const vistas = document.getElementById('v3dPalVistas');
+    if (atual.modo === 'tora') {
+        if (abas) abas.hidden = true;
+        if (vistas) vistas.hidden = true;
+        document.getElementById('v3dCfg').hidden = true;
+        cena.redimensionar();
+        document.getElementById('v3dInfo').textContent = desenharTora(atual.tora);
+        return;
+    }
     if (atual.modo === 'palete') {
         if (abas) abas.hidden = true;
         if (vistas) vistas.hidden = false;
         modal.querySelectorAll('[data-pvista]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pvista === atual.paleteVista)));
-        document.getElementById('v3dCfg').hidden = true;
+        const cfgEl = document.getElementById('v3dCfg');
+        cfgEl.hidden = atual.paleteVista !== 'caminhao';
+        document.getElementById('v3dQtdRotulo').textContent = 'Paletes';
+        if (atual.paleteVista === 'caminhao') {
+            const c = atual.caminhaoPalete;
+            document.getElementById('v3dQtd').value = c.qtd;
+            document.getElementById('v3dComp1').value = c.comp1;
+            document.getElementById('v3dComp2').value = c.comp2;
+            document.getElementById('v3dLarg').value = c.larg;
+            document.getElementById('v3dAlt').value = c.alt;
+            document.getElementById('v3dBitrem').checked = c.bitrem;
+            document.getElementById('v3dWrapComp2').hidden = !c.bitrem;
+        }
         cena.redimensionar();
         document.getElementById('v3dInfo').textContent = desenharPalete(atual.palete, atual.paleteVista);
         return;
     }
     if (abas) abas.hidden = false;
     if (vistas) vistas.hidden = true;
+    document.getElementById('v3dQtdRotulo').textContent = 'Pacotes';
     if (!atual.produto) return;
     modal.querySelectorAll('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === atual.aba)));
     const cfg = document.getElementById('v3dCfg');

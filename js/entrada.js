@@ -3562,3 +3562,16 @@ window.SectionLoader?.register('view-entrada', () => Promise.all([
     carregarEmpreiteiros(),
     carregarEntradas()
 ]));
+
+
+// Visualizacao 3D da carga de tora (somente leitura): usa as mesmas medidas do calculo de volume.
+window.verCargaTora3D = function() {
+    const ler = id => parseDecimalValue(document.getElementById(id)?.value) || 0;
+    window.abrirCargaTora3D?.({
+        comp: ler('entComp'),
+        larg: ler('entLarg'),
+        altEsq: ['entAltEsq1', 'entAltEsq2', 'entAltEsq3', 'entAltEsq4'].map(ler),
+        altDir: ['entAltDir1', 'entAltDir2', 'entAltDir3', 'entAltDir4'].map(ler),
+        caminhao: obterModeloCaminhaoEntrada()
+    });
+};
