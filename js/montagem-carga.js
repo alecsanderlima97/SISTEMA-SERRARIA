@@ -71,41 +71,49 @@ function montar(listaEntrada, cfg) {
     for (let k = melhor.v; k < melhor.v + melhor.n; k++) alts[k] = melhor.topo + altPacote(p);
     colocados.push({ p, ...melhor });
   });
-  centralizarCamadas(colocados, cacambas.map(cb => cb.vagas), c => altPacote(c.p));
+  centralizarCamadas(colocados, cacambas.map(cb => cb.comp / VAGA), c => altPacote(c.p), cfg.alinhar || {});
   // Ordem de carregamento: camada de baixo primeiro, da cabine para tras.
   colocados.sort((a, b) => a.topo - b.topo || b.ci - a.ci || b.v - a.v || a.f - b.f)
     .forEach((c, i) => { c.ordem = i + 1; });
   return { cacambas, colocados, sobra, fileiras, largura, altMax, VAGA };
 }
 
-// Cada camada de cada fileira fica centralizada na caçamba: a sobra é dividida por 2,
-// metade na frente e metade atrás (pode ficar no meio de um pacote de baixo). Assim as
-// camadas das duas fileiras ficam alinhadas, a fita passa por cima de todos e o peso não pende.
-// Se em alguma fileira a camada de cima ficaria sem apoio, aquela fileira volta como estava.
-function centralizarCamadas(colocados, vagasPorCacamba, alturaDe) {
+// Alinhamento de cada nivel da carga, como o caminhoneiro escolhe: base (no assoalho), em cima
+// (2a camada) e chapeu (3a em diante). 'tras' encosta na traseira, 'frente' encosta na cabine,
+// 'centro' divide a sobra por 2. Os niveis de cima se alinham sobre o nivel de baixo (onde passa a fita).
+// O espaco e medido em metros (comprimento da cacamba / vaga), entao a sobra que nao fecha uma vaga
+// inteira (ex.: 0,80 m num caminhao de 8,00) tambem entra na conta.
+// Se algum pacote de cima ficaria sem apoio, aquela fileira volta como estava.
+function centralizarCamadas(colocados, espacoPorCacamba, alturaDe, alinhar = {}) {
   const grupos = new Map();
   colocados.forEach(c => { const k = c.ci + '|' + c.f; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(c); });
+  const apoiado = lista => lista.every(c => {
+    if (c.topo < 0.01) return true;
+    for (let x = c.v + 0.125; x < c.v + c.n; x += 0.25) {
+      let sup = 0;
+      lista.forEach(o => { if (o !== c && o.topo < c.topo - 0.01 && x > o.v && x < o.v + o.n) sup = Math.max(sup, o.topo + alturaDe(o)); });
+      if (Math.abs(sup - c.topo) > 0.12) return false;
+    }
+    return true;
+  });
   grupos.forEach(lista => {
-    const vagas = vagasPorCacamba[lista[0].ci] || 0;
-    const antes = lista.map(c => c.v);
-    const camadas = new Map();
-    lista.forEach(c => { const k = Math.round(c.topo * 100); if (!camadas.has(k)) camadas.set(k, []); camadas.get(k).push(c); });
-    camadas.forEach(cam => {
-      cam.sort((a, b) => a.v - b.v);
-      const total = cam.reduce((s, c) => s + c.n, 0);
-      let x = Math.max(0, (vagas - total) / 2);
-      cam.forEach(c => { c.v = x; x += c.n; });
+    const espaco = espacoPorCacamba[lista[0].ci] || 0;
+    const niveis = [...new Set(lista.map(c => Math.round(c.topo * 100)))].sort((a, b) => a - b)
+      .map(k => lista.filter(c => Math.round(c.topo * 100) === k));
+    let lo = 0, hi = espaco;
+    niveis.forEach((cam, nivel) => {
+      const a = Math.min(...cam.map(c => c.v)), b = Math.max(...cam.map(c => c.v + c.n));
+      const total = b - a;
+      const modo = (nivel === 0 ? alinhar.base : nivel === 1 ? alinhar.cima : alinhar.chapeu) || 'centro';
+      let x = modo === 'tras' ? lo : modo === 'frente' ? hi - total : lo + (hi - lo - total) / 2;
+      x = total > hi - lo ? lo : Math.max(lo, Math.min(x, hi - total));
+      const d = x - a;
+      // move este nivel e tudo que esta em cima dele (a pilha anda junto)
+      const acima = niveis.slice(nivel).flat();
+      acima.forEach(c => { c.v += d; });
+      if (!apoiado(lista)) acima.forEach(c => { c.v -= d; }); // ficaria sem apoio: mantem onde estava
+      lo = Math.min(...cam.map(c => c.v)); hi = Math.max(...cam.map(c => c.v + c.n));
     });
-    const apoiado = lista.every(c => {
-      if (c.topo < 0.01) return true;
-      for (let x = c.v + 0.125; x < c.v + c.n; x += 0.25) {
-        let sup = 0;
-        lista.forEach(o => { if (o !== c && o.topo < c.topo - 0.01 && x > o.v && x < o.v + o.n) sup = Math.max(sup, o.topo + alturaDe(o)); });
-        if (Math.abs(sup - c.topo) > 0.12) return false;
-      }
-      return true;
-    });
-    if (!apoiado) lista.forEach((c, i) => { c.v = antes[i]; });
   });
 }
 

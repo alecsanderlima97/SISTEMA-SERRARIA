@@ -660,7 +660,7 @@ function desenharCaminhao(p, cfg) {
     const C = calc();
     const lista = Array.from({ length: Math.max(0, cfg.qtd) }, () => p);
     const comps = cfg.bitrem ? [cfg.comp1, cfg.comp2] : [cfg.comp1];
-    const m = C.montar(lista, { comps, largura: cfg.larg, altMax: cfg.alt });
+    const m = C.montar(lista, { comps, largura: cfg.larg, altMax: cfg.alt, alinhar: atual.alinhar });
     const W = cfg.larg;
     const { total, inicioCacamba, z0 } = desenharVeiculo(comps, W);
     // pacotes
@@ -943,7 +943,7 @@ function desenharPalete(m, vista = 'montado') {
 }
 
 // ---------- modal ----------
-let atual = { modo: 'madeira', palete: null, paleteVista: 'montado', tora: null, caminhaoPalete: { qtd: 216, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false }, produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
+let atual = { modo: 'madeira', palete: null, paleteVista: 'montado', tora: null, caminhaoPalete: { qtd: 216, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false }, produto: null, aba: 'pacote', alinhar: { base: 'centro', cima: 'centro', chapeu: 'centro' }, caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
 
 function garantirModal() {
     let modal = document.getElementById('modalVisualizador3D');
@@ -985,6 +985,9 @@ function garantirModal() {
             <label id="v3dWrapComp2" hidden>Caçamba 2 (m)<input id="v3dComp2" type="number" step="0.1"></label>
             <label>Largura (m)<input id="v3dLarg" type="number" step="0.05"></label>
             <label>Altura máx. (m)<input id="v3dAlt" type="number" step="0.05"></label>
+            <label class="v3d-al">Base<select id="v3dAlBase"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
+            <label class="v3d-al">Em cima<select id="v3dAlCima"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
+            <label class="v3d-al">Chapéu<select id="v3dAlChapeu"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
           </div>
         </div>
         <div class="v3d-corpo">
@@ -1009,8 +1012,10 @@ function garantirModal() {
             bitrem: $('v3dBitrem').checked
         };
         $('v3dWrapComp2').hidden = !atual[alvo].bitrem;
+        atual.alinhar = { base: $('v3dAlBase').value, cima: $('v3dAlCima').value, chapeu: $('v3dAlChapeu').value };
         desenhar();
     };
+    ['v3dAlBase', 'v3dAlCima', 'v3dAlChapeu'].forEach(id => $(id).addEventListener('change', lerCfg));
     ['v3dQtd', 'v3dComp1', 'v3dComp2', 'v3dLarg', 'v3dAlt'].forEach(id => $(id).addEventListener('change', lerCfg));
     // mudar a configuracao do pacote (so no 3D, nao grava no cadastro)
     const lerPac = e => {
@@ -1038,6 +1043,12 @@ function desenhar() {
     const vistas = document.getElementById('v3dPalVistas');
     const lista = document.getElementById('v3dLista');
     if (lista) lista.hidden = atual.modo !== 'montar';
+    // alinhamento da carga: so na madeira serrada (caminhao do cadastro e montador)
+    const mostrarAl = atual.modo === 'montar' || (atual.modo === 'madeira' && atual.aba === 'caminhao');
+    modal.querySelectorAll('.v3d-al').forEach(l => { l.hidden = !mostrarAl; });
+    document.getElementById('v3dAlBase').value = atual.alinhar.base;
+    document.getElementById('v3dAlCima').value = atual.alinhar.cima;
+    document.getElementById('v3dAlChapeu').value = atual.alinhar.chapeu;
     if (atual.modo !== 'madeira') document.getElementById('v3dPac').hidden = true;
     document.getElementById('v3dWrapQtd').hidden = atual.modo === 'montar';
     if (atual.modo === 'montar') {
@@ -1195,7 +1206,7 @@ function alturaVaga(g, ci, f, v, ignorar) {
 
 function avaliarVaga(g, u, ci, f, v, ignorar) {
     const n = nVagas(u, g);
-    if (ci < 0 || ci >= g.comps.length || f < 0 || f >= g.fileiras || v < -0.001 || v + n > g.vagas[ci] + 0.001) return null;
+    if (ci < 0 || ci >= g.comps.length || f < 0 || f >= g.fileiras || v < -0.001 || v + n > g.comps[ci] / g.VAGA + 0.001) return null;
     const base = Array.from({ length: n * 4 }, (_, k) => alturaVaga(g, ci, f, v + 0.125 + k * 0.25, ignorar));
     const topo = Math.max(...base);
     if (base.some(h => Math.abs(h - topo) > 0.12)) return null;           // pacote longo nao apoia em degrau
@@ -1229,7 +1240,7 @@ function montarAutomatico(lista = montagem.unidades) {
         if (r) montagem.colocados.push({ u, ...r });
     });
     const g = geometriaMontagem();
-    C.centralizarCamadas?.(montagem.colocados, g.vagas, c => C.altPacote(c.u.p));
+    C.centralizarCamadas?.(montagem.colocados, g.comps.map(cp => cp / g.VAGA), c => C.altPacote(c.u.p), atual.alinhar);
 }
 
 function melhorVagaInteira(g, u) {
