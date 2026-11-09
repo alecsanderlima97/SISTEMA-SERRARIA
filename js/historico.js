@@ -177,6 +177,7 @@ function formatarDataHistorico(valor) {
 async function renderizarHistorico() {
     if(!listaHistorico) return;
     const tipoAtivo = filtroTipo ? filtroTipo.value : 'madeira';
+    if (tipoAtivo === 'paletes') { await window.HistoricoPaletes?.render(listaHistorico, filtroCliente?.value || ''); return; }
     atualizarCabecalhoHistorico(tipoAtivo);
     listaHistorico.innerHTML = `<tr><td colspan="${tipoAtivo === 'subprodutos' ? 7 : 6}" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando...</td></tr>`;
     
@@ -243,6 +244,7 @@ function aplicarFiltro() {
     const inicio = document.getElementById('histRelDataInicio')?.value || '';
     const fim = document.getElementById('histRelDataFim')?.value || '';
 
+    if (tipoAtivo === 'paletes') { window.HistoricoPaletes?.render(listaHistorico, termo, false); return; }
     const header = listaHistorico?.closest('table')?.querySelector('thead tr');
     if (header && !header.querySelector('.check-todos-historico')) {
         header.insertAdjacentHTML('afterbegin', '<th><input class="check-todos-historico" type="checkbox" onchange="window.toggleTodosHistoricoRelatorio(this.checked)"></th>');

@@ -17,6 +17,7 @@
                             <select id="filtroHistoricoTipo" style="height: 48px;">
                                 <option value="madeira">Madeira Serrada (Cargas)</option>
                                 <option value="subprodutos">Subprodutos (Cavaco/Pó)</option>
+                                <option value="paletes" class="opcao-modulo-paletes">Paletes</option>
                             </select>
                         </div>
                         <div class="input-group" style="width: 190px; margin-bottom: 0;">

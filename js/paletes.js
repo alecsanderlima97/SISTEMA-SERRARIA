@@ -308,6 +308,13 @@ window.renderPaletes = async function() {
 };
 
 document.addEventListener('produtosUpdated', () => {
-    if (document.getElementById('view-paletes')?.classList.contains('active-section')) atualizarParcial();
+    if (document.getElementById('tabProdPalete')?.style.display === 'block') atualizarParcial();
 });
-window.SectionLoader?.register('view-paletes', () => window.renderPaletes());
+// API para estoque, montagem e romaneio de paletes (js/paletes-estoque.js e js/romaneio-paletes.js)
+window.PaletesAPI = {
+    async modelos() { if (!carregado) await carregarModelos(); return modelos; },
+    async madeiras() { await carregarMadeiras(); return madeiras(); },
+    async pedido(m, qtd) { await carregarMadeiras(); return calcularPedido(m, qtd); },
+    nomeMadeira,
+    resumo: resumoModelo
+};

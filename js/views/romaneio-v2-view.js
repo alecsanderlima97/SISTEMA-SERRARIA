@@ -6,6 +6,12 @@
                         <p>Sistema profissional agrupado por classes e logística detalhada.</p>
                     </div>
 
+                    <div class="rom-tipo-abas" role="tablist" aria-label="Tipo de romaneio">
+                        <button type="button" role="tab" data-romtipo="madeira" aria-selected="true" onclick="window.trocarTipoRomaneio('madeira')"><i class="fa-solid fa-layer-group"></i> Madeira serrada</button>
+                        <button type="button" role="tab" data-romtipo="paletes" aria-selected="false" onclick="window.trocarTipoRomaneio('paletes')"><i class="fa-solid fa-pallet"></i> Paletes</button>
+                    </div>
+                    <div id="romaneioPaletes" class="romaneio-paletes" hidden></div>
+
                     <!-- 1. Cabeçalho Logístico -->
                     <div class="logistics-grid">
                         <div class="card-v2">
