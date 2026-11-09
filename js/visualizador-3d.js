@@ -480,6 +480,18 @@ function cotas(b, textos = {}) {
     cena.conteudo.add(linhas);
 }
 
+// contagem por camada: "12 no assoalho + 10 em cima" (conta por fileira e nivel de altura)
+function contagemCamadas(colocados) {
+    const niveis = new Map();
+    colocados.forEach(c => {
+        const chave = c.ci + '|' + c.f;
+        if (!niveis.has(chave)) niveis.set(chave, [...new Set(colocados.filter(o => o.ci + '|' + o.f === chave).map(o => Math.round(o.topo * 100)))].sort((a, b) => a - b));
+    });
+    const cont = [0, 0, 0];
+    colocados.forEach(c => { const n = niveis.get(c.ci + '|' + c.f).indexOf(Math.round(c.topo * 100)); cont[Math.min(2, n)]++; });
+    return [cont[0] && `${cont[0]} no assoalho`, cont[1] && `${cont[1]} em cima`, cont[2] && `${cont[2]} no chapéu`].filter(Boolean).join(' + ');
+}
+
 function limparConteudo() {
     const g = cena.conteudo;
     while (g.children.length) {
@@ -920,7 +932,7 @@ function desenharCaminhao(p, cfg) {
     cena.conteudo.add(new T.LineSegments(geo, new T.LineBasicMaterial({ color: 0xdc2626 })));
     enquadrar(0, 1.6, 0, (total + CAB) / 2.2, [0.9, 0.6, 1.3]);
     const vol = m.colocados.reduce((s, c) => s + (c.p.esp / 100) * (c.p.larg / 100) * c.p.comp * (c.p.alt * c.p.cam + c.p.am), 0);
-    let txt = `${m.colocados.length} pacote(s) no caminhão · ${fmt(vol, 3)} m³ · ${m.cacambas.reduce((s, cb) => s + cb.vagas, 0) * m.fileiras} vagas no piso`;
+    let txt = `${m.colocados.length} pacote(s) no caminhão (${contagemCamadas(m.colocados)}) · ${fmt(vol, 3)} m³ · ${m.cacambas.reduce((s, cb) => s + cb.vagas, 0) * m.fileiras} vagas no piso`;
     if (m.sobra.length) txt += ` · ${m.sobra.length} não couberam`;
     return txt;
 }
@@ -1713,7 +1725,7 @@ function desenharMontagem() {
     cena.conteudo.add(montagem.fantasma);
     const vol = montagem.colocados.reduce((s, c) => s + (c.u.p.esp / 100) * (c.u.p.larg / 100) * c.u.p.comp * (c.u.p.alt * c.u.p.cam + c.u.p.am), 0);
     const fora = montagem.unidades.length - montagem.colocados.length;
-    document.getElementById('v3dInfo').textContent = `${montagem.colocados.length} de ${montagem.unidades.length} pacote(s) no caminhão · ${fmt(vol, 3)} m³ · ${g.vagas.reduce((s, n) => s + n, 0) * g.fileiras} vagas no piso${fora ? ` · ${fora} fora do caminhão` : ''}`;
+    document.getElementById('v3dInfo').textContent = `${montagem.colocados.length} de ${montagem.unidades.length} pacote(s) no caminhão (${contagemCamadas(montagem.colocados)}) · ${fmt(vol, 3)} m³ · ${g.vagas.reduce((s, n) => s + n, 0) * g.fileiras} vagas no piso${fora ? ` · ${fora} fora do caminhão` : ''}`;
     renderListaMontagem();
 }
 
