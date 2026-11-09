@@ -14,6 +14,9 @@
                     <button type="button" id="btnTabProdForm" onclick="window.switchTabProdutos('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-plus-circle"></i> Nova Madeira
                     </button>
+                    <button type="button" id="btnTabProdPalete" onclick="window.switchTabProdutos('palete')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer;">
+                        <i class="fa-solid fa-pallet"></i> Modelos de Palete
+                    </button>
                 </div>
 
                 <!-- TAB: LISTA -->
@@ -121,6 +124,7 @@
                         </section>
                     </form>
                 </div>
+                <div id="tabProdPalete" class="glass-panel pal-painel" style="display: none; margin-bottom: 0;"></div>
             </section>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();

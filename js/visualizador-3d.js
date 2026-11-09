@@ -320,8 +320,56 @@ function desenharCaminhao(p, cfg) {
     return txt;
 }
 
+// ---------- palete montado ----------
+// Eixos: x = comprimento do palete, z = largura. Ordem de baixo para cima: tabuas de baixo, blocos, ligacao, tabuas de cima.
+function distribuir(n, espaco, tamanho) {
+    if (n <= 1) return [(espaco - tamanho) / 2];
+    return Array.from({ length: n }, (_, i) => (espaco - tamanho) * i / (n - 1));
+}
+function pecasDoPalete(m) {
+    const L = Number(m.comprimento) || 1.2, W = Number(m.largura) || 1.0, folga = 0.002;
+    const por = pos => (m.componentes || []).filter(c => c.posicao === pos && Number(c.qtd) > 0);
+    const out = [];
+    let y = 0;
+    const camada = (lista, desenha) => {
+        let altura = 0;
+        lista.forEach(c => { const h = (Number(c.esp) || 0) / 100; altura = Math.max(altura, h); desenha(c, h); });
+        y += altura;
+    };
+    camada(por('inferior'), (c, h) => {
+        const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || L;
+        distribuir(Number(c.qtd), W, l).forEach(z => out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0 }));
+    });
+    camada(por('bloco'), (c, h) => {
+        const n = Number(c.qtd), cols = n === 9 ? 3 : Math.ceil(Math.sqrt(n)), linhas = Math.ceil(n / cols);
+        const bx = Number(c.comp) || 0.15, bz = (Number(c.larg) || 0) / 100;
+        const xs = distribuir(cols, L, bx), zs = distribuir(linhas, W, bz);
+        let k = 0;
+        zs.forEach(z => xs.forEach(x => { if (k++ < n) out.push({ x: x + bx / 2, y: y + h / 2, z: z + bz / 2, sx: bx - folga, sy: h - folga, sz: bz - folga, tom: 1 }); }));
+    });
+    camada(por('ligacao'), (c, h) => {
+        const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || W;
+        distribuir(Number(c.qtd), L, l).forEach(x => out.push({ x: x + l / 2, y: y + h / 2, z: (W - comp) / 2 + comp / 2, sx: l - folga, sy: h - folga, sz: comp - folga, tom: 2 }));
+    });
+    camada(por('superior'), (c, h) => {
+        const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || L;
+        distribuir(Number(c.qtd), W, l).forEach(z => out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0 }));
+    });
+    return { pecas: out, L, W, altura: y };
+}
+function desenharPalete(m) {
+    limparConteudo();
+    grade(3, 0.1, 0.5);
+    const p = pecasDoPalete(m);
+    malhaInstanciada(p.pecas.map(b => ({ ...b, x: b.x - p.L / 2, z: b.z - p.W / 2 })), COR_MADEIRA);
+    enquadrar(0, p.altura / 2, 0, Math.max(p.L, p.W) / 1.7, [1, 0.8, 1.2]);
+    const pecas = (m.componentes || []).reduce((s, c) => s + (Number(c.qtd) || 0), 0);
+    const m3 = (m.componentes || []).reduce((s, c) => s + (Number(c.qtd) || 0) * (Number(c.esp) / 100) * (Number(c.larg) / 100) * (Number(c.comp) || 0), 0);
+    return `Palete ${fmt(p.W, 2)} × ${fmt(p.L, 2)} m · altura ${fmt(p.altura * 100, 1)} cm · ${pecas} peças · ${fmt(m3, 4)} m³${m.pregos ? ` · ${m.pregos} pregos` : ''}`;
+}
+
 // ---------- modal ----------
-let atual = { produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
+let atual = { modo: 'madeira', palete: null, produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
 
 function garantirModal() {
     let modal = document.getElementById('modalVisualizador3D');
@@ -380,7 +428,17 @@ function garantirModal() {
 
 function desenhar() {
     const modal = document.getElementById('modalVisualizador3D');
-    if (!modal || !cena || !atual.produto) return;
+    if (!modal || !cena) return;
+    const abas = modal.querySelector('.v3d-abas');
+    if (atual.modo === 'palete') {
+        if (abas) abas.hidden = true;
+        document.getElementById('v3dCfg').hidden = true;
+        cena.redimensionar();
+        document.getElementById('v3dInfo').textContent = desenharPalete(atual.palete);
+        return;
+    }
+    if (abas) abas.hidden = false;
+    if (!atual.produto) return;
     modal.querySelectorAll('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === atual.aba)));
     const cfg = document.getElementById('v3dCfg');
     cfg.hidden = atual.aba !== 'caminhao';
@@ -412,6 +470,7 @@ async function abrir(produto) {
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = `${p.nome} · ${p.classe}ª classe · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}`;
     atual.produto = p;
+    atual.modo = 'madeira';
     try {
         await garantirThree();
     } catch (_) {
@@ -424,6 +483,19 @@ async function abrir(produto) {
 }
 
 window.abrirVisualizador3D = abrir;
+window.abrirPalete3D = async function(modelo) {
+    if (!modelo?.componentes?.length) { alert('Adicione os componentes do palete para ver em 3D.'); return; }
+    const modal = garantirModal();
+    modal.style.display = 'flex';
+    document.getElementById('v3dTitulo').textContent = modelo.nome || 'Palete';
+    atual.modo = 'palete';
+    atual.palete = JSON.parse(JSON.stringify(modelo));
+    try { await garantirThree(); }
+    catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
+    if (!cena) criarCena(document.getElementById('v3dPalco'));
+    else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
+    desenhar();
+};
 window.fecharVisualizador3D = function() {
     const modal = document.getElementById('modalVisualizador3D');
     if (modal) modal.style.display = 'none';

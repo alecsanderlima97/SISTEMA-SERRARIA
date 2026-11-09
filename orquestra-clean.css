@@ -961,3 +961,52 @@ body .v3d-modal .v3d-cfg input:not([type="checkbox"]) { width: 84px; min-height:
   .v3d-abas button { flex: 1; }
 }
 @media (max-width: 760px) { .v3d-dica { font-size: .7rem; padding: 6px 10px; } }
+
+
+/* Modelos de palete (Gestao de Madeira) */
+.pal-painel { color: var(--text-color, inherit); }
+.pal-grid { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pal-lista { display: grid; gap: 8px; }
+.pal-card { display: grid; gap: 2px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1.5px solid rgba(148,163,184,.35); background: rgba(255,255,255,.04); color: inherit; cursor: pointer; }
+.pal-card b { font-size: .98rem; }
+.pal-card span { font-size: .78rem; opacity: .8; font-variant-numeric: tabular-nums; }
+.pal-card.is-ativo { border-color: #1d4ed8; box-shadow: 0 0 0 1px #1d4ed8 inset; }
+.pal-main { display: grid; gap: 14px; min-width: 0; }
+.pal-bloco { border: 1px solid rgba(148,163,184,.3); border-radius: 12px; padding: 12px; min-width: 0; }
+.pal-bloco h3 { margin: 0 0 10px; font-size: 1rem; }
+.pal-editor-topo, .pal-pedido-topo { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+.pal-editor-topo label, .pal-pedido-topo label, .pal-obs { display: grid; gap: 3px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .85; }
+.pal-editor-topo label:first-child { flex: 1 1 220px; }
+.pal-editor-topo input, .pal-pedido-topo input { min-height: 38px; }
+.pal-obs { margin-top: 10px; }
+.pal-obs textarea { width: 100%; }
+.pal-tabela-wrap { overflow-x: auto; }
+.pal-tabela { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.pal-tabela th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; padding: 6px; border-bottom: 1px solid rgba(148,163,184,.35); }
+.pal-tabela td { padding: 5px 6px; border-bottom: 1px solid rgba(148,163,184,.18); vertical-align: middle; }
+.pal-tabela td small { display: block; opacity: .7; font-size: .74rem; }
+.pal-tabela input, .pal-tabela select { min-height: 34px; width: 100%; min-width: 64px; }
+.pal-tabela td:nth-child(2) select { min-width: 180px; }
+.pal-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pal-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pal-btn { min-height: 38px; padding: 0 14px; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1.5px solid rgba(148,163,184,.6); background: transparent; color: inherit; }
+.pal-btn-azul { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.pal-btn-ok { background: #15803d; border-color: #15803d; color: #fff; }
+.pal-btn-vermelho { border-color: #b91c1c; color: #f87171; }
+.pal-btn-x { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid #b91c1c; background: transparent; color: #f87171; font-size: 1.1rem; cursor: pointer; }
+.pal-total { display: grid; margin-left: auto; text-align: right; }
+.pal-total b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.pal-total span { font-size: .75rem; opacity: .75; }
+.pal-resumo { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.pal-resumo li { padding: 8px 10px; border-radius: 8px; background: rgba(29,78,216,.12); border: 1px solid rgba(29,78,216,.35); }
+.pal-resumo li span { display: block; font-size: .8rem; opacity: .8; }
+.pal-aviso { color: #f59e0b; font-weight: 600; }
+.pal-nota, .pal-vazio { font-size: .8rem; opacity: .75; margin: 8px 0 0; }
+.pal-btn:focus-visible, .pal-card:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.pal-bloco[hidden], .v3d-abas[hidden] { display: none !important; }
+@media (max-width: 860px) { .pal-grid { grid-template-columns: 1fr; } .pal-total { margin-left: 0; text-align: left; } }
+
+body .pal-tabela input:not([type="checkbox"]), body .pal-tabela select { min-height: 34px !important; height: 34px; padding: 2px 6px !important; font-size: .9rem !important; }
+.pal-tabela td:nth-child(1) select { min-width: 140px; }
+.pal-tabela td:nth-child(3) input, .pal-tabela td:nth-child(4) input, .pal-tabela td:nth-child(5) input, .pal-tabela td:nth-child(6) input { min-width: 70px; width: 76px; }
+.pal-tabela td .pal-aviso { display: block; font-size: .74rem; }
