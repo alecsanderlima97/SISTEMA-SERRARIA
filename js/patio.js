@@ -3922,7 +3922,7 @@ window.montarCargaPatio3D = function() {
         let cam = Number(cfg.cam) || 0, alt = Number(cfg.alt) || 0, am = Number(cfg.am) || 0;
         if (!cam && larg) cam = Math.max(1, Math.floor(120 / larg + 0.001));
         if (!alt && cam) { alt = Math.max(1, Math.round((Number(i.pecas) || cam) / cam)); am = 0; }
-        return { qtd: Number(i.pacotes) || 0, p: { classe: obterNumeroClasse(i.classe) || 1, esp: Number(i.espessura) || 0, larg, comp: Number(i.comprimento) || 0, alt, cam, am } };
+        return { qtd: Number(i.pacotes) || 0, p: { especie: i.especie || '', classe: obterNumeroClasse(i.classe) || 1, esp: Number(i.espessura) || 0, larg, comp: Number(i.comprimento) || 0, alt, cam, am } };
     }).filter(x => x.p.esp > 0 && x.p.larg > 0 && x.p.comp > 0);
     window.abrirMontadorCarga3D?.(itens, { titulo: 'Montar carga do pátio', origem: 'Pacotes do Controle de Produção' });
 };

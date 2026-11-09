@@ -47,7 +47,7 @@ function produtoParaPacote(p = {}) {
     if (!alt && cam) alt = Math.max(1, Math.round(((Number(p.pecasPorPacote) || 0) - am) / cam)) || 1;
     const nome = String(p.tipo || '');
     const tipo = /VIGA|TOCO|CAIBRO/i.test(nome) ? 'viga' : (/TABU|RIPA|SARRAFO/i.test(nome) ? 'tabua' : (esp >= 5 ? 'viga' : 'tabua'));
-    return { classe: numeroClasse(p.classe || p.qualidade), esp, larg, comp, alt, cam, am, tipo, nome: nome || 'Madeira' };
+    return { classe: numeroClasse(p.classe || p.qualidade), esp, larg, comp, alt, cam, am, tipo, nome: nome || 'Madeira', especie: p.especie || '' };
 }
 
 const COR_CLASSE = { 1: 0x16a34a, 2: 0xeab308, 3: 0xdc2626 };
@@ -125,6 +125,65 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
         y += e;
     }
     return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
+}
+
+// etiqueta do pacote, no mesmo modelo da impressa no Controle de Producao (canto superior esquerdo da ponta)
+const texturasEtiqueta = new Map();
+function texturaEtiqueta(p) {
+    const T = window.THREE;
+    const pecas = p.alt * p.cam + (p.am || 0);
+    const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
+    const chave = [p.classe, p.esp, p.larg, p.comp, p.alt, p.cam, p.am, p.especie].join('|');
+    if (texturasEtiqueta.has(chave)) return texturasEtiqueta.get(chave);
+    const em = window.dadosSerrariaEmitente || {};
+    const marca = String(em.nomeFantasia || 'VANMARTE').replace(/^SERRARIA\s+/i, '').toUpperCase();
+    const cidade = String(em.cidade || 'Ribeirão Branco / SP').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s*\/\s*/, ' - ').toUpperCase();
+    const contato = `${em.email || ''}${em.email && (em.telefone || em.contato) ? ' - ' : ''}${em.telefone || em.contato || ''}`;
+    const c = document.createElement('canvas'); c.width = 300; c.height = 400;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 300, 400);
+    x.strokeStyle = '#111'; x.lineWidth = 4; x.strokeRect(2, 2, 296, 396);
+    x.fillStyle = '#111'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+    x.font = '900 40px Arial'; x.fillText(marca, 150, 46);
+    x.font = 'bold 15px Arial'; x.fillText(`SERRARIA - ${cidade}`, 150, 68);
+    x.font = '12px Arial'; x.fillText(contato, 150, 88, 285);
+    x.fillRect(12, 98, 276, 2);
+    x.textAlign = 'left'; x.font = 'bold 13px Arial'; x.fillText('PRODUTO', 14, 120); x.fillText('CLASSE', 200, 120);
+    x.font = '900 24px Arial'; x.fillText(String(p.especie || 'EUCALIPTO').toUpperCase(), 14, 148, 175);
+    const cor = { 1: ['#16a34a', '#fff'], 2: ['#facc15', '#111'], 3: ['#dc2626', '#fff'] }[p.classe] || ['#dc2626', '#fff'];
+    x.fillStyle = cor[0]; x.fillRect(198, 124, 88, 34);
+    x.fillStyle = cor[1]; x.textAlign = 'center'; x.font = '900 26px Arial'; x.fillText(`${p.classe || '-'}ª`, 242, 151);
+    x.fillStyle = '#111'; x.textAlign = 'left'; x.font = 'bold 13px Arial'; x.fillText('BITOLAS', 14, 182);
+    x.font = '900 26px Arial'; x.fillText(`${fmt(p.esp, 1)} / ${fmt(p.larg, 1)} / ${fmt(p.comp, 2)}`, 14, 212, 272);
+    [[p.alt, 'ALTURAS', 'PEÇAS'], [p.cam, 'LARGURA', 'PEÇAS'], [p.am || '-', 'AMARRAS', '']].forEach(([v, t, u], i) => {
+        const y = 250 + i * 36;
+        x.font = '900 26px Arial'; x.textAlign = 'center'; x.fillText(String(v), 45, y);
+        x.fillRect(12, y + 6, 66, 2);
+        x.textAlign = 'left'; x.font = 'bold 17px Arial'; x.fillText(t, 92, y);
+        x.font = '13px Arial'; x.fillText(u, 200, y);
+    });
+    x.fillRect(12, 344, 276, 2);
+    x.font = '900 22px Arial'; x.textAlign = 'left'; x.fillText(`${pecas} PEÇAS`, 14, 376);
+    x.textAlign = 'right'; x.fillText(`${fmt(m3, 3)} M³`, 286, 376);
+    const t = new T.CanvasTexture(c);
+    t.anisotropy = 4;
+    texturasEtiqueta.set(chave, t);
+    return t;
+}
+// tras = true: ponta de tras (-x), a que aparece no caminhao; senao a ponta da frente (+x)
+function colarEtiqueta(dim, origem, p, tras = false) {
+    const T = window.THREE;
+    const H = 0.10; // etiqueta real ~7,5 x 10 cm
+    const alt = Math.min(H, dim.altura * 0.8);
+    const larg = alt * 0.75;
+    const geo = new T.PlaneGeometry(larg, alt);
+    geo.rotateY(tras ? -Math.PI / 2 : Math.PI / 2);
+    const mesh = new T.Mesh(geo, new T.MeshBasicMaterial({ map: texturaEtiqueta(p) }));
+    // canto superior esquerdo de quem olha a ponta
+    const y = origem.y + dim.altura - alt / 2 - 0.01;
+    if (tras) mesh.position.set(origem.x - 0.003, y, origem.z + larg / 2 + 0.02);
+    else mesh.position.set(origem.x + dim.comprimento + 0.003, y, origem.z + dim.largura - larg / 2 - 0.02);
+    cena.conteudo.add(mesh);
 }
 
 // amarras pela regra da serraria (pezinho + fiadas de amarra + tabuinhas do vao do meio)
@@ -407,6 +466,7 @@ function desenharPacote(p) {
     malhaInstanciada(dim.pecas.map(b => ({ ...b, x: b.x + off.x, z: b.z + off.z })), COR_MADEIRA);
     malhaInstanciada(fitasDoPacote(dim, off), 0x16a34a, false);
     if (!C.ehViga(p)) numerarPacote(dim, off, p);
+    colarEtiqueta(dim, off, p);
     enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [1, 0.45, 0.55]);
     const pecas = p.alt * p.cam + p.am;
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
@@ -612,6 +672,7 @@ function desenharCaminhao(p, cfg) {
         const oz = z0 + c.f * faixa + (faixa - dim0.largura) / 2;
         const oy = PISO + c.topo;
         const dim = tabuasDoPacote(c.p, { x: ox, y: oy, z: oz });
+        colarEtiqueta(dim, { x: ox, y: oy, z: oz }, c.p, true);
         pecas.push(...dim.pecas);
         fitas.push(...fitasDoPacote(dim, { x: ox, y: oy, z: oz }));
     });
@@ -1269,6 +1330,7 @@ function desenharMontagem() {
     montagem.colocados.forEach((c, i) => {
         const o = posicaoMundo(g, c);
         const dim = tabuasDoPacote(c.u.p, o);
+        colarEtiqueta(dim, o, c.u.p, true);
         pecas.push(...dim.pecas);
         fitas.push(...fitasDoPacote(dim, o));
         // caixa invisivel para clicar/arrastar
