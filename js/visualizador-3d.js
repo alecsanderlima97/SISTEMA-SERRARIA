@@ -138,9 +138,10 @@ function criarCena(container) {
     controls.dampingFactor = 0.12;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T.PCFShadowMap;
-    scene.add(new T.HemisphereLight(0xffffff, 0xd8d2c8, 0.75));
-    scene.add(new T.AmbientLight(0xffffff, 0.25));
-    const sol = new T.DirectionalLight(0xffffff, 0.95);
+    renderer.shadowMap.autoUpdate = false;
+    scene.add(new T.HemisphereLight(0xffffff, 0xb8b0a4, 0.5));
+    scene.add(new T.AmbientLight(0xffffff, 0.12));
+    const sol = new T.DirectionalLight(0xfff4e6, 0.85);
     sol.position.set(6, 12, 8);
     sol.castShadow = true;
     sol.shadow.mapSize.set(1024, 1024);
@@ -152,7 +153,7 @@ function criarCena(container) {
     cena = { renderer, scene, camera, controls, conteudo, container, raf: 0, sujo: true };
     // so redesenha quando algo muda (evita travar o celular/PC com a cena parada)
     const addOriginal = conteudo.add.bind(conteudo);
-    conteudo.add = (...o) => { cena.sujo = true; return addOriginal(...o); };
+    conteudo.add = (...o) => { cena.sujo = true; renderer.shadowMap.needsUpdate = true; return addOriginal(...o); };
     controls.addEventListener('change', () => { cena.sujo = true; });
     const redimensionar = () => {
         const w = container.clientWidth || 600, h = container.clientHeight || 400;
@@ -199,7 +200,7 @@ function malhaInstanciada(lista, cor, variacao = true) {
     const T = window.THREE;
     if (!lista.length) return;
     const geo = new T.BoxGeometry(1, 1, 1);
-    const mat = new T.MeshLambertMaterial({ color: 0xffffff });
+    const mat = new T.MeshLambertMaterial({ color: 0xffffff, map: cor === COR_MADEIRA ? veioMadeira() : null });
     const mesh = new T.InstancedMesh(geo, mat, lista.length);
     const m = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), esc = new T.Vector3();
     const tons = [new T.Color(cor), new T.Color(cor).offsetHSL(0, -0.05, -0.06), new T.Color(cor).offsetHSL(0.01, 0.02, -0.14)];
@@ -256,7 +257,65 @@ function enquadrar(cx, cy, cz, raio, dir = [1, 0.75, 1.15]) {
     cena.sujo = true;
 }
 
-const COR_MADEIRA = 0xd2a26a;
+const COR_MADEIRA = 0xdcb27c;
+
+// textura de veio de madeira (gerada no navegador, sem imagem externa)
+let texturaVeio = null;
+function veioMadeira() {
+    if (texturaVeio) return texturaVeio;
+    const T = window.THREE;
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const x = c.getContext('2d');
+    x.fillStyle = '#f2e2cc';
+    x.fillRect(0, 0, 256, 64);
+    let semente = 7;
+    const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
+    for (let i = 0; i < 26; i++) {
+        const y0 = rnd() * 64, amp = 1 + rnd() * 3, fase = rnd() * 6;
+        x.strokeStyle = `rgba(${120 + rnd() * 30},${70 + rnd() * 20},${30 + rnd() * 15},${0.18 + rnd() * 0.3})`;
+        x.lineWidth = 0.6 + rnd() * 1.6;
+        x.beginPath();
+        for (let px = 0; px <= 256; px += 8) { const py = y0 + Math.sin(px / 40 + fase) * amp; px ? x.lineTo(px, py) : x.moveTo(px, py); }
+        x.stroke();
+    }
+    for (let i = 0; i < 3; i++) { // nos
+        const nx = rnd() * 256, ny = rnd() * 64;
+        x.fillStyle = 'rgba(110,62,25,.45)';
+        x.beginPath(); x.ellipse(nx, ny, 3 + rnd() * 4, 1.5 + rnd() * 2, 0, 0, Math.PI * 2); x.fill();
+    }
+    texturaVeio = new T.CanvasTexture(c);
+    return texturaVeio;
+}
+
+// casca e topo (aneis) da tora
+let texturasTora = null;
+function texturaTora() {
+    if (texturasTora) return texturasTora;
+    const T = window.THREE;
+    const casca = document.createElement('canvas'); casca.width = 128; casca.height = 128;
+    let x = casca.getContext('2d');
+    x.fillStyle = '#5a3d24'; x.fillRect(0, 0, 128, 128);
+    let semente = 11;
+    const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
+    for (let i = 0; i < 70; i++) {
+        x.strokeStyle = `rgba(${rnd() < 0.5 ? '30,18,8' : '120,92,62'},${0.35 + rnd() * 0.4})`;
+        x.lineWidth = 1 + rnd() * 2.5;
+        const yy = rnd() * 128;
+        x.beginPath(); x.moveTo(0, yy); x.lineTo(128, yy + (rnd() - 0.5) * 10); x.stroke();
+    }
+    const topo = document.createElement('canvas'); topo.width = 128; topo.height = 128;
+    x = topo.getContext('2d');
+    x.fillStyle = '#4a321d'; x.fillRect(0, 0, 128, 128);
+    x.fillStyle = '#e3bf8c'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
+    for (let rr = 6; rr < 58; rr += 4 + rnd() * 3) { x.strokeStyle = `rgba(150,100,55,${0.35 + rnd() * 0.3})`; x.lineWidth = 1 + rnd(); x.beginPath(); x.arc(64 + rnd() * 2, 64 + rnd() * 2, rr, 0, Math.PI * 2); x.stroke(); }
+    x.fillStyle = '#9c6a3a'; x.beginPath(); x.arc(64, 64, 4, 0, Math.PI * 2); x.fill();
+    const tc = new T.CanvasTexture(casca);
+    tc.wrapS = tc.wrapT = T.RepeatWrapping;
+    tc.repeat.set(2, 3);
+    texturasTora = { casca: tc, topo: new T.CanvasTexture(topo) };
+    return texturasTora;
+}
 
 function desenharTabua(p) {
     limparConteudo();
@@ -545,11 +604,16 @@ function desenharTora(cfg) {
     if (lista.length) {
         const geo = new T.CylinderGeometry(1, 1, 1, 14);
         geo.rotateZ(Math.PI / 2);
-        const mats = [new T.MeshLambertMaterial({ color: 0x6b4a2b }), new T.MeshLambertMaterial({ color: 0xe0b98a }), new T.MeshLambertMaterial({ color: 0xe0b98a })];
+        const tx = texturaTora();
+        const mats = [new T.MeshLambertMaterial({ color: 0xffffff, map: tx.casca }), new T.MeshLambertMaterial({ color: 0xffffff, map: tx.topo }), new T.MeshLambertMaterial({ color: 0xffffff, map: tx.topo })];
         const mesh = new T.InstancedMesh(geo, mats, lista.length);
         const m = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), esc = new T.Vector3();
-        lista.forEach((t, i) => { pos.set(t.x, t.y, t.z); esc.set(t.L, t.raio, t.raio); m.compose(pos, q, esc); mesh.setMatrixAt(i, m); });
+        const giro = new T.Euler();
+        lista.forEach((t, i) => { pos.set(t.x, t.y, t.z); esc.set(t.L, t.raio, t.raio); giro.set((i * 2.399) % 6.28, 0, 0); q.setFromEuler(giro); m.compose(pos, q, esc); mesh.setMatrixAt(i, m); });
+        q.identity();
         mesh.instanceMatrix.needsUpdate = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         cena.conteudo.add(mesh);
     }
     // marcas das 8 medidas: poste vermelho na altura medida de cada ponto
@@ -836,10 +900,7 @@ function desenhar() {
         cena.redimensionar();
         if (montagem?.recalcular) {
             // mudou o caminhao: recoloca os mesmos pacotes nas vagas novas
-            const antes = montagem.colocados.map(c2 => c2.u);
-            montagem.colocados = [];
-            montagem.selecionado = null;
-            antes.forEach(colocarUnidade);
+            montarAutomatico(montagem.colocados.map(c2 => c2.u));
             montagem.recalcular = false;
         }
         desenharMontagem();
@@ -965,15 +1026,15 @@ function alturaVaga(g, ci, f, v, ignorar) {
     let h = 0;
     montagem.colocados.forEach(c => {
         if (c === ignorar || c.ci !== ci || c.f !== f) return;
-        if (v >= c.v && v < c.v + c.n) h = Math.max(h, c.topo + g.C.altPacote(c.u.p));
+        if (v > c.v - 0.001 && v < c.v + c.n - 0.001) h = Math.max(h, c.topo + g.C.altPacote(c.u.p));
     });
     return h;
 }
 
 function avaliarVaga(g, u, ci, f, v, ignorar) {
     const n = nVagas(u, g);
-    if (ci < 0 || ci >= g.comps.length || f < 0 || f >= g.fileiras || v < 0 || v + n > g.vagas[ci]) return null;
-    const base = Array.from({ length: n }, (_, k) => alturaVaga(g, ci, f, v + k, ignorar));
+    if (ci < 0 || ci >= g.comps.length || f < 0 || f >= g.fileiras || v < -0.001 || v + n > g.vagas[ci] + 0.001) return null;
+    const base = Array.from({ length: n * 4 }, (_, k) => alturaVaga(g, ci, f, v + 0.125 + k * 0.25, ignorar));
     const topo = Math.max(...base);
     if (base.some(h => Math.abs(h - topo) > 0.12)) return null;           // pacote longo nao apoia em degrau
     if (topo + g.C.altPacote(u.p) > g.altMax + 0.001) return null;        // passa da altura maxima
@@ -982,6 +1043,34 @@ function avaliarVaga(g, u, ci, f, v, ignorar) {
 
 // mesma regra do automatico: mais baixo, mais no meio, equilibra lados, cruzado
 function melhorVaga(g, u) {
+    let melhor = null, chaveMelhor = null;
+    const cmp = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 0.001) return a[i] - b[i]; return 0; };
+    g.comps.forEach((_, ci) => { for (let f = 0; f < g.fileiras; f++) for (let v = 0; v < g.vagas[ci]; v += 0.5) {
+        const r = avaliarVaga(g, u, ci, f, v);
+        if (!r) continue;
+        const centro = (v + r.n / 2) - g.vagas[ci] / 2;
+        const naCamada = montagem.colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - r.topo) < 0.05).length;
+        const chave = [Math.round(r.topo * 100), Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
+        if (!melhor || cmp(chave, chaveMelhor) < 0) { melhor = r; chaveMelhor = chave; }
+    } });
+    return melhor;
+}
+
+// automatico: mesma montagem do romaneio (vagas inteiras) e depois centraliza cada camada
+function montarAutomatico(lista = montagem.unidades) {
+    const C = calc();
+    montagem.colocados = [];
+    montagem.selecionado = null;
+    [...lista].sort((a, c) => c.p.comp - a.p.comp || (C.meio(a.p) - C.meio(c.p)) || c.p.esp - a.p.esp).forEach(u => {
+        const g = geometriaMontagem();
+        const r = melhorVagaInteira(g, u);
+        if (r) montagem.colocados.push({ u, ...r });
+    });
+    const g = geometriaMontagem();
+    C.centralizarCamadas?.(montagem.colocados, g.vagas, c => C.altPacote(c.u.p));
+}
+
+function melhorVagaInteira(g, u) {
     let melhor = null, chaveMelhor = null;
     const cmp = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 0.001) return a[i] - b[i]; return 0; };
     g.comps.forEach((_, ci) => { for (let f = 0; f < g.fileiras; f++) for (let v = 0; v < g.vagas[ci]; v++) {
@@ -1051,7 +1140,7 @@ function mundoParaVaga(g, ponto, u) {
     let ci = -1;
     montagem.geo.inicioCacamba.forEach((ini, i) => { if (ponto.x >= ini - 0.6 && ponto.x <= ini + g.comps[i] + 0.6) ci = i; });
     if (ci < 0) return null;
-    const v = Math.round((ponto.x - montagem.geo.inicioCacamba[ci]) / g.VAGA - n / 2);
+    const v = Math.round(((ponto.x - montagem.geo.inicioCacamba[ci]) / g.VAGA - n / 2) * 2) / 2; // passo de meia vaga
     const faixa = g.largura / g.fileiras;
     const f = Math.floor((ponto.z - montagem.geo.z0) / faixa);
     return { ci, v: Math.max(0, Math.min(g.vagas[ci] - n, v)), f: Math.max(0, Math.min(g.fileiras - 1, f)) };
@@ -1200,7 +1289,7 @@ function instalarListaEventos() {
             montagem.colocados = [];
             montagem.selecionado = null;
             const C = calc();
-            [...montagem.unidades].sort((a, c) => c.p.comp - a.p.comp || (C.meio(a.p) - C.meio(c.p)) || c.p.esp - a.p.esp).forEach(colocarUnidade);
+            montarAutomatico();
             desenharMontagem();
             return;
         }
@@ -1233,8 +1322,7 @@ window.abrirMontadorCarga3D = async function(itens, opcoes = {}) {
     instalarArraste();
     instalarListaEventos();
     // comeca com a montagem automatica; o usuario ajusta arrastando
-    const C = calc();
-    [...unidades].sort((a, c) => c.p.comp - a.p.comp || (C.meio(a.p) - C.meio(c.p)) || c.p.esp - a.p.esp).forEach(colocarUnidade);
+    montarAutomatico();
     desenhar();
     const g = geometriaMontagem();
     enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 2.2, [0.9, 0.7, 1.3]);
