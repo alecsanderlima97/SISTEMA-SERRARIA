@@ -1106,3 +1106,20 @@ body .v3d-modal .v3d-menu button:hover, body .v3d-modal .v3d-menu button:focus-v
 .pal-tabela { width: 100%; border-collapse: collapse; }
 .pal-tabela th, .pal-tabela td { padding: 8px 10px; border-bottom: 1px solid var(--panel-border, #e5e7eb); text-align: left; vertical-align: top; }
 body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado .opcao-modulo-paletes { display: none !important; }
+
+/* 3D no celular: controles compactos, a janela rola e o desenho ganha altura */
+@media (max-width: 760px) {
+  .v3d-caixa { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .v3d-topo, .v3d-barra, .v3d-dica { flex: 0 0 auto; }
+  .v3d-barra { gap: 6px 8px; }
+  .v3d-cfg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%; }
+  .v3d-cfg[hidden] { display: none !important; }
+  .v3d-cfg label { font-size: .62rem; min-width: 0; }
+  body .v3d-modal .v3d-cfg input:not([type="checkbox"]), body .v3d-modal .v3d-cfg select { width: 100% !important; min-height: 34px; height: 34px; font-size: .9rem; }
+  .v3d-cfg .v3d-check { height: auto; align-self: end; padding-bottom: 8px; font-size: .72rem; }
+  .v3d-pac-orig { grid-column: 1 / -1; min-height: 34px; }
+  .v3d-corpo { flex: 0 0 auto; }
+  .v3d-corpo .v3d-palco { flex: 0 0 auto; height: 68vh; min-height: 68vh; }
+  .v3d-lista { max-height: none; }
+  .v3d-item-cfg input { width: 46px !important; }
+}
