@@ -114,6 +114,7 @@
                             <strong id="prodVolumePacote">0,000 m3</strong>
                         </div>
                         <div class="produto-config-save">
+                            <button type="button" class="btn-secondary btn-3d-madeira" onclick="window.verFormularioMadeira3D()"><i class="fa-solid fa-cube"></i> Ver em 3D</button>
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
                         </div>
                             </div>

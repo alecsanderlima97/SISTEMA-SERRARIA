@@ -928,3 +928,36 @@ body .mc-modal .mc-draw svg { width: 100% !important; height: auto !important; m
 @media (max-width: 760px) { body .mc-modal .mc-draw svg { min-width: 0 !important; } }
 .mc-conteudo { display: flex !important; flex-direction: column; }
 .mc-conteudo > * { flex-shrink: 0; }
+
+
+/* Visualizador 3D (Gestao de Madeira) */
+.btn-3d-madeira { color: #1d4ed8 !important; font-weight: 700 !important; }
+button.btn-secondary.btn-3d-madeira { border-color: #1d4ed8 !important; }
+.v3d-modal { position: fixed; inset: 0; z-index: 10070; display: none; align-items: center; justify-content: center; background: rgba(12,10,9,.72); padding: 12px; }
+.v3d-caixa { width: min(1200px, 100%); height: min(860px, calc(100vh - 24px)); display: flex; flex-direction: column; background: #fff; color: #1f1c18; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+.v3d-topo { display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+.v3d-topo h3 { margin: 0; font-size: 1.1rem; color: #1f1c18; }
+.v3d-topo p { margin: 3px 0 0; font-size: .86rem; color: #475569; font-variant-numeric: tabular-nums; }
+.v3d-fechar { background: none; border: 0; font-size: 1.7rem; line-height: 1; width: 40px; height: 40px; cursor: pointer; color: #44403c; }
+.v3d-barra { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; padding: 10px 16px; border-bottom: 1px solid #e5e7eb; }
+.v3d-abas { display: inline-flex; border: 1.5px solid #4b5563; border-radius: 8px; overflow: hidden; }
+.v3d-abas button { border: 0; background: #fff; color: #1f1c18; font-weight: 700; padding: 9px 16px; cursor: pointer; }
+.v3d-abas button[aria-selected="true"] { background: #1d4ed8; color: #fff; }
+.v3d-cfg { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.v3d-cfg label { display: grid; gap: 3px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+.v3d-cfg .v3d-check { display: inline-flex; align-items: center; gap: 6px; height: 36px; font-size: .8rem; color: #1f1c18; }
+body .v3d-modal .v3d-cfg input:not([type="checkbox"]) { width: 84px; min-height: 36px; height: 36px; background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; border: 1.5px solid #a8a29e !important; border-radius: 6px; padding: 0 8px; }
+.v3d-modal [hidden] { display: none !important; }
+.v3d-palco { position: relative; flex: 1 1 auto; min-height: 0; background: #fff; touch-action: none; }
+.v3d-palco canvas { display: block; }
+.v3d-carregando { position: absolute; inset: 0; display: grid; place-items: center; color: #64748b; font-weight: 600; }
+.v3d-dica { margin: 0; padding: 8px 16px; font-size: .78rem; color: #64748b; border-top: 1px solid #e5e7eb; }
+.v3d-abas button:focus-visible, .v3d-fechar:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+@media (max-width: 760px) {
+  .v3d-modal { padding: 0; }
+  .v3d-caixa { height: 100%; border-radius: 0; }
+  .v3d-barra { padding: 8px 10px; }
+  .v3d-abas { width: 100%; }
+  .v3d-abas button { flex: 1; }
+}
+@media (max-width: 760px) { .v3d-dica { font-size: .7rem; padding: 6px 10px; } }
