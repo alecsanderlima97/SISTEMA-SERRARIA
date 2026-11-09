@@ -298,11 +298,11 @@ window.amarrasPadraoPacote = p => (calc() ? amarrasPadrao(p) : 0);
 const texturasNumero = new Map();
 function rotuloNumero(n, destaque) {
     const T = window.THREE;
-    const chave = n + (destaque ? 'd' : '');
+    const chave = n + (destaque === 'amarra' ? 'a' : destaque ? 'd' : '');
     if (!texturasNumero.has(chave)) {
         const c = document.createElement('canvas'); c.width = 64; c.height = 40;
         const x = c.getContext('2d');
-        x.fillStyle = destaque ? '#1d4ed8' : 'rgba(255,255,255,.92)';
+        x.fillStyle = destaque === 'amarra' ? '#ea580c' : destaque ? '#1d4ed8' : 'rgba(255,255,255,.92)';
         x.fillRect(0, 0, 64, 40);
         x.fillStyle = destaque ? '#fff' : '#111827';
         x.font = 'bold 28px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
@@ -317,6 +317,17 @@ function numerarPacote(dim, off, p) {
     const T = window.THREE;
     const e = p.esp / 100, l = p.larg / 100;
     const h = Math.max(0.012, Math.min(0.03, e * 0.9));
+    // amarras numeradas em laranja (pezinho, fiadas de amarra e as do meio), na face que a camera ve
+    const fora = atual.pecaFora || new Set();
+    dim.pecas.filter(b => b.tipo === 'amarra' && !fora.has(b.k)).forEach((b, i) => {
+        const sp = rotuloNumero(i + 1, 'amarra');
+        const ha = 0.022; // legivel com zoom mesmo na tabua fina
+        sp.scale.set(ha * 1.6, ha, 1);
+        const cruzada = b.sz >= dim.largura * 0.5; // atravessada: numero na lateral; ao longo: numero na ponta
+        if (cruzada) sp.position.set(off.x + b.x, off.y + b.y, off.z + b.z + b.sz / 2 + 0.006);
+        else sp.position.set(off.x + b.x + b.sx / 2 + 0.006, off.y + b.y, off.z + b.z);
+        cena.conteudo.add(sp);
+    });
     const xFace = off.x + dim.comprimento + 0.004;
     dim.camadasY.forEach((y, i) => {
         const sp = rotuloNumero(i + 1, (i + 1) % 10 === 0);
