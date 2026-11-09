@@ -396,3 +396,6 @@ window.fecharMontagemCarga = function() {
 
 // Atualiza o desenho quando o romaneio muda com a janela aberta.
 document.addEventListener('romaneioPacotesAlterados', renderizar);
+
+// Regras do pacote compartilhadas com o visualizador 3D (Gestao de Madeira).
+window.MontagemCargaCalc = { montar, altPacote, largPacote, peAlt, fileirasAmarra, ehViga, vaoMeio, camadaExtra, meio };

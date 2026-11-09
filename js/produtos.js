@@ -255,6 +255,9 @@ function renderProdutos() {
             </td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
+                    <button onclick="window.verMadeira3D('${p.id}')" class="btn-icon btn-3d-madeira" title="Ver em 3D: tábua, pacote e caminhão" aria-label="Ver em 3D">
+                        <i class="fa-solid fa-cube"></i> 3D
+                    </button>
                     <button onclick="window.editarProduto('${p.id}')" class="btn-icon" style="color:var(--primary-color); font-size:1rem; padding: 6px 8px;" title="Editar">
                         <i class="fa-solid fa-pencil"></i>
                     </button>
@@ -284,6 +287,27 @@ async function carregarProdutos() {
         listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
     }
 }
+
+// Visualizacao 3D (js/visualizador-3d.js): somente leitura.
+window.verMadeira3D = function(id) {
+    const p = produtosAtuais.find(x => x.id === id);
+    if (p) window.abrirVisualizador3D?.(p);
+};
+window.verFormularioMadeira3D = function() {
+    const resumo = calcularResumoProduto();
+    window.abrirVisualizador3D?.({
+        tipo: document.getElementById('prodTipo')?.value || '',
+        classe: obterClasseProduto(),
+        espessura: parseNumeroBR(document.getElementById('prodEspessura')?.value),
+        largura: parseNumeroBR(document.getElementById('prodLargura')?.value),
+        comprimentoVenda: parseNumeroBR(document.getElementById('prodComprimentoVenda')?.value),
+        comprimentoReal: parseNumeroBR(document.getElementById('prodComprimentoReal')?.value),
+        alturas: resumo.alturas,
+        larguraPacote: resumo.larguraPacote,
+        amarras: resumo.amarras,
+        pecasPorPacote: resumo.pecas
+    });
+};
 
 atualizarVisualClasseProduto();
 atualizarResumoProduto();
