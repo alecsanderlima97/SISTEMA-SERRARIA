@@ -202,6 +202,14 @@ function malhaInstanciada(lista, cor, variacao = true) {
     return mesh;
 }
 
+function contorno(mesh, cor = 0x6b7280) {
+    const T = window.THREE;
+    const linhas = new T.LineSegments(new T.EdgesGeometry(mesh.geometry), new T.LineBasicMaterial({ color: cor }));
+    linhas.position.copy(mesh.position);
+    cena.conteudo.add(linhas);
+    return mesh;
+}
+
 function caixa(x, y, z, sx, sy, sz, cor) {
     const T = window.THREE;
     const mesh = new T.Mesh(new T.BoxGeometry(sx, sy, sz), new T.MeshLambertMaterial({ color: cor }));
@@ -258,32 +266,76 @@ function desenharPacote(p) {
 
 const PISO = 1.25, RODA = 0.52, CAB = 2.5;
 
-// Caminhao (ou bitrem) com carroceria aberta e fueiros. Devolve onde comeca cada cacamba.
-function desenharVeiculo(comps, W, alturaFueiro = 1.0) {
+// Caminhao florestal (6x4) com carroceria aberta, cabeceira perfurada e fueiros com ponta amarela.
+// opts.fueiro = altura dos fueiros; opts.florestal = poe grade traseira (carga de tora). Devolve onde comeca cada cacamba.
+function painelPerfurado(x, z, largura, altura, espessura) {
+    caixa(x, PISO + altura / 2, z, espessura, altura, largura, 0x374151);
+    const furo = 0.11, passo = 0.3;
+    const cols = Math.max(1, Math.floor((largura - 0.2) / passo)), linhas = Math.max(1, Math.floor((altura - 0.25) / passo));
+    for (let i = 0; i < cols; i++) for (let j = 0; j < linhas; j++) {
+        const zz = z - ((cols - 1) * passo) / 2 + i * passo;
+        const yy = PISO + 0.2 + j * passo + furo / 2;
+        [-1, 1].forEach(lado => caixa(x + lado * (espessura / 2 + 0.002), yy, zz, 0.004, furo, furo, 0xd1d5db));
+    }
+    caixa(x, PISO + altura - 0.04, z, espessura + 0.02, 0.08, largura + 0.04, 0xfacc15); // friso amarelo
+}
+
+function desenharVeiculo(comps, W, opts = {}) {
+    const fueiro = typeof opts === 'number' ? opts : (opts.fueiro || 1.2);
+    const florestal = typeof opts === 'object' && !!opts.florestal;
     const GAP = 0.55;
     const total = comps.reduce((s, c) => s + c, 0) + GAP * (comps.length - 1);
     grade(Math.ceil(total + CAB + 6), 0.5, 1);
     const z0 = -W / 2;
     let x = -total / 2 - CAB / 2;
     const inicioCacamba = [];
-    comps.forEach(comp => {
+    const rodaTraseira = (rx) => {
+        [-1, 1].forEach(lado => {
+            roda(rx, RODA, lado * (W / 2 - 0.18), RODA, 0.26);   // rodado duplo: pneu de fora
+            roda(rx, RODA, lado * (W / 2 - 0.47), RODA, 0.26);   // pneu de dentro
+        });
+    };
+    comps.forEach((comp, ci) => {
         inicioCacamba.push(x);
-        caixa(x + comp / 2, PISO - 0.08, 0, comp, 0.16, W, 0x8a5a2b);                 // assoalho
-        caixa(x + comp / 2, PISO - 0.25, 0, comp, 0.18, 0.9, 0x2b2f36);               // longarina
-        const n = Math.max(2, Math.round(comp / 1.2) + 1);
+        caixa(x + comp / 2, PISO - 0.07, 0, comp, 0.14, W, 0x3f3f46);                  // assoalho metalico
+        caixa(x + comp / 2, PISO - 0.24, 0, comp + (ci === comps.length - 1 ? 0.6 : 0), 0.2, 0.9, 0x1f2937); // longarinas
+        const n = Math.max(2, Math.round(comp / 1.4) + 1);
         for (let i = 0; i < n; i++) {
-            const fx = x + 0.04 + (comp - 0.08) * (i / (n - 1));
-            [z0 + 0.03, -z0 - 0.03].forEach(fz => caixa(fx, PISO + alturaFueiro / 2, fz, 0.07, alturaFueiro, 0.06, 0x6b7280));
+            const fx = x + 0.06 + (comp - 0.12) * (i / (n - 1));
+            [z0 + 0.04, -z0 - 0.04].forEach(fz => {
+                caixa(fx, PISO + fueiro / 2, fz, 0.1, fueiro, 0.1, 0x374151);            // fueiro
+                caixa(fx, PISO + fueiro + 0.07, fz, 0.11, 0.14, 0.11, 0xfacc15);         // ponta amarela
+            });
         }
-        [1.2, 2.35].forEach(dx => [z0 + 0.25, -z0 - 0.25].forEach(rz => roda(x + dx, RODA, rz, RODA, 0.4)));  // eixo duplo atras
+        if (ci === comps.length - 1) painelPerfurado(x + comp + 0.06, 0, W, Math.max(fueiro, 2.0) + 0.1, 0.08); // cabeceira
+        if (florestal && ci === 0) painelPerfurado(x - 0.06, 0, W, Math.max(1.4, fueiro * 0.85), 0.07);       // grade traseira
+        [1.15, 2.3].forEach(dx => rodaTraseira(x + dx));
+        caixa(x + 1.72, RODA + 0.2, 0, 1.7, 0.08, W + 0.04, 0x111827);                   // para-lama do tandem
         x += comp + GAP;
     });
-    const xc = x - GAP + 0.35; // cabine na frente (x positivo)
-    caixa(xc + CAB / 2, (RODA + 0.25 + 3.05) / 2, 0, CAB, 3.05 - (RODA + 0.25), W * 0.95, 0x24507a);
-    caixa(xc + CAB - 0.02, 2.25, 0, 0.04, 0.8, W * 0.8, 0xa9cbe3);                // para-brisa
-    [z0 * 0.95 - 0.01, -z0 * 0.95 + 0.01].forEach(fz => caixa(xc + CAB - 0.8, 2.25, fz, 0.9, 0.7, 0.02, 0xa9cbe3));
-    caixa(xc + CAB + 0.05, 0.85, 0, 0.12, 0.3, W * 0.98, 0xb8bec6);                 // para-choque
-    [z0 + 0.25, -z0 - 0.25].forEach(rz => roda(xc + CAB - 0.75, RODA, rz, RODA, 0.35));
+    // cabine branca (frente em x positivo)
+    const xc = x - GAP + 0.45;
+    const largCab = W * 0.96;
+    caixa(xc + CAB / 2, 0.95, 0, CAB + 0.3, 0.22, 0.9, 0x1f2937);                          // chassi sob a cabine
+    contorno(caixa(xc + CAB / 2, 2.0, 0, CAB, 2.1, largCab, 0xe8eaee));                      // corpo
+    contorno(caixa(xc + CAB / 2 - 0.15, 3.18, 0, CAB - 0.5, 0.26, largCab * 0.92, 0xdfe2e7)); // defletor do teto
+    caixa(xc + CAB + 0.005, 2.45, 0, 0.02, 0.75, largCab * 0.86, 0x1e3a5f);                  // para-brisa
+    [-1, 1].forEach(lado => {
+        caixa(xc + CAB - 0.75, 2.4, lado * (largCab / 2 + 0.005), 0.9, 0.62, 0.02, 0x1e3a5f); // janela lateral
+        caixa(xc + CAB - 1.7, 1.6, lado * (largCab / 2 + 0.005), 0.02, 1.4, 0.02, 0x9ca3af);  // linha da porta
+        caixa(xc + CAB + 0.05, 2.35, lado * (largCab / 2 + 0.16), 0.06, 0.38, 0.12, 0x111827); // espelho
+        caixa(xc + CAB - 0.4, 0.62, lado * (largCab / 2 - 0.05), 0.35, 0.08, 0.25, 0x374151);  // degrau
+    });
+    caixa(xc + CAB + 0.01, 1.42, 0, 0.03, 0.62, largCab * 0.62, 0x1f2937);                   // grade frontal
+    caixa(xc + CAB + 0.08, 0.86, 0, 0.16, 0.32, W, 0x111827);                                // para-choque
+    [-1, 1].forEach(lado => caixa(xc + CAB + 0.015, 1.25, lado * largCab * 0.38, 0.02, 0.16, 0.26, 0xfef3c7)); // farois
+    // tanque de combustivel
+    const T = window.THREE;
+    const tanque = new T.Mesh(new T.CylinderGeometry(0.27, 0.27, 0.9, 20), new T.MeshLambertMaterial({ color: 0xc0c4ca }));
+    tanque.rotation.z = Math.PI / 2;
+    tanque.position.set(xc - 0.25, 0.85, -(W / 2 - 0.3));
+    cena.conteudo.add(tanque);
+    [-1, 1].forEach(lado => roda(xc + CAB - 0.8, RODA, lado * (W / 2 - 0.2), RODA, 0.3)); // eixo dianteiro
     return { total, inicioCacamba, z0, GAP };
 }
 
@@ -340,7 +392,7 @@ function desenharTora(cfg) {
     const comp = cfg.comp, W = cfg.larg, d = cfg.diametro || 0.22, r = d / 2;
     const esq = (cfg.altEsq || []).map(Number), dir = (cfg.altDir || []).map(Number);
     const maxAlt = Math.max(0.5, ...esq, ...dir);
-    const { inicioCacamba, z0 } = desenharVeiculo([comp], W, Math.min(maxAlt + 0.2, 3.2));
+    const { inicioCacamba, z0 } = desenharVeiculo([comp], W, { fueiro: Math.max(2.4, Math.min(maxAlt + 0.25, 3.3)), florestal: true });
     const x0 = inicioCacamba[0];
     const nSeg = Math.max(1, Math.ceil(comp / 3.0));     // toras de ate ~3 m
     const segL = comp / nSeg;
