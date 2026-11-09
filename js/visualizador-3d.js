@@ -127,7 +127,7 @@ let cena = null; // { renderer, scene, camera, controls, conteudo, raf }
 function criarCena(container) {
     const T = window.THREE;
     const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setClearColor(0xffffff, 1);
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
@@ -137,19 +137,23 @@ function criarCena(container) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.12;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.shadowMap.type = T.PCFShadowMap;
     scene.add(new T.HemisphereLight(0xffffff, 0xd8d2c8, 0.75));
     scene.add(new T.AmbientLight(0xffffff, 0.25));
     const sol = new T.DirectionalLight(0xffffff, 0.95);
     sol.position.set(6, 12, 8);
     sol.castShadow = true;
-    sol.shadow.mapSize.set(2048, 2048);
+    sol.shadow.mapSize.set(1024, 1024);
     Object.assign(sol.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 40 });
     sol.shadow.bias = -0.0005;
     scene.add(sol);
     const conteudo = new T.Group();
     scene.add(conteudo);
-    cena = { renderer, scene, camera, controls, conteudo, container, raf: 0 };
+    cena = { renderer, scene, camera, controls, conteudo, container, raf: 0, sujo: true };
+    // so redesenha quando algo muda (evita travar o celular/PC com a cena parada)
+    const addOriginal = conteudo.add.bind(conteudo);
+    conteudo.add = (...o) => { cena.sujo = true; return addOriginal(...o); };
+    controls.addEventListener('change', () => { cena.sujo = true; });
     const redimensionar = () => {
         const w = container.clientWidth || 600, h = container.clientHeight || 400;
         renderer.setSize(w, h, false);
@@ -157,13 +161,16 @@ function criarCena(container) {
         renderer.domElement.style.height = '100%';
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        cena.sujo = true;
     };
     cena.redimensionar = redimensionar;
     redimensionar();
     const loop = () => {
         cena.raf = requestAnimationFrame(loop);
         if (container.offsetParent === null) return; // janela fechada: nao gasta bateria
-        controls.update();
+        const mexeu = controls.update();
+        if (!mexeu && !cena.sujo) return;
+        cena.sujo = false;
         renderer.render(scene, camera);
     };
     loop();
@@ -246,6 +253,7 @@ function enquadrar(cx, cy, cz, raio, dir = [1, 0.75, 1.15]) {
     cena.camera.position.set(cx + d.x, cy + d.y, cz + d.z);
     cena.controls.target.set(cx, cy, cz);
     cena.controls.update();
+    cena.sujo = true;
 }
 
 const COR_MADEIRA = 0xd2a26a;
@@ -1145,13 +1153,14 @@ function instalarArraste() {
         arraste.alvo = r;
         const f = montagem.fantasma;
         const base = r || (cand ? { ci: cand.ci, f: cand.f, v: cand.v, n: nVagas(arraste.c.u, g), topo: 0 } : null);
-        if (!base) { f.visible = false; return; }
+        if (!base) { f.visible = false; cena.sujo = true; return; }
         const o = posicaoMundo(g, { ...base, u: arraste.c.u });
         const L = arraste.c.u.p.comp, H = g.C.altPacote(arraste.c.u.p), Wp = g.C.largPacote(arraste.c.u.p);
         f.scale.set(L, H, Wp);
         f.position.set(o.x + L / 2, o.y + H / 2, o.z + Wp / 2);
         f.material.color.set(r ? 0x16a34a : 0xdc2626);
         f.visible = true;
+        cena.sujo = true;
     });
     const soltar = () => {
         if (!arraste) return;
