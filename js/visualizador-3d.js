@@ -83,20 +83,38 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
         for (let c = 0; c < p.cam; c++) zs.push(sobra + c * l + l / 2);
     }
     let yGrupoInicio = y;
+    let amarras = viga ? 0 : nPe * 2;
+    const camadasY = [];
+    // vao do meio: 4 tabuinhas em pe em cada bloco de 10 fiadas (contam como amarra)
     const fecharVao = (yIni, yFim) => {
         if (!vao) return;
         const zIni = Math.floor(p.cam / 2) * l;
-        const n = Math.max(1, Math.floor(vao / e + 0.001));
-        for (let k = 0; k < n; k++) add(L / 2, (yIni + yFim) / 2, zIni + k * e + e / 2, L, (yFim - yIni) - folga, e - folga, 1);
+        const n = Math.max(1, Math.min(4, Math.floor(vao / e + 0.001)));
+        const passo = vao / n;
+        for (let k = 0; k < n; k++) add(L / 2, (yIni + yFim) / 2, zIni + k * passo + passo / 2, L, (yFim - yIni) - folga, e - folga, 1);
+        amarras += n;
+    };
+    // fileira de amarra: tabua atravessada em cada ponta. Se a tabua e mais curta que a largura
+    // do pacote (pacote de 1,00 com 1,20 de largura), vao 2 lado a lado em cada ponta.
+    const porPonta = L < W - 0.01 ? 2 : 1;
+    const fileiraAmarra = yy => {
+        [[0.06 + l / 2, 1], [L - 0.06 - l / 2, -1]].forEach(([xc, dir]) => {
+            if (porPonta === 1) add(xc, yy + e / 2, W / 2, l - folga, e - folga, W, 2);
+            else {
+                add(xc, yy + e / 2, L / 2, l - folga, e - folga, L, 2);
+                add(xc + dir * (l + 0.004), yy + e / 2, W - L / 2, l - folga, e - folga, L, 2);
+            }
+        });
+        amarras += 2 * porPonta;
     };
     for (let r = 0; r < p.alt; r++) {
         if (!viga && r > 0 && r % 10 === 0) {
             fecharVao(yGrupoInicio, y);
-            // fileira de amarra: 2 tabuas atravessadas nas pontas
-            [0.06 + l / 2, L - 0.06 - l / 2].forEach(xc => add(xc, y + e / 2, W / 2, l - folga, e - folga, W, 2));
+            fileiraAmarra(y);
             y += e;
             yGrupoInicio = y;
         }
+        camadasY.push(y + e / 2);
         zs.forEach(z => add(L / 2, y + e / 2, z, L, e - folga, l - folga, (r + Math.round(z * 100)) % 3 === 0 ? 1 : 0));
         y += e;
     }
@@ -106,7 +124,57 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
         for (let c = 0; c < Math.min(p.am, zs.length); c++) add(L / 2, y + e / 2, zs[c], L, e - folga, l - folga, 1);
         y += e;
     }
-    return { pecas: out, altura: y, largura: W, comprimento: L };
+    return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
+}
+
+// numeros para contar: fiadas (1..alt) na quina da ponta e tabuas da fiada de cima (1..cam)
+const texturasNumero = new Map();
+function rotuloNumero(n, destaque) {
+    const T = window.THREE;
+    const chave = n + (destaque ? 'd' : '');
+    if (!texturasNumero.has(chave)) {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 40;
+        const x = c.getContext('2d');
+        x.fillStyle = destaque ? '#1d4ed8' : 'rgba(255,255,255,.92)';
+        x.fillRect(0, 0, 64, 40);
+        x.fillStyle = destaque ? '#fff' : '#111827';
+        x.font = 'bold 28px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillText(String(n), 32, 21);
+        texturasNumero.set(chave, new T.CanvasTexture(c));
+    }
+    const sp = new T.Sprite(new T.SpriteMaterial({ map: texturasNumero.get(chave) }));
+    sp.material.map.needsUpdate = false;
+    return sp;
+}
+function numerarPacote(dim, off, p) {
+    const T = window.THREE;
+    const e = p.esp / 100, l = p.larg / 100;
+    const h = Math.max(0.012, Math.min(0.03, e * 0.9));
+    const xFace = off.x + dim.comprimento + 0.004;
+    dim.camadasY.forEach((y, i) => {
+        const sp = rotuloNumero(i + 1, (i + 1) % 10 === 0);
+        sp.scale.set(h * 1.6, h, 1);
+        sp.position.set(xFace, off.y + y, off.z + dim.largura + h * 1.1);
+        cena.conteudo.add(sp);
+    });
+    const yTopo = off.y + dim.altura + h * 0.9;
+    dim.zs.forEach((z, i) => {
+        const num = dim.zs.length - i; // conta da esquerda para a direita olhando a ponta
+        const sp = rotuloNumero(num, num % 5 === 0);
+        const hh = Math.min(h * 1.3, l * 0.55);
+        sp.scale.set(hh * 1.6, hh, 1);
+        sp.position.set(xFace, yTopo, off.z + z);
+        cena.conteudo.add(sp);
+    });
+    // contorno de cada tabua na ponta, para separar no olho
+    const pts = [];
+    dim.camadasY.forEach(y => dim.zs.forEach(z => {
+        const y0 = off.y + y - e / 2, y1 = y0 + e, z0 = off.z + z - l / 2, z1 = z0 + l;
+        pts.push(xFace, y0, z0, xFace, y0, z1, xFace, y0, z1, xFace, y1, z1, xFace, y1, z1, xFace, y1, z0, xFace, y1, z0, xFace, y0, z0);
+    }));
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+    cena.conteudo.add(new T.LineSegments(g, new T.LineBasicMaterial({ color: 0x5b3a1e, transparent: true, opacity: 0.55 })));
 }
 
 // fitas verdes (3) em volta do pacote
@@ -334,10 +402,11 @@ function desenharPacote(p) {
     const off = { x: -dim.comprimento / 2, y: 0, z: -dim.largura / 2 };
     malhaInstanciada(dim.pecas.map(b => ({ ...b, x: b.x + off.x, z: b.z + off.z })), COR_MADEIRA);
     malhaInstanciada(fitasDoPacote(dim, off), 0x16a34a, false);
-    enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.6);
+    if (!C.ehViga(p)) numerarPacote(dim, off, p);
+    enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [1, 0.45, 0.55]);
     const pecas = p.alt * p.cam + p.am;
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
-    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³`;
+    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!C.ehViga(p) && dim.amarras !== p.am ? ` · desenho tem ${dim.amarras} am (pezinho + amarras + meio)` : ''}`;
 }
 
 const PISO = 1.25, RODA = 0.52, CAB = 2.5;
