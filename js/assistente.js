@@ -160,7 +160,7 @@ const GUIAS_TELA = {
         ]
     },
     'view-produtos': {
-        titulo: 'Gestao de Madeira',
+        titulo: 'Cadastro de Medidas',
         passos: [
             'Cadastre classe, medidas e configuracao do pacote.',
             'Mantenha a ordem por classe e medida para facilitar o romaneio.',

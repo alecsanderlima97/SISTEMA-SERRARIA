@@ -720,7 +720,7 @@ async function sugerirConfiguracaoMadeiraPatio(origem = 'producao') {
     const encontrada = configuracoes.find(item => chaveCubagemConfiguracao(item.espessura, item.largura, item.comprimentoReferencia) === chave);
 
     if (!encontrada) {
-        campos.sugestao.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>Nenhuma configuracao padrao encontrada na Gestao de Madeira para esta cubagem.</span>';
+        campos.sugestao.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>Nenhuma configuracao padrao encontrada no Cadastro de Medidas para esta cubagem.</span>';
         campos.sugestao.hidden = false;
         delete sugestoesConfiguracaoPatio[origem];
         return;

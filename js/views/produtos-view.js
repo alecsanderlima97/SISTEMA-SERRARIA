@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: PRODUTOS / MADEIRAS ====== -->
             <section id="view-produtos" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-tree-city"></i> Gestão de Madeira</h1>
+                    <h1><i class="fa-solid fa-ruler-combined"></i> Cadastro de Medidas</h1>
                     <p>Cadastre as madeiras, classes e configuracoes de pacote</p>
                 </div>
 
@@ -13,9 +13,6 @@
                     </button>
                     <button type="button" id="btnTabProdForm" onclick="window.switchTabProdutos('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-plus-circle"></i> Nova Madeira
-                    </button>
-                    <button type="button" id="btnTabProdPalete" onclick="window.switchTabProdutos('palete')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer;">
-                        <i class="fa-solid fa-pallet"></i> Modelos de Palete
                     </button>
                 </div>
 
@@ -124,7 +121,6 @@
                         </section>
                     </form>
                 </div>
-                <div id="tabProdPalete" class="glass-panel pal-painel" style="display: none; margin-bottom: 0;"></div>
             </section>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();
