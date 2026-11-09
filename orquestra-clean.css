@@ -1010,3 +1010,7 @@ body .pal-tabela input:not([type="checkbox"]), body .pal-tabela select { min-hei
 .pal-tabela td:nth-child(1) select { min-width: 140px; }
 .pal-tabela td:nth-child(3) input, .pal-tabela td:nth-child(4) input, .pal-tabela td:nth-child(5) input, .pal-tabela td:nth-child(6) input { min-width: 70px; width: 76px; }
 .pal-tabela td .pal-aviso { display: block; font-size: .74rem; }
+
+.pal-inline { display: flex; gap: 6px; align-items: center; }
+.pal-inline input { width: 90px; }
+#v3dPalVistas[hidden] { display: none !important; }

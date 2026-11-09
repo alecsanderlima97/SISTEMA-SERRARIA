@@ -329,47 +329,117 @@ function distribuir(n, espaco, tamanho) {
 function pecasDoPalete(m) {
     const L = Number(m.comprimento) || 1.2, W = Number(m.largura) || 1.0, folga = 0.002;
     const por = pos => (m.componentes || []).filter(c => c.posicao === pos && Number(c.qtd) > 0);
-    const out = [];
-    let y = 0;
-    const camada = (lista, desenha) => {
+    const out = [];       // pecas: {x,y,z,sx,sy,sz,tom,camada}
+    const pregos = [];    // cabecas de prego: {x,y,z,camada}
+    const pos = { inferior: [], bloco: [], ligacao: [], superior: [] };
+    let y = 0, camadaIdx = 0;
+    const camada = (nome, lista, desenha) => {
         let altura = 0;
-        lista.forEach(c => { const h = (Number(c.esp) || 0) / 100; altura = Math.max(altura, h); desenha(c, h); });
+        lista.forEach(c => { const h = (Number(c.esp) || 0) / 100; altura = Math.max(altura, h); desenha(c, h, camadaIdx); });
+        pos[nome].y = y;
+        pos[nome].h = altura;
         y += altura;
+        if (lista.length) camadaIdx++;
     };
-    camada(por('inferior'), (c, h) => {
+    camada('inferior', por('inferior'), (c, h, k) => {
         const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || L;
-        distribuir(Number(c.qtd), W, l).forEach(z => out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0 }));
+        distribuir(Number(c.qtd), W, l).forEach(z => {
+            out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0, camada: k });
+            pos.inferior.push({ zc: z + l / 2, l });
+        });
     });
-    camada(por('bloco'), (c, h) => {
+    camada('bloco', por('bloco'), (c, h, k) => {
         const n = Number(c.qtd), cols = n === 9 ? 3 : Math.ceil(Math.sqrt(n)), linhas = Math.ceil(n / cols);
         const bx = Number(c.comp) || 0.15, bz = (Number(c.larg) || 0) / 100;
         const xs = distribuir(cols, L, bx), zs = distribuir(linhas, W, bz);
-        let k = 0;
-        zs.forEach(z => xs.forEach(x => { if (k++ < n) out.push({ x: x + bx / 2, y: y + h / 2, z: z + bz / 2, sx: bx - folga, sy: h - folga, sz: bz - folga, tom: 1 }); }));
+        pos.bloco.xs = xs.map(x => x + bx / 2);
+        let i = 0;
+        zs.forEach(z => xs.forEach(x => { if (i++ < n) out.push({ x: x + bx / 2, y: y + h / 2, z: z + bz / 2, sx: bx - folga, sy: h - folga, sz: bz - folga, tom: 1, camada: k }); }));
     });
-    camada(por('ligacao'), (c, h) => {
+    camada('ligacao', por('ligacao'), (c, h, k) => {
         const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || W;
-        distribuir(Number(c.qtd), L, l).forEach(x => out.push({ x: x + l / 2, y: y + h / 2, z: (W - comp) / 2 + comp / 2, sx: l - folga, sy: h - folga, sz: comp - folga, tom: 2 }));
+        distribuir(Number(c.qtd), L, l).forEach(x => {
+            out.push({ x: x + l / 2, y: y + h / 2, z: (W - comp) / 2 + comp / 2, sx: l - folga, sy: h - folga, sz: comp - folga, tom: 2, camada: k });
+            pos.ligacao.push({ xc: x + l / 2 });
+        });
     });
-    camada(por('superior'), (c, h) => {
+    camada('superior', por('superior'), (c, h, k) => {
         const l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || L;
-        distribuir(Number(c.qtd), W, l).forEach(z => out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0 }));
+        distribuir(Number(c.qtd), W, l).forEach(z => {
+            out.push({ x: (L - comp) / 2 + comp / 2, y: y + h / 2, z: z + l / 2, sx: comp - folga, sy: h - folga, sz: l - folga, tom: 0, camada: k });
+            pos.superior.push({ zc: z + l / 2, l, k });
+        });
     });
-    return { pecas: out, L, W, altura: y };
+    // pregos: 2 por cruzamento tabua de cima x ligacao (por cima) e tabua de baixo x coluna de blocos (por baixo)
+    const kSup = pos.superior[0]?.k;
+    pos.superior.forEach(t => pos.ligacao.forEach(g => [-1, 1].forEach(s => pregos.push({ x: g.xc, y, z: t.zc + s * t.l / 4, camada: kSup, topo: true }))));
+    (pos.bloco.xs || []).forEach(xc => pos.inferior.forEach(t => [-1, 1].forEach(s => pregos.push({ x: xc, y: 0, z: t.zc + s * t.l / 4, camada: 0, topo: false }))));
+    return { pecas: out, pregos, L, W, altura: y };
 }
-function desenharPalete(m) {
+
+// Quantidade de pregos que o desenho usa (sugestao para a receita).
+window.sugerirPregosPalete = m => pecasDoPalete(m).pregos.length;
+
+function desenharPregos(lista) {
+    const T = window.THREE;
+    if (!lista.length) return;
+    const geo = new T.CylinderGeometry(0.0045, 0.0045, 0.003, 10);
+    const mesh = new T.InstancedMesh(geo, new T.MeshLambertMaterial({ color: 0x374151 }), lista.length);
+    const mtx = new T.Matrix4();
+    lista.forEach((p, i) => { mtx.makeTranslation(p.x, p.y, p.z); mesh.setMatrixAt(i, mtx); });
+    mesh.instanceMatrix.needsUpdate = true;
+    cena.conteudo.add(mesh);
+}
+
+// Corte das pecas: a madeira inteira (ex.: viga de 2,40) dividida nos toquinhos que saem dela.
+function desenharCortePalete(m) {
+    limparConteudo();
+    const comps = (m.componentes || []).filter(c => Number(c.qtd) > 0);
+    const pecas = [], sobras = [];
+    const linhasInfo = [];
+    let z = 0, maxComp = 1.2;
+    comps.forEach(c => {
+        const e = (Number(c.esp) || 0) / 100, l = (Number(c.larg) || 0) / 100, comp = Number(c.comp) || 0;
+        const origem = Number(c.origem?.comp) || 0;
+        const rend = origem > comp + 0.001 && comp > 0 ? Math.floor(origem / comp + 0.001) : 1;
+        const sobra = rend > 1 ? Math.max(0, origem - rend * comp) : 0;
+        const gap = rend > 1 ? 0.035 : 0;
+        const total = rend * comp + (rend - 1) * gap + (sobra > 0.005 ? gap + sobra : 0);
+        maxComp = Math.max(maxComp, total);
+        let x = -total / 2;
+        for (let i = 0; i < rend; i++) { pecas.push({ x: x + comp / 2, y: e / 2, z: z + l / 2, sx: comp, sy: e, sz: l, tom: i % 2 }); x += comp + gap; }
+        if (sobra > 0.005) sobras.push({ x: x + sobra / 2, y: e / 2, z: z + l / 2, sx: sobra, sy: e, sz: l });
+        linhasInfo.push(`${POS_NOME[c.posicao] || 'Peça'}: ${rend > 1 ? `1 peça de ${fmt(origem, 2)} m → ${rend} toquinhos de ${fmt(comp, 2)} m${sobra > 0.005 ? ` (sobra ${fmt(sobra * 100, 0)} cm)` : ''}` : `${fmt(Number(c.esp), 1)} × ${fmt(Number(c.larg), 1)} × ${fmt(comp, 2)} m`} · ${c.qtd} por palete`);
+        z += l + 0.25;
+    });
+    const deslocZ = z / 2;
+    grade(Math.max(3, Math.ceil(maxComp + 1)), 0.1, 0.5);
+    malhaInstanciada(pecas.map(p => ({ ...p, z: p.z - deslocZ })), COR_MADEIRA);
+    malhaInstanciada(sobras.map(p => ({ ...p, z: p.z - deslocZ })), 0x9ca3af, false);
+    enquadrar(0, 0.05, 0, Math.max(maxComp, z) / 2.8, [0.3, 0.9, 1]);
+    return linhasInfo.join(' · ');
+}
+
+const POS_NOME = { superior: 'Tábua de cima', ligacao: 'Tábua de ligação', bloco: 'Bloco', inferior: 'Tábua de baixo', outro: 'Outro' };
+
+function desenharPalete(m, vista = 'montado') {
+    if (vista === 'corte') return desenharCortePalete(m);
     limparConteudo();
     grade(3, 0.1, 0.5);
     const p = pecasDoPalete(m);
-    malhaInstanciada(p.pecas.map(b => ({ ...b, x: b.x - p.L / 2, z: b.z - p.W / 2 })), COR_MADEIRA);
-    enquadrar(0, p.altura / 2, 0, Math.max(p.L, p.W) / 1.7, [1, 0.8, 1.2]);
+    const sobe = vista === 'explodido' ? 0.16 : 0; // pecas soltas: separa as camadas
+    malhaInstanciada(p.pecas.map(b => ({ ...b, x: b.x - p.L / 2, y: b.y + b.camada * sobe, z: b.z - p.W / 2 })), COR_MADEIRA);
+    desenharPregos(p.pregos.map(g => ({ x: g.x - p.L / 2, y: g.y + (g.camada || 0) * sobe + (g.topo ? 0.0015 : -0.0015), z: g.z - p.W / 2 })));
+    const alturaVista = p.altura + sobe * 3;
+    enquadrar(0, alturaVista / 2, 0, Math.max(p.L, p.W, alturaVista) / 1.7, [1, 0.8, 1.2]);
     const pecas = (m.componentes || []).reduce((s, c) => s + (Number(c.qtd) || 0), 0);
     const m3 = (m.componentes || []).reduce((s, c) => s + (Number(c.qtd) || 0) * (Number(c.esp) / 100) * (Number(c.larg) / 100) * (Number(c.comp) || 0), 0);
-    return `Palete ${fmt(p.W, 2)} × ${fmt(p.L, 2)} m · altura ${fmt(p.altura * 100, 1)} cm · ${pecas} peças · ${fmt(m3, 4)} m³${m.pregos ? ` · ${m.pregos} pregos` : ''}`;
+    const pregosTxt = m.pregos ? `${m.pregos} pregos` : `${p.pregos.length} pregos no desenho`;
+    return `Palete ${fmt(p.W, 2)} × ${fmt(p.L, 2)} m · altura ${fmt(p.altura * 100, 1)} cm · ${pecas} peças · ${fmt(m3, 4)} m³ · ${pregosTxt}${vista === 'explodido' ? ' · peças soltas: de baixo para cima tábuas de baixo, blocos, ligação e tábuas de cima' : ''}`;
 }
 
 // ---------- modal ----------
-let atual = { modo: 'madeira', palete: null, produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
+let atual = { modo: 'madeira', palete: null, paleteVista: 'montado', produto: null, aba: 'pacote', caminhao: { qtd: 22, comp1: 7.2, comp2: 7.2, larg: 2.4, alt: 2.6, bitrem: false } };
 
 function garantirModal() {
     let modal = document.getElementById('modalVisualizador3D');
@@ -392,6 +462,11 @@ function garantirModal() {
             <button type="button" role="tab" data-aba="pacote">Pacote</button>
             <button type="button" role="tab" data-aba="caminhao">Caminhão</button>
           </div>
+          <div class="v3d-abas" id="v3dPalVistas" role="tablist" hidden>
+            <button type="button" role="tab" data-pvista="montado">Montado</button>
+            <button type="button" role="tab" data-pvista="explodido">Peças soltas</button>
+            <button type="button" role="tab" data-pvista="corte">Corte das peças</button>
+          </div>
           <div class="v3d-cfg" id="v3dCfg" hidden>
             <label>Pacotes<input id="v3dQtd" type="number" min="1" step="1"></label>
             <label>Caçamba (m)<input id="v3dComp1" type="number" step="0.1"></label>
@@ -406,6 +481,7 @@ function garantirModal() {
       </div>`;
     document.body.appendChild(modal);
     modal.querySelectorAll('[data-aba]').forEach(b => b.addEventListener('click', () => { atual.aba = b.dataset.aba; desenhar(); }));
+    modal.querySelectorAll('[data-pvista]').forEach(b => b.addEventListener('click', () => { atual.paleteVista = b.dataset.pvista; desenhar(); }));
     const $ = id => document.getElementById(id);
     const lerCfg = () => {
         atual.caminhao = {
@@ -430,14 +506,18 @@ function desenhar() {
     const modal = document.getElementById('modalVisualizador3D');
     if (!modal || !cena) return;
     const abas = modal.querySelector('.v3d-abas');
+    const vistas = document.getElementById('v3dPalVistas');
     if (atual.modo === 'palete') {
         if (abas) abas.hidden = true;
+        if (vistas) vistas.hidden = false;
+        modal.querySelectorAll('[data-pvista]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pvista === atual.paleteVista)));
         document.getElementById('v3dCfg').hidden = true;
         cena.redimensionar();
-        document.getElementById('v3dInfo').textContent = desenharPalete(atual.palete);
+        document.getElementById('v3dInfo').textContent = desenharPalete(atual.palete, atual.paleteVista);
         return;
     }
     if (abas) abas.hidden = false;
+    if (vistas) vistas.hidden = true;
     if (!atual.produto) return;
     modal.querySelectorAll('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === atual.aba)));
     const cfg = document.getElementById('v3dCfg');
@@ -489,6 +569,7 @@ window.abrirPalete3D = async function(modelo) {
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = modelo.nome || 'Palete';
     atual.modo = 'palete';
+    atual.paleteVista = 'montado';
     atual.palete = JSON.parse(JSON.stringify(modelo));
     try { await garantirThree(); }
     catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
