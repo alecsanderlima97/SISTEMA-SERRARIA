@@ -251,7 +251,7 @@ function renderProdutos() {
     listaProdutos.innerHTML = '';
 
     if (produtosAtuais.length === 0) {
-        listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>';
+        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado no momento.</td></tr>';
         return;
     }
 
@@ -260,6 +260,9 @@ function renderProdutos() {
         const numeroClasse = String(classe).includes('1') ? 1 : String(classe).includes('2') ? 2 : String(classe).includes('3') ? 3 : 0;
         const corClasse = numeroClasse === 1 ? '#22c55e' : numeroClasse === 2 ? '#facc15' : numeroClasse === 3 ? '#ef4444' : '#94a3b8';
         const medidas = `${p.espessura || 0} / ${p.largura || 0} / ${p.comprimentoVenda || 0}m`;
+        const alt = Number(p.alturas) || 0, cam = Number(p.larguraPacote) || 0, am = Number(p.amarras) || 0;
+        const pecasPct = Number(p.pecasPorPacote) || (alt * cam + am);
+        const configPacote = alt && cam ? `${alt} × ${cam}${am ? ` + ${am}` : ''} <small style="opacity:.75;">= ${pecasPct} pç</small>` : '<span style="opacity:.6;">não informado</span>';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -269,6 +272,7 @@ function renderProdutos() {
             <td>
                 <strong style="display:block; color:${corClasse} !important; font-size:1.18rem; font-weight:900; letter-spacing:0;">${medidas}</strong>
             </td>
+            <td><strong style="font-size:1.05rem; font-variant-numeric: tabular-nums; white-space:nowrap;">${configPacote}</strong></td>
             <td>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center; white-space: nowrap;">
                     <button onclick="window.verMadeira3D('${p.id}')" class="btn-icon btn-3d-madeira" title="Ver em 3D: tábua, pacote e caminhão" aria-label="Ver em 3D">
@@ -288,7 +292,7 @@ function renderProdutos() {
 }
 
 async function carregarProdutos() {
-    listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>';
+    listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center;"><span class="saw-loader" aria-hidden="true"></span> Carregando do Firebase...</td></tr>';
     try {
         const querySnapshot = await getDocs(produtosCollection);
         produtosAtuais = [];
@@ -300,7 +304,7 @@ async function carregarProdutos() {
         document.dispatchEvent(new Event('produtosUpdated'));
     } catch (error) {
         console.error('Erro ao buscar produtos: ', error);
-        listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
+        listaProdutos.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
     }
 }
 

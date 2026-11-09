@@ -30,6 +30,7 @@
                                 <tr>
                                     <th>Classe</th>
                                     <th>Medidas</th>
+                                    <th>Config. do pacote</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
