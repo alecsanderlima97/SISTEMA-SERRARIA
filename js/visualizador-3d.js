@@ -103,7 +103,7 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }, opts = {}) {
     const fecharVao = (yIni, yFim) => {
         if (!vao) return;
         const zIni = Math.floor(p.cam / 2) * l;
-        const n = Math.min(verba, Math.max(1, Math.min(4, Math.floor(vao / e + 0.001))));
+        const n = Math.min(verba, 4); // sempre 4 por bloco (regra da serraria), mesmo com vao estreito
         if (n <= 0) return;
         verba -= n;
         const passo = vao / n;
