@@ -257,6 +257,7 @@
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Volume M³</h4>
                                         <div id="entResultadoVolume" style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">0.000 m³</div>
                                         <small id="entInfoMedia" style="color:#aaa; font-size: 0.75rem;">Média: 0.00m</small>
+                                        <button type="button" class="btn-secondary btn-3d-madeira" onclick="window.verCargaTora3D()" style="margin-top:8px; width:100%;"><i class="fa-solid fa-cube"></i> Ver carga em 3D</button>
                                     </div>
                                     <div id="entCardFinanceiroEmpreiteiro" style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto Empreiteiro</h4>
