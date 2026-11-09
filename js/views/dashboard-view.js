@@ -114,7 +114,7 @@
                         <div class="kpi-icon"><i class="fa-solid fa-tree"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-entrada-toras">0 m³</h3>
-                            <p>Conferência de Cargas</p>
+                            <p>Conferência de Carga de Tora</p>
                         </div>
                     </div>
                     <div class="kpi-card glass-panel" data-dashboard-view="madeira">

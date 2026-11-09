@@ -144,7 +144,7 @@ const GUIAS_TELA = {
         ]
     },
     'view-entrada': {
-        titulo: 'Conferencia de Cargas',
+        titulo: 'Conferencia de Carga de Tora',
         passos: [
             'Registre a entrada com fornecedor/empreiteiro, mato, produto e romaneio.',
             'Confira os valores de tora, lenha, outros e corte/remocao antes de salvar.',
