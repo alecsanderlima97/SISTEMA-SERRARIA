@@ -60,6 +60,7 @@ const COR_CLASSE = { 1: 0x16a34a, 2: 0xeab308, 3: 0xdc2626 };
 function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }, opts = {}) {
     const C = calc();
     const viga = C.ehViga(p);
+    if (viga && Number(p.comp) <= 1.21) return vigaCurta(p, origem, opts);
     const e = p.esp / 100, l = p.larg / 100, L = p.comp;
     const W = C.largPacote(p);
     const vao = C.vaoMeio(p);
@@ -142,6 +143,70 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }, opts = {}) {
         for (let c = 0; c < Math.min(p.am, zs.length); c++) add(L / 2, y + e / 2, zs[c], L, e - folga, l - folga, 1);
         y += e;
     }
+    return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
+}
+
+// Pacote de viga de 1,20 (viga de 2,40 nao amarra): 1 pezinho em cada ponta, uma camada inteira
+// atravessada no meio da altura e, quando 10 x 11 nao fecha 1,20, 3 vigas da mesma medida no vao do meio
+// em cada metade (de cutelo, uma em cima da outra).
+// Ex.: 12 x 10 + 18 = 2 pezinhos + 10 atravessadas + 3 + 3. Usa no maximo p.am amarras (opts.regra ignora).
+function vigaCurta(p, origem, opts = {}) {
+    const e = p.esp / 100, l = p.larg / 100, L = p.comp;
+    const folga = 0.0015;
+    const vao = 1.2 - p.cam * l >= 0.03 ? 1.2 - p.cam * l : 0;
+    const W = vao ? 1.2 : Math.min(1.2, p.cam * l);
+    const out = [];
+    let tipo = 'amarra';
+    const add = (x, y, z, sx, sy, sz, tom = 0) => out.push({ x: origem.x + x, y: origem.y + y, z: origem.z + z, sx, sy, sz, tom, k: out.length, tipo });
+    let verba = opts.regra ? Infinity : Math.max(0, Math.round(Number(p.am) || 0));
+    let amarras = 0;
+    // pezinho
+    const pe = verba >= 2 ? 1 : 0;
+    let y = 0;
+    if (pe) { [0.04 + l / 2, L - 0.04 - l / 2].forEach(xc => add(xc, e / 2, W / 2, l - folga, e - folga, W, 2)); verba -= 2; amarras += 2; y = e; }
+    // camada do meio atravessada
+    const nMeioRegra = Math.max(1, Math.floor(L / l + 0.001));
+    const nMeio = p.alt >= 2 ? Math.min(nMeioRegra, verba) : 0;
+    verba -= nMeio;
+    const corte = Math.floor(p.alt / 2);
+    const zs = [];
+    if (vao) {
+        const metade = Math.floor(p.cam / 2);
+        for (let c = 0; c < metade; c++) zs.push(c * l + l / 2);
+        for (let c = 0; c < p.cam - metade; c++) zs.push(metade * l + vao + c * l + l / 2);
+    } else {
+        const sobra = Math.max(0, W - p.cam * l) / 2;
+        for (let c = 0; c < p.cam; c++) zs.push(sobra + c * l + l / 2);
+    }
+    const camadasY = [];
+    let yBloco = y;
+    const fecharVao = (y0, y1) => {
+        if (!vao || y1 <= y0) return;
+        const n = Math.min(3, verba);
+        if (n <= 0) return;
+        verba -= n; amarras += n;
+        tipo = 'amarra';
+        // vigas da mesma medida, de cutelo (em pe), uma em cima da outra dentro do vao
+        const zMeio = Math.floor(p.cam / 2) * l + vao / 2;
+        const passoY = Math.min(l, (y1 - y0) / n);
+        for (let k = 0; k < n; k++) add(L / 2, y0 + passoY * k + passoY / 2, zMeio, L, passoY - folga, Math.min(e, vao) - folga, 1);
+    };
+    for (let r = 0; r < p.alt; r++) {
+        if (r === corte && nMeio) {
+            fecharVao(yBloco, y);
+            tipo = 'amarra';
+            const passoX = L / nMeio;
+            for (let k = 0; k < nMeio; k++) add(k * passoX + passoX / 2, y + e / 2, W / 2, Math.min(l, passoX) - folga, e - folga, W, 2);
+            amarras += nMeio;
+            y += e;
+            yBloco = y;
+        }
+        camadasY.push(y + e / 2);
+        tipo = 'tabua';
+        zs.forEach(z => add(L / 2, y + e / 2, z, L, e - folga, l - folga, (r + Math.round(z * 100)) % 3 === 0 ? 1 : 0));
+        y += e;
+    }
+    fecharVao(yBloco, y);
     return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
 }
 
@@ -330,6 +395,62 @@ function criarCena(container) {
     window.addEventListener('resize', redimensionar);
 }
 
+// ---------- cotas (risquinho com a medida) ----------
+const texturasCota = new Map();
+function rotuloCota(texto) {
+    const T = window.THREE;
+    if (!texturasCota.has(texto)) {
+        const c = document.createElement('canvas'); c.width = 192; c.height = 56;
+        const x = c.getContext('2d');
+        x.fillStyle = '#1d4ed8'; x.fillRect(0, 0, 192, 56);
+        x.fillStyle = '#fff'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillText(texto, 96, 29);
+        const t = new T.CanvasTexture(c);
+        t.compartilhada = true;
+        texturasCota.set(texto, t);
+    }
+    return new T.Sprite(new T.SpriteMaterial({ map: texturasCota.get(texto), depthTest: false }));
+}
+function caixaDe(lista) {
+    const b = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity };
+    lista.forEach(q => {
+        b.x0 = Math.min(b.x0, q.x - q.sx / 2); b.x1 = Math.max(b.x1, q.x + q.sx / 2);
+        b.y0 = Math.min(b.y0, q.y - q.sy / 2); b.y1 = Math.max(b.y1, q.y + q.sy / 2);
+        b.z0 = Math.min(b.z0, q.z - q.sz / 2); b.z1 = Math.max(b.z1, q.z + q.sz / 2);
+    });
+    return Number.isFinite(b.x0) ? b : null;
+}
+// Mostra comprimento (x), largura (z) e altura (y) de uma caixa, do lado que a camera ve (+x, +z).
+// textos: { comp, larg, alt } para trocar o texto (ex.: em cm na tabua).
+function cotas(b, textos = {}) {
+    if (!b) return;
+    const T = window.THREE;
+    const tam = Math.max(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0);
+    const off = Math.max(0.025, tam * 0.05), tick = off * 0.5;
+    const h = Math.min(0.32, Math.max(0.03, tam * 0.06));
+    const pts = [];
+    const seg = (a, c) => pts.push(a[0], a[1], a[2], c[0], c[1], c[2]);
+    const rot = (txt, pos) => { const sp = rotuloCota(txt); sp.scale.set(h * 192 / 56, h, 1); sp.position.set(...pos); sp.renderOrder = 10; cena.conteudo.add(sp); };
+    const m = v => `${fmt(v, 2)} m`;
+    // comprimento: embaixo, na frente (+z)
+    const zc = b.z1 + off, yb = b.y0 + 0.002;
+    seg([b.x0, yb, zc], [b.x1, yb, zc]); seg([b.x0, yb, zc - tick], [b.x0, yb, zc + tick]); seg([b.x1, yb, zc - tick], [b.x1, yb, zc + tick]);
+    rot(textos.comp || m(b.x1 - b.x0), [(b.x0 + b.x1) / 2, yb + h * 0.7, zc + h * 0.3]);
+    // largura: embaixo, na ponta (+x)
+    const xc = b.x1 + off;
+    seg([xc, yb, b.z0], [xc, yb, b.z1]); seg([xc - tick, yb, b.z0], [xc + tick, yb, b.z0]); seg([xc - tick, yb, b.z1], [xc + tick, yb, b.z1]);
+    rot(textos.larg || m(b.z1 - b.z0), [xc + h * 0.4, yb + h * 0.7, (b.z0 + b.z1) / 2]);
+    // altura: na quina de tras (-x, +z)
+    const xa = b.x0 - off, za = b.z1 + off;
+    seg([xa, b.y0, za], [xa, b.y1, za]); seg([xa - tick, b.y0, za], [xa + tick, b.y0, za]); seg([xa - tick, b.y1, za], [xa + tick, b.y1, za]);
+    rot(textos.alt || m(b.y1 - b.y0), [xa - h * 0.9, (b.y0 + b.y1) / 2, za]);
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+    const linhas = new T.LineSegments(g, new T.LineBasicMaterial({ color: 0x1d4ed8, depthTest: false }));
+    linhas.renderOrder = 9;
+    cena.conteudo.add(linhas);
+}
+
 function limparConteudo() {
     const g = cena.conteudo;
     while (g.children.length) {
@@ -474,6 +595,7 @@ function desenharTabua(p) {
     grade(4, 0.1, 0.5);
     const e = p.esp / 100, l = p.larg / 100, L = p.comp;
     malhaInstanciada([{ x: 0, y: e / 2, z: 0, sx: L, sy: e, sz: l, tom: 0 }], COR_MADEIRA, false);
+    cotas({ x0: -L / 2, x1: L / 2, y0: 0, y1: e, z0: -l / 2, z1: l / 2 }, { larg: `${fmt(p.larg, 1)} cm`, alt: `${fmt(p.esp, 1)} cm` });
     enquadrar(0, e / 2, 0, Math.max(L, 0.5) / 2, [0.6, 0.55, 1]);
     return `Tábua única: ${fmt(p.esp, 1)} cm × ${fmt(p.larg, 1)} cm × ${fmt(L, 2)} m · ${fmt(e * l * L, 4)} m³ por peça`;
 }
@@ -502,7 +624,8 @@ function desenharPacote(p) {
         cena.conteudo.add(marca);
     });
     malhaInstanciada(fitasDoPacote(dim, off), 0x16a34a, false);
-    if (!C.ehViga(p)) numerarPacote(dim, off, p);
+    numerarPacote(dim, off, p);
+    cotas({ x0: off.x, x1: off.x + dim.comprimento, y0: 0, y1: dim.altura, z0: off.z, z1: off.z + dim.largura });
     const tiradas = dim.pecas.filter(b => fora.has(b.k));
     const tabFora = tiradas.filter(b => b.tipo === 'tabua').length, amFora = tiradas.length - tabFora;
     const pecas = p.alt * p.cam + (p.am || 0) - tiradas.length;
@@ -512,7 +635,7 @@ function desenharPacote(p) {
     atualizarBotoesPecas(sel.size, tiradas.length);
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
     const menos = tiradas.length ? ` − ${tabFora ? `${tabFora} tábua(s)` : ''}${tabFora && amFora ? ' − ' : ''}${amFora ? `${amFora} amarra(s)` : ''}` : '';
-    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}${menos}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!C.ehViga(p) && dim.amarras !== (p.am || 0) ? ` · desenho tem ${dim.amarras} am (o resto não cabe pela regra)` : ''}${sel.size ? ` · ${sel.size} selecionada(s)` : ''}`;
+    return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) && p.comp > 1.21 ? ' pç' : ' am'}` : ''}${menos}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!(C.ehViga(p) && p.comp > 1.21) && dim.amarras !== (p.am || 0) ? ` · desenho tem ${dim.amarras} am (o resto não cabe pela regra)` : ''}${sel.size ? ` · ${sel.size} selecionada(s)` : ''}`;
 }
 
 function atualizarBotoesPecas(nSel, nFora) {
@@ -754,6 +877,7 @@ function desenharCaminhao(p, cfg) {
         fitas.push(...fitasDoPacote(dim, { x: ox, y: oy, z: oz }));
     });
     malhaInstanciada(pecas, COR_MADEIRA);
+    cotas(caixaDe(pecas));
     malhaInstanciada(fitas, 0x16a34a, false);
     // limite de altura (linha vermelha nas laterais)
     const T = window.THREE;
@@ -835,6 +959,7 @@ function desenharTora(cfg) {
         caixa(xx, PISO + h / 2, zz, 0.025, h, 0.025, 0xdc2626);
         caixa(xx, PISO + h, zz, 0.12, 0.025, 0.06, 0xdc2626);
     }));
+    cotas({ x0, x1: x0 + comp, y0: PISO, y1: PISO + Math.max(0, ...esq, ...dir), z0, z1: -z0 }, { alt: `${fmt(Math.max(0, ...esq, ...dir), 2)} m (máx.)` });
     enquadrar(0, 1.6, 0, (comp + CAB) / 2.2, [0.9, 0.6, 1.3]);
     const todas = [...esq, ...dir].filter(a => a > 0);
     const media = todas.length ? Math.trunc(todas.reduce((s, a) => s + a, 0) / todas.length * 100) / 100 : 0;
@@ -883,6 +1008,7 @@ function desenharToraDeLado(cfg, x0, z0, comp, W, d, r, esq, dir) {
         caixa(xx, PISO + h / 2, zz, 0.025, h, 0.025, 0xdc2626);
         caixa(xx, PISO + h, zz, 0.12, 0.025, 0.06, 0xdc2626);
     }));
+    cotas({ x0, x1: x0 + comp, y0: PISO, y1: PISO + Math.max(0, ...esq, ...dir), z0, z1: -z0 }, { alt: `${fmt(Math.max(0, ...esq, ...dir), 2)} m (máx.)` });
     enquadrar(0, 1.6, 0, (comp + CAB) / 2.2, [0.9, 0.6, 1.3]);
     const todas = [...esq, ...dir].filter(a => a > 0);
     const media = todas.length ? Math.trunc(todas.reduce((s, a) => s + a, 0) / todas.length * 100) / 100 : 0;
@@ -1071,6 +1197,7 @@ function desenharPaletesCaminhao(m, cfg) {
         }
     });
     malhaInstanciada(pecas, COR_MADEIRA);
+    cotas(caixaDe(pecas));
     const total = comps.reduce((s, c) => s + c, 0);
     enquadrar(0, 1.6, 0, (total + CAB) / 2.2, [0.9, 0.6, 1.3]);
     return `Cabem ${capacidade.toLocaleString('pt-BR')} paletes (${o.pilhas} pilhas × ${porPilha} por pilha, palete de ${fmt(hPal * 100, 1)} cm) · desenhados ${qtd.toLocaleString('pt-BR')}${cfg.qtd > capacidade ? ` · ${(cfg.qtd - capacidade).toLocaleString('pt-BR')} não couberam` : ''}`;
@@ -1084,6 +1211,7 @@ function desenharPalete(m, vista = 'montado') {
     const p = pecasDoPalete(m);
     const sobe = vista === 'explodido' ? 0.16 : 0; // pecas soltas: separa as camadas
     malhaInstanciada(p.pecas.map(b => ({ ...b, x: b.x - p.L / 2, y: b.y + b.camada * sobe, z: b.z - p.W / 2 })), COR_MADEIRA);
+    if (vista !== 'explodido') cotas({ x0: -p.L / 2, x1: p.L / 2, y0: 0, y1: p.altura, z0: -p.W / 2, z1: p.W / 2 }, { alt: `${fmt(p.altura * 100, 1)} cm` });
     desenharPregos(p.pregos.map(g => ({ x: g.x - p.L / 2, y: g.y + (g.camada || 0) * sobe + (g.topo ? 0.0015 : -0.0015), z: g.z - p.W / 2 })));
     const alturaVista = p.altura + sobe * 3;
     enquadrar(0, alturaVista / 2, 0, Math.max(p.L, p.W, alturaVista) / 1.7, [1, 0.8, 1.2]);
@@ -1126,7 +1254,7 @@ function garantirModal() {
           <div class="v3d-cfg" id="v3dPac" hidden>
             <label>Fiadas<input id="v3dPacAlt" type="number" min="1" step="1"></label>
             <label>Por fiada<input id="v3dPacCam" type="number" min="1" step="1"></label>
-            <label>Amarras<input id="v3dPacAm" type="number" min="0" step="1"></label>
+            <label><span id="v3dPacAmRot">Amarras</span><input id="v3dPacAm" type="number" min="0" step="1"></label>
             <button type="button" class="v3d-pac-orig" id="v3dPacOrig">Voltar ao cadastro</button>
             <button type="button" class="v3d-pac-orig v3d-peca-tirar" id="v3dPecaTirar" hidden>Tirar peças</button>
             <button type="button" class="v3d-pac-orig" id="v3dPecaRepor" hidden>Repor peças</button>
@@ -1181,7 +1309,7 @@ function garantirModal() {
         const cam = Math.max(1, parseInt($('v3dPacCam').value, 10) || atual.produto.cam);
         let am = Math.max(0, parseInt($('v3dPacAm').value, 10) || 0);
         const novo = { ...atual.produto, alt, cam };
-        if (e?.target?.id !== 'v3dPacAm' && !calc().ehViga(novo)) am = amarrasPadrao(novo);
+        if (e?.target?.id !== 'v3dPacAm' && (!calc().ehViga(novo) || Number(novo.comp) <= 1.21)) am = amarrasPadrao(novo);
         atual.produto = { ...novo, am };
         atual.pecaSel = new Set(); atual.pecaFora = new Set();
         atual.manterCamera = true;
@@ -1288,6 +1416,7 @@ function desenhar() {
     document.getElementById('v3dPacAlt').value = atual.produto.alt;
     document.getElementById('v3dPacCam').value = atual.produto.cam;
     document.getElementById('v3dPacAm').value = atual.produto.am || 0;
+    document.getElementById('v3dPacAmRot').textContent = calc().ehViga(atual.produto) && atual.produto.comp > 1.21 ? 'Peças a mais' : 'Amarras';
     const o = atual.produtoOriginal;
     document.getElementById('v3dPacOrig').hidden = !o || (o.alt === atual.produto.alt && o.cam === atual.produto.cam && (o.am || 0) === (atual.produto.am || 0));
     const cfg = document.getElementById('v3dCfg');
@@ -1538,6 +1667,7 @@ function desenharMontagem() {
         }
     });
     malhaInstanciada(pecas, COR_MADEIRA);
+    cotas(caixaDe(pecas));
     malhaInstanciada(fitas, 0x16a34a, false);
     // linha da altura maxima
     const yLim = PISO + g.altMax, xa = montagem.geo.inicioCacamba[0], xb = xa + montagem.geo.total;

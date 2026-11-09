@@ -84,7 +84,7 @@ const SECTION_PERMISSIONS = [
     { id: 'view-historico', label: 'Historico de Vendas' },
     { id: 'view-clientes', label: 'Clientes' },
     { id: 'view-transportes', label: 'Transportadoras' },
-    { id: 'view-entrada', label: 'Conferencia de Cargas' },
+    { id: 'view-entrada', label: 'Conferencia de Carga de Tora' },
     { id: 'view-mapa', label: 'Mapa' },
     { id: 'view-cavaco', label: 'Venda de Subprodutos' },
     { id: 'view-produtos', label: 'Cadastro de Medidas' },
@@ -108,7 +108,7 @@ const SUBSECTION_PERMISSIONS = {
         ]
     },
     'view-entrada': {
-        label: 'Conferencia de Cargas',
+        label: 'Conferencia de Carga de Tora',
         items: [
             { id: 'registro', label: 'Registrar tora' },
             { id: 'lista', label: 'Ultimas entradas / historico' },
