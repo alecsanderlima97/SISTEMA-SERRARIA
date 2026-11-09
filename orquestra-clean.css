@@ -1053,3 +1053,10 @@ body.modulo-serraria-desligado #view-dashboard [data-dashboard-permission="contr
   .v3d-lista { width: auto; flex: 0 0 auto; max-height: 34vh; border-right: 0; border-bottom: 1px solid #e5e7eb; }
   .v3d-corpo .v3d-palco { min-height: 50vh; }
 }
+
+/* Montador/visualizador: configuracao do pacote editavel */
+.v3d-item-cfg { display: flex; align-items: center; gap: 3px; margin-top: 4px; font-weight: 700; color: #475569; }
+body .v3d-modal .v3d-lista .v3d-item-cfg input { -webkit-text-fill-color: #1f1c18; height: 32px; width: 52px !important; min-height: 32px; padding: 0 4px !important; border: 1.5px solid #94a3b8 !important; border-radius: 6px; font: inherit; color: #1f1c18 !important; background: #fff !important; text-align: center; }
+.v3d-pac-orig { align-self: end; min-height: 38px; padding: 0 12px; border-radius: 8px; border: 1.5px solid #4b5563; background: #fff; color: #1f1c18; font-weight: 700; cursor: pointer; }
+.v3d-pac-orig[hidden] { display: none !important; }
+#v3dPac[hidden] { display: none !important; }
