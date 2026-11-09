@@ -1060,3 +1060,7 @@ body .v3d-modal .v3d-lista .v3d-item-cfg input { -webkit-text-fill-color: #1f1c1
 .v3d-pac-orig { align-self: end; min-height: 38px; padding: 0 12px; border-radius: 8px; border: 1.5px solid #4b5563; background: #fff; color: #1f1c18; font-weight: 700; cursor: pointer; }
 .v3d-pac-orig[hidden] { display: none !important; }
 #v3dPac[hidden] { display: none !important; }
+
+/* alinhamento da carga (base / em cima / chapeu) */
+.v3d-al[hidden] { display: none !important; }
+body .v3d-modal .v3d-cfg select { min-height: 36px; height: 36px; background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; border: 1.5px solid #a8a29e !important; border-radius: 6px; padding: 0 6px; }
