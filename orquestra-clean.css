@@ -1025,3 +1025,31 @@ body.modulo-serraria-desligado #view-dashboard [data-dashboard-permission="contr
 .pal-modulo-abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .pal-modulo-aba { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--text-muted); font-weight: 700; padding: 10px 16px; cursor: pointer; }
 .pal-modulo-aba[aria-selected="true"] { color: var(--accent-color); border-bottom-color: var(--accent-color); }
+
+
+/* Montador de carga 3D */
+.v3d-corpo { flex: 1 1 auto; min-height: 0; display: flex; }
+.v3d-corpo .v3d-palco { flex: 1 1 auto; min-width: 0; }
+.v3d-lista { width: 290px; flex: 0 0 290px; overflow-y: auto; border-right: 1px solid #e5e7eb; background: #f8fafc; color: #1f1c18; padding: 10px; display: grid; align-content: start; gap: 10px; }
+.v3d-lista[hidden] { display: none !important; }
+.v3d-lista-topo { display: grid; gap: 6px; }
+.v3d-lista-acoes { display: flex; gap: 6px; }
+.v3d-lista button { min-height: 36px; border-radius: 8px; border: 1.5px solid #4b5563; background: #fff; color: #1f1c18; font-weight: 700; cursor: pointer; padding: 0 10px; }
+.v3d-lista button:disabled { opacity: .35; cursor: not-allowed; }
+.v3d-lista #v3dAuto { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.v3d-lista .v3d-remover { border-color: #b91c1c; color: #b91c1c; background: #fef2f2; }
+.v3d-dica-lista { margin: 0; font-size: .78rem; color: #64748b; }
+.v3d-itens { display: grid; gap: 6px; }
+.v3d-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 8px; border-radius: 8px; background: #fff; border: 1px solid #e5e7eb; border-left: 4px solid var(--cor); }
+.v3d-item-txt { display: grid; font-size: .82rem; }
+.v3d-item-txt b { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.v3d-item-txt span { color: #475569; }
+.v3d-item-qtd { font-weight: 700; color: #1f1c18 !important; }
+.v3d-item-btns { display: flex; gap: 4px; }
+.v3d-item-btns button { min-width: 42px; }
+.mc-btn-3d { justify-self: start; min-height: 40px; padding: 0 14px; border-radius: 8px; border: 0; background: #1d4ed8; color: #fff; font-weight: 700; cursor: pointer; }
+@media (max-width: 760px) {
+  .v3d-corpo { flex-direction: column; }
+  .v3d-lista { width: auto; flex: 0 0 auto; max-height: 34vh; border-right: 0; border-bottom: 1px solid #e5e7eb; }
+  .v3d-corpo .v3d-palco { min-height: 50vh; }
+}

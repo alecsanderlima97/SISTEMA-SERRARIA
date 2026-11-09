@@ -299,6 +299,7 @@ function garantirModal() {
           <label>Largura (m)<input id="mcLarg" type="number" step="0.05"></label>
           <label>Altura máx. (m)<input id="mcAlt" type="number" step="0.05"></label>
         </div>
+        <button type="button" class="mc-btn-3d" onclick="window.montarCargaRomaneio3D()"><i class="fa-solid fa-cube"></i> Montar em 3D (arrastar pacotes)</button>
         <div id="mcResumo" class="mc-resumo"></div>
         <div id="mcStatus"></div>
         <h4>Vista de cima</h4><div class="mc-draw" id="mcTopo"></div>
@@ -399,3 +400,19 @@ document.addEventListener('romaneioPacotesAlterados', renderizar);
 
 // Regras do pacote compartilhadas com o visualizador 3D (Gestao de Madeira).
 window.MontagemCargaCalc = { montar, altPacote, largPacote, peAlt, fileirasAmarra, ehViga, vaoMeio, camadaExtra, meio };
+
+
+// Montador 3D com os pacotes do romaneio (so os selecionados no romaneio).
+window.montarCargaRomaneio3D = function() {
+  const dados = window.obterRomaneioParaMontagem?.() || { pacotes: [] };
+  const itens = [];
+  (dados.pacotes || []).forEach(p => {
+    const unidades = pacotesDoRomaneio([{ ...p, qtdPacotes: 1 }]);
+    if (unidades.length) itens.push({ p: unidades[0], qtd: Number(p.qtdPacotes) || 1 });
+  });
+  window.abrirMontadorCarga3D?.(itens, {
+    titulo: 'Montar carga do romaneio',
+    origem: 'Pacotes do romaneio',
+    caminhao: { comp1: estado.comp1, comp2: estado.comp2, larg: estado.larg, alt: estado.alt, bitrem: estado.bitrem }
+  });
+};

@@ -37,6 +37,9 @@
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
                         <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
                     </button>
+                    <button type="button" class="btn-patio-print" onclick="window.montarCargaPatio3D()" style="background:#0f766e !important;">
+                        <i class="fa-solid fa-cube"></i> Montar carga 3D
+                    </button>
                     <button type="button" onclick="window.fecharModalPatio()" class="btn-patio-exit">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
                     </button>
