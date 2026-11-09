@@ -3915,14 +3915,29 @@ window.aplicarFotoContagemPatio = async function(modo) {
 
 
 // Montador 3D com os pacotes do Controle de Producao (somente planejamento, nao grava).
-window.montarCargaPatio3D = function() {
-    const itens = (itensPatioTemp || []).filter(i => Number(i.pacotes) > 0).map(i => {
+function itensPatioPara3D(lista) {
+    return (lista || []).filter(i => Number(i.pacotes) > 0).map(i => {
         const cfg = parseConfigPacote(i.pecasRaw);
+        const det = obterDetalhesPacoteEtiqueta(i);
         const larg = Number(i.largura) || 0;
-        let cam = Number(cfg.cam) || 0, alt = Number(cfg.alt) || 0, am = Number(cfg.am) || 0;
+        let cam = Number(cfg.cam) || Number(det.largura) || 0, alt = Number(cfg.alt) || Number(det.alturas) || 0;
+        let am = Number(cfg.am) || Number(det.amarras) || 0;
         if (!cam && larg) cam = Math.max(1, Math.floor(120 / larg + 0.001));
         if (!alt && cam) { alt = Math.max(1, Math.round((Number(i.pecas) || cam) / cam)); am = 0; }
         return { qtd: Number(i.pacotes) || 0, p: { especie: i.especie || '', classe: obterNumeroClasse(i.classe) || 1, esp: Number(i.espessura) || 0, larg, comp: Number(i.comprimento) || 0, alt, cam, am } };
     }).filter(x => x.p.esp > 0 && x.p.larg > 0 && x.p.comp > 0);
-    window.abrirMontadorCarga3D?.(itens, { titulo: 'Montar carga do pátio', origem: 'Pacotes do Controle de Produção' });
+}
+window.montarCargaPatio3D = function() {
+    window.abrirMontadorCarga3D?.(itensPatioPara3D(itensPatioTemp), { titulo: 'Montar carga do pátio', origem: 'Pacotes do Controle de Produção' });
+};
+// Fluxo do Patio: ver os pacotes que estao no patio em 3D e simular como carregar (nao grava nada)
+window.verPctsPatio3D = async function() {
+    try {
+        const atual = await carregarRelatorioPatioAtual();
+        const itens = itensPatioPara3D(atual?.itens || []);
+        if (!itens.length) { alert('Não há pacotes no pátio para ver em 3D.'); return; }
+        window.abrirMontadorCarga3D?.(itens, { titulo: 'Pacotes do pátio em 3D', origem: 'Pacotes no pátio' });
+    } catch (e) {
+        alert('Não foi possível carregar o pátio. Tente de novo.');
+    }
 };
