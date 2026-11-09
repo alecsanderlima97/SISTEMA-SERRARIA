@@ -127,6 +127,10 @@ function tabuasDoPacote(p, origem = { x: 0, y: 0, z: 0 }) {
     return { pecas: out, altura: y, largura: W, comprimento: L, amarras, camadasY, zs };
 }
 
+// amarras pela regra da serraria (pezinho + fiadas de amarra + tabuinhas do vao do meio)
+function amarrasPadrao(p) { return tabuasDoPacote(p).amarras; }
+window.amarrasPadraoPacote = p => (calc() ? amarrasPadrao(p) : 0);
+
 // numeros para contar: fiadas (1..alt) na quina da ponta e tabuas da fiada de cima (1..cam)
 const texturasNumero = new Map();
 function rotuloNumero(n, destaque) {
@@ -907,6 +911,12 @@ function garantirModal() {
             <button type="button" role="tab" data-pvista="corte">Corte das peças</button>
             <button type="button" role="tab" data-pvista="caminhao">No caminhão</button>
           </div>
+          <div class="v3d-cfg" id="v3dPac" hidden>
+            <label>Fiadas<input id="v3dPacAlt" type="number" min="1" step="1"></label>
+            <label>Por fiada<input id="v3dPacCam" type="number" min="1" step="1"></label>
+            <label>Amarras<input id="v3dPacAm" type="number" min="0" step="1"></label>
+            <button type="button" class="v3d-pac-orig" id="v3dPacOrig">Voltar ao cadastro</button>
+          </div>
           <div class="v3d-cfg" id="v3dCfg" hidden>
             <label id="v3dWrapQtd"><span id="v3dQtdRotulo">Pacotes</span><input id="v3dQtd" type="number" min="1" step="1"></label>
             <label>Caçamba (m)<input id="v3dComp1" type="number" step="0.1"></label>
@@ -941,6 +951,19 @@ function garantirModal() {
         desenhar();
     };
     ['v3dQtd', 'v3dComp1', 'v3dComp2', 'v3dLarg', 'v3dAlt'].forEach(id => $(id).addEventListener('change', lerCfg));
+    // mudar a configuracao do pacote (so no 3D, nao grava no cadastro)
+    const lerPac = e => {
+        if (!atual.produto) return;
+        const alt = Math.max(1, parseInt($('v3dPacAlt').value, 10) || atual.produto.alt);
+        const cam = Math.max(1, parseInt($('v3dPacCam').value, 10) || atual.produto.cam);
+        let am = Math.max(0, parseInt($('v3dPacAm').value, 10) || 0);
+        const novo = { ...atual.produto, alt, cam };
+        if (e?.target?.id !== 'v3dPacAm' && !calc().ehViga(novo)) am = amarrasPadrao(novo);
+        atual.produto = { ...novo, am };
+        desenhar();
+    };
+    ['v3dPacAlt', 'v3dPacCam', 'v3dPacAm'].forEach(id => $(id).addEventListener('change', lerPac));
+    $('v3dPacOrig').addEventListener('click', () => { if (atual.produtoOriginal) { atual.produto = { ...atual.produtoOriginal }; desenhar(); } });
     $('v3dBitrem').addEventListener('change', lerCfg);
     modal.addEventListener('click', e => { if (e.target === modal) window.fecharVisualizador3D(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') window.fecharVisualizador3D(); });
@@ -954,6 +977,7 @@ function desenhar() {
     const vistas = document.getElementById('v3dPalVistas');
     const lista = document.getElementById('v3dLista');
     if (lista) lista.hidden = atual.modo !== 'montar';
+    if (atual.modo !== 'madeira') document.getElementById('v3dPac').hidden = true;
     document.getElementById('v3dWrapQtd').hidden = atual.modo === 'montar';
     if (atual.modo === 'montar') {
         if (abas) abas.hidden = true;
@@ -1009,6 +1033,13 @@ function desenhar() {
     document.getElementById('v3dQtdRotulo').textContent = 'Pacotes';
     if (!atual.produto) return;
     modal.querySelectorAll('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === atual.aba)));
+    const pac = document.getElementById('v3dPac');
+    pac.hidden = atual.aba === 'tabua';
+    document.getElementById('v3dPacAlt').value = atual.produto.alt;
+    document.getElementById('v3dPacCam').value = atual.produto.cam;
+    document.getElementById('v3dPacAm').value = atual.produto.am || 0;
+    const o = atual.produtoOriginal;
+    document.getElementById('v3dPacOrig').hidden = !o || (o.alt === atual.produto.alt && o.cam === atual.produto.cam && (o.am || 0) === (atual.produto.am || 0));
     const cfg = document.getElementById('v3dCfg');
     cfg.hidden = atual.aba !== 'caminhao';
     const c = atual.caminhao;
@@ -1039,6 +1070,7 @@ async function abrir(produto) {
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = `${p.nome} · ${p.classe}ª classe · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}`;
     atual.produto = p;
+    atual.produtoOriginal = { ...p };
     atual.modo = 'madeira';
     try {
         await garantirThree();
@@ -1184,7 +1216,8 @@ function renderListaMontagem() {
         return `<div class="v3d-item" style="--cor:${cor}">
           <div class="v3d-item-txt"><b>${fmt(gr.p.esp, 1)} × ${fmt(gr.p.larg, 1)} × ${fmt(gr.p.comp, 2)}</b>
             <span>${gr.p.classe}ª · (${gr.p.alt}×${gr.p.cam})${gr.p.am ? ` + ${gr.p.am}` : ''} · ${fmt(C.altPacote(gr.p), 2)} m</span>
-            <span class="v3d-item-qtd">${gr.noCaminhao} no caminhão · ${resta} fora</span></div>
+            <span class="v3d-item-qtd">${gr.noCaminhao} no caminhão · ${resta} fora</span>
+            <span class="v3d-item-cfg"><input type="number" min="1" step="1" data-cfg="alt" data-grupo="${k}" value="${gr.p.alt}" aria-label="Fiadas">×<input type="number" min="1" step="1" data-cfg="cam" data-grupo="${k}" value="${gr.p.cam}" aria-label="Tábuas por fiada">+<input type="number" min="0" step="1" data-cfg="am" data-grupo="${k}" value="${gr.p.am || 0}" aria-label="Amarras"></span></div>
           <div class="v3d-item-btns">
             <button type="button" data-menos="${k}" ${gr.noCaminhao ? '' : 'disabled'} aria-label="Tirar 1 do caminhão">−1</button>
             <button type="button" data-mais="${k}" ${resta ? '' : 'disabled'} aria-label="Pôr 1 no caminhão">+1</button>
@@ -1336,6 +1369,21 @@ function instalarListaEventos() {
     const el = document.getElementById('v3dLista');
     if (!el || el.dataset.ok) return;
     el.dataset.ok = '1';
+    // mudar fiadas x por fiada + amarras de um grupo: refaz a carga com o pacote novo
+    el.addEventListener('change', e => {
+        const inp = e.target.closest('input[data-cfg]');
+        if (!inp || !montagem) return;
+        const k = inp.dataset.grupo;
+        const u0 = montagem.unidades.find(u => grupoChave(u.p) === k);
+        if (!u0) return;
+        const C = calc();
+        const val = Math.max(inp.dataset.cfg === 'am' ? 0 : 1, parseInt(inp.value, 10) || 0);
+        const novo = { ...u0.p, [inp.dataset.cfg]: val };
+        if (inp.dataset.cfg !== 'am' && !C.ehViga(novo)) novo.am = amarrasPadrao(novo);
+        montagem.unidades.forEach(u => { if (grupoChave(u.p) === k) u.p = novo; });
+        montarAutomatico(montagem.colocados.length ? montagem.unidades.filter(u => montagem.colocados.some(c => c.u === u)) : []);
+        desenharMontagem();
+    });
     el.addEventListener('click', e => {
         const b = e.target.closest('button');
         if (!b || !montagem) return;
