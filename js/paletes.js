@@ -1,7 +1,7 @@
-// Modelos de palete (Gestao de Madeira): receita do palete, pedido do cliente e 3D.
+// Modelos de palete (modulo Paletes): receita do palete, pedido do cliente e 3D.
 // Os modelos ficam em configuracoes_sistema/modelos_palete (leitura: usuarios aprovados;
 // gravacao: gerente/admin, pela regra ja existente). Nada aqui altera madeiras, patio ou estoque.
-import { db, doc, getDoc, setDoc } from './firebase-init.js';
+import { db, doc, getDoc, setDoc, collection, getDocs } from './firebase-init.js';
 
 const DOC_REF = () => doc(db, 'configuracoes_sistema', 'modelos_palete');
 const POSICOES = {
@@ -20,7 +20,13 @@ const fmt = (n, d = 2) => Number(n || 0).toLocaleString('pt-BR', { minimumFracti
 const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const novoId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const madeiras = () => (window.obterProdutosMadeira?.() || []);
+let madeirasCache = [];
+const madeiras = () => { const lista = window.obterProdutosMadeira?.() || []; return lista.length ? lista : madeirasCache; };
+async function carregarMadeiras() {
+    if ((window.obterProdutosMadeira?.() || []).length) return;
+    try { madeirasCache = (await getDocs(collection(db, 'produtos'))).docs.map(d => ({ id: d.id, ...d.data() })); }
+    catch (_) { madeirasCache = []; }
+}
 
 // Modelo inicial PBR. Manual ABRAS PBR-1 (2019): 1,00 x 1,20 m, 8 tabuas de cima de 1.200 mm,
 // 3 de baixo de 1.200 mm, 3 de ligacao de 1.000 x 125 mm, 9 blocos, eucalipto, carga 1.200 kg.
@@ -184,7 +190,7 @@ function htmlPedido() {
 }
 
 function render() {
-    const alvo = document.getElementById('tabProdPalete');
+    const alvo = document.getElementById('paletesModelos');
     if (!alvo) return;
     alvo.innerHTML = `
       <div class="section-title"><h2><i class="fa-solid fa-pallet"></i> Modelos de palete</h2></div>
@@ -222,7 +228,7 @@ function lerTopo() {
 }
 
 function instalarEventos() {
-    const alvo = document.getElementById('tabProdPalete');
+    const alvo = document.getElementById('paletesModelos');
     if (!alvo || alvo.dataset.eventos) return;
     alvo.dataset.eventos = '1';
     alvo.addEventListener('click', async e => {
@@ -292,8 +298,9 @@ function instalarEventos() {
 
 window.renderPaletes = async function() {
     instalarEventos();
+    await carregarMadeiras();
     if (!carregado) {
-        const alvo = document.getElementById('tabProdPalete');
+        const alvo = document.getElementById('paletesModelos');
         if (alvo) alvo.innerHTML = '<p class="pal-vazio"><span class="saw-loader" aria-hidden="true"></span> Carregando modelos…</p>';
         await carregarModelos();
     }
@@ -301,5 +308,6 @@ window.renderPaletes = async function() {
 };
 
 document.addEventListener('produtosUpdated', () => {
-    if (document.getElementById('tabProdPalete')?.style.display === 'block') atualizarParcial();
+    if (document.getElementById('view-paletes')?.classList.contains('active-section')) atualizarParcial();
 });
+window.SectionLoader?.register('view-paletes', () => window.renderPaletes());

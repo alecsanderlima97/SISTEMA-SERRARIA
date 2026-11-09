@@ -43,7 +43,7 @@ function configurarProtecaoVoltarNavegador() {
 
 const ROLE_PERMISSIONS = {
     'gerente': {
-        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-paletes', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
         readOnly: false
     },
     'patrao': {
@@ -87,7 +87,8 @@ const SECTION_PERMISSIONS = [
     { id: 'view-entrada', label: 'Conferencia de Cargas' },
     { id: 'view-mapa', label: 'Mapa' },
     { id: 'view-cavaco', label: 'Venda de Subprodutos' },
-    { id: 'view-produtos', label: 'Gestao de Madeira' },
+    { id: 'view-produtos', label: 'Cadastro de Medidas' },
+    { id: 'view-paletes', label: 'Paletes' },
     { id: 'view-estoque', label: 'Controle de Estoque' },
     { id: 'view-frotas', label: 'Controle de Frota' },
     { id: 'view-financeiro', label: 'Financeiro' },

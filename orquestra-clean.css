@@ -1014,3 +1014,14 @@ body .pal-tabela input:not([type="checkbox"]), body .pal-tabela select { min-hei
 .pal-inline { display: flex; gap: 6px; align-items: center; }
 .pal-inline input { width: 90px; }
 #v3dPalVistas[hidden] { display: none !important; }
+
+
+/* Modulos do sistema */
+.sidebar nav ul li.modulo-desligado { display: none !important; }
+body.modulo-serraria-desligado #view-dashboard [data-dashboard-permission="fluxo-patio"],
+body.modulo-serraria-desligado #view-dashboard [data-dashboard-permission="controle-producao"] { display: none !important; }
+.cfg-modulo-opcao { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+.cfg-modulo-opcao input { width: 20px; height: 20px; margin-top: 2px; }
+.pal-modulo-abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.pal-modulo-aba { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--text-muted); font-weight: 700; padding: 10px 16px; cursor: pointer; }
+.pal-modulo-aba[aria-selected="true"] { color: var(--accent-color); border-bottom-color: var(--accent-color); }

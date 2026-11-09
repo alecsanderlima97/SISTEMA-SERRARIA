@@ -159,6 +159,15 @@
                         </button>
                     </div>
 
+                    <div class="glass-panel cfg-modulos" data-subsection-permission="view-configuracoes:regras-pagamento">
+                        <h2 style="margin-top:0;"><i class="fa-solid fa-puzzle-piece"></i> Módulos do sistema</h2>
+                        <p style="margin:0 0 10px; opacity:.8;">Ligue só o que a empresa usa. Desligar esconde o menu; nenhum dado é apagado.</p>
+                        <label class="cfg-modulo-opcao"><input type="checkbox" id="cfgModuloSerraria" checked> <span><b>Serraria</b> · pátio de produção, romaneio de madeira, entrada de tora, subprodutos e histórico</span></label>
+                        <label class="cfg-modulo-opcao"><input type="checkbox" id="cfgModuloPaletes" checked> <span><b>Paletes</b> · modelos de palete, estoque, montagem e romaneio de paletes</span></label>
+                        <p style="margin:8px 0; font-size:.82rem; opacity:.75;">Comum aos dois: Clientes, Cadastro de Medidas, Financeiro, Frotas, Estoque e RH.</p>
+                        <button type="button" class="btn-primary" onclick="window.salvarModulosSistema()"><i class="fa-solid fa-floppy-disk"></i> Salvar módulos</button>
+                        <span id="cfgModulosAviso" role="status" style="margin-left:10px; font-weight:600;"></span>
+                    </div>
                     <div class="glass-panel" data-subsection-permission="view-configuracoes:regras-pagamento">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
                             <i class="fa-solid fa-hand-holding-dollar" style="font-size:24px; color:#f59e0b;"></i>
