@@ -1550,6 +1550,9 @@ function avaliarVaga(g, u, ci, f, v, ignorar) {
     const base = Array.from({ length: n * 4 }, (_, k) => alturaVaga(g, ci, f, v + 0.125 + k * 0.25, ignorar));
     const topo = Math.max(...base);
     if (base.some(h => Math.abs(h - topo) > 0.12)) return null;           // pacote longo nao apoia em degrau
+    // 2,40 nao vai em cima de pacotes de 1,20 (so no assoalho ou sobre outro 2,40)
+    if (n > 1 && topo > 0.01 && montagem.colocados.some(c => c !== ignorar && c.ci === ci && c.f === f && c.v < v + n && v < c.v + c.n
+        && Math.abs(c.topo + g.C.altPacote(c.u.p) - topo) < 0.12 && c.n < n)) return null;
     if (topo + g.C.altPacote(u.p) > g.altMax + 0.001) return null;        // passa da altura maxima
     return { ci, f, v, n, topo };
 }

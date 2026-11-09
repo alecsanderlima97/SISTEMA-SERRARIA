@@ -66,6 +66,9 @@ function montar(listaEntrada, cfg) {
         const base = alts.slice(v, v + n);
         const topo = Math.max(...base);
         if (base.some(h => Math.abs(h - topo) > 0.12)) continue; // nao apoia pacote longo em degrau
+        // pacote de 2,40 so vai no assoalho ou em cima de outro de 2,40 (nunca em cima de dois de 1,20)
+        if (n > 1 && topo > 0.01 && colocados.some(c => c.ci === ci && c.f === f && c.v < v + n && v < c.v + c.n
+            && Math.abs(c.topo + altPacote(c.p) - topo) < 0.12 && c.n < n)) continue;
         if (topo + altPacote(p) > altMax + 0.001) continue;
         const centro = (v + n / 2) - cb.vagas / 2;
         const naCamada = colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - topo) < 0.05).length;
