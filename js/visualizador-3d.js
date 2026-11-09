@@ -171,18 +171,21 @@ function texturaEtiqueta(p) {
     return t;
 }
 // tras = true: ponta de tras (-x), a que aparece no caminhao; senao a ponta da frente (+x)
-function colarEtiqueta(dim, origem, p, tras = false) {
+// lado = +1: lateral +z; lado = -1: lateral -z. No caminhao, a lateral que fica para fora.
+// A etiqueta vai na lateral do pacote (onde passam as fitas verdes), no canto superior esquerdo
+// de quem olha essa lateral, entre a fita da ponta e a do meio.
+function colarEtiqueta(dim, origem, p, lado = 1) {
     const T = window.THREE;
     const H = 0.10; // etiqueta real ~7,5 x 10 cm
     const alt = Math.min(H, dim.altura * 0.8);
     const larg = alt * 0.75;
     const geo = new T.PlaneGeometry(larg, alt);
-    geo.rotateY(tras ? -Math.PI / 2 : Math.PI / 2);
+    if (lado < 0) geo.rotateY(Math.PI);
     const mesh = new T.Mesh(geo, new T.MeshBasicMaterial({ map: texturaEtiqueta(p) }));
-    // canto superior esquerdo de quem olha a ponta
-    const y = origem.y + dim.altura - alt / 2 - 0.01;
-    if (tras) mesh.position.set(origem.x - 0.003, y, origem.z + larg / 2 + 0.02);
-    else mesh.position.set(origem.x + dim.comprimento + 0.003, y, origem.z + dim.largura - larg / 2 - 0.02);
+    const y = origem.y + dim.altura - alt / 2 - 0.012;
+    const deslocX = dim.comprimento * 0.1 + 0.03 + larg / 2; // logo depois da fita da ponta
+    if (lado >= 0) mesh.position.set(origem.x + deslocX, y, origem.z + dim.largura + 0.004);
+    else mesh.position.set(origem.x + dim.comprimento - deslocX, y, origem.z - 0.004);
     cena.conteudo.add(mesh);
 }
 
@@ -467,7 +470,7 @@ function desenharPacote(p) {
     malhaInstanciada(fitasDoPacote(dim, off), 0x16a34a, false);
     if (!C.ehViga(p)) numerarPacote(dim, off, p);
     colarEtiqueta(dim, off, p);
-    enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [1, 0.45, 0.55]);
+    enquadrar(0, dim.altura / 2, 0, Math.max(dim.comprimento, dim.altura, dim.largura) / 1.35, [0.8, 0.45, 1]);
     const pecas = p.alt * p.cam + p.am;
     const m3 = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
     return `Pacote ${C.ehViga(p) ? 'de viga ' : ''}(${p.alt}×${p.cam})${p.am ? ` + ${p.am}${C.ehViga(p) ? ' pç' : ' am'}` : ''}: ${fmt(dim.comprimento, 2)} × ${fmt(dim.largura, 2)} × ${fmt(dim.altura, 2)} m · ${pecas} peças · ${fmt(m3, 3)} m³${!C.ehViga(p) && dim.amarras !== p.am ? ` · desenho tem ${dim.amarras} am (pezinho + amarras + meio)` : ''}`;
@@ -602,6 +605,7 @@ function cabine(xc, W) {
 function desenharVeiculo(comps, W, opts = {}) {
     const fueiro = typeof opts === 'number' ? opts : (opts.fueiro || 1.2);
     const florestal = typeof opts === 'object' && !!opts.florestal;
+    const semLaterais = typeof opts === 'object' && !!opts.semLaterais;
     const GAP = 0.55;
     const total = comps.reduce((s, c) => s + c, 0) + GAP * (comps.length - 1);
     grade(Math.ceil(total + CAB + 6), 0.5, 1);
@@ -620,7 +624,7 @@ function desenharVeiculo(comps, W, opts = {}) {
         });
         [-0.38, 0.38].forEach(zz => bloco(x + comp / 2 + (ci === comps.length - 1 ? 0.3 : 0), PISO - 0.38, zz, comp + (ci === comps.length - 1 ? 0.6 : 0), 0.24, 0.1, mat(0x1b1e23, 0.6, 0.3))); // longarinas
         const n = Math.max(2, Math.round(comp / 1.4) + 1);
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < (semLaterais ? 0 : n); i++) {
             const fx = x + 0.07 + (comp - 0.14) * (i / (n - 1));
             [z0 + 0.05, -z0 - 0.05].forEach(fz => {
                 bloco(fx, PISO + fueiro / 2, fz, 0.1, fueiro, 0.1, aco);                       // fueiro
@@ -672,7 +676,7 @@ function desenharCaminhao(p, cfg) {
         const oz = z0 + c.f * faixa + (faixa - dim0.largura) / 2;
         const oy = PISO + c.topo;
         const dim = tabuasDoPacote(c.p, { x: ox, y: oy, z: oz });
-        colarEtiqueta(dim, { x: ox, y: oy, z: oz }, c.p, true);
+        colarEtiqueta(dim, { x: ox, y: oy, z: oz }, c.p, m.fileiras > 1 && c.f === 0 ? -1 : 1);
         pecas.push(...dim.pecas);
         fitas.push(...fitasDoPacote(dim, { x: ox, y: oy, z: oz }));
     });
@@ -709,8 +713,9 @@ function desenharTora(cfg) {
     const comp = cfg.comp, W = cfg.larg, d = cfg.diametro || 0.22, r = d / 2;
     const esq = (cfg.altEsq || []).map(Number), dir = (cfg.altDir || []).map(Number);
     const maxAlt = Math.max(0.5, ...esq, ...dir);
-    const { inicioCacamba, z0 } = desenharVeiculo([comp], W, { fueiro: Math.max(2.4, Math.min(maxAlt + 0.25, 3.3)), florestal: true });
+    const { inicioCacamba, z0 } = desenharVeiculo([comp], W, { fueiro: Math.max(2.4, Math.min(maxAlt + 0.25, 3.3)), florestal: true, semLaterais: !!cfg.deLado });
     const x0 = inicioCacamba[0];
+    if (cfg.deLado) return desenharToraDeLado(cfg, x0, z0, comp, W, d, r, esq, dir);
     const nSeg = Math.max(1, Math.ceil(comp / 3.0));     // toras de ate ~3 m
     const segL = comp / nSeg;
     const colunas = Math.max(1, Math.floor(W / d));
@@ -764,6 +769,53 @@ function desenharTora(cfg) {
     return `${cfg.caminhao ? cfg.caminhao + ' · ' : ''}${fmt(comp, 2)} × ${fmt(W, 2)} m · altura média ${fmt(media, 2)} m · ${fmt(vol, 3)} m³ · desenho com toras de ~${Math.round(d * 100)} cm (ilustrativo; o volume vem das medidas)`;
 }
 
+// Toras atravessadas: cada tora fica de lado na cacamba (comprimento = largura do caminhao),
+// empilhadas ao longo do comprimento. A altura de cada ponto vem das medidas (media esquerda/direita).
+function desenharToraDeLado(cfg, x0, z0, comp, W, d, r, esq, dir) {
+    const T = window.THREE;
+    const colunas = Math.max(1, Math.floor(comp / d));
+    const passoY = d * 0.87;
+    const lista = [];
+    for (let linha = 0; ; linha++) {
+        const yc = PISO + r + linha * passoY;
+        let algum = false;
+        const desloc = linha % 2 ? r : 0;
+        for (let c = 0; c < colunas - (linha % 2 ? 1 : 0); c++) {
+            const xc = x0 + r + desloc + c * d;
+            const t = (xc - x0) / comp;
+            const h = (alturaNoPonto(esq, 1 - t) + alturaNoPonto(dir, 1 - t)) / 2;
+            if (yc + r > PISO + h + 0.001) continue;
+            algum = true;
+            const variacao = 0.9 + ((linha * 3 + c * 5) % 5) * 0.04;
+            lista.push({ x: xc, y: yc, z: 0, raio: r * variacao, L: W - 0.02 - ((linha + c) % 3) * 0.04 });
+        }
+        if (!algum || linha > 60) break;
+    }
+    if (lista.length) {
+        const geo = new T.CylinderGeometry(1, 1, 1, 14);
+        geo.rotateX(Math.PI / 2); // eixo da tora no z (atravessada)
+        const tx = texturaTora();
+        const mats = [new T.MeshLambertMaterial({ color: 0xffffff, map: tx.casca }), new T.MeshLambertMaterial({ color: 0xffffff, map: tx.topo }), new T.MeshLambertMaterial({ color: 0xffffff, map: tx.topo })];
+        const mesh = new T.InstancedMesh(geo, mats, lista.length);
+        const m = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), esc = new T.Vector3();
+        lista.forEach((t, i) => { pos.set(t.x, t.y, t.z); esc.set(t.raio, t.raio, t.L); m.compose(pos, q, esc); mesh.setMatrixAt(i, m); });
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        cena.conteudo.add(mesh);
+    }
+    [[esq, z0 - 0.05], [dir, -z0 + 0.05]].forEach(([alts, zz]) => alts.forEach((h, i) => {
+        if (!(h > 0)) return;
+        const xx = x0 + comp - (comp / alts.length) * (i + 0.5);
+        caixa(xx, PISO + h / 2, zz, 0.025, h, 0.025, 0xdc2626);
+        caixa(xx, PISO + h, zz, 0.12, 0.025, 0.06, 0xdc2626);
+    }));
+    enquadrar(0, 1.6, 0, (comp + CAB) / 2.2, [0.9, 0.6, 1.3]);
+    const todas = [...esq, ...dir].filter(a => a > 0);
+    const media = todas.length ? Math.trunc(todas.reduce((s, a) => s + a, 0) / todas.length * 100) / 100 : 0;
+    return `${cfg.caminhao ? cfg.caminhao + ' · ' : ''}Toras de lado · ${fmt(comp, 2)} × ${fmt(W, 2)} m · altura média ${fmt(media, 2)} m · ${fmt(comp * W * media, 3)} m³ · desenho ilustrativo; o volume vem das medidas`;
+}
+
 window.abrirCargaTora3D = async function(cfg) {
     if (!(cfg?.comp > 0 && cfg?.larg > 0) || ![...(cfg.altEsq || []), ...(cfg.altDir || [])].some(a => a > 0)) {
         alert('Preencha comprimento, largura e as alturas da carga para ver em 3D.');
@@ -773,7 +825,7 @@ window.abrirCargaTora3D = async function(cfg) {
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = 'Carga de tora';
     atual.modo = 'tora';
-    atual.tora = { ...cfg };
+    atual.tora = { ...cfg, deLado: cfg.deLado ?? (Number(cfg.comp) >= 7.75) }; // caminhao comprido costuma vir com tora de lado
     try { await garantirThree(); }
     catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
     if (!cena) criarCena(document.getElementById('v3dPalco'));
@@ -900,16 +952,42 @@ function desenharPaletesCaminhao(m, cfg) {
     const porPilha = Math.max(0, Math.floor(cfg.alt / hPal + 0.001));
     const capacidade = o.pilhas * porPilha;
     const qtd = Math.min(Math.max(0, cfg.qtd), capacidade);
-    // monta da cabine para tras, pilha cheia por pilha
+    // Colunas (no comprimento) com uma pilha em cada fileira. Pilhas cheias e, no maximo, uma coluna
+    // incompleta, dividida entre as fileiras para nao pender de lado. 'Carga' (base) coloca o bloco
+    // de colunas atras, no centro ou na frente; 'Pilha incompleta' (em cima) escolhe onde fica a coluna baixa.
+    const al = atual.alinhar || {};
+    const porColuna = porPilha * o.fileiras;
+    const colunasTot = porColuna ? Math.ceil(qtd / porColuna) : 0;
+    const ordemCi = comps.map((_, ci) => ci).sort((a, b) => inicioCacamba[b] - inicioCacamba[a]); // da cabine para tras
     const vagas = [];
-    comps.forEach((c, ci) => { for (let i = o.porLinha[ci] - 1; i >= 0; i--) for (let f = 0; f < o.fileiras; f++) vagas.push({ ci, i, f }); });
+    let faltamCol = colunasTot, restantePal = qtd;
+    ordemCi.forEach(ci => {
+        const ncol = Math.min(o.porLinha[ci], faltamCol);
+        faltamCol -= ncol;
+        if (!ncol) return;
+        const livre = comps[ci] - ncol * o.px;
+        const ini = al.base === 'tras' ? 0 : al.base === 'frente' ? livre : livre / 2;
+        const cols = Array.from({ length: ncol }, (_, k) => ({ ci, x: inicioCacamba[ci] + ini + k * o.px }));
+        cols.forEach(c => vagas.push(c));
+    });
+    const totalCol = vagas.length;
+    const incompleta = qtd % porColuna ? (al.cima === 'tras' ? 0 : al.cima === 'frente' ? totalCol - 1 : Math.floor((totalCol - 1) / 2)) : -1;
+    const ordem = vagas.map((v, k) => k).sort((a, b) => (a === incompleta) - (b === incompleta));
+    const alturas = new Array(totalCol).fill(0);
+    ordem.forEach(k => { const n = Math.min(porColuna, restantePal); alturas[k] = n; restantePal -= n; });
+    const pilhasPos = [];
+    vagas.forEach((v, k) => {
+        const n = alturas[k];
+        for (let f = 0; f < o.fileiras; f++) {
+            const nf = Math.floor(n / o.fileiras) + (f < n % o.fileiras ? 1 : 0);
+            pilhasPos.push({ x: v.x, f, n: nf });
+        }
+    });
     const pecas = [];
-    let restante = qtd;
-    vagas.forEach(v => {
-        const n = Math.min(porPilha, restante);
-        restante -= n;
-        const sobraX = comps[v.ci] - o.porLinha[v.ci] * o.px, sobraZ = W - o.fileiras * o.pz;
-        const ox = inicioCacamba[v.ci] + sobraX / 2 + v.i * o.px;
+    pilhasPos.forEach(v => {
+        const n = v.n;
+        const sobraZ = W - o.fileiras * o.pz;
+        const ox = v.x;
         const oz = z0 + sobraZ / 2 + v.f * o.pz;
         for (let k = 0; k < n; k++) {
             const oy = PISO + k * hPal;
@@ -978,6 +1056,9 @@ function garantirModal() {
             <label>Amarras<input id="v3dPacAm" type="number" min="0" step="1"></label>
             <button type="button" class="v3d-pac-orig" id="v3dPacOrig">Voltar ao cadastro</button>
           </div>
+          <div class="v3d-cfg" id="v3dToraCfg" hidden>
+            <label class="v3d-check"><input id="v3dToraLado" type="checkbox"> Toras atravessadas (de lado, sem fueiros laterais)</label>
+          </div>
           <div class="v3d-cfg" id="v3dCfg" hidden>
             <label id="v3dWrapQtd"><span id="v3dQtdRotulo">Pacotes</span><input id="v3dQtd" type="number" min="1" step="1"></label>
             <label>Caçamba (m)<input id="v3dComp1" type="number" step="0.1"></label>
@@ -985,9 +1066,9 @@ function garantirModal() {
             <label id="v3dWrapComp2" hidden>Caçamba 2 (m)<input id="v3dComp2" type="number" step="0.1"></label>
             <label>Largura (m)<input id="v3dLarg" type="number" step="0.05"></label>
             <label>Altura máx. (m)<input id="v3dAlt" type="number" step="0.05"></label>
-            <label class="v3d-al">Base<select id="v3dAlBase"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
-            <label class="v3d-al">Em cima<select id="v3dAlCima"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
-            <label class="v3d-al">Chapéu<select id="v3dAlChapeu"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
+            <label class="v3d-al"><span id="v3dRotAlBase">Base</span><select id="v3dAlBase"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
+            <label class="v3d-al"><span id="v3dRotAlCima">Em cima</span><select id="v3dAlCima"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
+            <label class="v3d-al" id="v3dWrapAlChapeu">Chapéu<select id="v3dAlChapeu"><option value="tras">Trás</option><option value="centro">Centro</option><option value="frente">Frente</option></select></label>
           </div>
         </div>
         <div class="v3d-corpo">
@@ -1016,6 +1097,7 @@ function garantirModal() {
         desenhar();
     };
     ['v3dAlBase', 'v3dAlCima', 'v3dAlChapeu'].forEach(id => $(id).addEventListener('change', lerCfg));
+    $('v3dToraLado').addEventListener('change', () => { if (atual.tora) { atual.tora.deLado = $('v3dToraLado').checked; desenhar(); } });
     ['v3dQtd', 'v3dComp1', 'v3dComp2', 'v3dLarg', 'v3dAlt'].forEach(id => $(id).addEventListener('change', lerCfg));
     // mudar a configuracao do pacote (so no 3D, nao grava no cadastro)
     const lerPac = e => {
@@ -1044,8 +1126,14 @@ function desenhar() {
     const lista = document.getElementById('v3dLista');
     if (lista) lista.hidden = atual.modo !== 'montar';
     // alinhamento da carga: so na madeira serrada (caminhao do cadastro e montador)
-    const mostrarAl = atual.modo === 'montar' || (atual.modo === 'madeira' && atual.aba === 'caminhao');
+    const palCam = atual.modo === 'palete' && atual.paleteVista === 'caminhao';
+    const mostrarAl = palCam || atual.modo === 'montar' || (atual.modo === 'madeira' && atual.aba === 'caminhao');
     modal.querySelectorAll('.v3d-al').forEach(l => { l.hidden = !mostrarAl; });
+    document.getElementById('v3dWrapAlChapeu').hidden = !mostrarAl || palCam;
+    document.getElementById('v3dRotAlBase').textContent = palCam ? 'Carga' : 'Base';
+    document.getElementById('v3dRotAlCima').textContent = palCam ? 'Pilha incompleta' : 'Em cima';
+    document.getElementById('v3dToraCfg').hidden = atual.modo !== 'tora';
+    if (atual.tora) document.getElementById('v3dToraLado').checked = !!atual.tora.deLado;
     document.getElementById('v3dAlBase').value = atual.alinhar.base;
     document.getElementById('v3dAlCima').value = atual.alinhar.cima;
     document.getElementById('v3dAlChapeu').value = atual.alinhar.chapeu;
@@ -1341,7 +1429,7 @@ function desenharMontagem() {
     montagem.colocados.forEach((c, i) => {
         const o = posicaoMundo(g, c);
         const dim = tabuasDoPacote(c.u.p, o);
-        colarEtiqueta(dim, o, c.u.p, true);
+        colarEtiqueta(dim, o, c.u.p, g.fileiras > 1 && c.f === 0 ? -1 : 1);
         pecas.push(...dim.pecas);
         fitas.push(...fitasDoPacote(dim, o));
         // caixa invisivel para clicar/arrastar
