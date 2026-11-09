@@ -12,8 +12,24 @@ window.switchTabProdutos = function(tabName, isEditing = false) {
     const tabLista = document.getElementById('tabProdLista');
     const btnForm = document.getElementById('btnTabProdForm');
     const btnLista = document.getElementById('btnTabProdLista');
+    const tabPalete = document.getElementById('tabProdPalete');
+    const btnPalete = document.getElementById('btnTabProdPalete');
 
     if (!tabForm || !tabLista || !btnForm || !btnLista) return;
+
+    if (tabPalete && btnPalete) {
+        const ativo = tabName === 'palete';
+        tabPalete.style.display = ativo ? 'block' : 'none';
+        btnPalete.style.color = ativo ? 'var(--accent-color)' : 'var(--text-muted)';
+        btnPalete.style.borderBottom = ativo ? '3px solid var(--accent-color)' : 'none';
+        if (ativo) {
+            tabForm.style.display = 'none';
+            tabLista.style.display = 'none';
+            [btnForm, btnLista].forEach(b => { b.style.color = 'var(--text-muted)'; b.style.borderBottom = 'none'; });
+            window.renderPaletes?.();
+            return;
+        }
+    }
 
     if (tabName === 'form') {
         tabForm.style.display = 'block';
@@ -287,6 +303,9 @@ async function carregarProdutos() {
         listaProdutos.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--danger-color);">Erro ao conectar com Firebase.</td></tr>';
     }
 }
+
+// Leitura das madeiras para os modelos de palete (js/paletes.js).
+window.obterProdutosMadeira = () => produtosAtuais.map(p => ({ ...p }));
 
 // Visualizacao 3D (js/visualizador-3d.js): somente leitura.
 window.verMadeira3D = function(id) {
