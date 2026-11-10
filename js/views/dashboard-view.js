@@ -54,6 +54,7 @@
                         <button type="button" class="btn-secondary btn-foto-contagem" onclick="window.abrirFotoContagemPatio()" style="height:42px;"><i class="fa-solid fa-camera"></i> Ler foto</button>
                         <button type="button" class="btn-secondary" onclick="window.imprimirListaProducaoPatio()" style="height:42px;"><i class="fa-solid fa-print"></i> Imprimir</button>
                         <button type="button" class="btn-secondary" onclick="window.verPctsPatio3D()" style="height:42px;"><i class="fa-solid fa-cube"></i> Ver PCTs em 3D</button>
+                        <button type="button" class="btn-secondary" onclick="window.verPatio3D()" style="height:42px;"><i class="fa-solid fa-warehouse"></i> Pátio em 3D</button>
                     </div>
                     <div id="formProducaoPatio" class="package-entry-grid" data-aberto="0" style="display:none; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Classe</label><select id="prodPatioClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
