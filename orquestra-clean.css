@@ -1149,3 +1149,10 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 
 .v3d-patio-cfg summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: #334155; min-height: 32px; display: flex; align-items: center; }
 .v3d-patio-cfg .v3d-patio-medida { margin-top: 6px; }
+
+.v3d-dica-pacote { position: absolute; z-index: 3; pointer-events: none; display: grid; background: #fff; color: #111827; border: 2px solid #111827; border-radius: 6px; padding: 4px 8px; font-size: .9rem; line-height: 1.25; text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.v3d-dica-pacote[hidden] { display: none; }
+
+/* 3D em tela cheia */
+.v3d-modal { padding: 0 !important; }
+.v3d-caixa { width: 100vw !important; height: 100vh !important; height: 100dvh !important; max-width: none; border-radius: 0 !important; }
