@@ -2403,7 +2403,7 @@ function renderListaPatio() {
         </dl></div>`;
     }
     el.innerHTML = `<div class="v3d-lista-topo"><b>Pátio de pacotes</b>
-        <p class="v3d-dica-lista">Caminhão no meio: 2ª de um lado, 1ª do outro. Cada fileira enche a partir da ponta do caminhão. Toque numa pilha ou fileira para ver o pacote.</p>
+        <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda, caminhão no meio, 2ª e tora à direita. Cada fileira enche a partir da ponta do caminhão. Toque numa pilha ou fileira para ver o pacote.</p>
         <p class="v3d-dica-lista">Capacidade: 1ª ${patio.d1.capacidade || 304} pacotes (8 fileiras: 4 de 11 e 4 de 8) · 2ª ${patio.d2.capacidade || 60} pacotes (5 fileiras de 3) · até ${MAX_PILHA} por pilha.</p>
         ${ficha}</div>
       <div class="v3d-itens">
@@ -2471,5 +2471,6 @@ window.abrirPatio3D = async function(itens, opcoes = {}) {
     else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
     instalarPatioEventos();
     desenhar();
-    enquadrar(0, 0, 0, Math.max(patio.comp, patio.larg) * 0.48, [0.3, 1, 0.95]);
+    // visto de quem chega pela entrada (como na foto): 1a a esquerda, 2a e tora a direita
+    enquadrar(0, 0, 0, Math.max(patio.comp, patio.larg) * 0.48, [-0.3, 1, -0.95]);
 };
