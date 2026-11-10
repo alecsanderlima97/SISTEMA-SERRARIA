@@ -2206,8 +2206,9 @@ function layoutPatio() {
     const f2 = [], f1 = [];
     // 2a fica no fundo, perto da tora e ao lado da carroceria (nao perto da cabine)
     for (let i = 0; i < L2; i++) f2.push(fil(2, i + 1, x2, T2, z1f - (L2 - i) * SLOT_Z, -1));
-    for (let i = 0; i < L1; i++) f1.push(fil(1, i + 1, x1, T1, zTopo + i * SLOT_Z, 1));
-    for (let i = 0; i < L1c; i++) f1.push(fil(1, L1 + i + 1, x1 + (T1 - T1c) * SLOT_X, T1c, zTopo + (L1 + i) * SLOT_Z, 1));
+    // 1a enche a partir do muro do fundo (ponta oposta ao caminhao), nao colado no caminhao
+    for (let i = 0; i < L1; i++) f1.push(fil(1, i + 1, x1, T1, zTopo + i * SLOT_Z, -1));
+    for (let i = 0; i < L1c; i++) f1.push(fil(1, L1 + i + 1, x1 + (T1 - T1c) * SLOT_X, T1c, zTopo + (L1 + i) * SLOT_Z, -1));
     // 3a: patio de fora, atras do galpao (depois da esteira de po), do lado do patio de 1a; 4 fileiras de 4
     const f3 = [];
     for (let i = 0; i < 4; i++) f3.push(fil(3, i + 1, x1 + 2, 4, W + 3.2 + i * SLOT_Z, 1));
@@ -2399,12 +2400,12 @@ function renderListaPatio() {
           <div><dt>Configuração</dt><dd>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</dd></div>
           <div><dt>Peças por pacote</dt><dd>${pecas}</dd></div>
           <div><dt>Volume por pacote</dt><dd>${fmt((p.esp / 100) * (p.larg / 100) * p.comp * pecas, 3)} m³</dd></div>
-          <div><dt>Posição</dt><dd>${sel.posicao}ª a partir do caminhão</dd></div>
+          <div><dt>Posição</dt><dd>${sel.posicao}ª a partir do ${sel.lado === 1 ? 'muro' : 'caminhão'}</dd></div>
           <div><dt>Pacotes nesta pilha</dt><dd>${sel.n}</dd></div>
         </dl></div>`;
     }
     el.innerHTML = `<div class="v3d-lista-topo"><b>Pátio de pacotes</b>
-        <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda, caminhão no meio, 2ª e tora à direita. Cada fileira enche a partir da ponta do caminhão. Toque numa pilha ou fileira para ver o pacote.</p>
+        <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda (encostada no muro), caminhão no meio, 2ª e tora à direita. Toque numa pilha ou fileira para ver o pacote.</p>
         <p class="v3d-dica-lista">Capacidade: 1ª ${patio.d1.capacidade || 304} pacotes (8 fileiras: 4 de 11 e 4 de 8) · 2ª ${patio.d2.capacidade || 60} pacotes (5 fileiras de 3) · até ${MAX_PILHA} por pilha.</p>
         ${ficha}</div>
       <div class="v3d-itens">
