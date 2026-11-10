@@ -1404,7 +1404,8 @@ function desenhar() {
     const abas = modal.querySelector('.v3d-abas');
     const vistas = document.getElementById('v3dPalVistas');
     const lista = document.getElementById('v3dLista');
-    if (lista) lista.hidden = atual.modo !== 'montar';
+    if (lista) lista.hidden = atual.modo !== 'montar' && atual.modo !== 'patio';
+    if (atual.modo !== 'patio' && cena.scene) ajustarSombra(12);
     // alinhamento da carga: so na madeira serrada (caminhao do cadastro e montador)
     const palCam = atual.modo === 'palete' && atual.paleteVista === 'caminhao';
     const mostrarAl = palCam || atual.modo === 'montar' || (atual.modo === 'madeira' && atual.aba === 'caminhao');
@@ -1437,6 +1438,14 @@ function desenhar() {
             montagem.recalcular = false;
         }
         desenharMontagem();
+        return;
+    }
+    if (atual.modo === 'patio') {
+        if (abas) abas.hidden = true;
+        if (vistas) vistas.hidden = true;
+        document.getElementById('v3dCfg').hidden = true;
+        cena.redimensionar();
+        desenharPatio();
         return;
     }
     if (atual.modo === 'tora') {
@@ -2132,4 +2141,311 @@ window.abrirMontadorCarga3D = async function(itens, opcoes = {}) {
     desenhar();
     const g = geometriaMontagem();
     enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 2.2, [0.9, 0.7, 1.3]);
+};
+
+// ---------- Patio 3D (galpao da serraria visto como no croqui) ----------
+// Base do Laboratorio (serraria em 3D). So mostra: nada e gravado.
+// Galpao: tora na ponta esquerda, linha de producao no lado de baixo, patio de 2a perto da tora,
+// paletes no meio, patio de 1a na outra ponta, carregamento no meio do lado de cima.
+// Cada fileira guarda uma medida; no maximo 4 pacotes empilhados. 3a classe fica num patio separado,
+// do lado de fora, do outro lado do galpao (acima, a esquerda do carregamento).
+let patio = null;
+const MAX_PILHA = 4;
+
+function ajustarSombra(raio) {
+    const sol = cena.scene.children.find(o => o.isDirectionalLight);
+    if (!sol) return;
+    Object.assign(sol.shadow.camera, { left: -raio, right: raio, top: raio, bottom: -raio, far: raio * 4 });
+    sol.position.set(raio * 0.5, raio, raio * 0.66);
+    sol.shadow.camera.updateProjectionMatrix();
+}
+function rotuloTexto(texto, x, y, z, h = 1.1, cor = '#1f2937') {
+    const T = window.THREE;
+    const c = document.createElement('canvas');
+    const x2 = c.getContext('2d');
+    x2.font = 'bold 44px sans-serif';
+    c.width = Math.ceil(x2.measureText(texto).width) + 40; c.height = 64;
+    const k = c.getContext('2d');
+    k.fillStyle = 'rgba(255,255,255,.92)'; k.fillRect(0, 0, c.width, c.height);
+    k.fillStyle = cor; k.font = 'bold 44px sans-serif'; k.textAlign = 'center'; k.textBaseline = 'middle';
+    k.fillText(texto, c.width / 2, 34);
+    const sp = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(c), depthTest: false }));
+    sp.scale.set(h * c.width / c.height, h, 1);
+    sp.position.set(x, y, z);
+    sp.renderOrder = 10;
+    cena.conteudo.add(sp);
+    return sp;
+}
+// marca no chao (faixa pintada)
+function faixaChao(x0, z0, x1, z1, cor, y = 0.012) {
+    caixa((x0 + x1) / 2, y, (z0 + z1) / 2, Math.abs(x1 - x0), 0.01, Math.abs(z1 - z0), cor);
+}
+// distribui as pilhas de cada medida em fileiras dentro de uma area; comeca pelo lado mais perto do carregamento
+function distribuirPilhas(grupos, area, doFim) {
+    const C = calc();
+    const pilhas = [], fileiras = [];
+    const passo = 0.35, corredor = 0.9;
+    let x = doFim ? area.x1 : area.x0;
+    grupos.forEach(gr => {
+        const p = gr.p;
+        const comp = p.comp, larg = C.largPacote(p), alt = C.altPacote(p);
+        let resta = gr.qtd;
+        if (!resta) return;
+        // fileira nova para cada medida
+        let z = area.z0;
+        const xa = doFim ? x - comp : x;
+        if (doFim ? xa < area.x0 - 0.01 : xa + comp > area.x1 + 0.01) { gr.fora = resta; return; }
+        const fil = { n: fileiras.length + 1, p, x0: xa, x1: xa + comp, pacotes: 0, pilhas: 0 };
+        fileiras.push(fil);
+        let colX = xa;
+        while (resta > 0) {
+            if (z + larg > area.z1 + 0.01) {
+                // fileira cheia: continua na coluna ao lado (mesma medida)
+                const nx = doFim ? colX - comp - passo : colX + comp + passo;
+                if (doFim ? nx < area.x0 - 0.01 : nx + comp > area.x1 + 0.01) break;
+                colX = nx; z = area.z0;
+                fil.x0 = Math.min(fil.x0, colX); fil.x1 = Math.max(fil.x1, colX + comp);
+            }
+            const n = Math.min(MAX_PILHA, resta);
+            pilhas.push({ p, x: colX, z, comp, larg, alt, n, fileira: fil.n });
+            fil.pacotes += n; fil.pilhas++;
+            resta -= n;
+            z += larg + passo;
+        }
+        gr.fora = resta;
+        x = doFim ? fil.x0 - corredor : fil.x1 + corredor;
+    });
+    return { pilhas, fileiras };
+}
+function desenharPatio() {
+    limparConteudo();
+    const T = window.THREE;
+    const C = calc();
+    const L = patio.comp, W = patio.larg;
+    ajustarSombra(Math.max(L, W) * 0.75);
+    // terreno e piso de concreto do galpao
+    const terra = new T.Mesh(new T.PlaneGeometry(L + 70, W + 50), new T.MeshLambertMaterial({ color: 0xc8a27a }));
+    terra.rotation.x = -Math.PI / 2; terra.position.set(4, -0.01, 6); terra.receiveShadow = true;
+    cena.conteudo.add(terra);
+    const piso = new T.Mesh(new T.PlaneGeometry(L, W), new T.MeshLambertMaterial({ color: 0xa8a29e }));
+    piso.rotation.x = -Math.PI / 2; piso.position.y = 0.002; piso.receiveShadow = true;
+    cena.conteudo.add(piso);
+    // colunas e vigas do telhado (sem telha para ver dentro)
+    const H = 6;
+    const aco = mat(0x475569, 0.5, 0.4);
+    const nCol = Math.max(2, Math.round(L / 6));
+    for (let i = 0; i <= nCol; i++) {
+        const x = -L / 2 + (L * i) / nCol;
+        [-W / 2, W / 2].forEach(z => bloco(x, H / 2, z, 0.25, H, 0.25, aco));
+        bloco(x, H, 0, 0.18, 0.3, W, aco);
+    }
+    [-W / 2, W / 2].forEach(z => bloco(0, H, z, L, 0.25, 0.18, aco));
+    // areas (medidas relativas ao galpao)
+    const linhaZ0 = W / 2 - 4;                       // linha de producao: faixa de 3 m no lado de baixo
+    const carga = { x0: -L * 0.12, x1: L * 0.12 };   // carregamento no meio do lado de cima
+    const pal = { x0: -L * 0.04, x1: L * 0.04 };     // paletes: faixa no meio, saindo da linha
+    const area2 = { x0: -L / 2 + 1.5, x1: pal.x0 - 1.5, z0: -W / 2 + 4.5, z1: linhaZ0 - 1.5 };
+    const area1 = { x0: pal.x1 + 1.5, x1: L / 2 - 1.5, z0: -W / 2 + 4.5, z1: linhaZ0 - 1.5 };
+    faixaChao(area2.x0, area2.z0, area2.x1, area2.z1, 0xfde68a);
+    faixaChao(area1.x0, area1.z0, area1.x1, area1.z1, 0xbbf7d0);
+    faixaChao(carga.x0, -W / 2, carga.x1, -W / 2 + 3.5, 0xfef08a);
+    const area3 = { x0: -L / 2 + 1.5, x1: carga.x0 - 3, z0: -W / 2 - 13, z1: -W / 2 - 2 };
+    faixaChao(area3.x0, area3.z0, area3.x1, area3.z1, 0xfecaca);
+    // linha de producao: esteira comprida + maquinas
+    const azul = mat(0x1d4ed8, 0.5, 0.3);
+    bloco(0, 0.45, linhaZ0 + 1.5, L - 4, 0.9, 1.2, mat(0x334155, 0.6, 0.3));
+    for (let i = 0; i < 7; i++) bloco(-L / 2 + 5 + i * ((L - 10) / 6), 1.1, linhaZ0 + 1.5, 2.4, 2.2, 2.2, azul);
+    rotuloTexto('LINHA DE PRODUÇÃO', 0, 3.2, linhaZ0 + 1.5);
+    // paletes: faixa com pilhas de paletes
+    faixaChao(pal.x0, 0, pal.x1, linhaZ0, 0xe5e7eb);
+    const paletes = [];
+    for (let z = 1; z < linhaZ0 - 1.2; z += 1.6) paletes.push({ x: (pal.x0 + pal.x1) / 2, y: 0.6, z: z + 0.6, sx: 1.2, sy: 1.2, sz: 1.0, tom: Math.round(z) % 3 });
+    malhaInstanciada(paletes, COR_MADEIRA);
+    rotuloTexto('PALETES', (pal.x0 + pal.x1) / 2, 2.4, linhaZ0 / 2);
+    // tora (lado de fora, ponta esquerda)
+    const toraX = -L / 2 - 8;
+    const madeiraTora = new T.MeshLambertMaterial({ color: 0x9a6b3f });
+    const geoTora = new T.CylinderGeometry(0.16, 0.16, 6, 10);
+    const nTora = 3 * 14;
+    const toras = new T.InstancedMesh(geoTora, madeiraTora, nTora);
+    const m4 = new T.Matrix4(), q = new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0));
+    let it = 0;
+    for (let pilha = 0; pilha < 3; pilha++) for (let cam2 = 0; cam2 < 4; cam2++) for (let k = 0; k < 4 - cam2 && it < nTora; k++) {
+        m4.compose(new T.Vector3(toraX - 2 + k * 0.34 + cam2 * 0.17 + pilha * 1.6, 0.16 + cam2 * 0.29, -W / 4 + pilha * 6.5), q, new T.Vector3(1, 1, 1));
+        toras.setMatrixAt(it++, m4);
+    }
+    toras.count = it; toras.castShadow = true;
+    cena.conteudo.add(toras);
+    rotuloTexto('TORA', toraX, 3, 0);
+    // esteira de po e cavaco ate os montes
+    bloco(L * 0.15, 0.6, W / 2 + 2.2, L * 0.9, 0.3, 0.8, mat(0x64748b, 0.6, 0.3));
+    const monte = (x, z, cor, nome) => {
+        const cone = new T.Mesh(new T.ConeGeometry(4, 3.2, 24), new T.MeshLambertMaterial({ color: cor }));
+        cone.position.set(x, 1.6, z); cone.castShadow = true; cena.conteudo.add(cone);
+        rotuloTexto(nome, x, 4.4, z);
+    };
+    monte(L / 2 + 9, W / 2 + 3, 0xe7d3a8, 'PÓ');
+    monte(L / 2 + 9, -2, 0xb98b56, 'CAVACO');
+    rotuloTexto('ESTEIRA DE PÓ E CAVACO', L * 0.1, 1.8, W / 2 + 2.2, 0.9);
+    // caminhao no carregamento (do lado de fora, encostado)
+    const n0 = cena.conteudo.children.length;
+    desenharVeiculo([7.2], 2.4, { fueiro: 1.2 });
+    const ehGradeOuSombra = o => o.type === 'GridHelper' || !!(o.material && o.material.isShadowMaterial);
+    const novos = cena.conteudo.children.slice(n0).filter(o => !ehGradeOuSombra(o));
+    cena.conteudo.children.slice(n0).filter(ehGradeOuSombra).forEach(o => cena.conteudo.remove(o));
+    const caminhao = new T.Group();
+    novos.forEach(o => { cena.conteudo.remove(o); caminhao.add(o); });
+    // de re para o galpao: traseira encostada na parede de cima, cabine para fora
+    caminhao.rotation.y = Math.PI / 2;
+    caminhao.position.set(0, 0, -W / 2 - 5.5);
+    cena.conteudo.add(caminhao);
+    rotuloTexto('CARREGAMENTO', 0, 5, -W / 2 - 5.5);
+    // pacotes do estoque
+    const grupos2 = patio.grupos.filter(g => g.p.classe === 2), grupos1 = patio.grupos.filter(g => g.p.classe === 1);
+    const grupos3 = patio.grupos.filter(g => g.p.classe !== 1 && g.p.classe !== 2);
+    const d2 = distribuirPilhas(grupos2, area2, true);   // lado de 2a: mais perto do carregamento = ponta direita
+    const d1 = distribuirPilhas(grupos1, area1, false);  // lado de 1a: mais perto = ponta esquerda
+    const d3 = distribuirPilhas(grupos3, area3, true);   // patio de 3a (fora): mais perto = ponta direita
+    patio.alvos = [];
+    const caixas = [], tampas = [], fitas = [];
+    const desenharLado = (d, lado) => {
+        d.pilhas.forEach(pl => {
+            for (let k = 0; k < pl.n; k++) {
+                const y = k * (pl.alt + 0.08);
+                caixas.push({ x: pl.x + pl.comp / 2, y: y + pl.alt / 2 + 0.08, z: pl.z + pl.larg / 2, sx: pl.comp, sy: pl.alt, sz: pl.larg, tom: k % 3 });
+                tampas.push({ x: pl.x + pl.comp / 2, y: y + 0.04, z: pl.z + pl.larg / 2, sx: pl.comp * 0.9, sy: 0.08, sz: pl.larg * 0.9 });
+                fitas.push(...fitasDoPacote({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }));
+            }
+            const alto = pl.n * (pl.alt + 0.08);
+            const alvo = new T.Mesh(new T.BoxGeometry(pl.comp, alto, pl.larg), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+            alvo.position.set(pl.x + pl.comp / 2, alto / 2, pl.z + pl.larg / 2);
+            alvo.userData.pilha = { ...pl, lado };
+            cena.conteudo.add(alvo);
+            patio.alvos.push(alvo);
+            if (patio.sel && patio.sel.lado === lado && patio.sel.fileira === pl.fileira) {
+                const borda = new T.LineSegments(new T.EdgesGeometry(alvo.geometry), new T.LineBasicMaterial({ color: 0x1d4ed8 }));
+                borda.position.copy(alvo.position); borda.scale.set(1.03, 1.03, 1.03);
+                cena.conteudo.add(borda);
+            }
+        });
+        d.fileiras.forEach(f => rotuloTexto(`F${f.n}`, (f.x0 + f.x1) / 2, 0.6, (lado === 1 ? area1 : lado === 3 ? area3 : area2).z0 - 0.9, 0.8, '#1d4ed8'));
+    };
+    desenharLado(d2, 2); desenharLado(d1, 1); desenharLado(d3, 3);
+    malhaInstanciada(caixas, COR_MADEIRA);
+    malhaInstanciada(tampas, 0x6b4f2a, false);
+    malhaInstanciada(fitas, 0x16a34a, false);
+    rotuloTexto('PÁTIO 2ª', (area2.x0 + area2.x1) / 2, 6.8, area2.z0, 1.4, '#a16207');
+    rotuloTexto('PÁTIO 1ª', (area1.x0 + area1.x1) / 2, 6.8, area1.z0, 1.4, '#15803d');
+    rotuloTexto('PÁTIO 3ª', (area3.x0 + area3.x1) / 2, 6.8, area3.z0, 1.4, '#b91c1c');
+    patio.d1 = d1; patio.d2 = d2; patio.d3 = d3;
+    const total = patio.grupos.reduce((s, g) => s + g.qtd, 0);
+    const fora = patio.grupos.reduce((s, g) => s + (g.fora || 0), 0);
+    const vol = patio.grupos.reduce((s, g) => s + g.qtd * (g.p.esp / 100) * (g.p.larg / 100) * g.p.comp * (g.p.alt * g.p.cam + (g.p.am || 0)), 0);
+    document.getElementById('v3dInfo').textContent = `Galpão ${fmt(L, 0)} × ${fmt(W, 0)} m · ${total} pacote(s) no pátio · ${fmt(vol, 3)} m³ · até ${MAX_PILHA} por pilha${fora ? ` · ${fora} não couberam no desenho` : ''}`;
+    renderListaPatio();
+}
+function renderListaPatio() {
+    const el = document.getElementById('v3dLista');
+    if (!el) return;
+    const linhaFil = (f, lado) => {
+        const p = f.p;
+        const ativo = patio.sel && patio.sel.lado === lado && patio.sel.fileira === f.n;
+        const cor = p.classe === 1 ? '#16a34a' : p.classe === 2 ? '#eab308' : '#dc2626';
+        return `<button type="button" class="v3d-item v3d-item-patio${ativo ? ' ativo' : ''}" style="--cor:${cor}" data-pfil="${lado}|${f.n}">
+          <span class="v3d-item-txt"><b>F${f.n} · ${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</b>
+          <span>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${f.pacotes} pacote(s) em ${f.pilhas} pilha(s)</span></span></button>`;
+    };
+    const sel = patio.sel;
+    let ficha = '';
+    if (sel) {
+        const p = sel.p, pecas = p.alt * p.cam + (p.am || 0);
+        ficha = `<div class="v3d-ficha"><b class="v3d-ficha-tit">Pátio ${sel.lado}ª${sel.lado === 3 ? ' (fora)' : ''} · Fileira F${sel.fileira}</b><dl>
+          <div><dt>Medida</dt><dd>${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} cm × ${fmt(p.comp, 2)} m</dd></div>
+          <div><dt>Classe</dt><dd>${p.classe}ª</dd></div>
+          <div><dt>Configuração</dt><dd>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</dd></div>
+          <div><dt>Peças por pacote</dt><dd>${pecas}</dd></div>
+          <div><dt>Volume por pacote</dt><dd>${fmt((p.esp / 100) * (p.larg / 100) * p.comp * pecas, 3)} m³</dd></div>
+          <div><dt>Pacotes nesta pilha</dt><dd>${sel.n}</dd></div>
+        </dl></div>`;
+    }
+    el.innerHTML = `<div class="v3d-lista-topo"><b>Pátio de pacotes</b>
+        <p class="v3d-dica-lista">Toque numa pilha ou numa fileira para ver o pacote. 2ª perto da tora, 1ª na outra ponta e 3ª no pátio de fora; a fileira F1 é a mais perto do carregamento.</p>
+        <label class="v3d-patio-medida">Galpão (m) <input type="number" id="v3dPatioComp" min="20" max="200" step="1" value="${patio.comp}" aria-label="Comprimento do galpão"> × <input type="number" id="v3dPatioLarg" min="10" max="80" step="1" value="${patio.larg}" aria-label="Largura do galpão"></label>
+        ${ficha}</div>
+      <div class="v3d-itens">
+        <b class="v3d-lado-tit">Pátio 1ª</b>${patio.d1.fileiras.map(f => linhaFil(f, 1)).join('') || '<p class="v3d-dica-lista">Sem pacotes de 1ª.</p>'}
+        <b class="v3d-lado-tit">Pátio 2ª</b>${patio.d2.fileiras.map(f => linhaFil(f, 2)).join('') || '<p class="v3d-dica-lista">Sem pacotes de 2ª.</p>'}
+        <b class="v3d-lado-tit">Pátio 3ª (fora do galpão)</b>${patio.d3.fileiras.map(f => linhaFil(f, 3)).join('') || '<p class="v3d-dica-lista">Sem pacotes de 3ª.</p>'}
+      </div>`;
+}
+function selecionarFileira(lado, n) {
+    const d = lado === 1 ? patio.d1 : lado === 3 ? patio.d3 : patio.d2;
+    const pl = d.pilhas.find(x => x.fileira === n);
+    patio.sel = pl ? { ...pl, lado } : null;
+    desenharPatio();
+}
+function instalarPatioEventos() {
+    const el = document.getElementById('v3dLista');
+    if (el && !el.dataset.patioOk) {
+        el.dataset.patioOk = '1';
+        el.addEventListener('click', e => {
+            if (atual.modo !== 'patio' || !patio) return;
+            const b = e.target.closest('[data-pfil]');
+            if (!b) return;
+            const [lado, n] = b.dataset.pfil.split('|').map(Number);
+            selecionarFileira(lado, n);
+        });
+        el.addEventListener('change', e => {
+            if (atual.modo !== 'patio' || !patio) return;
+            if (e.target.id === 'v3dPatioComp') patio.comp = Math.min(200, Math.max(20, Number(e.target.value) || patio.comp));
+            else if (e.target.id === 'v3dPatioLarg') patio.larg = Math.min(80, Math.max(10, Number(e.target.value) || patio.larg));
+            else return;
+            try { localStorage.setItem('patio3dMedidas', JSON.stringify({ comp: patio.comp, larg: patio.larg })); } catch (_) {}
+            patio.sel = null;
+            desenharPatio();
+        });
+    }
+    const palco = document.getElementById('v3dPalco');
+    if (palco && !palco.dataset.patioOk) {
+        palco.dataset.patioOk = '1';
+        let ini = null;
+        palco.addEventListener('pointerdown', e => { if (atual.modo === 'patio') ini = { x: e.clientX, y: e.clientY }; });
+        palco.addEventListener('pointerup', e => {
+            if (atual.modo !== 'patio' || !patio || !ini) return;
+            const moveu = Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 6;
+            ini = null;
+            if (moveu) return; // girou a camera
+            const T = window.THREE;
+            const r = cena.renderer.domElement.getBoundingClientRect();
+            const ray = new T.Raycaster();
+            ray.setFromCamera(new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cena.camera);
+            const hit = ray.intersectObjects(patio.alvos || [])[0];
+            patio.sel = hit ? hit.object.userData.pilha : null;
+            desenharPatio();
+        });
+    }
+}
+window.abrirPatio3D = async function(itens, opcoes = {}) {
+    if (!calc()) { alert('Módulo de montagem ainda carregando. Tente novamente em instantes.'); return; }
+    const mapa = new Map();
+    (itens || []).forEach(it => {
+        const k = grupoChave(it.p);
+        if (!mapa.has(k)) mapa.set(k, { p: it.p, qtd: 0 });
+        mapa.get(k).qtd += Number(it.qtd) || 0;
+    });
+    let med = { comp: 60, larg: 30 };
+    try { med = { ...med, ...JSON.parse(localStorage.getItem('patio3dMedidas') || '{}') }; } catch (_) {}
+    // mais pacotes primeiro: fica mais perto do carregamento
+    patio = { grupos: [...mapa.values()].filter(g => g.qtd > 0).sort((a, b) => b.qtd - a.qtd), comp: med.comp, larg: med.larg, sel: null, alvos: [], d1: { fileiras: [], pilhas: [] }, d2: { fileiras: [], pilhas: [] }, d3: { fileiras: [], pilhas: [] } };
+    const modal = garantirModal();
+    modal.style.display = 'flex';
+    document.getElementById('v3dTitulo').textContent = opcoes.titulo || 'Pátio em 3D';
+    atual.modo = 'patio';
+    try { await garantirThree(); }
+    catch (_) { document.getElementById('v3dPalco').innerHTML = '<div class="v3d-carregando">Não foi possível carregar o 3D. Verifique a internet e tente de novo.</div>'; return; }
+    if (!cena) criarCena(document.getElementById('v3dPalco'));
+    else if (!document.getElementById('v3dPalco').contains(cena.renderer.domElement)) document.getElementById('v3dPalco').appendChild(cena.renderer.domElement);
+    instalarPatioEventos();
+    desenhar();
+    enquadrar(0, 0, 2, Math.max(patio.comp, patio.larg) * 0.42, [0.35, 1, 0.9]);
 };

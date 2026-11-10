@@ -1138,3 +1138,11 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 @media (max-width: 760px) {
   .v3d-lista:not([hidden]) ~ .v3d-palco .v3d-ficha-flutua:not([hidden]) { display: block; position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; pointer-events: none; background: rgba(239, 246, 255, .96); border: 1.5px solid #1d4ed8; border-radius: 8px; padding: 6px 8px; font-size: .8rem; color: #1f1c18; font-variant-numeric: tabular-nums; }
 }
+
+/* Patio em 3D */
+.v3d-item-patio { width: 100%; text-align: left; cursor: pointer; font: inherit; }
+.v3d-item-patio.ativo { outline: 2px solid #1d4ed8; outline-offset: 1px; }
+.v3d-item-patio:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.v3d-lado-tit { font-size: .85rem; color: #334155; margin-top: 4px; }
+.v3d-patio-medida { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #334155; }
+.v3d-patio-medida input { width: 64px; min-height: 34px; border: 1px solid #94a3b8; border-radius: 6px; padding: 0 6px; }

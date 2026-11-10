@@ -3941,3 +3941,15 @@ window.verPctsPatio3D = async function() {
         alert('Não foi possível carregar o pátio. Tente de novo.');
     }
 };
+
+// Patio em 3D: galpao com os pacotes do patio nas fileiras (1a, 2a e 3a). Base do Laboratorio. So mostra.
+window.verPatio3D = async function() {
+    try {
+        const atual = await carregarRelatorioPatioAtual();
+        const itens = itensPatioPara3D(atual?.itens || []);
+        if (!itens.length) { alert('Não há pacotes no pátio para mostrar.'); return; }
+        window.abrirPatio3D?.(itens, { titulo: 'Pátio em 3D' });
+    } catch (e) {
+        alert('Não foi possível carregar o pátio. Tente de novo.');
+    }
+};
