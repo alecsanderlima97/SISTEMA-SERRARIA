@@ -72,7 +72,8 @@ function montar(listaEntrada, cfg) {
         if (topo + altPacote(p) > altMax + 0.001) continue;
         const centro = (v + n / 2) - cb.vagas / 2;
         const naCamada = colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - topo) < 0.05).length;
-        const chave = [Math.round(topo * 100), Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
+        // no assoalho carrega da cabine para tras (os de 2,40 vao primeiro, encostados na frente)
+        const chave = [Math.round(topo * 100), topo < 0.01 ? -(v + n) : Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
         if (!melhor || comparar(chave, melhor.chave) < 0) melhor = { ci, f, v, n, topo, chave };
       }
     }));
