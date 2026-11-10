@@ -2184,7 +2184,7 @@ function faixaChao(x0, z0, x1, z1, cor, y = 0.012) {
 // Caminhao entra de re pelo lado de cima e fica NO MEIO: de um lado o patio de 2a, do outro a esteira
 // de montagem de pacotes e o patio de 1a. Assim o empilhadeirista nao da volta dentro da serraria.
 // Patio de 1a: 8 fileiras (4 de 11 posicoes, mais perto da entrada, e 4 de 8, ao lado da esteira).
-// Patio de 2a: 5 fileiras de 3 posicoes. Patio de 3a: fora do galpao. Ate 4 pacotes por pilha.
+// Patio de 2a: 5 fileiras de 3 posicoes. Patio de 3a: fora, atras do galpao. Ate 4 pacotes por pilha.
 // Cada fileira guarda uma medida e enche a partir da ponta do caminhao. 2,40 ocupa 2 posicoes.
 const SLOT_X = 1.35, SLOT_Z = 1.5;
 function layoutPatio() {
@@ -2204,12 +2204,13 @@ function layoutPatio() {
     const ox = -L / 2, oz = -W / 2;              // centraliza o galpao na origem
     const fil = (lado, n, xIni, slots, z, rumo) => ({ lado, n, x0: ox + xIni, slots, z: oz + z, rumo }); // rumo -1: enche da direita p/ esquerda
     const f2 = [], f1 = [];
-    for (let i = 0; i < L2; i++) f2.push(fil(2, i + 1, x2, T2, zTopo + i * SLOT_Z, -1));
+    // 2a fica no fundo, perto da tora e ao lado da carroceria (nao perto da cabine)
+    for (let i = 0; i < L2; i++) f2.push(fil(2, i + 1, x2, T2, z1f - (L2 - i) * SLOT_Z, -1));
     for (let i = 0; i < L1; i++) f1.push(fil(1, i + 1, x1, T1, zTopo + i * SLOT_Z, 1));
     for (let i = 0; i < L1c; i++) f1.push(fil(1, L1 + i + 1, x1 + (T1 - T1c) * SLOT_X, T1c, zTopo + (L1 + i) * SLOT_Z, 1));
-    // 3a: patio de fora, do outro lado (direita), 4 fileiras de 4
+    // 3a: patio de fora, atras do galpao (depois da esteira de po), do lado do patio de 1a; 4 fileiras de 4
     const f3 = [];
-    for (let i = 0; i < 4; i++) f3.push(fil(3, i + 1, L + 2, 4, zTopo + i * SLOT_Z, 1));
+    for (let i = 0; i < 4; i++) f3.push(fil(3, i + 1, x1 + 2, 4, W + 3.2 + i * SLOT_Z, 1));
     return { L, W, ox, oz, laneA: ox + laneA, laneB: ox + laneB, esteira: { x0: ox + x1, x1: ox + x1 + (T1 - T1c) * SLOT_X, z0: oz + zTopo + L1 * SLOT_Z, z1: oz + linhaZ0 }, linhaZ0: oz + linhaZ0, f1, f2, f3 };
 }
 // enche as fileiras: cada medida comeca numa fileira nova; se encher, continua na proxima
