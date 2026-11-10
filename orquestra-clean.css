@@ -1126,3 +1126,15 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 
 .v3d-lista .v3d-salvar-arranjo { background: #15803d; border-color: #15803d; color: #fff; }
 .v3d-salvo { color: #15803d !important; font-weight: 700; }
+
+/* Ficha do pacote selecionado no montador */
+.v3d-ficha { border: 1.5px solid #1d4ed8; border-radius: 8px; background: #eff6ff; padding: 8px 10px; }
+.v3d-ficha-tit { display: block; margin-bottom: 4px; color: #1e3a8a; }
+.v3d-ficha dl { margin: 0; display: grid; gap: 2px; font-size: .82rem; }
+.v3d-ficha dl div { display: flex; justify-content: space-between; gap: 8px; }
+.v3d-ficha dt { color: #475569; }
+.v3d-ficha dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.v3d-ficha-flutua { display: none; }
+@media (max-width: 760px) {
+  .v3d-lista:not([hidden]) ~ .v3d-palco .v3d-ficha-flutua:not([hidden]) { display: block; position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; pointer-events: none; background: rgba(239, 246, 255, .96); border: 1.5px solid #1d4ed8; border-radius: 8px; padding: 6px 8px; font-size: .8rem; color: #1f1c18; font-variant-numeric: tabular-nums; }
+}

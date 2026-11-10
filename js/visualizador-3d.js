@@ -1684,9 +1684,21 @@ function renderListaMontagem() {
           ${montagem.aoSalvar ? `<button type="button" id="v3dSalvarArranjo" class="v3d-salvar-arranjo"><i class="fa-solid fa-floppy-disk"></i> Salvar no romaneio</button>` : ''}
         </div>
         ${montagem.salvoMsg ? `<p class="v3d-dica-lista v3d-salvo">${montagem.salvoMsg}</p>` : ''}
+        ${sel ? fichaSelecionado(sel) : ''}
         ${sel ? `<div class="v3d-sel-acoes"><button type="button" id="v3dTrocarSel"><i class="fa-solid fa-right-left"></i> Trocar com outro</button><button type="button" id="v3dLadoSel"><i class="fa-solid fa-arrows-left-right"></i> Outro lado</button><button type="button" id="v3dRemoverSel" class="v3d-remover"><i class="fa-solid fa-arrow-down"></i> Descer do caminhão</button></div>` : '<p class="v3d-dica-lista">Arraste um pacote (mãozinha) para mudar de lugar: ele anda no comprimento e encaixa na medida. Botão direito no pacote: trocar, outro lado ou descer.</p>'}
       </div>
       <div class="v3d-itens">${linhas || '<p class="v3d-dica-lista">Nenhum pacote para montar.</p>'}</div>`;
+    // no celular a lista fica acima do 3D: repete a ficha resumida em cima do caminhao
+    const palco = document.getElementById('v3dPalco');
+    let flut = palco?.querySelector('.v3d-ficha-flutua');
+    if (palco && !flut) { flut = document.createElement('div'); flut.className = 'v3d-ficha-flutua'; flut.setAttribute('aria-live', 'polite'); palco.appendChild(flut); }
+    if (flut) {
+        if (sel) {
+            const p = sel.u.p, pecas = p.alt * p.cam + (p.am || 0);
+            flut.innerHTML = `<b>${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</b> · (${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${pecas} pç · ${fmt((p.esp / 100) * (p.larg / 100) * p.comp * pecas, 3)} m³`;
+            flut.hidden = false;
+        } else flut.hidden = true;
+    }
 }
 
 function mundoParaVaga(g, ponto, u) {
@@ -2031,9 +2043,7 @@ function fotoDaCarga(dir) {
     cam.position.copy(pos); ctr.target.copy(alvo); ctr.update(); cena.sujo = true;
     return url;
 }
-function imprimirPlanoCarga() {
-    const g = geometriaMontagem();
-    const C = g.C;
+function ordemCarga() {
     const nomesNivel = ['Assoalho', 'Em cima', 'Chapéu'];
     const niveis = new Map();
     montagem.colocados.forEach(c => { const k = c.ci + '|' + c.f; if (!niveis.has(k)) niveis.set(k, [...new Set(montagem.colocados.filter(o => o.ci + '|' + o.f === k).map(o => Math.round(o.topo * 100)))].sort((a, b) => a - b)); });
@@ -2041,6 +2051,35 @@ function imprimirPlanoCarga() {
     // sempre da cabine para tras
     const nivelDe = c => Math.min(2, niveis.get(c.ci + '|' + c.f).indexOf(Math.round(c.topo * 100)));
     const ordem = [...montagem.colocados].sort((a, b) => nivelDe(a) - nivelDe(b) || (a.f - b.f) || (b.ci - a.ci) || (b.v - a.v));
+    return { nomesNivel, nivelDe, ordem };
+}
+// Especificacoes do pacote selecionado no caminhao
+function fichaSelecionado(c) {
+    const g = geometriaMontagem();
+    const p = c.u.p;
+    const { nomesNivel, nivelDe, ordem } = ordemCarga();
+    const pecas = p.alt * p.cam + (p.am || 0);
+    const vol = (p.esp / 100) * (p.larg / 100) * p.comp * pecas;
+    const cabine = Math.max(0, g.comps[c.ci] - (c.v + c.n) * g.VAGA);
+    const lado = g.fileiras > 1 ? (c.f === 0 ? 'Motorista' : 'Passageiro') : 'Centro';
+    const tipo = g.C.ehViga?.(p) ? 'Viga' : 'Tábua';
+    const linha = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+    return `<div class="v3d-ficha" role="region" aria-label="Pacote selecionado">
+      <b class="v3d-ficha-tit">Pacote ${ordem.indexOf(c) + 1} · ${tipo} ${p.classe}ª</b>
+      <dl>
+        ${linha('Medida', `${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} cm × ${fmt(p.comp, 2)} m`)}
+        ${linha('Configuração', `(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}`)}
+        ${linha('Peças', pecas)}
+        ${linha('Volume', `${fmt(vol, 3)} m³`)}
+        ${linha('Altura do pacote', `${fmt(g.C.altPacote(p), 2)} m`)}
+        ${linha('Posição', `${nomesNivel[nivelDe(c)]} · ${lado}`)}
+        ${linha('Da frente', `${g.comps.length > 1 ? `Caçamba ${c.ci + 1} · ` : ''}${fmt(cabine, 2)} m`)}
+      </dl></div>`;
+}
+function imprimirPlanoCarga() {
+    const g = geometriaMontagem();
+    const C = g.C;
+    const { nomesNivel, nivelDe, ordem } = ordemCarga();
     // o que separar do patio (o empilhadeirista pega o pacote dessa medida que estiver mais perto)
     const separar = new Map();
     ordem.forEach(c => { const p = c.u.p; const k = `${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)} · (${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}`; separar.set(k, (separar.get(k) || 0) + 1); });
