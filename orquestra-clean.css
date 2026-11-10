@@ -1146,3 +1146,6 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 .v3d-lado-tit { font-size: .85rem; color: #334155; margin-top: 4px; }
 .v3d-patio-medida { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #334155; }
 .v3d-patio-medida input { width: 64px; min-height: 34px; border: 1px solid #94a3b8; border-radius: 6px; padding: 0 6px; }
+
+.v3d-patio-cfg summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: #334155; min-height: 32px; display: flex; align-items: center; }
+.v3d-patio-cfg .v3d-patio-medida { margin-top: 6px; }
