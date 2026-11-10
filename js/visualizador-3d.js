@@ -2181,66 +2181,102 @@ function faixaChao(x0, z0, x1, z1, cor, y = 0.012) {
     caixa((x0 + x1) / 2, y, (z0 + z1) / 2, Math.abs(x1 - x0), 0.01, Math.abs(z1 - z0), cor);
 }
 // ---- layout do patio (conforme o dono da serraria) ----
-// Caminhao entra de re pelo lado de cima e fica NO MEIO: de um lado o patio de 2a, do outro a esteira
-// de montagem de pacotes e o patio de 1a. Assim o empilhadeirista nao da volta dentro da serraria.
-// Patio de 1a: 8 fileiras (4 de 11 posicoes, mais perto da entrada, e 4 de 8, ao lado da esteira).
-// Patio de 2a: 5 fileiras de 3 posicoes. Patio de 3a: fora, atras do galpao. Ate 4 pacotes por pilha.
-// Cada fileira guarda uma medida e enche a partir da ponta do caminhao. 2,40 ocupa 2 posicoes.
-const SLOT_X = 1.35, SLOT_Z = 1.5;
+// Caminhao entra de re e fica NO MEIO: de um lado o patio de 2a (com o munk florestal e as toras atras),
+// do outro a esteira de montagem de pacotes e o patio de 1a encostado no muro do fundo.
+// 1a: dois blocos de 4 fileiras (de fundo) x 3 pilhas (de lado): um para largura 11 e outro para 8,5.
+// 2a: um bloco de 3 fileiras x 4 pilhas. 3a: fora, atras do galpao. Ate 4 pacotes por pilha.
+// 50 cm entre pilhas para uma pessoa passar etiquetando. Fileira enche a partir do muro.
+const PASSO = 1.2 + 0.5;   // pacote de 1,20 + 50 cm de corredor
+function bloco3(lado, nome, x0, z0, fundo, deLado, primeiroN, doFim) {
+    // fileiras correm ao longo de z (de lado); a profundidade (uma na frente da outra) e ao longo de x
+    return { lado, nome, x0, z0, fundo, deLado, primeiroN, doFim, livre: Array.from({ length: fundo }, () => Array(deLado).fill(true)) };
+}
 function layoutPatio() {
-    const T1 = 11, T1c = 8, T2 = 3, L1 = 4, L1c = 4, L2 = 5;
-    const margem = 1, folga = 0.8, faixa = 4.4;
-    let x = 0;
-    const x2 = x + margem;                       // patio de 2a
-    const x2f = x2 + T2 * SLOT_X;
-    const laneA = x2f + folga, laneB = laneA + faixa; // faixa do caminhao
-    const x1 = laneB + folga;                    // patio de 1a (fileiras compridas)
-    const x1f = x1 + T1 * SLOT_X;
+    const margem = 1, folga = 0.9, faixa = 4.4, esteiraL = 3.2, munk = 4.2;
+    const x2 = margem;                            // 2a encostada na parede da esquerda (munk e tora do lado de fora)
+    const x2f = x2 + 3 * PASSO;
+    const laneA = x2f + folga, laneB = laneA + faixa;
+    const xe = laneB + folga, xef = xe + esteiraL; // esteira de montagem de pacotes
+    const x1 = xef + folga, x1f = x1 + 4 * PASSO;  // 1a: 4 de fundo, encostada no muro
     const L = x1f + margem;
     const zTopo = 1.2;
-    const z1f = zTopo + (L1 + L1c) * SLOT_Z;
-    const linhaZ0 = z1f + 1.2;                   // linha de producao (3 m)
+    const z11 = zTopo, z85 = z11 + 3 * PASSO + 0.6; // dois blocos de 3 de lado
+    const fimPatio = Math.max(z85 + 3 * PASSO, zTopo + 4 * PASSO + 4);
+    const linhaZ0 = fimPatio + 1.2;
     const W = linhaZ0 + 3.6;
-    const ox = -L / 2, oz = -W / 2;              // centraliza o galpao na origem
-    const fil = (lado, n, xIni, slots, z, rumo) => ({ lado, n, x0: ox + xIni, slots, z: oz + z, rumo }); // rumo -1: enche da direita p/ esquerda
-    const f2 = [], f1 = [];
-    // 2a fica no fundo, perto da tora e ao lado da carroceria (nao perto da cabine)
-    for (let i = 0; i < L2; i++) f2.push(fil(2, i + 1, x2, T2, z1f - (L2 - i) * SLOT_Z, -1));
-    // 1a enche a partir do muro do fundo (ponta oposta ao caminhao), nao colado no caminhao
-    for (let i = 0; i < L1; i++) f1.push(fil(1, i + 1, x1, T1, zTopo + i * SLOT_Z, -1));
-    for (let i = 0; i < L1c; i++) f1.push(fil(1, L1 + i + 1, x1 + (T1 - T1c) * SLOT_X, T1c, zTopo + (L1 + i) * SLOT_Z, -1));
-    // 3a: patio de fora, atras do galpao (depois da esteira de po), do lado do patio de 1a; 4 fileiras de 4
-    const f3 = [];
-    for (let i = 0; i < 4; i++) f3.push(fil(3, i + 1, x1 + 2, 4, W + 3.2 + i * SLOT_Z, 1));
-    return { L, W, ox, oz, laneA: ox + laneA, laneB: ox + laneB, esteira: { x0: ox + x1, x1: ox + x1 + (T1 - T1c) * SLOT_X, z0: oz + zTopo + L1 * SLOT_Z, z1: oz + linhaZ0 }, linhaZ0: oz + linhaZ0, f1, f2, f3 };
+    const ox = -L / 2, oz = -W / 2;
+    const b11 = bloco3(1, '11 cm', ox + x1, oz + z11, 4, 3, 1, true);
+    const b85 = bloco3(1, '8,5 cm', ox + x1, oz + z85, 4, 3, 5, true);
+    const b2 = bloco3(2, '', ox + x2, oz + zTopo + 4, 3, 4, 1, false);   // 2a mais para o fundo, ao lado da carroceria
+    const b3 = bloco3(3, '', ox + x1, oz + W + 3.2, 3, 4, 1, false);     // 3a atras do galpao
+    return { L, W, ox, oz, laneA: ox + laneA, laneB: ox + laneB, munkX: ox - munk / 2 - 0.4,
+        esteira: { x0: ox + xe, x1: ox + xef, z0: oz + zTopo + 2, z1: oz + linhaZ0 },
+        linhaZ0: oz + linhaZ0, b11, b85, b2, b3 };
 }
-// enche as fileiras: cada medida comeca numa fileira nova; se encher, continua na proxima
-function encherFileiras(grupos, fileiras) {
+// x da fileira r (0 = encostada no muro) e z da pilha c
+function posBloco(b, r, c) {
+    const x = b.doFim ? b.x0 + (b.fundo - 1 - r) * PASSO : b.x0 + r * PASSO;
+    return { x, z: b.z0 + c * PASSO };
+}
+// enche os blocos: cada medida comeca numa fileira nova; 2,40 ocupa 2 fileiras na mesma coluna
+function encherBlocos(grupos, blocos, escolher) {
     const C = calc();
     const pilhas = [], usadas = [];
-    let fi = 0;
+    const prox = new Map(blocos.map(b => [b, 0]));
     grupos.forEach(gr => {
         const p = gr.p;
-        const ocupa = p.comp > 1.3 ? 2 : 1;
-        let resta = gr.qtd, pos = 0;
-        while (resta > 0 && fi < fileiras.length) {
-            const f = fileiras[fi];
-            if (pos + ocupa > f.slots) { fi++; pos = 0; continue; }
-            if (pos === 0) usadas.push({ ...f, p, pacotes: 0, pilhas: 0 });
-            const u = usadas[usadas.length - 1];
-            const n = Math.min(MAX_PILHA, resta);
-            const larg = Math.min(C.largPacote(p), SLOT_Z - 0.15);
-            const xIni = f.rumo > 0 ? f.x0 + pos * SLOT_X : f.x0 + (f.slots - pos - ocupa) * SLOT_X;
-            const comp = p.comp;
-            pilhas.push({ p, x: xIni + (ocupa * SLOT_X - comp) / 2, z: f.z + (SLOT_Z - larg) / 2, comp, larg, alt: C.altPacote(p), n, fileira: f.n, posicao: pos + 1 });
-            u.pacotes += n; u.pilhas++;
-            resta -= n; pos += ocupa;
+        const fundo = p.comp > 1.3 ? 2 : 1;
+        let resta = gr.qtd;
+        const ordem = escolher ? escolher(p) : blocos;
+        for (const b of ordem) {
+            let r = prox.get(b);
+            let fil = null;
+            while (resta > 0 && r + fundo <= b.fundo) {
+                let pos = -1;
+                for (let c = 0; c < b.deLado; c++) {
+                    let ok = true;
+                    for (let k = 0; k < fundo; k++) if (!b.livre[r + k][c]) ok = false;
+                    if (ok) { pos = c; break; }
+                }
+                if (pos < 0) { r += fundo; fil = null; continue; }
+                for (let k = 0; k < fundo; k++) b.livre[r + k][pos] = false;
+                if (!fil) { fil = { lado: b.lado, n: b.primeiroN + r, bloco: b.nome, p, pacotes: 0, pilhas: 0, slots: b.deLado }; usadas.push(fil); }
+                const n = Math.min(MAX_PILHA, resta);
+                const larg = Math.min(C.largPacote(p), 1.4);
+                const a0 = posBloco(b, r, pos), a1 = posBloco(b, r + fundo - 1, pos);
+                const xIni = Math.min(a0.x, a1.x);
+                pilhas.push({ p, x: xIni + (fundo * PASSO - 0.5 - p.comp) / 2, z: a0.z + (1.2 - larg) / 2, comp: p.comp, larg, alt: C.altPacote(p), n, fileira: fil.n, posicao: pos + 1, bloco: b.nome });
+                fil.pacotes += n; fil.pilhas++;
+                resta -= n;
+            }
+            // proxima medida comeca na fileira seguinte
+            const ultima = b.livre.findIndex(l => l.every(Boolean));
+            prox.set(b, ultima < 0 ? b.fundo : ultima);
+            if (resta <= 0) break;
         }
-        if (resta > 0 && pos) fi++;
-        else if (pos) fi++;
         gr.fora = Math.max(0, resta);
     });
-    return { pilhas, fileiras: usadas, total: fileiras.length, capacidade: fileiras.reduce((s, f) => s + f.slots, 0) * MAX_PILHA };
+    const cap = blocos.reduce((s, b) => s + b.fundo * b.deLado, 0);
+    return { pilhas, fileiras: usadas, capacidade: cap * MAX_PILHA };
+}
+function desenharMunk(x, z) {
+    const T = window.THREE;
+    const amarelo = mat(0xeab308, 0.5, 0.2), preto = mat(0x1f2937, 0.7, 0.3);
+    bloco(x, 1.1, z, 2.2, 1.0, 4.0, amarelo);                  // chassi
+    bloco(x, 2.2, z - 1.1, 1.8, 1.3, 1.4, mat(0xf8fafc, 0.4, 0.1)); // cabine
+    bloco(x, 2.25, z - 1.1, 1.82, 0.7, 1.2, mat(0x0f172a, 0.2, 0.6)); // vidro
+    [-1.3, 1.3].forEach(dz => [-1, 1].forEach(l => {
+        const r = new T.Mesh(new T.CylinderGeometry(0.62, 0.62, 0.5, 18), new T.MeshLambertMaterial({ color: 0x111111 }));
+        r.rotation.x = Math.PI / 2; r.rotation.y = Math.PI / 2; r.rotation.z = Math.PI / 2;
+        r.position.set(x + l * 1.15, 0.62, z + dz); r.castShadow = true; cena.conteudo.add(r);
+    }));
+    bloco(x, 2.0, z + 1.0, 0.5, 1.2, 0.5, amarelo);            // coluna do guindaste
+    const lanca = new T.Mesh(new T.BoxGeometry(0.32, 0.32, 4.2), amarelo);
+    lanca.position.set(x, 3.4, z + 2.4); lanca.rotation.x = -0.55; lanca.castShadow = true; cena.conteudo.add(lanca);
+    const braco = new T.Mesh(new T.BoxGeometry(0.26, 0.26, 2.6), amarelo);
+    braco.position.set(x, 3.6, z + 4.8); braco.rotation.x = 0.5; cena.conteudo.add(braco);
+    bloco(x, 2.4, z + 5.6, 0.7, 0.6, 0.5, preto);              // garra
+    rotuloTexto('MUNK FLORESTAL', x, 4.8, z, 0.6);
 }
 function desenharPatio() {
     limparConteudo();
@@ -2249,14 +2285,13 @@ function desenharPatio() {
     const L = G.L, W = G.W;
     patio.comp = L; patio.larg = W;
     ajustarSombra(Math.max(L, W) * 0.8);
-    // terreno e piso de concreto do galpao
-    const terra = new T.Mesh(new T.PlaneGeometry(L + 34, W + 30), new T.MeshLambertMaterial({ color: 0xc8a27a }));
-    terra.rotation.x = -Math.PI / 2; terra.position.set(2, -0.01, 0); terra.receiveShadow = true;
+    const terra = new T.Mesh(new T.PlaneGeometry(L + 40, W + 30), new T.MeshLambertMaterial({ color: 0xc8a27a }));
+    terra.rotation.x = -Math.PI / 2; terra.position.set(0, -0.01, 0); terra.receiveShadow = true;
     cena.conteudo.add(terra);
     const piso = new T.Mesh(new T.PlaneGeometry(L, W), new T.MeshLambertMaterial({ color: 0xa8a29e }));
     piso.rotation.x = -Math.PI / 2; piso.position.y = 0.002; piso.receiveShadow = true;
     cena.conteudo.add(piso);
-    // galpao aberto: colunas e tesouras do telhado
+    // galpao aberto: colunas e tesouras
     const H = 5.5, aco = mat(0x475569, 0.5, 0.4);
     const nCol = Math.max(2, Math.round(L / 6));
     for (let i = 0; i <= nCol; i++) {
@@ -2265,36 +2300,39 @@ function desenharPatio() {
         bloco(x, H, 0, 0.18, 0.3, W, aco);
     }
     [-W / 2, W / 2].forEach(z => bloco(0, H, z, L, 0.25, 0.18, aco));
-    // faixas no chao
-    const zA = G.f1[0].z, zB = G.f1[G.f1.length - 1].z + SLOT_Z;
-    faixaChao(G.f2[0].x0 - 0.2, zA - 0.2, G.f2[0].x0 + 3 * SLOT_X + 0.2, G.f2[G.f2.length - 1].z + SLOT_Z + 0.2, 0xfde68a);
-    faixaChao(G.f1[0].x0 - 0.2, zA - 0.2, G.f1[0].x0 + 11 * SLOT_X + 0.2, G.f1[3].z + SLOT_Z, 0xbbf7d0);
-    faixaChao(G.f1[4].x0 - 0.2, G.f1[4].z, G.f1[0].x0 + 11 * SLOT_X + 0.2, zB + 0.2, 0xbbf7d0);
+    // chao de cada bloco + marca de cada pilha (com corredor de 50 cm)
+    const corBloco = { 1: 0xbbf7d0, 2: 0xfde68a, 3: 0xfecaca };
+    const marcas = [];
+    [G.b11, G.b85, G.b2, G.b3].forEach(b => {
+        faixaChao(b.x0 - 0.3, b.z0 - 0.3, b.x0 + b.fundo * PASSO - 0.2, b.z0 + b.deLado * PASSO - 0.2, corBloco[b.lado]);
+        for (let r = 0; r < b.fundo; r++) for (let c = 0; c < b.deLado; c++) {
+            const q = posBloco(b, r, c);
+            marcas.push({ x: q.x + 0.6, y: 0.017, z: q.z + 0.6, sx: 1.2, sy: 0.006, sz: 1.2 });
+        }
+    });
+    malhaInstanciada(marcas, 0xe2e8f0, false);
     faixaChao(G.laneA, -W / 2, G.laneB, G.linhaZ0 - 0.6, 0xfef9c3);
-    // linhas finas marcando cada fileira
-    [...G.f1, ...G.f2].forEach(f => faixaChao(f.x0, f.z + SLOT_Z - 0.04, f.x0 + f.slots * SLOT_X, f.z + SLOT_Z, 0x94a3b8, 0.016));
-    // linha de producao: esteira comprida + maquinas
+    // linha de producao
     const azul = mat(0x1d4ed8, 0.5, 0.3);
     const zl = G.linhaZ0 + 1.5;
     bloco(0, 0.45, zl, L - 3, 0.9, 1.2, mat(0x334155, 0.6, 0.3));
     for (let i = 0; i < 5; i++) bloco(-L / 2 + 3 + i * ((L - 6) / 4), 1.1, zl, 2.2, 2.2, 2.2, azul);
     rotuloTexto('LINHA DE PRODUÇÃO', 0, 2.9, zl, 0.7);
-    // esteira de montagem de pacotes (ainda nao tem pacote pronto): esteira + 2 pessoas
-    const E = G.esteira, ex = (E.x0 + E.x1) / 2;
-    bloco(ex, 0.45, (E.z0 + E.z1) / 2, 0.9, 0.9, E.z1 - E.z0 - 0.4, mat(0x2563eb, 0.5, 0.3));
+    // esteira de montagem de pacotes + 2 pessoas
+    const E = G.esteira, ex = (E.x0 + E.x1) / 2, ez = (E.z0 + E.z1) / 2;
+    bloco(ex, 0.45, ez, 0.9, 0.9, E.z1 - E.z0 - 0.4, mat(0x2563eb, 0.5, 0.3));
     const pessoa = (x, z) => {
         const corpo = new T.Mesh(new T.CylinderGeometry(0.2, 0.22, 1.1, 12), new T.MeshLambertMaterial({ color: 0x1e3a8a }));
         corpo.position.set(x, 0.85, z); corpo.castShadow = true;
         const cab = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), new T.MeshLambertMaterial({ color: 0xd6a37c }));
         cab.position.set(x, 1.55, z);
-        const capacete = new T.Mesh(new T.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshLambertMaterial({ color: 0xf8fafc }));
-        capacete.position.set(x, 1.6, z);
-        cena.conteudo.add(corpo, cab, capacete);
+        cena.conteudo.add(corpo, cab);
     };
-    pessoa(ex - 0.9, (E.z0 + E.z1) / 2 - 1); pessoa(ex + 0.9, (E.z0 + E.z1) / 2 + 0.6);
-    rotuloTexto('MONTAGEM DE PACOTES', ex, 2.4, (E.z0 + E.z1) / 2, 0.55);
-    // tora logo atras do patio de 2a (lado de fora, parede da esquerda)
-    const toraX = -L / 2 - 2.2;
+    pessoa(ex - 0.9, ez - 1); pessoa(ex + 0.9, ez + 0.6);
+    rotuloTexto('MONTAGEM DE PACOTES', ex, 2.4, ez, 0.55);
+    // munk florestal entre o patio de 2a e as toras; toras mais para fora
+    desenharMunk(G.munkX, G.b2.z0 + 2);
+    const toraX = G.munkX - 4.2;
     const geoTora = new T.CylinderGeometry(0.16, 0.16, 3, 10);
     const nTora = 3 * 30;
     const toras = new T.InstancedMesh(geoTora, new T.MeshLambertMaterial({ color: 0x9a6b3f }), nTora);
@@ -2318,7 +2356,7 @@ function desenharPatio() {
     monte(L / 2 + 4, W / 2 + 2.5, 0xe7d3a8, 'PÓ');
     monte(L / 2 + 10, W / 2 + 1, 0xb98b56, 'CAVACO');
     rotuloTexto('ESTEIRA DE PÓ E CAVACO', L * 0.1, 1.5, W / 2 + 1.5, 0.6);
-    // caminhao no meio: entrou de re, cabine virada para fora (como na foto)
+    // caminhao no meio, de re, cabine para fora
     const n0 = cena.conteudo.children.length;
     desenharVeiculo([7.2], 2.4, { fueiro: 1.2 });
     const ehGradeOuSombra = o => o.type === 'GridHelper' || !!(o.material && o.material.isShadowMaterial);
@@ -2326,20 +2364,22 @@ function desenharPatio() {
     const novos = cena.conteudo.children.slice(n0);
     const caminhao = new T.Group();
     novos.forEach(o => { cena.conteudo.remove(o); caminhao.add(o); });
-    caminhao.rotation.y = Math.PI / 2; // cabine para -z (lado de fora)
+    caminhao.rotation.y = Math.PI / 2;
     const cx = (G.laneA + G.laneB) / 2;
     caminhao.position.set(cx, 0, -W / 2 + 4.4);
     cena.conteudo.add(caminhao);
     rotuloTexto('CARREGAMENTO', cx, 4.6, -W / 2 + 2, 0.7);
-    // pacotes do estoque
+    // pacotes
+    const C = calc();
     const grupos1 = patio.grupos.filter(g => g.p.classe === 1);
     const grupos2 = patio.grupos.filter(g => g.p.classe === 2);
     const grupos3 = patio.grupos.filter(g => g.p.classe !== 1 && g.p.classe !== 2);
-    const d1 = encherFileiras(grupos1, G.f1), d2 = encherFileiras(grupos2, G.f2), d3 = encherFileiras(grupos3, G.f3);
-    faixaChao(G.f3[0].x0 - 0.2, G.f3[0].z - 0.2, G.f3[0].x0 + 4 * SLOT_X + 0.2, G.f3[3].z + SLOT_Z + 0.2, 0xfecaca);
+    const d1 = encherBlocos(grupos1, [G.b11, G.b85], p => (Number(p.larg) >= 10 ? [G.b11, G.b85] : [G.b85, G.b11]));
+    const d2 = encherBlocos(grupos2, [G.b2]);
+    const d3 = encherBlocos(grupos3, [G.b3]);
     patio.alvos = [];
     const caixas = [], tampas = [], fitas = [];
-    const desenharLado = (d, lado, fils) => {
+    const desenharLado = (d, lado) => {
         d.pilhas.forEach(pl => {
             for (let k = 0; k < pl.n; k++) {
                 const y = k * (pl.alt + 0.08);
@@ -2359,24 +2399,22 @@ function desenharPatio() {
                 cena.conteudo.add(borda);
             }
         });
-        // numero da fileira na ponta do caminhao
-        fils.forEach(f => {
-            const xp = f.rumo > 0 ? f.x0 - 0.35 : f.x0 + f.slots * SLOT_X + 0.35;
-            rotuloTexto(`F${f.n}`, xp, 0.35, f.z + SLOT_Z / 2, 0.4, '#1d4ed8');
-        });
     };
-    desenharLado(d2, 2, G.f2); desenharLado(d1, 1, G.f1); desenharLado(d3, 3, G.f3);
+    desenharLado(d2, 2); desenharLado(d1, 1); desenharLado(d3, 3);
     malhaInstanciada(caixas, COR_MADEIRA);
     malhaInstanciada(tampas, 0x6b4f2a, false);
     malhaInstanciada(fitas, 0x16a34a, false);
-    rotuloTexto('PÁTIO 2ª', G.f2[0].x0 + 1.5 * SLOT_X, 5.2, G.f2[0].z, 0.7, '#a16207');
-    rotuloTexto('PÁTIO 1ª', G.f1[0].x0 + 5.5 * SLOT_X, 5.2, G.f1[0].z, 0.7, '#15803d');
-    rotuloTexto('PÁTIO 3ª', G.f3[0].x0 + 2 * SLOT_X, 3.4, G.f3[0].z, 0.7, '#b91c1c');
+    // numero das fileiras ao lado de cada bloco
+    [G.b11, G.b85, G.b2, G.b3].forEach(b => { for (let r = 0; r < b.fundo; r++) { const q = posBloco(b, r, 0); rotuloTexto(`F${b.primeiroN + r}`, q.x + 0.6, 0.35, b.z0 - 0.55, 0.4, '#1d4ed8'); } });
+    rotuloTexto('PÁTIO 1ª · 11 cm', G.b11.x0 + 2 * PASSO, 5.2, G.b11.z0, 0.6, '#15803d');
+    rotuloTexto('PÁTIO 1ª · 8,5 cm', G.b85.x0 + 2 * PASSO, 5.2, G.b85.z0 + 1.5 * PASSO, 0.6, '#15803d');
+    rotuloTexto('PÁTIO 2ª', G.b2.x0 + 1.5 * PASSO, 5.2, G.b2.z0, 0.7, '#a16207');
+    rotuloTexto('PÁTIO 3ª', G.b3.x0 + 1.5 * PASSO, 3.4, G.b3.z0, 0.7, '#b91c1c');
     patio.d1 = d1; patio.d2 = d2; patio.d3 = d3;
     const total = patio.grupos.reduce((s, g) => s + g.qtd, 0);
     const fora = patio.grupos.reduce((s, g) => s + (g.fora || 0), 0);
     const vol = patio.grupos.reduce((s, g) => s + g.qtd * (g.p.esp / 100) * (g.p.larg / 100) * g.p.comp * (g.p.alt * g.p.cam + (g.p.am || 0)), 0);
-    document.getElementById('v3dInfo').textContent = `${total} pacote(s) no pátio · ${fmt(vol, 3)} m³ · 1ª: ${d1.fileiras.length} de 8 fileiras · 2ª: ${d2.fileiras.length} de 5 fileiras · até ${MAX_PILHA} por pilha${fora ? ` · ${fora} não cabem nas fileiras` : ''}`;
+    document.getElementById('v3dInfo').textContent = `${total} pacote(s) no pátio · ${fmt(vol, 3)} m³ · 1ª: ${d1.fileiras.length} de 8 fileiras · 2ª: ${d2.fileiras.length} de 3 fileiras · até ${MAX_PILHA} por pilha${fora ? ` · ${fora} não cabem` : ''}`;
     renderListaPatio();
 }
 function renderListaPatio() {
@@ -2387,8 +2425,8 @@ function renderListaPatio() {
         const ativo = patio.sel && patio.sel.lado === lado && patio.sel.fileira === f.n;
         const cor = p.classe === 1 ? '#16a34a' : p.classe === 2 ? '#eab308' : '#dc2626';
         return `<button type="button" class="v3d-item v3d-item-patio${ativo ? ' ativo' : ''}" style="--cor:${cor}" data-pfil="${lado}|${f.n}">
-          <span class="v3d-item-txt"><b>F${f.n} · ${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</b>
-          <span>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${f.pacotes} pacote(s) em ${f.pilhas} de ${f.slots} posição(ões)</span></span></button>`;
+          <span class="v3d-item-txt"><b>F${f.n}${f.bloco ? ` (${f.bloco})` : ''} · ${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</b>
+          <span>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${f.pacotes} pacote(s) em ${f.pilhas} pilha(s)</span></span></button>`;
     };
     const sel = patio.sel;
     let ficha = '';
@@ -2400,13 +2438,13 @@ function renderListaPatio() {
           <div><dt>Configuração</dt><dd>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</dd></div>
           <div><dt>Peças por pacote</dt><dd>${pecas}</dd></div>
           <div><dt>Volume por pacote</dt><dd>${fmt((p.esp / 100) * (p.larg / 100) * p.comp * pecas, 3)} m³</dd></div>
-          <div><dt>Posição</dt><dd>${sel.posicao}ª a partir do ${sel.lado === 1 ? 'muro' : 'caminhão'}</dd></div>
+          <div><dt>Posição</dt><dd>${sel.bloco ? `bloco ${sel.bloco} · ` : ''}${sel.posicao}ª pilha da fileira</dd></div>
           <div><dt>Pacotes nesta pilha</dt><dd>${sel.n}</dd></div>
         </dl></div>`;
     }
     el.innerHTML = `<div class="v3d-lista-topo"><b>Pátio de pacotes</b>
         <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda (encostada no muro), caminhão no meio, 2ª e tora à direita. Toque numa pilha ou fileira para ver o pacote.</p>
-        <p class="v3d-dica-lista">Capacidade: 1ª ${patio.d1.capacidade || 304} pacotes (8 fileiras: 4 de 11 e 4 de 8) · 2ª ${patio.d2.capacidade || 60} pacotes (5 fileiras de 3) · até ${MAX_PILHA} por pilha.</p>
+        <p class="v3d-dica-lista">Capacidade: 1ª ${patio.d1.capacidade || 96} pacotes (2 blocos de 4 fileiras × 3: 11 cm e 8,5 cm) · 2ª ${patio.d2.capacidade || 48} pacotes (3 fileiras × 4) · até ${MAX_PILHA} por pilha · 50 cm entre pilhas.</p>
         ${ficha}</div>
       <div class="v3d-itens">
         <b class="v3d-lado-tit">Pátio 1ª</b>${patio.d1.fileiras.map(f => linhaFil(f, 1)).join('') || '<p class="v3d-dica-lista">Sem pacotes de 1ª.</p>'}
@@ -2474,5 +2512,5 @@ window.abrirPatio3D = async function(itens, opcoes = {}) {
     instalarPatioEventos();
     desenhar();
     // visto de quem chega pela entrada (como na foto): 1a a esquerda, 2a e tora a direita
-    enquadrar(0, 0, 0, Math.max(patio.comp, patio.larg) * 0.48, [-0.3, 1, -0.95]);
+    enquadrar(-patio.comp * 0.06, 0, 0, Math.max(patio.comp, patio.larg) * 0.62, [-0.3, 1, -0.95]);
 };
