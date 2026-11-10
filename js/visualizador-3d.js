@@ -2210,7 +2210,7 @@ function layoutPatio(cfg = CFG_PATIO_PADRAO) {
     const b2 = bloco3(2, '', ox + x2, oz + zTopo + 4, c2.fundo, c2.lado, 1, false);   // 2a mais para o fundo, ao lado da carroceria
     const b3 = bloco3(3, '', ox + x1, oz + W + 3.2, c3.fundo, c3.lado, 1, false);     // 3a atras do galpao
     return { L, W, ox, oz, laneA: ox + laneA, laneB: ox + laneB, munkX: ox - munk / 2 - 0.4,
-        esteira: { x0: ox + xe, x1: ox + xef, z0: oz + zTopo + 2, z1: oz + linhaZ0 },
+        esteira: { x0: ox + xe, x1: ox + xef, z0: oz + linhaZ0 - 5.6, z1: oz + linhaZ0 },  // esteira curta, saindo da linha
         linhaZ0: oz + linhaZ0, b11, b2, b3 };
 }
 // x da fileira r (0 = encostada no muro) e z da pilha c
@@ -2335,17 +2335,16 @@ function desenharPatio() {
     bloco(0, 0.45, zl, L - 3, 0.9, 1.2, mat(0x334155, 0.6, 0.3));
     for (let i = 0; i < 5; i++) bloco(-L / 2 + 3 + i * ((L - 6) / 4), 1.1, zl, 2.2, 2.2, 2.2, azul);
     rotuloTexto('LINHA DE PRODUÇÃO', 0, 2.9, zl, 0.7);
-    // esteira de montagem de pacotes + 2 pessoas
+    // esteira de montagem de pacotes: 3 pacotes sendo montados de cada lado (1 de 1a e 2 de 2a: comeco, meio e fim)
     const E = G.esteira, ex = (E.x0 + E.x1) / 2, ez = (E.z0 + E.z1) / 2;
-    bloco(ex, 0.45, ez, 0.9, 0.9, E.z1 - E.z0 - 0.4, mat(0x2563eb, 0.5, 0.3));
-    const pessoa = (x, z) => {
-        const corpo = new T.Mesh(new T.CylinderGeometry(0.2, 0.22, 1.1, 12), new T.MeshLambertMaterial({ color: 0x1e3a8a }));
-        corpo.position.set(x, 0.85, z); corpo.castShadow = true;
-        const cab = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), new T.MeshLambertMaterial({ color: 0xd6a37c }));
-        cab.position.set(x, 1.55, z);
-        cena.conteudo.add(corpo, cab);
-    };
-    pessoa(ex - 0.9, ez - 1); pessoa(ex + 0.9, ez + 0.6);
+    bloco(ex, 0.45, ez, 0.8, 0.9, E.z1 - E.z0 - 0.2, mat(0x2563eb, 0.5, 0.3));
+    const emMontagem = [];
+    [-1, 1].forEach(lado => [[E.z1 - 0.9, 1], [ez, 2], [E.z0 + 0.9, 2]].forEach(([z, cl]) => {
+        const x = ex + lado * 1.15;
+        emMontagem.push({ x, y: 0.28, z, sx: 1.0, sy: 0.5, sz: 1.2, tom: cl });
+        rotuloTexto(`${cl}ª`, x, 0.85, z, 0.32, cl === 1 ? '#15803d' : '#a16207');
+    }));
+    malhaInstanciada(emMontagem, COR_MADEIRA);
     rotuloTexto('MONTAGEM DE PACOTES', ex, 2.4, ez, 0.55);
     // munk florestal entre o patio de 2a e as toras; toras mais para fora
     desenharMunk(G.munkX, G.b2.z0 + 2);
@@ -2399,6 +2398,8 @@ function desenharPatio() {
                 caixas.push({ x: pl.x + pl.comp / 2, y: y + pl.alt / 2 + 0.08, z: pl.z + pl.larg / 2, sx: pl.comp, sy: pl.alt, sz: pl.larg, tom: k % 3 });
                 tampas.push({ x: pl.x + pl.comp / 2, y: y + 0.04, z: pl.z + pl.larg / 2, sx: pl.comp * 0.9, sy: 0.08, sz: pl.larg * 0.9 });
                 fitas.push(...fitasDoPacote({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }));
+                // etiqueta do pacote, virada para a entrada
+                colarEtiqueta({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }, pl.p, -1);
             }
             const alto = pl.n * (pl.alt + 0.08);
             const alvo = new T.Mesh(new T.BoxGeometry(pl.comp, alto, pl.larg), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
@@ -2418,15 +2419,33 @@ function desenharPatio() {
     malhaInstanciada(tampas, 0x6b4f2a, false);
     malhaInstanciada(fitas, 0x16a34a, false);
     // numero das fileiras ao lado de cada bloco
+    // placa em cima de cada fileira: medida, configuracao, pacotes e cubagem
+    const placas = new Map();
+    [...d1.pilhas, ...d2.pilhas, ...d3.pilhas].forEach(pl => {
+        const id = pl.lado + '|' + pl.c;
+        const f = placas.get(id) || { pl, x0: Infinity, x1: -Infinity, z: pl.z + pl.larg / 2, topo: 0, pct: 0, vol: 0, ks: new Set() };
+        const p = pl.p;
+        f.x0 = Math.min(f.x0, pl.x); f.x1 = Math.max(f.x1, pl.x + pl.comp);
+        f.topo = Math.max(f.topo, pl.n * (pl.alt + 0.08));
+        f.pct += pl.n;
+        f.vol += pl.n * (p.esp / 100) * (p.larg / 100) * p.comp * (p.alt * p.cam + (p.am || 0));
+        f.ks.add(pl.k);
+        placas.set(id, f);
+    });
+    placas.forEach(f => {
+        const p = f.pl.p;
+        const txt = `F${f.pl.fileira} · ${p.classe}ª ${fmt(p.esp, 1)}×${fmt(p.larg, 1)}×${fmt(p.comp, 2)} · (${p.alt}×${p.cam})${p.am ? `+${p.am}` : ''}${f.ks.size > 1 ? ' +outras' : ''} · ${f.pct} pct · ${fmt(f.vol, 3)} m³`;
+        rotuloTexto(txt, (f.x0 + f.x1) / 2, f.topo + 0.5, f.z, 0.5, '#1f2937');
+    });
     // F1, F2... na frente de cada fileira (lado do corredor)
     [G.b11, G.b2, G.b3].forEach(b => { for (let c = 0; c < b.deLado; c++) { const q = posBloco(b, b.fundo - 1, c); const xf = b.doFim ? q.x - 0.45 : q.x + 1.65; rotuloTexto(`F${b.primeiroN + c}`, xf, 0.35, q.z + 0.6, 0.4, '#1d4ed8'); } });
     // fantasma do arraste
     patio.fantasma = new T.Mesh(new T.BoxGeometry(1.2, 0.6, 1.2), new T.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.45, depthWrite: false }));
     patio.fantasma.visible = false;
     cena.conteudo.add(patio.fantasma);
-    rotuloTexto('PÁTIO 1ª', G.b11.x0 + 2 * PASSO, 5.2, G.b11.z0, 0.7, '#15803d');
-    rotuloTexto('PÁTIO 2ª', G.b2.x0 + 1.5 * PASSO, 5.2, G.b2.z0, 0.7, '#a16207');
-    rotuloTexto('PÁTIO 3ª', G.b3.x0 + 1.5 * PASSO, 3.4, G.b3.z0, 0.7, '#b91c1c');
+    rotuloTexto('PÁTIO 1ª', G.b11.x0 + 2 * PASSO, 0.6, G.b11.z0 - 0.9, 0.7, '#15803d');
+    rotuloTexto('PÁTIO 2ª', G.b2.x0 + 1.5 * PASSO, 0.6, G.b2.z0 - 0.9, 0.7, '#a16207');
+    rotuloTexto('PÁTIO 3ª', G.b3.x0 + 1.5 * PASSO, 0.6, G.b3.z0 - 0.9, 0.7, '#b91c1c');
     patio.d1 = d1; patio.d2 = d2; patio.d3 = d3;
     const total = patio.grupos.reduce((s, g) => s + g.qtd, 0);
     const fora = patio.grupos.reduce((s, g) => s + (g.fora || 0), 0);
