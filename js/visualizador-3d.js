@@ -1393,7 +1393,7 @@ function garantirModal() {
     $('v3dPecaRepor').addEventListener('click', () => { atual.pecaFora = new Set(); atual.pecaSel = new Set(); atual.manterCamera = true; desenhar(); });
     $('v3dPacOrig').addEventListener('click', () => { if (atual.produtoOriginal) { atual.produto = { ...atual.produtoOriginal }; atual.pecaSel = new Set(); atual.pecaFora = new Set(); desenhar(); } });
     $('v3dBitrem').addEventListener('change', lerCfg);
-    modal.addEventListener('click', e => { if (e.target === modal) window.fecharVisualizador3D(); });
+    // nao fecha ao clicar fora: so pelo X (o 3D ocupa a tela toda)
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') window.fecharVisualizador3D(); });
     return modal;
 }
@@ -2187,6 +2187,33 @@ function faixaChao(x0, z0, x1, z1, cor, y = 0.012) {
 // 2a: um bloco de 3 fileiras x 4 pilhas. 3a: fora, atras do galpao. Ate 4 pacotes por pilha.
 // 50 cm entre pilhas para uma pessoa passar etiquetando. Fileira enche a partir do muro.
 const PASSO = 1.2 + 0.5;   // pacote de 1,20 + 50 cm de corredor
+// "1ª 17/85/120" e "(50X14)+16": o mesmo texto na etiqueta do pacote e ao passar o mouse
+function textoPacotePatio(p) {
+    return [`${p.classe}ª ${Math.round(p.esp * 10)}/${Math.round(p.larg * 10)}/${Math.round(p.comp * 100)}`, `(${p.alt}X${p.cam})${p.am ? `+${p.am}` : ''}`];
+}
+const texEtiqPatio = new Map();
+function etiquetaPatio(p, x, y, z, larg) {
+    const T = window.THREE;
+    const [l1, l2] = textoPacotePatio(p);
+    const chave = l1 + '|' + l2;
+    if (!texEtiqPatio.has(chave)) {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 160;
+        const k = c.getContext('2d');
+        k.fillStyle = '#ffffff'; k.fillRect(0, 0, 256, 160);
+        k.strokeStyle = '#111827'; k.lineWidth = 6; k.strokeRect(3, 3, 250, 154);
+        k.fillStyle = '#111827'; k.textAlign = 'center'; k.textBaseline = 'middle';
+        k.font = 'bold 46px sans-serif'; k.fillText(l1, 128, 56, 236);
+        k.font = 'bold 40px sans-serif'; k.fillText(l2, 128, 112, 236);
+        const t = new T.CanvasTexture(c); t.compartilhada = true;
+        texEtiqPatio.set(chave, t);
+    }
+    const w = Math.min(0.62, larg * 0.9), h = w * 0.625;
+    const geo = new T.PlaneGeometry(w, h);
+    geo.rotateY(Math.PI); // de frente para a entrada (lado -z)
+    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: texEtiqPatio.get(chave) }));
+    m.position.set(x, y, z);
+    cena.conteudo.add(m);
+}
 function bloco3(lado, nome, x0, z0, fundo, deLado, primeiroN, doFim) {
     // fileiras correm ao longo de z (de lado); a profundidade (uma na frente da outra) e ao longo de x
     return { lado, nome, x0, z0, fundo, deLado, primeiroN, doFim, livre: Array.from({ length: fundo }, () => Array(deLado).fill(true)) };
@@ -2398,8 +2425,8 @@ function desenharPatio() {
                 caixas.push({ x: pl.x + pl.comp / 2, y: y + pl.alt / 2 + 0.08, z: pl.z + pl.larg / 2, sx: pl.comp, sy: pl.alt, sz: pl.larg, tom: k % 3 });
                 tampas.push({ x: pl.x + pl.comp / 2, y: y + 0.04, z: pl.z + pl.larg / 2, sx: pl.comp * 0.9, sy: 0.08, sz: pl.larg * 0.9 });
                 fitas.push(...fitasDoPacote({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }));
-                // etiqueta do pacote, virada para a entrada
-                colarEtiqueta({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }, pl.p, -1);
+                // etiqueta do pacote, de frente para a entrada
+                etiquetaPatio(pl.p, pl.x + pl.comp / 2, y + 0.08 + pl.alt / 2, pl.z - 0.006, Math.min(pl.comp, pl.alt * 1.6));
             }
             const alto = pl.n * (pl.alt + 0.08);
             const alvo = new T.Mesh(new T.BoxGeometry(pl.comp, alto, pl.larg), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
@@ -2419,24 +2446,6 @@ function desenharPatio() {
     malhaInstanciada(tampas, 0x6b4f2a, false);
     malhaInstanciada(fitas, 0x16a34a, false);
     // numero das fileiras ao lado de cada bloco
-    // placa em cima de cada fileira: medida, configuracao, pacotes e cubagem
-    const placas = new Map();
-    [...d1.pilhas, ...d2.pilhas, ...d3.pilhas].forEach(pl => {
-        const id = pl.lado + '|' + pl.c;
-        const f = placas.get(id) || { pl, x0: Infinity, x1: -Infinity, z: pl.z + pl.larg / 2, topo: 0, pct: 0, vol: 0, ks: new Set() };
-        const p = pl.p;
-        f.x0 = Math.min(f.x0, pl.x); f.x1 = Math.max(f.x1, pl.x + pl.comp);
-        f.topo = Math.max(f.topo, pl.n * (pl.alt + 0.08));
-        f.pct += pl.n;
-        f.vol += pl.n * (p.esp / 100) * (p.larg / 100) * p.comp * (p.alt * p.cam + (p.am || 0));
-        f.ks.add(pl.k);
-        placas.set(id, f);
-    });
-    placas.forEach(f => {
-        const p = f.pl.p;
-        const txt = `F${f.pl.fileira} · ${p.classe}ª ${fmt(p.esp, 1)}×${fmt(p.larg, 1)}×${fmt(p.comp, 2)} · (${p.alt}×${p.cam})${p.am ? `+${p.am}` : ''}${f.ks.size > 1 ? ' +outras' : ''} · ${f.pct} pct · ${fmt(f.vol, 3)} m³`;
-        rotuloTexto(txt, (f.x0 + f.x1) / 2, f.topo + 0.5, f.z, 0.5, '#1f2937');
-    });
     // F1, F2... na frente de cada fileira (lado do corredor)
     [G.b11, G.b2, G.b3].forEach(b => { for (let c = 0; c < b.deLado; c++) { const q = posBloco(b, b.fundo - 1, c); const xf = b.doFim ? q.x - 0.45 : q.x + 1.65; rotuloTexto(`F${b.primeiroN + c}`, xf, 0.35, q.z + 0.6, 0.4, '#1d4ed8'); } });
     // fantasma do arraste
@@ -2579,8 +2588,25 @@ function instalarPatioEventos() {
                 e.stopPropagation();
             }
         }, true);
+        const dica = document.createElement('div');
+        dica.className = 'v3d-dica-pacote'; dica.hidden = true;
+        palco.appendChild(dica);
         palco.addEventListener('pointermove', e => {
-            if (!arr || atual.modo !== 'patio') return;
+            if (atual.modo !== 'patio' || !patio) { dica.hidden = true; return; }
+            if (!arr) {
+                const hit = e.pointerType === 'mouse' ? raioPatio(e).intersectObjects(patio.alvos || [])[0] : null;
+                if (hit) {
+                    const [l1, l2] = textoPacotePatio(hit.object.userData.pilha.p);
+                    dica.innerHTML = `<b>${l1}</b><span>${l2}</span>`;
+                    const r = palco.getBoundingClientRect();
+                    dica.style.left = (e.clientX - r.left + 14) + 'px';
+                    dica.style.top = (e.clientY - r.top + 14) + 'px';
+                    dica.hidden = false;
+                    palco.style.cursor = 'grab';
+                } else { dica.hidden = true; palco.style.cursor = ''; }
+                return;
+            }
+            dica.hidden = true;
             if (Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 6) arr.moveu = true;
             if (!arr.moveu) return;
             palco.style.cursor = 'grabbing';
