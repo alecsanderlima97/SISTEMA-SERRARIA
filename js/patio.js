@@ -3948,7 +3948,17 @@ window.verPatio3D = async function() {
         const atual = await carregarRelatorioPatioAtual();
         const itens = itensPatioPara3D(atual?.itens || []);
         if (!itens.length) { alert('Não há pacotes no pátio para mostrar.'); return; }
-        window.abrirPatio3D?.(itens, { titulo: 'Pátio em 3D' });
+        // arrumacao salva: a mais recente entre os relatorios (passa de um dia para o outro)
+        const relatorios = await carregarRelatoriosPatioCache();
+        const comLayout = relatorios.filter(r => r?.layout3d?.salvoEm).sort((a, b) => String(b.layout3d.salvoEm).localeCompare(String(a.layout3d.salvoEm)))[0];
+        window.abrirPatio3D?.(itens, {
+            titulo: 'Pátio em 3D',
+            layout: comLayout?.layout3d || null,
+            aoSalvar: atual?.id ? async layout3d => {
+                await window.FS.updateDoc('patio_relatorios', atual.id, { layout3d });
+                atual.layout3d = layout3d;
+            } : null
+        });
     } catch (e) {
         alert('Não foi possível carregar o pátio. Tente de novo.');
     }

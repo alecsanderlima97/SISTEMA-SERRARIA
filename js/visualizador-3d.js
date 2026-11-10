@@ -2191,23 +2191,24 @@ function bloco3(lado, nome, x0, z0, fundo, deLado, primeiroN, doFim) {
     // fileiras correm ao longo de z (de lado); a profundidade (uma na frente da outra) e ao longo de x
     return { lado, nome, x0, z0, fundo, deLado, primeiroN, doFim, livre: Array.from({ length: fundo }, () => Array(deLado).fill(true)) };
 }
-function layoutPatio() {
+const CFG_PATIO_PADRAO = { b1: { fundo: 4, lado: 3 }, b2: { fundo: 3, lado: 4 }, b3: { fundo: 3, lado: 4 } };
+function layoutPatio(cfg = CFG_PATIO_PADRAO) {
+    const c1 = cfg.b1, c2 = cfg.b2, c3 = cfg.b3;
     const margem = 1, folga = 0.9, faixa = 4.4, esteiraL = 3.2, munk = 4.2;
     const x2 = margem;                            // 2a encostada na parede da esquerda (munk e tora do lado de fora)
-    const x2f = x2 + 3 * PASSO;
+    const x2f = x2 + c2.fundo * PASSO;
     const laneA = x2f + folga, laneB = laneA + faixa;
     const xe = laneB + folga, xef = xe + esteiraL; // esteira de montagem de pacotes
-    const x1 = xef + folga, x1f = x1 + 4 * PASSO;  // 1a: 4 de fundo, encostada no muro
+    const x1 = xef + folga, x1f = x1 + c1.fundo * PASSO;  // 1a encostada no muro
     const L = x1f + margem;
     const zTopo = 1.2;
-    const z11 = zTopo;
-    const fimPatio = Math.max(z11 + 3 * PASSO, zTopo + 4 * PASSO + 4);
+    const fimPatio = Math.max(zTopo + c1.lado * PASSO, zTopo + 4 + c2.lado * PASSO, zTopo + 4 * PASSO + 4);
     const linhaZ0 = fimPatio + 1.2;
     const W = linhaZ0 + 3.6;
     const ox = -L / 2, oz = -W / 2;
-    const b11 = bloco3(1, '', ox + x1, oz + z11, 4, 3, 1, true);
-    const b2 = bloco3(2, '', ox + x2, oz + zTopo + 4, 3, 4, 1, false);   // 2a mais para o fundo, ao lado da carroceria
-    const b3 = bloco3(3, '', ox + x1, oz + W + 3.2, 3, 4, 1, false);     // 3a atras do galpao
+    const b11 = bloco3(1, '', ox + x1, oz + zTopo, c1.fundo, c1.lado, 1, true);
+    const b2 = bloco3(2, '', ox + x2, oz + zTopo + 4, c2.fundo, c2.lado, 1, false);   // 2a mais para o fundo, ao lado da carroceria
+    const b3 = bloco3(3, '', ox + x1, oz + W + 3.2, c3.fundo, c3.lado, 1, false);     // 3a atras do galpao
     return { L, W, ox, oz, laneA: ox + laneA, laneB: ox + laneB, munkX: ox - munk / 2 - 0.4,
         esteira: { x0: ox + xe, x1: ox + xef, z0: oz + zTopo + 2, z1: oz + linhaZ0 },
         linhaZ0: oz + linhaZ0, b11, b2, b3 };
@@ -2217,46 +2218,62 @@ function posBloco(b, r, c) {
     const x = b.doFim ? b.x0 + (b.fundo - 1 - r) * PASSO : b.x0 + r * PASSO;
     return { x, z: b.z0 + c * PASSO };
 }
-// enche os blocos: cada medida comeca numa fileira nova; 2,40 ocupa 2 fileiras na mesma coluna
-function encherBlocos(grupos, blocos, escolher) {
+// Fileira = uma coluna de pilhas (uma na frente da outra, a partir do muro). Cada medida ocupa sua
+// fileira (ex.: uma de 11 cm e do lado uma de 8,5). Primeiro respeita as posicoes salvas/arrastadas.
+function encherPatio(grupos, blocos, salvos = {}) {
     const C = calc();
-    const pilhas = [], usadas = [];
-    const prox = new Map(blocos.map(b => [b, 0]));
+    const pilhas = [];
+    blocos.forEach(b => { b.dono = Array(b.deLado).fill(null); });
+    const livre = (b, r, c, f) => { for (let k = 0; k < f; k++) if (r + k >= b.fundo || !b.livre[r + k][c]) return false; return true; };
+    const colocar = (gr, b, r, c, f) => {
+        for (let k = 0; k < f; k++) b.livre[r + k][c] = false;
+        if (!b.dono[c]) b.dono[c] = gr.k;
+        const p = gr.p, n = Math.min(MAX_PILHA, gr.resta);
+        const larg = Math.min(C.largPacote(p), 1.4);
+        const a0 = posBloco(b, r, c), a1 = posBloco(b, r + f - 1, c);
+        pilhas.push({ k: gr.k, p, x: Math.min(a0.x, a1.x) + (f * PASSO - 0.5 - p.comp) / 2, z: a0.z + (1.2 - larg) / 2, comp: p.comp, larg, alt: C.altPacote(p), n,
+            lado: b.lado, c, r, ocupa: f, fileira: b.primeiroN + c, posicao: r + 1 });
+        gr.resta -= n;
+    };
+    grupos.forEach(gr => { gr.resta = gr.qtd; gr.f = gr.p.comp > 1.3 ? 2 : 1; });
+    // 1) posicoes salvas
+    grupos.forEach(gr => (salvos[gr.k] || []).forEach(sv => {
+        if (gr.resta <= 0) return;
+        const b = blocos.find(x => x.lado === sv.l);
+        if (b && sv.c < b.deLado && livre(b, sv.r, sv.c, gr.f)) colocar(gr, b, sv.r, sv.c, gr.f);
+    }));
+    // 2) o resto: fileira da mesma medida, depois fileira vazia, depois qualquer vaga do bloco da classe
     grupos.forEach(gr => {
-        const p = gr.p;
-        const fundo = p.comp > 1.3 ? 2 : 1;
-        let resta = gr.qtd;
-        const ordem = escolher ? escolher(p) : blocos;
-        for (const b of ordem) {
-            let r = prox.get(b);
-            let fil = null;
-            while (resta > 0 && r + fundo <= b.fundo) {
-                let pos = -1;
-                for (let c = 0; c < b.deLado; c++) {
-                    let ok = true;
-                    for (let k = 0; k < fundo; k++) if (!b.livre[r + k][c]) ok = false;
-                    if (ok) { pos = c; break; }
-                }
-                if (pos < 0) { r += fundo; fil = null; continue; }
-                for (let k = 0; k < fundo; k++) b.livre[r + k][pos] = false;
-                if (!fil) { fil = { lado: b.lado, n: b.primeiroN + r, bloco: b.nome, p, pacotes: 0, pilhas: 0, slots: b.deLado }; usadas.push(fil); }
-                const n = Math.min(MAX_PILHA, resta);
-                const larg = Math.min(C.largPacote(p), 1.4);
-                const a0 = posBloco(b, r, pos), a1 = posBloco(b, r + fundo - 1, pos);
-                const xIni = Math.min(a0.x, a1.x);
-                pilhas.push({ p, x: xIni + (fundo * PASSO - 0.5 - p.comp) / 2, z: a0.z + (1.2 - larg) / 2, comp: p.comp, larg, alt: C.altPacote(p), n, fileira: fil.n, posicao: pos + 1, bloco: b.nome });
-                fil.pacotes += n; fil.pilhas++;
-                resta -= n;
+        const lado = gr.p.classe === 1 ? 1 : gr.p.classe === 2 ? 2 : 3;
+        const b = blocos.find(x => x.lado === lado);
+        if (!b) return;
+        const cols = c => b.livre.every(l => l[c]);
+        const passes = [c => b.dono[c] === gr.k, c => cols(c), () => true];
+        for (const ok of passes) {
+            for (let c = 0; c < b.deLado && gr.resta > 0; c++) {
+                if (!ok(c)) continue;
+                for (let r = 0; r < b.fundo && gr.resta > 0; r++) if (livre(b, r, c, gr.f)) colocar(gr, b, r, c, gr.f);
             }
-            // proxima medida comeca na fileira seguinte
-            const ultima = b.livre.findIndex(l => l.every(Boolean));
-            prox.set(b, ultima < 0 ? b.fundo : ultima);
-            if (resta <= 0) break;
+            if (gr.resta <= 0) break;
         }
-        gr.fora = Math.max(0, resta);
+        gr.fora = Math.max(0, gr.resta);
     });
-    const cap = blocos.reduce((s, b) => s + b.fundo * b.deLado, 0);
-    return { pilhas, fileiras: usadas, capacidade: cap * MAX_PILHA };
+    // fileiras para a lista
+    const porLado = { 1: [], 2: [], 3: [] };
+    const fil = new Map();
+    pilhas.forEach(pl => {
+        const id = pl.lado + '|' + pl.c;
+        if (!fil.has(id)) { const f = { lado: pl.lado, n: pl.fileira, p: pl.p, pacotes: 0, pilhas: 0, medidas: new Set() }; fil.set(id, f); porLado[pl.lado].push(f); }
+        const f = fil.get(id); f.pacotes += pl.n; f.pilhas++; f.medidas.add(pl.k);
+    });
+    const res = l => {
+        const b = blocos.find(x => x.lado === l);
+        return { pilhas: pilhas.filter(x => x.lado === l), fileiras: porLado[l].sort((a, b2) => a.n - b2.n), capacidade: b ? b.fundo * b.deLado * MAX_PILHA : 0, total: b ? b.deLado : 0 };
+    };
+    // posicoes atuais (para salvar)
+    const pos = {};
+    pilhas.forEach(pl => { (pos[pl.k] = pos[pl.k] || []).push({ l: pl.lado, c: pl.c, r: pl.r }); });
+    return { d1: res(1), d2: res(2), d3: res(3), pos };
 }
 function desenharMunk(x, z) {
     const T = window.THREE;
@@ -2280,9 +2297,10 @@ function desenharMunk(x, z) {
 function desenharPatio() {
     limparConteudo();
     const T = window.THREE;
-    const G = layoutPatio();
+    const G = layoutPatio(patio.cfg);
     const L = G.L, W = G.W;
     patio.comp = L; patio.larg = W;
+    patio.G = G;
     ajustarSombra(Math.max(L, W) * 0.8);
     const terra = new T.Mesh(new T.PlaneGeometry(L + 40, W + 30), new T.MeshLambertMaterial({ color: 0xc8a27a }));
     terra.rotation.x = -Math.PI / 2; terra.position.set(0, -0.01, 0); terra.receiveShadow = true;
@@ -2369,13 +2387,9 @@ function desenharPatio() {
     cena.conteudo.add(caminhao);
     rotuloTexto('CARREGAMENTO', cx, 4.6, -W / 2 + 2, 0.7);
     // pacotes
-    const C = calc();
-    const grupos1 = patio.grupos.filter(g => g.p.classe === 1);
-    const grupos2 = patio.grupos.filter(g => g.p.classe === 2);
-    const grupos3 = patio.grupos.filter(g => g.p.classe !== 1 && g.p.classe !== 2);
-    const d1 = encherBlocos(grupos1, [G.b11]);
-    const d2 = encherBlocos(grupos2, [G.b2]);
-    const d3 = encherBlocos(grupos3, [G.b3]);
+    const cheio = encherPatio(patio.grupos, [G.b11, G.b2, G.b3], patio.pos || {});
+    const { d1, d2, d3 } = cheio;
+    patio.posAtual = cheio.pos;
     patio.alvos = [];
     const caixas = [], tampas = [], fitas = [];
     const desenharLado = (d, lado) => {
@@ -2392,7 +2406,7 @@ function desenharPatio() {
             alvo.userData.pilha = { ...pl, lado };
             cena.conteudo.add(alvo);
             patio.alvos.push(alvo);
-            if (patio.sel && patio.sel.lado === lado && patio.sel.fileira === pl.fileira) {
+            if (patio.sel && patio.sel.lado === lado && patio.sel.c === pl.c && patio.sel.r === pl.r) {
                 const borda = new T.LineSegments(new T.EdgesGeometry(alvo.geometry), new T.LineBasicMaterial({ color: 0x1d4ed8 }));
                 borda.position.copy(alvo.position); borda.scale.set(1.03, 1.03, 1.03);
                 cena.conteudo.add(borda);
@@ -2404,7 +2418,12 @@ function desenharPatio() {
     malhaInstanciada(tampas, 0x6b4f2a, false);
     malhaInstanciada(fitas, 0x16a34a, false);
     // numero das fileiras ao lado de cada bloco
-    [G.b11, G.b2, G.b3].forEach(b => { for (let r = 0; r < b.fundo; r++) { const q = posBloco(b, r, 0); rotuloTexto(`F${b.primeiroN + r}`, q.x + 0.6, 0.35, b.z0 - 0.55, 0.4, '#1d4ed8'); } });
+    // F1, F2... na frente de cada fileira (lado do corredor)
+    [G.b11, G.b2, G.b3].forEach(b => { for (let c = 0; c < b.deLado; c++) { const q = posBloco(b, b.fundo - 1, c); const xf = b.doFim ? q.x - 0.45 : q.x + 1.65; rotuloTexto(`F${b.primeiroN + c}`, xf, 0.35, q.z + 0.6, 0.4, '#1d4ed8'); } });
+    // fantasma do arraste
+    patio.fantasma = new T.Mesh(new T.BoxGeometry(1.2, 0.6, 1.2), new T.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.45, depthWrite: false }));
+    patio.fantasma.visible = false;
+    cena.conteudo.add(patio.fantasma);
     rotuloTexto('PÁTIO 1ª', G.b11.x0 + 2 * PASSO, 5.2, G.b11.z0, 0.7, '#15803d');
     rotuloTexto('PÁTIO 2ª', G.b2.x0 + 1.5 * PASSO, 5.2, G.b2.z0, 0.7, '#a16207');
     rotuloTexto('PÁTIO 3ª', G.b3.x0 + 1.5 * PASSO, 3.4, G.b3.z0, 0.7, '#b91c1c');
@@ -2412,7 +2431,7 @@ function desenharPatio() {
     const total = patio.grupos.reduce((s, g) => s + g.qtd, 0);
     const fora = patio.grupos.reduce((s, g) => s + (g.fora || 0), 0);
     const vol = patio.grupos.reduce((s, g) => s + g.qtd * (g.p.esp / 100) * (g.p.larg / 100) * g.p.comp * (g.p.alt * g.p.cam + (g.p.am || 0)), 0);
-    document.getElementById('v3dInfo').textContent = `${total} pacote(s) no pátio · ${fmt(vol, 3)} m³ · 1ª: ${d1.fileiras.length} de 4 fileiras · 2ª: ${d2.fileiras.length} de 3 fileiras · até ${MAX_PILHA} por pilha${fora ? ` · ${fora} não cabem` : ''}`;
+    document.getElementById('v3dInfo').textContent = `${total} pacote(s) no pátio · ${fmt(vol, 3)} m³ · 1ª: ${d1.fileiras.length} de ${d1.total} fileiras · 2ª: ${d2.fileiras.length} de ${d2.total} fileiras · até ${MAX_PILHA} por pilha${fora ? ` · ${fora} não cabem` : ''}`;
     renderListaPatio();
 }
 function renderListaPatio() {
@@ -2424,7 +2443,7 @@ function renderListaPatio() {
         const cor = p.classe === 1 ? '#16a34a' : p.classe === 2 ? '#eab308' : '#dc2626';
         return `<button type="button" class="v3d-item v3d-item-patio${ativo ? ' ativo' : ''}" style="--cor:${cor}" data-pfil="${lado}|${f.n}">
           <span class="v3d-item-txt"><b>F${f.n}${f.bloco ? ` (${f.bloco})` : ''} · ${p.classe}ª · ${fmt(p.esp, 1)} × ${fmt(p.larg, 1)} × ${fmt(p.comp, 2)}</b>
-          <span>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${f.pacotes} pacote(s) em ${f.pilhas} pilha(s)</span></span></button>`;
+          <span>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''} · ${f.pacotes} pacote(s) em ${f.pilhas} pilha(s)${f.medidas && f.medidas.size > 1 ? ' · fileira misturada' : ''}</span></span></button>`;
     };
     const sel = patio.sel;
     let ficha = '';
@@ -2436,13 +2455,22 @@ function renderListaPatio() {
           <div><dt>Configuração</dt><dd>(${p.alt}×${p.cam})${p.am ? ` + ${p.am}` : ''}</dd></div>
           <div><dt>Peças por pacote</dt><dd>${pecas}</dd></div>
           <div><dt>Volume por pacote</dt><dd>${fmt((p.esp / 100) * (p.larg / 100) * p.comp * pecas, 3)} m³</dd></div>
-          <div><dt>Posição</dt><dd>${sel.bloco ? `bloco ${sel.bloco} · ` : ''}${sel.posicao}ª pilha da fileira</dd></div>
+          <div><dt>Posição</dt><dd>${sel.posicao}ª pilha a partir do muro</dd></div>
           <div><dt>Pacotes nesta pilha</dt><dd>${sel.n}</dd></div>
         </dl></div>`;
     }
     el.innerHTML = `<div class="v3d-lista-topo"><b>Pátio de pacotes</b>
-        <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda (encostada no muro), caminhão no meio, 2ª e tora à direita. Toque numa pilha ou fileira para ver o pacote.</p>
-        <p class="v3d-dica-lista">Capacidade: 1ª ${patio.d1.capacidade || 48} pacotes (4 fileiras × 3) · 2ª ${patio.d2.capacidade || 48} pacotes (3 fileiras × 4) · até ${MAX_PILHA} por pilha · 50 cm entre pilhas.</p>
+        <p class="v3d-dica-lista">Visto da entrada: 1ª à esquerda (encostada no muro), caminhão no meio, 2ª e tora à direita.</p>
+        <p class="v3d-dica-lista">Arraste uma pilha (segure e solte noutra vaga) para mudar de lugar. Toque para ver o pacote.</p>
+        <div class="v3d-lista-acoes">
+          ${patio.aoSalvar ? `<button type="button" id="v3dPatioSalvar" class="v3d-salvar-arranjo"${patio.alterado ? '' : ' disabled'}><i class="fa-solid fa-floppy-disk"></i> Salvar arrumação</button>` : ''}
+          <button type="button" id="v3dPatioAuto">Arrumar automático</button>
+        </div>
+        ${patio.msg ? `<p class="v3d-dica-lista v3d-salvo">${patio.msg}</p>` : ''}
+        <details class="v3d-patio-cfg"><summary>Configurar pátios</summary>
+          ${[['b1', '1ª'], ['b2', '2ª'], ['b3', '3ª']].map(([k, nome]) => `<label class="v3d-patio-medida">Pátio ${nome}: <input type="number" min="1" max="12" data-pcfg="${k}|fundo" value="${patio.cfg[k].fundo}" aria-label="Pilhas de fundo do pátio ${nome}"> de fundo × <input type="number" min="1" max="12" data-pcfg="${k}|lado" value="${patio.cfg[k].lado}" aria-label="Fileiras do pátio ${nome}"> fileiras</label>`).join('')}
+          <p class="v3d-dica-lista">Até ${MAX_PILHA} pacotes por pilha · 50 cm entre pilhas.</p>
+        </details>
         ${ficha}</div>
       <div class="v3d-itens">
         <b class="v3d-lado-tit">Pátio 1ª</b>${patio.d1.fileiras.map(f => linhaFil(f, 1)).join('') || '<p class="v3d-dica-lista">Sem pacotes de 1ª.</p>'}
@@ -2456,36 +2484,131 @@ function selecionarFileira(lado, n) {
     patio.sel = pl ? { ...pl, lado } : null;
     desenharPatio();
 }
+function raioPatio(e) {
+    const T = window.THREE;
+    const r = cena.renderer.domElement.getBoundingClientRect();
+    const ray = new T.Raycaster();
+    ray.setFromCamera(new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cena.camera);
+    return ray;
+}
+// vaga mais perto do ponto do chao (qualquer patio), livre para a pilha que esta sendo arrastada
+function vagaPerto(ponto, pl) {
+    const G = patio.G;
+    let melhor = null;
+    [G.b11, G.b2, G.b3].forEach(b => {
+        for (let r = 0; r + pl.ocupa <= b.fundo; r++) for (let c = 0; c < b.deLado; c++) {
+            const q0 = posBloco(b, r, c), q1 = posBloco(b, r + pl.ocupa - 1, c);
+            const cx = (Math.min(q0.x, q1.x) + Math.max(q0.x, q1.x) + 1.2) / 2, cz = q0.z + 0.6;
+            const d = Math.hypot(ponto.x - cx, ponto.z - cz);
+            if (d > 1.3 || (melhor && d >= melhor.d)) continue;
+            let ok = true;
+            for (let k = 0; k < pl.ocupa; k++) {
+                const ocupada = !b.livre[r + k][c];
+                const propria = pl.lado === b.lado && pl.c === c && r + k >= pl.r && r + k < pl.r + pl.ocupa;
+                if (ocupada && !propria) ok = false;
+            }
+            if (ok) melhor = { b, r, c, d, cx, cz };
+        }
+    });
+    return melhor;
+}
 function instalarPatioEventos() {
     const el = document.getElementById('v3dLista');
     if (el && !el.dataset.patioOk) {
         el.dataset.patioOk = '1';
-        el.addEventListener('click', e => {
+        el.addEventListener('click', async e => {
             if (atual.modo !== 'patio' || !patio) return;
             const b = e.target.closest('[data-pfil]');
-            if (!b) return;
-            const [lado, n] = b.dataset.pfil.split('|').map(Number);
-            selecionarFileira(lado, n);
+            if (b) { const [lado, n] = b.dataset.pfil.split('|').map(Number); selecionarFileira(lado, n); return; }
+            if (e.target.closest('#v3dPatioAuto')) {
+                patio.pos = {}; patio.alterado = true; patio.sel = null; patio.msg = 'Arrumado automático. Salve para guardar.';
+                desenharPatio(); return;
+            }
+            const sv = e.target.closest('#v3dPatioSalvar');
+            if (sv && patio.aoSalvar) {
+                sv.disabled = true;
+                try {
+                    await patio.aoSalvar({ pos: patio.posAtual || {}, cfg: patio.cfg, salvoEm: new Date().toISOString() });
+                    patio.alterado = false; patio.msg = 'Arrumação do pátio salva.';
+                } catch (_) { patio.msg = 'Não foi possível salvar. Tente de novo.'; }
+                renderListaPatio();
+            }
+        });
+        el.addEventListener('change', e => {
+            if (atual.modo !== 'patio' || !patio) return;
+            const inp = e.target.closest('[data-pcfg]');
+            if (!inp) return;
+            const [k, campo] = inp.dataset.pcfg.split('|');
+            const v = Math.min(12, Math.max(1, parseInt(inp.value, 10) || 1));
+            patio.cfg = { ...patio.cfg, [k]: { ...patio.cfg[k], [campo]: v } };
+            patio.alterado = true; patio.msg = 'Tamanho do pátio alterado. Salve para guardar.';
+            desenharPatio();
         });
     }
     const palco = document.getElementById('v3dPalco');
     if (palco && !palco.dataset.patioOk) {
         palco.dataset.patioOk = '1';
-        let ini = null;
-        palco.addEventListener('pointerdown', e => { if (atual.modo === 'patio') ini = { x: e.clientX, y: e.clientY }; });
+        let ini = null, arr = null;
+        const chao = () => new window.THREE.Plane(new window.THREE.Vector3(0, 1, 0), 0);
+        palco.addEventListener('pointerdown', e => {
+            if (atual.modo !== 'patio' || !patio || e.button > 0) return;
+            ini = { x: e.clientX, y: e.clientY };
+            const hit = raioPatio(e).intersectObjects(patio.alvos || [])[0];
+            if (hit) {
+                arr = { pl: hit.object.userData.pilha, vaga: null, moveu: false };
+                cena.controls.enabled = false;
+                e.stopPropagation();
+            }
+        }, true);
+        palco.addEventListener('pointermove', e => {
+            if (!arr || atual.modo !== 'patio') return;
+            if (Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 6) arr.moveu = true;
+            if (!arr.moveu) return;
+            palco.style.cursor = 'grabbing';
+            const pt = new window.THREE.Vector3();
+            if (!raioPatio(e).ray.intersectPlane(chao(), pt)) return;
+            arr.vaga = vagaPerto(pt, arr.pl);
+            const f = patio.fantasma;
+            if (arr.vaga) {
+                f.scale.set(arr.pl.ocupa * PASSO - 0.5, Math.max(0.3, arr.pl.n * (arr.pl.alt + 0.08)) / 0.6, 1.2);
+                f.position.set(arr.vaga.cx, f.scale.y * 0.3, arr.vaga.cz);
+                f.visible = true;
+            } else f.visible = false;
+            cena.sujo = true;
+        }, true);
         palco.addEventListener('pointerup', e => {
-            if (atual.modo !== 'patio' || !patio || !ini) return;
+            if (atual.modo !== 'patio' || !patio) return;
+            cena.controls.enabled = true;
+            palco.style.cursor = '';
+            if (arr) {
+                const a = arr; arr = null; ini = null;
+                if (a.moveu) {
+                    if (a.vaga) {
+                        // troca a posicao desta pilha nas posicoes atuais e redesenha
+                        const pos = JSON.parse(JSON.stringify(patio.posAtual || {}));
+                        const lista = pos[a.pl.k] || [];
+                        const i = lista.findIndex(x => x.l === a.pl.lado && x.c === a.pl.c && x.r === a.pl.r);
+                        const nova = { l: a.vaga.b.lado, c: a.vaga.c, r: a.vaga.r };
+                        if (i >= 0) lista[i] = nova; else lista.push(nova);
+                        pos[a.pl.k] = lista;
+                        patio.pos = pos; patio.alterado = true;
+                        patio.msg = 'Pilha movida. Salve para guardar a arrumação.';
+                        patio.sel = null;
+                    } else patio.msg = 'Sem vaga livre ali. Solte a pilha numa vaga vazia.';
+                    desenharPatio();
+                    return;
+                }
+                patio.sel = a.pl;
+                desenharPatio();
+                return;
+            }
+            if (!ini) return;
             const moveu = Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 6;
             ini = null;
             if (moveu) return; // girou a camera
-            const T = window.THREE;
-            const r = cena.renderer.domElement.getBoundingClientRect();
-            const ray = new T.Raycaster();
-            ray.setFromCamera(new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cena.camera);
-            const hit = ray.intersectObjects(patio.alvos || [])[0];
-            patio.sel = hit ? hit.object.userData.pilha : null;
+            patio.sel = null;
             desenharPatio();
-        });
+        }, true);
     }
 }
 window.abrirPatio3D = async function(itens, opcoes = {}) {
@@ -2493,12 +2616,15 @@ window.abrirPatio3D = async function(itens, opcoes = {}) {
     const mapa = new Map();
     (itens || []).forEach(it => {
         const k = grupoChave(it.p);
-        if (!mapa.has(k)) mapa.set(k, { p: it.p, qtd: 0 });
+        if (!mapa.has(k)) mapa.set(k, { k, p: it.p, qtd: 0 });
         mapa.get(k).qtd += Number(it.qtd) || 0;
     });
     const med = { comp: 0, larg: 0 };
+    const salvo = opcoes.layout || {};
+    const cfg = JSON.parse(JSON.stringify(CFG_PATIO_PADRAO));
+    ['b1', 'b2', 'b3'].forEach(k => ['fundo', 'lado'].forEach(c => { const v = Number(salvo.cfg?.[k]?.[c]); if (v >= 1 && v <= 12) cfg[k][c] = v; }));
     // mais pacotes primeiro: fica mais perto do carregamento
-    patio = { grupos: [...mapa.values()].filter(g => g.qtd > 0).sort((a, b) => b.qtd - a.qtd), comp: med.comp, larg: med.larg, sel: null, alvos: [], d1: { fileiras: [], pilhas: [] }, d2: { fileiras: [], pilhas: [] }, d3: { fileiras: [], pilhas: [] } };
+    patio = { grupos: [...mapa.values()].filter(g => g.qtd > 0).sort((a, b) => b.qtd - a.qtd), comp: med.comp, larg: med.larg, sel: null, alvos: [], d1: { fileiras: [], pilhas: [] }, d2: { fileiras: [], pilhas: [] }, d3: { fileiras: [], pilhas: [] }, cfg, pos: salvo.pos || {}, aoSalvar: opcoes.aoSalvar || null, alterado: false, msg: salvo.pos ? 'Arrumação salva carregada.' : '' };
     const modal = garantirModal();
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = opcoes.titulo || 'Pátio em 3D';
