@@ -1599,7 +1599,8 @@ function melhorVaga(g, u) {
         if (!r) continue;
         const centro = (v + r.n / 2) - g.vagas[ci] / 2;
         const naCamada = montagem.colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - r.topo) < 0.05).length;
-        const chave = [Math.round(r.topo * 100), Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
+        // no assoalho carrega da cabine para tras (os de 2,40 vao primeiro, encostados na frente)
+        const chave = [Math.round(r.topo * 100), r.topo < 0.01 ? -(v + r.n) : Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
         if (!melhor || cmp(chave, chaveMelhor) < 0) { melhor = r; chaveMelhor = chave; }
     } });
     return melhor;
@@ -1627,7 +1628,8 @@ function melhorVagaInteira(g, u) {
         if (!r) continue;
         const centro = (v + r.n / 2) - g.vagas[ci] / 2;
         const naCamada = montagem.colocados.filter(c => c.ci === ci && c.f === f && Math.abs(c.topo - r.topo) < 0.05).length;
-        const chave = [Math.round(r.topo * 100), Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
+        // no assoalho carrega da cabine para tras (os de 2,40 vao primeiro, encostados na frente)
+        const chave = [Math.round(r.topo * 100), r.topo < 0.01 ? -(v + r.n) : Math.abs(centro), naCamada, f === 0 ? -centro : centro, -ci];
         if (!melhor || cmp(chave, chaveMelhor) < 0) { melhor = r; chaveMelhor = chave; }
     } });
     return melhor;
