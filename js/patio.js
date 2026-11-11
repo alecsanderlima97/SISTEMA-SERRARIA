@@ -3945,11 +3945,13 @@ window.verPctsPatio3D = async function() {
 // Patio em 3D: galpao com os pacotes do patio nas fileiras (1a, 2a e 3a). Base do Laboratorio. So mostra.
 window.verPatio3D = async function() {
     try {
-        const atual = await carregarRelatorioPatioAtual();
-        const itens = itensPatioPara3D(atual?.itens || []);
-        if (!itens.length) { alert('Não há pacotes no pátio para mostrar.'); return; }
+        // so os pacotes lancados no Fluxo do Patio: a lista que esta na tela; se nao estiver aberta, a ultima lista salva
+        const relatorios = await carregarRelatoriosPatioCache(true);
+        const atual = relatorios[0] || null;
+        const fonte = (Array.isArray(itensPatioTemp) && itensPatioTemp.length) ? itensPatioTemp : (atual?.itens || []);
+        const itens = itensPatioPara3D(fonte);
+        if (!itens.length) { alert('Não há pacotes lançados no Fluxo do Pátio.'); return; }
         // arrumacao salva: a mais recente entre os relatorios (passa de um dia para o outro)
-        const relatorios = await carregarRelatoriosPatioCache();
         const comLayout = relatorios.filter(r => r?.layout3d?.salvoEm).sort((a, b) => String(b.layout3d.salvoEm).localeCompare(String(a.layout3d.salvoEm)))[0];
         window.abrirPatio3D?.(itens, {
             titulo: 'Pátio em 3D',
