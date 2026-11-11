@@ -2192,7 +2192,7 @@ function textoPacotePatio(p) {
     return [`${p.classe}ª ${Math.round(p.esp * 10)}/${Math.round(p.larg * 10)}/${Math.round(p.comp * 100)}`, `(${p.alt}X${p.cam})${p.am ? `+${p.am}` : ''}`];
 }
 const texEtiqPatio = new Map();
-function etiquetaPatio(p, x, y, z, larg) {
+function etiquetaPatio(p, x, y, z, larg, dir = -1) {
     const T = window.THREE;
     const [l1, l2] = textoPacotePatio(p);
     const chave = l1 + '|' + l2;
@@ -2209,7 +2209,7 @@ function etiquetaPatio(p, x, y, z, larg) {
     }
     const w = Math.min(0.62, larg * 0.9), h = w * 0.625;
     const geo = new T.PlaneGeometry(w, h);
-    geo.rotateY(Math.PI); // de frente para a entrada (lado -z)
+    geo.rotateY(dir < 0 ? -Math.PI / 2 : Math.PI / 2); // de frente para o caminhao (cabeca do pacote)
     const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: texEtiqPatio.get(chave) }));
     m.position.set(x, y, z);
     cena.conteudo.add(m);
@@ -2425,8 +2425,9 @@ function desenharPatio() {
                 caixas.push({ x: pl.x + pl.comp / 2, y: y + pl.alt / 2 + 0.08, z: pl.z + pl.larg / 2, sx: pl.comp, sy: pl.alt, sz: pl.larg, tom: k % 3 });
                 tampas.push({ x: pl.x + pl.comp / 2, y: y + 0.04, z: pl.z + pl.larg / 2, sx: pl.comp * 0.9, sy: 0.08, sz: pl.larg * 0.9 });
                 fitas.push(...fitasDoPacote({ comprimento: pl.comp, largura: pl.larg, altura: pl.alt }, { x: pl.x, y: y + 0.08, z: pl.z }));
-                // etiqueta do pacote, de frente para a entrada
-                etiquetaPatio(pl.p, pl.x + pl.comp / 2, y + 0.08 + pl.alt / 2, pl.z - 0.006, Math.min(pl.comp, pl.alt * 1.6));
+                // etiqueta na cabeca do pacote, virada para o caminhao (2a fica a esquerda do caminhao, 1a e 3a a direita)
+                const dir = pl.lado === 2 ? 1 : -1;
+                etiquetaPatio(pl.p, dir > 0 ? pl.x + pl.comp + 0.006 : pl.x - 0.006, y + 0.08 + pl.alt / 2, pl.z + pl.larg / 2, Math.min(pl.larg, pl.alt * 1.6), dir);
             }
             const alto = pl.n * (pl.alt + 0.08);
             const alvo = new T.Mesh(new T.BoxGeometry(pl.comp, alto, pl.larg), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
