@@ -343,10 +343,14 @@ window.abrirModalPatio = async function() {
     atualizarEstadoEdicaoPatio();
 
     // Carregar histórico do Firebase e calcular acumulados de hoje
-    await carregarHistoricoPatio();
-    const relHoje = historicoPatioAtuais.find(rel => rel.data === dataAtualString);
-    if (relHoje) {
-        carregarRelatorioPatioNoFormulario(relHoje, relHoje.id);
+    await carregarHistoricoPatio(true);
+    // segue sempre a lista mais atualizada (a do Fluxo do Patio, se a empilhadeira lancou por ultimo)
+    const maisNova = historicoPatioAtuais.find(rel => Array.isArray(rel.itens) && rel.itens.length) || historicoPatioAtuais[0];
+    if (maisNova && maisNova.data === dataAtualString) {
+        carregarRelatorioPatioNoFormulario(maisNova, maisNova.id);
+    } else if (maisNova) {
+        // lista de outro dia: traz os pacotes para a contagem de hoje (salva como lista nova do dia)
+        carregarRelatorioPatioNoFormulario({ ...maisNova, data: dataAtualString, horario: horaAtualPatio(), periodo: 'Atualizacao do dia' }, null);
     }
     atualizarAvisoUltimaAlteracaoPatio();
     await calcularAcumuladosHoje(dataAtualString);
@@ -374,8 +378,8 @@ window.fecharFluxoPatio = function() {
     if (panel) panel.style.display = 'none';
 };
 
-async function carregarRelatorioPatioAtual() {
-    const relatorios = await carregarRelatoriosPatioCache();
+async function carregarRelatorioPatioAtual(force = false) {
+    const relatorios = await carregarRelatoriosPatioCache(force);
     // Um relatorio vazio pode existir por abertura anterior da tela. Para o fluxo
     // operacional, priorizamos a ultima lista que realmente possui pacotes.
     return relatorios.find(relatorio => Array.isArray(relatorio.itens) && relatorio.itens.length > 0)
@@ -384,6 +388,10 @@ async function carregarRelatorioPatioAtual() {
 }
 
 async function garantirRelatorioProducaoPatioAtual() {
+    // Controle de Producao (escritorio) e Fluxo do Patio (empilhadeira) gravam listas no mesmo lugar:
+    // sempre segue a mais atualizada das duas, para um nao trabalhar em cima de lista velha.
+    const maisNova = await carregarRelatorioPatioAtual(true).catch(() => null);
+    if (maisNova?.id) producaoPatioRelatorioAtual = maisNova;
     if (producaoPatioRelatorioAtual?.id) return producaoPatioRelatorioAtual;
 
     producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
@@ -571,10 +579,9 @@ window.abrirProducaoPatio = async function() {
     setFormProducaoPatioAberto(ehFluxoPatioOperacionalExclusivo());
     aplicarPermissoesDashboardPatio();
     window.scrollTo({ top: 0, behavior: 'auto' });
-    // Apenas abrir o Fluxo nao deve criar uma lista vazia nem substituir a lista ativa.
-    if (!producaoPatioRelatorioAtual?.id) {
-        producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
-    }
+    // Apenas abrir o Fluxo nao deve criar uma lista vazia; abre sempre a lista mais atualizada
+    // (pode ter sido lancada no Controle de Producao por outra pessoa).
+    producaoPatioRelatorioAtual = (await carregarRelatorioPatioAtual(true).catch(() => null)) || producaoPatioRelatorioAtual;
     await renderizarProducaoPatio();
 };
 
@@ -2719,6 +2726,13 @@ async function salvarRelatorioPatio() {
 
     try {
         if (relatorioPatioEditandoId) {
+            // se a empilhadeira lancou no Fluxo do Patio depois que esta tela abriu, avisa antes de sobrescrever
+            const snapAtual = await getDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId)).catch(() => null);
+            const versaoBanco = snapAtual?.exists?.() ? snapAtual.data().atualizadoEm : null;
+            if (versaoBanco && relatorioExistente?.atualizadoEm && versaoBanco !== relatorioExistente.atualizadoEm
+                && !confirm('Esta lista foi alterada no Fluxo do Pátio depois que você abriu.\nOK = salvar por cima com a sua contagem.\nCancelar = não salvar (feche e abra de novo para ver a lista atualizada).')) {
+                return;
+            }
             await updateDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId), relatorio);
             alert(`✅ Contagem do Pátio atualizada com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         } else {
@@ -3945,11 +3959,12 @@ window.verPctsPatio3D = async function() {
 // Patio em 3D: galpao com os pacotes do patio nas fileiras (1a, 2a e 3a). Base do Laboratorio. So mostra.
 window.verPatio3D = async function() {
     try {
+        // so os pacotes lancados no Fluxo do Patio: a lista que esta na tela; se nao estiver aberta, a ultima lista salva
+        const relatorios = await carregarRelatoriosPatioCache(true);
         const atual = await carregarRelatorioPatioAtual();
         const itens = itensPatioPara3D(atual?.itens || []);
-        if (!itens.length) { alert('Não há pacotes no pátio para mostrar.'); return; }
+        if (!itens.length) { alert('Não há pacotes lançados no Fluxo do Pátio.'); return; }
         // arrumacao salva: a mais recente entre os relatorios (passa de um dia para o outro)
-        const relatorios = await carregarRelatoriosPatioCache();
         const comLayout = relatorios.filter(r => r?.layout3d?.salvoEm).sort((a, b) => String(b.layout3d.salvoEm).localeCompare(String(a.layout3d.salvoEm)))[0];
         window.abrirPatio3D?.(itens, {
             titulo: 'Pátio em 3D',

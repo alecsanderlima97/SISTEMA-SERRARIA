@@ -2362,16 +2362,9 @@ function desenharPatio() {
     bloco(0, 0.45, zl, L - 3, 0.9, 1.2, mat(0x334155, 0.6, 0.3));
     for (let i = 0; i < 5; i++) bloco(-L / 2 + 3 + i * ((L - 6) / 4), 1.1, zl, 2.2, 2.2, 2.2, azul);
     rotuloTexto('LINHA DE PRODUÇÃO', 0, 2.9, zl, 0.7);
-    // esteira de montagem de pacotes: 3 pacotes sendo montados de cada lado (1 de 1a e 2 de 2a: comeco, meio e fim)
+    // esteira de montagem de pacotes (so a esteira: pacote so aparece no patio quando e lancado no Fluxo do Patio)
     const E = G.esteira, ex = (E.x0 + E.x1) / 2, ez = (E.z0 + E.z1) / 2;
     bloco(ex, 0.45, ez, 0.8, 0.9, E.z1 - E.z0 - 0.2, mat(0x2563eb, 0.5, 0.3));
-    const emMontagem = [];
-    [-1, 1].forEach(lado => [[E.z1 - 0.9, 1], [ez, 2], [E.z0 + 0.9, 2]].forEach(([z, cl]) => {
-        const x = ex + lado * 1.15;
-        emMontagem.push({ x, y: 0.28, z, sx: 1.0, sy: 0.5, sz: 1.2, tom: cl });
-        rotuloTexto(`${cl}ª`, x, 0.85, z, 0.32, cl === 1 ? '#15803d' : '#a16207');
-    }));
-    malhaInstanciada(emMontagem, COR_MADEIRA);
     rotuloTexto('MONTAGEM DE PACOTES', ex, 2.4, ez, 0.55);
     // munk florestal entre o patio de 2a e as toras; toras mais para fora
     desenharMunk(G.munkX, G.b2.z0 + 2);
