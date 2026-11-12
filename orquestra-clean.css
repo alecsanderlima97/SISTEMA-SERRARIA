@@ -1211,3 +1211,26 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 #modalRadarClientes span.radar-dif.acima { color: #15803d !important; -webkit-text-fill-color: #15803d; }
 #modalRadarClientes span.radar-dif.abaixo { color: #b91c1c !important; -webkit-text-fill-color: #b91c1c; }
 #modalRadarClientes span.radar-dif.igual { color: #475569 !important; -webkit-text-fill-color: #475569; }
+
+/* Radar: clientes novos (prospeccao) */
+.prosp-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 8px; }
+.prosp-form label { display: grid; gap: 4px; font-size: .8rem; font-weight: 700; color: #334155 !important; flex: 1 1 180px; }
+#modalRadarClientes .prosp-form input, #modalRadarClientes .prosp-form select, #modalRadarClientes .prosp-obs, #modalRadarClientes .prosp-status select { min-height: 40px; border: 1px solid #94a3b8 !important; border-radius: 8px; padding: 0 10px; background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; font-size: .95rem; }
+.prosp-buscar { min-height: 42px; padding: 0 16px; }
+.prosp-atalhos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.prosp-atalhos button { min-height: 34px; padding: 0 10px; border-radius: 999px; border: 1px solid #94a3b8; background: #f8fafc; color: #1f1c18; cursor: pointer; font-size: .85rem; }
+.prosp-barra { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 6px; }
+.prosp-check { display: flex; gap: 6px; align-items: center; font-weight: 700; color: #334155 !important; min-height: 36px; }
+.prosp-lista { display: grid; gap: 8px; }
+.prosp-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 10px; border: 1px solid #e5e7eb; border-left: 5px solid #94a3b8; border-radius: 10px; background: #fff; }
+.prosp-item.st-contatar { border-left-color: #d97706; } .prosp-item.st-liguei, .prosp-item.st-visitei { border-left-color: #1d4ed8; } .prosp-item.st-cliente { border-left-color: #15803d; } .prosp-item.st-descartado { border-left-color: #9ca3af; opacity: .7; }
+.prosp-info { display: grid; gap: 2px; }
+.prosp-info small { color: #475569 !important; font-size: .8rem; }
+.prosp-info .radar-chip { margin-left: 6px; }
+.prosp-acoes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.prosp-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #94a3b8; background: #fff; color: #1f1c18 !important; text-decoration: none; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.prosp-status { display: flex; gap: 6px; align-items: center; font-size: .8rem; font-weight: 700; color: #334155 !important; }
+.prosp-obs { flex: 1 1 220px; }
+.prosp-mais { margin-top: 10px; }
+@media (max-width: 760px) { .prosp-item { grid-template-columns: 1fr; } }
+#modalRadarClientes .prosp-obs::placeholder { color: #64748b !important; -webkit-text-fill-color: #64748b; font-weight: 400; }
