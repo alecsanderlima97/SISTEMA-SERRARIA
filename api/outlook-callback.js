@@ -4,7 +4,7 @@ const {
     serializeCookie,
     encodeMeta,
     getOutlookConfig
-} = require('./outlook-utils');
+} = require('./_outlook-utils');
 
 function responderHtml(res, html, status = 200, cookies = []) {
     if (cookies.length) {
