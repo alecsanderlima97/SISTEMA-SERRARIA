@@ -4,6 +4,7 @@
                 <div class="main-header">
                     <h1><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Vendas</h1>
                     <p>Registro de todos os romaneios finalizados</p>
+                    <button type="button" class="btn-primary" onclick="window.abrirRadarClientes()" style="margin-top:10px; min-height:42px;"><i class="fa-solid fa-satellite-dish"></i> Radar de Clientes</button>
                 </div>
 
                 <div class="glass-panel" style="margin-bottom: 20px;">
