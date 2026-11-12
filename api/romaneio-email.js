@@ -1,4 +1,4 @@
-const { REFRESH_COOKIE, parseCookies, refreshOutlookAccessToken } = require('./outlook-utils');
+const { REFRESH_COOKIE, parseCookies, refreshOutlookAccessToken } = require('./_outlook-utils');
 
 function responderErro(res, status, error) {
     return res.status(status).json({ ok: false, error });

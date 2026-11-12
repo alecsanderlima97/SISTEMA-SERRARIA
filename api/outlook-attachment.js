@@ -5,7 +5,7 @@ const {
     decodeMeta,
     serializeCookie,
     refreshOutlookAccessToken
-} = require('./outlook-utils');
+} = require('./_outlook-utils');
 
 // Baixa um anexo (PDF, XML ou imagem) de um e-mail do Outlook conectado neste navegador,
 // para o Financeiro importar boletos e notas sem precisar salvar o arquivo antes.
