@@ -1,6 +1,8 @@
 // Radar de Clientes: quem esta comprando, quem e hora de ligar, quem sumiu,
 // e comparativo de precos por medida (o preco esta mudando muito).
-// So le dados (romaneios, clientes e contas a receber). Nao grava nada.
+// Aba "Clientes novos": busca empresas no Google Maps (via /api/prospeccao) e guarda o andamento
+// de cada uma em prospeccao/{placeId}. As outras abas so leem dados.
+import { auth } from './firebase-init.js';
 
 const fmtR = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtN = (v, d = 3) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -9,6 +11,116 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim(
 const DIA = 86400000;
 
 let radar = { dados: null, aba: 'clientes', periodo: 365, busca: '' };
+const ATALHOS_PROSP = ['fábrica de paletes', 'embalagens de madeira', 'caixaria de madeira', 'madeireira', 'construtora', 'indústria moveleira'];
+const STATUS_PROSP = [['novo', 'Novo'], ['contatar', 'A contatar'], ['liguei', 'Liguei'], ['visitei', 'Visitei'], ['cliente', 'Virou cliente'], ['descartado', 'Descartado']];
+let prosp = { texto: 'fábrica de paletes', cidade: '', centro: null, raio: 150, resultados: [], token: '', salvos: new Map(), soLista: false, msg: '', carregando: false };
+try { const m = JSON.parse(localStorage.getItem('radarProspCentro') || 'null'); if (m?.lat) { prosp.centro = m; prosp.cidade = m.cidadeDigitada || ''; } } catch (_) {}
+function distKm(a, b) {
+    if (!a || !b || a.lat == null || b.lat == null) return null;
+    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+async function chamarProsp(corpo) {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) throw new Error('Sessão expirada. Entre novamente.');
+    const r = await fetch('/api/prospeccao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...corpo, idToken }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Não foi possível buscar agora.');
+    return d;
+}
+async function carregarSalvosProsp() {
+    try {
+        const lista = await window.FS.getCollection('prospeccao');
+        prosp.salvos = new Map(lista.map(x => [x.placeId || x.id, x]));
+    } catch (_) { /* sem permissao ou colecao vazia */ }
+}
+async function buscarProsp(maisPagina) {
+    if (prosp.carregando) return;
+    prosp.carregando = true; prosp.msg = 'Buscando…'; render();
+    try {
+        if (!prosp.centro || prosp.centro.cidadeDigitada !== prosp.cidade) {
+            if (!prosp.cidade.trim()) throw new Error('Informe a cidade de partida (ex.: a cidade da serraria).');
+            const { local } = await chamarProsp({ modo: 'local', cidade: prosp.cidade });
+            prosp.centro = { ...local, cidadeDigitada: prosp.cidade };
+            try { localStorage.setItem('radarProspCentro', JSON.stringify(prosp.centro)); } catch (_) {}
+        }
+        const d = await chamarProsp({ texto: prosp.texto, lat: prosp.centro.lat, lng: prosp.centro.lng, raioKm: prosp.raio, pageToken: maisPagina ? prosp.token : '' });
+        const novos = (d.empresas || []).map(e => ({ ...e, km: distKm(prosp.centro, e) })).filter(e => e.km == null || e.km <= prosp.raio * 1.05);
+        prosp.resultados = maisPagina ? [...prosp.resultados, ...novos.filter(n => !prosp.resultados.some(r => r.placeId === n.placeId))] : novos;
+        prosp.resultados.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
+        prosp.token = d.nextPageToken || '';
+        prosp.msg = prosp.resultados.length ? '' : 'Nenhuma empresa encontrada. Tente outro termo ou aumente o raio.';
+    } catch (e) {
+        prosp.msg = e.message;
+    } finally {
+        prosp.carregando = false; render();
+    }
+}
+async function salvarProsp(placeId, mudanca) {
+    const base = prosp.salvos.get(placeId) || prosp.resultados.find(r => r.placeId === placeId);
+    if (!base) return;
+    const reg = {
+        placeId, nome: base.nome || '', endereco: base.endereco || '', telefone: base.telefone || '', site: base.site || '',
+        lat: base.lat ?? null, lng: base.lng ?? null, mapsUrl: base.mapsUrl || '', tipo: base.tipo || '', busca: base.busca || prosp.texto,
+        status: base.status || 'novo', obs: base.obs || '', ...mudanca,
+        atualizadoEm: new Date().toISOString(), atualizadoPor: auth.currentUser?.email || ''
+    };
+    try {
+        await window.FS.setDoc('prospeccao', placeId, reg);
+        prosp.salvos.set(placeId, reg);
+        prosp.msg = 'Salvo.';
+    } catch (_) { prosp.msg = 'Não foi possível salvar (verifique sua permissão).'; }
+    render();
+}
+function linhaProsp(e, cadastroNomes) {
+    const s = prosp.salvos.get(e.placeId);
+    const st = s?.status || '';
+    const jaCliente = cadastroNomes.has(norm(e.nome));
+    const tel = String(e.telefone || '').replace(/\D/g, '');
+    const whats = tel.length >= 10 && /^(\d{2})9/.test(tel.replace(/^55/, '')) ? `https://wa.me/${tel.startsWith('55') ? tel : '55' + tel}?text=${encodeURIComponent(`Olá! Somos uma serraria e fornecemos madeira serrada para ${e.tipo || 'sua empresa'}. Posso te passar nossas medidas e preços?`)}` : '';
+    const km = e.km ?? distKm(prosp.centro, e);
+    return `<div class="prosp-item${st ? ' st-' + st : ''}">
+      <div class="prosp-info">
+        <b>${esc(e.nome)}</b>${jaCliente ? '<span class="radar-chip ativo">Já é cliente</span>' : ''}${e.situacao && e.situacao !== 'OPERATIONAL' ? '<span class="radar-chip sumido">Fechada</span>' : ''}
+        <small>${esc(e.tipo || '')}${km != null ? ` · ${fmtN(km, 0)} km` : ''}${e.nota ? ` · ★ ${fmtN(e.nota, 1)} (${e.avaliacoes})` : ''}</small>
+        <small>${esc(e.endereco || '')}</small>
+      </div>
+      <div class="prosp-acoes">
+        ${e.telefone ? `<a href="tel:${esc(tel)}" class="prosp-btn"><i class="fa-solid fa-phone" aria-hidden="true"></i> ${esc(e.telefone)}</a>` : ''}
+        ${whats ? `<a href="${whats}" target="_blank" rel="noopener" class="prosp-btn radar-whats"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>` : ''}
+        ${e.site ? `<a href="${esc(e.site)}" target="_blank" rel="noopener noreferrer" class="prosp-btn">Site</a>` : ''}
+        ${e.mapsUrl ? `<a href="${esc(e.mapsUrl)}" target="_blank" rel="noopener noreferrer" class="prosp-btn">Mapa</a>` : ''}
+        <label class="prosp-status">Andamento <select data-prosp-status="${esc(e.placeId)}">
+          <option value="">—</option>${STATUS_PROSP.map(([v, n]) => `<option value="${v}"${st === v ? ' selected' : ''}>${n}</option>`).join('')}
+        </select></label>
+        <input type="text" class="prosp-obs" data-prosp-obs="${esc(e.placeId)}" value="${esc(s?.obs || '')}" placeholder="Anotação (ex.: falar com João, compra 1,20)" aria-label="Anotação sobre ${esc(e.nome)}">
+        ${st === 'cliente' && !jaCliente ? `<button type="button" class="prosp-btn" data-prosp-cadastrar="${esc(e.placeId)}">Cadastrar cliente</button>` : ''}
+      </div></div>`;
+}
+function renderProsp(el) {
+    const cadastroNomes = new Set((radar.dados?.clientes || []).map(c => norm(c.nome)));
+    const lista = prosp.soLista
+        ? [...prosp.salvos.values()].map(x => ({ ...x, km: distKm(prosp.centro, x) })).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9))
+        : prosp.resultados.map(r => ({ ...r, ...(prosp.salvos.get(r.placeId) ? { status: prosp.salvos.get(r.placeId).status } : {}) }));
+    const cont = {}; prosp.salvos.forEach(x => { cont[x.status] = (cont[x.status] || 0) + 1; });
+    el.innerHTML = `
+      <form class="prosp-form" id="prospForm">
+        <label>O que procurar <input type="search" id="prospTexto" value="${esc(prosp.texto)}" maxlength="100" required></label>
+        <label>Cidade de partida <input type="text" id="prospCidade" value="${esc(prosp.cidade)}" placeholder="Cidade da serraria" maxlength="120" required></label>
+        <label>Raio <select id="prospRaio">${[50, 100, 150, 300, 450, 600].map(r => `<option value="${r}"${prosp.raio === r ? ' selected' : ''}>${r} km</option>`).join('')}</select></label>
+        <button type="submit" class="btn-primary prosp-buscar"${prosp.carregando ? ' disabled' : ''}><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Buscar</button>
+      </form>
+      <div class="prosp-atalhos">${ATALHOS_PROSP.map(a => `<button type="button" data-prosp-atalho="${esc(a)}">${esc(a)}</button>`).join('')}</div>
+      <div class="prosp-barra">
+        <label class="prosp-check"><input type="checkbox" id="prospSoLista"${prosp.soLista ? ' checked' : ''}> Ver só minha lista (${prosp.salvos.size})</label>
+        <span class="radar-dica">${STATUS_PROSP.filter(([v]) => cont[v]).map(([v, n]) => `${n}: <b>${cont[v]}</b>`).join(' · ')}</span>
+      </div>
+      ${prosp.msg ? `<p class="radar-dica" role="status">${esc(prosp.msg)}</p>` : ''}
+      <div class="prosp-lista">${lista.map(e => linhaProsp(e, cadastroNomes)).join('') || (prosp.carregando ? '' : '<p class="radar-vazio">Digite o que procurar, a cidade de partida e o raio, e clique em Buscar.</p>')}</div>
+      ${!prosp.soLista && prosp.token ? `<button type="button" class="prosp-btn prosp-mais" id="prospMais"${prosp.carregando ? ' disabled' : ''}>Carregar mais resultados</button>` : ''}
+      <p class="radar-dica">Dados do Google Maps. Use para contato comercial com empresas; não guarde dados pessoais além do necessário.</p>`;
+}
 
 function dataRomaneio(r) {
     const s = r.logistica?.dataCarregamento || r.logistica?.dataDescarregamento || r.dataCriacao || r.data || '';
@@ -169,6 +281,7 @@ function render() {
     const R = montar(radar.dados, radar.periodo);
     const b = norm(radar.busca);
     document.querySelectorAll('[data-radar-aba]').forEach(x => x.setAttribute('aria-selected', String(x.dataset.radarAba === radar.aba)));
+    if (radar.aba === 'novos') { renderProsp(el); return; }
     if (radar.aba === 'clientes') {
         const lista = R.clientes.filter(c => !b || norm(c.nome).includes(b));
         el.innerHTML = `
@@ -224,13 +337,14 @@ function garantirModal() {
     m.innerHTML = `
       <div class="radar-caixa">
         <header class="radar-topo">
-          <div><h2 id="radarTitulo"><i class="fa-solid fa-satellite-dish"></i> Radar de Clientes</h2><p>Madeira serrada · dados dos romaneios</p></div>
+          <div><h2 id="radarTitulo"><i class="fa-solid fa-satellite-dish"></i> Radar de Clientes</h2><p>Madeira serrada · romaneios e Google Maps</p></div>
           <button type="button" class="radar-fechar" aria-label="Fechar" onclick="window.fecharRadarClientes()">×</button>
         </header>
         <div class="radar-filtros">
           <div class="radar-abas" role="tablist">
             <button type="button" role="tab" data-radar-aba="clientes">Clientes</button>
             <button type="button" role="tab" data-radar-aba="precos">Comparativo de preços</button>
+            <button type="button" role="tab" data-radar-aba="novos">Clientes novos</button>
           </div>
           <label>Período <select id="radarPeriodo"><option value="90">90 dias</option><option value="180">6 meses</option><option value="365" selected>12 meses</option><option value="730">24 meses</option></select></label>
           <label class="radar-busca">Buscar <input type="search" id="radarBusca" placeholder="Cliente ou medida"></label>
@@ -243,6 +357,34 @@ function garantirModal() {
         if (aba) { radar.aba = aba.dataset.radarAba; render(); return; }
         const med = e.target.closest('[data-radar-medida]');
         if (med) { const d = m.querySelector(`[data-radar-det="${med.dataset.radarMedida}"]`); if (d) d.hidden = !d.hidden; }
+        const at = e.target.closest('[data-prosp-atalho]');
+        if (at) { prosp.texto = at.dataset.prospAtalho; prosp.cidade = m.querySelector('#prospCidade')?.value || prosp.cidade; buscarProsp(false); return; }
+        if (e.target.closest('#prospMais')) { buscarProsp(true); return; }
+        const cad = e.target.closest('[data-prosp-cadastrar]');
+        if (cad) {
+            const s = prosp.salvos.get(cad.dataset.prospCadastrar);
+            if (s && confirm(`Cadastrar "${s.nome}" como cliente?`)) {
+                window.FS.addDoc('clientes', { nome: s.nome, contato: s.telefone || '', endereco: s.endereco || '', cidade: (s.endereco || '').split(',').slice(-3, -2)[0]?.trim() || '', origem: 'prospeccao', criadoEm: new Date().toISOString() })
+                    .then(() => { radar.dados.clientes.push({ nome: s.nome }); prosp.msg = 'Cliente cadastrado.'; render(); })
+                    .catch(() => { prosp.msg = 'Não foi possível cadastrar (verifique sua permissão).'; render(); });
+            }
+        }
+    });
+    m.addEventListener('submit', e => {
+        if (e.target.id !== 'prospForm') return;
+        e.preventDefault();
+        prosp.texto = m.querySelector('#prospTexto').value.trim();
+        prosp.cidade = m.querySelector('#prospCidade').value.trim();
+        prosp.raio = Number(m.querySelector('#prospRaio').value) || 150;
+        buscarProsp(false);
+    });
+    m.addEventListener('change', e => {
+        const st = e.target.closest('[data-prosp-status]');
+        if (st) { salvarProsp(st.dataset.prospStatus, { status: st.value || 'novo' }); return; }
+        const ob = e.target.closest('[data-prosp-obs]');
+        if (ob) { salvarProsp(ob.dataset.prospObs, { obs: ob.value.slice(0, 300) }); return; }
+        if (e.target.id === 'prospSoLista') { prosp.soLista = e.target.checked; render(); }
+        if (e.target.id === 'prospRaio') prosp.raio = Number(e.target.value) || 150;
     });
     m.addEventListener('keydown', e => {
         if (e.key === 'Escape') window.fecharRadarClientes();
@@ -260,6 +402,7 @@ window.abrirRadarClientes = async function() {
     document.body.classList.add('modal-open');
     try {
         radar.dados = await carregar();
+        await carregarSalvosProsp();
         render();
     } catch (err) {
         console.error('Radar de clientes', err);
