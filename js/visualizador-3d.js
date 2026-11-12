@@ -1325,7 +1325,30 @@ function garantirModal() {
         <p class="v3d-dica">Arraste para girar · role ou pince para aproximar · arraste com dois dedos (ou botão direito fora do pacote) para mover. Na carga: arraste o pacote com a mãozinha; botão direito abre as opções. Na aba Pacote: clique numa tábua ou amarra para selecionar e tirar. Grade: quadradinho fino = 10 cm, linha forte = 50 cm (no caminhão: 50 cm e 1 m).</p>
       </div>`;
     document.body.appendChild(modal);
-    modal.querySelectorAll('[data-aba]').forEach(b => b.addEventListener('click', () => { atual.aba = b.dataset.aba; desenhar(); }));
+    modal.querySelectorAll('[data-aba]').forEach(b => b.addEventListener('click', () => {
+        const aba = b.dataset.aba;
+        // no montador de carga (Fluxo do Patio / romaneio): Tabua e Pacote mostram o pacote escolhido; Caminhao volta para a carga
+        if (atual.modo === 'montar' && aba !== 'caminhao' && montagem?.unidades?.length) {
+            const u = montagem.selecionado?.u || montagem.unidades[0];
+            const p = u.p;
+            atual.produto = { ...p, nome: p.nome || 'Pacote', comp: p.comp };
+            atual.produtoOriginal = { ...atual.produto };
+            atual.pecaSel = new Set(); atual.pecaFora = new Set();
+            atual.voltarMontar = true;
+            atual.modo = 'madeira';
+            atual.aba = aba;
+            instalarSelecaoPecas();
+            desenhar();
+            return;
+        }
+        if (atual.modo === 'madeira' && atual.voltarMontar && aba === 'caminhao' && montagem) {
+            atual.modo = 'montar';
+            desenhar();
+            enquadrar(0, 1.6, 0, (montagem.geo.total + CAB) / 2.2, [0.9, 0.7, 1.3]);
+            return;
+        }
+        atual.aba = aba; desenhar();
+    }));
     modal.querySelectorAll('[data-pvista]').forEach(b => b.addEventListener('click', () => { atual.paleteVista = b.dataset.pvista; desenhar(); }));
     const $ = id => document.getElementById(id);
     const lerCfg = () => {
@@ -1421,7 +1444,10 @@ function desenhar() {
     if (atual.modo !== 'madeira') document.getElementById('v3dPac').hidden = true;
     document.getElementById('v3dWrapQtd').hidden = atual.modo === 'montar';
     if (atual.modo === 'montar') {
-        if (abas) abas.hidden = true;
+        if (abas) {
+            abas.hidden = false;
+            abas.querySelectorAll('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === 'caminhao')));
+        }
         if (vistas) vistas.hidden = true;
         document.getElementById('v3dCfg').hidden = false;
         const c = atual.caminhao;
@@ -1524,6 +1550,7 @@ async function abrir(produto) {
     atual.produto = p;
     atual.produtoOriginal = { ...p };
     atual.pecaSel = new Set(); atual.pecaFora = new Set();
+    atual.voltarMontar = false;
     atual.modo = 'madeira';
     try {
         await garantirThree();
@@ -2125,6 +2152,7 @@ window.abrirMontadorCarga3D = async function(itens, opcoes = {}) {
     modal.style.display = 'flex';
     document.getElementById('v3dTitulo').textContent = opcoes.titulo || 'Montar carga';
     atual.modo = 'montar';
+    atual.voltarMontar = false;
     if (opcoes.caminhao) atual.caminhao = { ...atual.caminhao, ...opcoes.caminhao };
     montagem = { unidades, colocados: [], selecionado: null, origem: opcoes.origem || 'Pacotes', aoSalvar: opcoes.aoSalvar || null, numero: opcoes.numero || '', salvoMsg: '' };
     if (opcoes.arranjo?.caminhao) atual.caminhao = { ...atual.caminhao, ...opcoes.arranjo.caminhao };
