@@ -1156,3 +1156,58 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 /* 3D em tela cheia */
 .v3d-modal { padding: 0 !important; }
 .v3d-caixa { width: 100vw !important; height: 100vh !important; height: 100dvh !important; max-width: none; border-radius: 0 !important; }
+
+/* Radar de Clientes */
+.radar-modal { position: fixed; inset: 0; z-index: 10060; display: none; background: rgba(12,10,9,.72); }
+.radar-caixa { width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: #fff; color: #1f1c18; }
+.radar-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e5e7eb; }
+.radar-topo h2 { margin: 0; font-size: 1.25rem; }
+.radar-topo p { margin: 2px 0 0; color: #64748b; font-size: .85rem; }
+.radar-fechar { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.8rem; cursor: pointer; color: #1f1c18; }
+.radar-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 10px 18px; border-bottom: 1px solid #e5e7eb; }
+.radar-filtros label { display: grid; gap: 4px; font-size: .8rem; font-weight: 700; color: #334155; }
+.radar-filtros select, .radar-filtros input { min-height: 40px; border: 1px solid #94a3b8; border-radius: 8px; padding: 0 10px; font-size: .95rem; background: #fff; color: #1f1c18; }
+.radar-busca { flex: 1 1 200px; }
+.radar-abas { display: flex; gap: 6px; }
+.radar-abas button { min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1.5px solid #4b5563; background: #fff; color: #1f1c18; font-weight: 700; cursor: pointer; }
+.radar-abas button[aria-selected="true"] { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.radar-abas button:focus-visible, .radar-medida:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.radar-corpo { flex: 1 1 auto; overflow: auto; padding: 14px 18px; }
+.radar-kpis { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.radar-kpi { display: grid; min-width: 130px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e5e7eb; border-left: 5px solid; }
+.radar-kpi b { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.radar-kpi span { color: #475569; font-size: .85rem; }
+.radar-kpi.ligar { border-left-color: #d97706; } .radar-kpi.sumido { border-left-color: #b91c1c; } .radar-kpi.ativo { border-left-color: #15803d; }
+.radar-dica { color: #64748b; font-size: .85rem; margin: 4px 0 10px; }
+.radar-tabela-wrap { overflow-x: auto; }
+.radar-tabela { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.radar-tabela th { position: sticky; top: 0; background: #f1f5f9; text-align: left; padding: 8px; white-space: nowrap; color: #334155; }
+.radar-tabela td { padding: 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+.radar-tabela td small { display: block; color: #64748b; font-size: .76rem; }
+.radar-tabela .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.radar-chip { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.radar-chip.ligar { background: #fef3c7; color: #92400e; } .radar-chip.sumido { background: #fee2e2; color: #991b1b; } .radar-chip.ativo { background: #dcfce7; color: #166534; }
+.radar-dif { font-weight: 700; } .radar-dif.abaixo { color: #b91c1c; } .radar-dif.acima { color: #15803d; } .radar-dif.igual { color: #475569; }
+.radar-vencido { color: #b91c1c !important; font-weight: 700; }
+.radar-whats { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: #16a34a; color: #fff; font-size: 1.2rem; }
+.radar-medida { cursor: pointer; }
+.radar-medida:hover { background: #f8fafc; }
+.radar-detalhe td { background: #f8fafc; }
+.radar-pill { display: inline-block; margin: 3px 6px 3px 0; padding: 4px 8px; border-radius: 6px; background: #fff; border: 1px solid #e5e7eb; font-size: .82rem; }
+.radar-vazio { text-align: center; color: #64748b; padding: 18px; }
+@media (max-width: 760px) { .radar-corpo, .radar-filtros, .radar-topo { padding-left: 12px; padding-right: 12px; } }
+
+.radar-caixa, .radar-caixa td, .radar-caixa b, .radar-caixa h2 { color: #1f1c18 !important; }
+.radar-caixa td small, .radar-caixa .radar-dica, .radar-caixa .radar-topo p, .radar-caixa .radar-kpi span { color: #475569 !important; }
+.radar-caixa .radar-filtros input, .radar-caixa .radar-filtros select { background: #fff !important; color: #1f1c18 !important; border: 1px solid #94a3b8 !important; }
+.radar-caixa .radar-tabela th { border: 0 !important; background: #f1f5f9 !important; color: #334155 !important; }
+.radar-caixa .radar-chip.ligar { color: #92400e !important; } .radar-caixa .radar-chip.sumido { color: #991b1b !important; } .radar-caixa .radar-chip.ativo { color: #166534 !important; }
+.radar-caixa .radar-dif.abaixo, .radar-caixa .radar-vencido { color: #b91c1c !important; } .radar-caixa .radar-dif.acima { color: #15803d !important; }
+.radar-caixa .radar-abas button[aria-selected="true"] { color: #fff !important; }
+.radar-whats { width: auto !important; padding: 0 10px; gap: 6px; display: inline-flex !important; align-items: center; font-size: .85rem !important; font-weight: 700; color: #fff !important; text-decoration: none; white-space: nowrap; }
+#modalRadarClientes #radarBusca, #modalRadarClientes #radarPeriodo { background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; }
+#modalRadarClientes #radarBusca::placeholder { color: #64748b !important; -webkit-text-fill-color: #64748b; }
+#modalRadarClientes .radar-tabela td:last-child { white-space: nowrap; min-width: 120px; }
+#modalRadarClientes span.radar-dif.acima { color: #15803d !important; -webkit-text-fill-color: #15803d; }
+#modalRadarClientes span.radar-dif.abaixo { color: #b91c1c !important; -webkit-text-fill-color: #b91c1c; }
+#modalRadarClientes span.radar-dif.igual { color: #475569 !important; -webkit-text-fill-color: #475569; }
