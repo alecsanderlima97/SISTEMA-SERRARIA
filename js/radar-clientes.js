@@ -149,7 +149,10 @@ function montar(dados, periodoDias) {
     const desde = new Date(hoje.getTime() - periodoDias * DIA);
     const cadastro = new Map();
     dados.clientes.forEach(c => { cadastro.set(c.id, c); cadastro.set('N:' + norm(c.nome), c); });
-    const chaveCliente = r => (r.clienteId ? r.clienteId : 'N:' + norm(r.cliente));
+    // agrupa sempre pelo nome (o mesmo cliente pode ter romaneios com e sem id, ou cadastro duplicado)
+    const chaveNome = n => 'N:' + norm(n).replace(/[^A-Z0-9]+/g, ' ').trim();
+    const nomeCliente = (id, nome) => (id && cadastro.get(id)?.nome) || nome || '';
+    const chaveCliente = r => chaveNome(nomeCliente(r.clienteId, r.cliente));
 
     const vendas = [];   // uma linha por pacote vendido
     const cargas = [];   // uma linha por romaneio
@@ -158,7 +161,7 @@ function montar(dados, periodoDias) {
         const d = dataRomaneio(r);
         if (!d) return;
         const ck = chaveCliente(r);
-        const cad = cadastro.get(ck) || cadastro.get('N:' + norm(r.cliente));
+        const cad = (r.clienteId && cadastro.get(r.clienteId)) || cadastro.get('N:' + norm(r.cliente));
         const nome = cad?.nome || r.cliente || 'Sem nome';
         const pacotes = Array.isArray(r.pacotes) ? r.pacotes : [];
         let m3 = 0;
@@ -189,7 +192,7 @@ function montar(dados, periodoDias) {
     const aberto = new Map();
     (dados.contas || []).forEach(c => {
         if (c.pago) return;
-        const k = c.clienteId || 'N:' + norm(c.cliente);
+        const k = chaveNome(nomeCliente(c.clienteId, c.cliente));
         const a = aberto.get(k) || { valor: 0, vencido: 0 };
         a.valor += Number(c.valor || 0);
         if (c.vencimento && new Date(`${c.vencimento}T23:59:59`) < hoje) a.vencido += Number(c.valor || 0);
