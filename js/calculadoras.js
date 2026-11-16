@@ -135,6 +135,13 @@ function ordenarSubprodutosConformeFiltro(a, b) {
 function atualizarContadorSubprodutos() {
     const el = document.getElementById('subRelContador');
     if (el) el.textContent = `${subprodutosSelecionadosRelatorio.size} selecionado(s)`;
+    const seletorTodos = document.getElementById('checkAllSubLancamentos');
+    if (seletorTodos) {
+        const itensVisiveis = [...document.querySelectorAll('.check-sub-relatorio')];
+        const selecionadosVisiveis = itensVisiveis.filter(item => item.checked).length;
+        seletorTodos.checked = itensVisiveis.length > 0 && selecionadosVisiveis === itensVisiveis.length;
+        seletorTodos.indeterminate = selecionadosVisiveis > 0 && selecionadosVisiveis < itensVisiveis.length;
+    }
 }
 
 function formatarDataHoraLancamentoSubproduto(venda = {}) {
@@ -1248,6 +1255,55 @@ window.whatsappVendaSubproduto = (id) => {
     if (prepararDocumentoVendaSubproduto(id)) executarAcaoDocumentoSubproduto('whatsapp');
 };
 
+function dadosPagamentoSubproduto(usuario) {
+    return {
+        statusPagamento: 'PAGO',
+        pagamento: {
+            dataHora: new Date().toISOString(),
+            usuario,
+            uid: auth.currentUser?.uid || null
+        },
+        atualizadoEm: new Date().toISOString()
+    };
+}
+
+window.marcarSubprodutosSelecionadosComoPagos = async () => {
+    const selecionados = [...subprodutosSelecionadosRelatorio]
+        .map(id => vendasSubprodutosCache.find(item => item.id === id))
+        .filter(Boolean);
+    const pendentes = selecionados.filter(venda => String(venda.statusPagamento || 'PENDENTE').toUpperCase() !== 'PAGO');
+    if (!pendentes.length) {
+        alert('Selecione pelo menos um lancamento pendente.');
+        return;
+    }
+    if (!window.FS?.updateDoc) {
+        alert('O modulo de pagamentos ainda nao terminou de carregar. Atualize a pagina e tente novamente.');
+        return;
+    }
+    if (!confirm(`Marcar ${pendentes.length} lancamento(s) selecionado(s) como pago(s)?`)) return;
+
+    const usuario = window.App?.userName || document.getElementById('userNameHeader')?.textContent?.trim() || auth.currentUser?.email || 'Usuario';
+    const falhas = [];
+    for (const venda of pendentes) {
+        const dados = dadosPagamentoSubproduto(usuario);
+        try {
+            await window.FS.updateDoc('vendas_subprodutos', venda.id, dados);
+            const idx = vendasSubprodutosCache.findIndex(item => item.id === venda.id);
+            if (idx >= 0) vendasSubprodutosCache[idx] = { ...vendasSubprodutosCache[idx], ...dados };
+            subprodutosSelecionadosRelatorio.delete(venda.id);
+        } catch (error) {
+            console.error('Erro ao marcar subproduto como pago:', error);
+            falhas.push(venda.id);
+        }
+    }
+
+    renderizarLancamentosSubprodutos();
+    document.dispatchEvent(new Event('historicoUpdated'));
+    if (falhas.length) {
+        alert(`${pendentes.length - falhas.length} lancamento(s) atualizado(s). ${falhas.length} nao puderam ser atualizados.`);
+    }
+};
+
 window.alternarPagamentoSubproduto = async (id) => {
     const venda = vendasSubprodutosCache.find(item => item.id === id);
     if (!venda) return;
@@ -1257,15 +1313,7 @@ window.alternarPagamentoSubproduto = async (id) => {
     const usuario = window.App?.userName || document.getElementById('userNameHeader')?.textContent?.trim() || auth.currentUser?.email || 'Usuario';
     const dados = pago
         ? { statusPagamento: 'PENDENTE', pagamento: null, atualizadoEm: new Date().toISOString() }
-        : {
-            statusPagamento: 'PAGO',
-            pagamento: {
-                dataHora: new Date().toISOString(),
-                usuario,
-                uid: auth.currentUser?.uid || null
-            },
-            atualizadoEm: new Date().toISOString()
-        };
+        : dadosPagamentoSubproduto(usuario);
     try {
         await window.FS.updateDoc('vendas_subprodutos', id, dados);
         const idx = vendasSubprodutosCache.findIndex(item => item.id === id);

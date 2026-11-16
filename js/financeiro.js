@@ -3135,6 +3135,8 @@ window.renderFinanceiro = function() {
     }
     const btnExcluirSelecionados = document.getElementById('btnExcluirFinanceiroSelecionados');
     if (btnExcluirSelecionados) btnExcluirSelecionados.style.display = 'none';
+    const btnMarcarPagos = document.getElementById('btnMarcarFinanceiroSelecionados');
+    if (btnMarcarPagos) btnMarcarPagos.style.display = 'none';
 
     if (lista.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">Nenhum documento financeiro encontrado nesta pasta.</td></tr>';
@@ -3219,12 +3221,50 @@ window.atualizarSelecaoFinanceiro = function() {
     }
     const btn = document.getElementById('btnExcluirFinanceiroSelecionados');
     if (btn) btn.style.display = selecionados.length ? 'inline-flex' : 'none';
+    const btnMarcarPagos = document.getElementById('btnMarcarFinanceiroSelecionados');
+    if (btnMarcarPagos) btnMarcarPagos.style.display = selecionados.length ? 'inline-flex' : 'none';
     checks.forEach(input => input.closest('tr')?.classList.toggle('financeiro-row-selected', input.checked));
 };
 
 window.marcarTodosFinanceiro = function(checked) {
     document.querySelectorAll('.financeiro-check').forEach(input => input.checked = checked);
     window.atualizarSelecaoFinanceiro();
+};
+
+window.marcarFinanceirosSelecionadosComoPagos = async function() {
+    const ids = new Set(Array.from(document.querySelectorAll('.financeiro-check:checked')).map(input => input.value));
+    const lista = obterLancamentosFinanceiros();
+    const pendentes = lista.filter(item => ids.has(item.id) && !item.pago);
+    if (!pendentes.length) {
+        alert('Selecione pelo menos um documento ainda nao pago.');
+        return;
+    }
+    if (!confirm(`Marcar ${pendentes.length} documento(s) selecionado(s) como pago(s)?`)) return;
+
+    const agora = new Date().toISOString();
+    pendentes.forEach(item => {
+        item.pago = true;
+        item.pagoEm = agora;
+        item.atualizadoEm = agora;
+    });
+    salvarLancamentosFinanceiros(lista);
+
+    const falhas = [];
+    if (window.FS?.setDoc) {
+        for (const item of pendentes) {
+            try {
+                await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, prepararFinanceiroParaNuvem(item));
+            } catch (error) {
+                console.error(`Falha ao marcar financeiro/${item.id} como pago.`, error);
+                falhas.push(item.id);
+            }
+        }
+    }
+
+    renderFinanceiro();
+    if (falhas.length) {
+        alert(`${pendentes.length - falhas.length} documento(s) atualizado(s). ${falhas.length} nao puderam ser sincronizados na nuvem.`);
+    }
 };
 
 window.ordenarFinanceiroPor = function(campo) {
