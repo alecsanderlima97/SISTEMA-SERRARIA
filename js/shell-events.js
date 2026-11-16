@@ -127,10 +127,10 @@
     }
 
     function aplicarPreferenciasInterface() {
-        const ajuda = lerPreferencia(UI_PREFS.help, true);
-        const guia = ajuda && lerPreferencia(UI_PREFS.guide, true);
+        const ajuda = false;
+        const guia = false;
         const assistente = lerPreferencia(UI_PREFS.assistant, true);
-        const companion = ajuda && lerPreferencia(UI_PREFS.companion, true);
+        const companion = false;
         const movimento = lerPreferencia(UI_PREFS.motion, true);
         const imagemFundo = lerPreferencia(UI_PREFS.backgroundImage, true);
         const compacto = lerPreferencia(UI_PREFS.compact, false);
@@ -387,7 +387,7 @@
             });
         }
 
-        iniciarTooltipsOrquestra();
+        // Ajuda ao passar o mouse (tooltip customizado) removida a pedido do cliente.
         iniciarContextoCabecalho();
         iniciarNotificacoesCabecalho();
         renderizarGaleriaFundos();

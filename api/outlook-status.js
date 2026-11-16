@@ -3,7 +3,7 @@ const {
     parseCookies,
     decodeMeta,
     getOutlookConfig
-} = require('./outlook-utils');
+} = require('./_outlook-utils');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {

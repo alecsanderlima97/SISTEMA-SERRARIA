@@ -868,7 +868,10 @@ window.importarFeriadosNacionais = async function() {
         alert(`${automaticos.length} feriado(s) nacional(is) de ${ano} foram atualizados. Feriados estaduais e municipais cadastrados foram preservados.`);
     } catch (error) {
         console.error('Erro ao importar feriados nacionais:', error);
-        alert('Não foi possível atualizar os feriados nacionais agora. Seus feriados manuais foram mantidos.');
+        const semPermissao = /permission|insufficient/i.test(String(error?.code || error?.message || ''));
+        alert(semPermissao
+            ? 'Os feriados foram consultados, mas seu usuário não tem permissão para salvar as regras de pagamento. Peça a um gerente ou administrador.'
+            : 'Não foi possível consultar o calendário nacional agora (internet ou serviço fora do ar). Seus feriados manuais foram mantidos.');
     } finally {
         if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Atualizar feriados nacionais'; }
     }
@@ -3022,11 +3025,11 @@ function gerarHtmlReciboEntrada(en) {
     const dtObj = new Date(en.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
     const reciboFinanceiro = usuarioPodeVerFinanceiroEmpreiteiro()
-        ? `<br><p><strong>Valor Empreiteiro por MÂ³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
+        ? `<br><p><strong>Valor Empreiteiro por M³:</strong> R$ ${(en.valorMetroEmpreiteiro || 0).toFixed(2)}</p>
 <p><strong>Total Empreiteiro:</strong> R$ ${(en.totalEmpreiteiro || 0).toFixed(2)}</p>
-<p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+<p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
 <h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`
-        : `<br><p><strong>Valor Descarga por MÂ³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
+        : `<br><p><strong>Valor Descarga por M³:</strong> R$ ${(en.valorDescargaM3 || 0).toFixed(2)}</p>
 <h3><strong>TOTAL DESCARGA:</strong> R$ ${(en.totalDescarga || 0).toFixed(2)}</h3>`;
     return `
         <div class="doc-header"><div><img src="logo.png" alt="Serraria" class="doc-logo" onerror="this.style.display='none'"><div style="margin-top:10px; color:#334155; font-size:13px;"><strong>Recibo de Entrada de Toras</strong></div></div><div class="doc-title"><h1>Entrada</h1><p><strong>Romaneio ${en.romaneioNum || 'N/A'}</strong></p></div></div>
@@ -3559,3 +3562,16 @@ window.SectionLoader?.register('view-entrada', () => Promise.all([
     carregarEmpreiteiros(),
     carregarEntradas()
 ]));
+
+
+// Visualizacao 3D da carga de tora (somente leitura): usa as mesmas medidas do calculo de volume.
+window.verCargaTora3D = function() {
+    const ler = id => parseDecimalValue(document.getElementById(id)?.value) || 0;
+    window.abrirCargaTora3D?.({
+        comp: ler('entComp'),
+        larg: ler('entLarg'),
+        altEsq: ['entAltEsq1', 'entAltEsq2', 'entAltEsq3', 'entAltEsq4'].map(ler),
+        altDir: ['entAltDir1', 'entAltDir2', 'entAltDir3', 'entAltDir4'].map(ler),
+        caminhao: obterModeloCaminhaoEntrada()
+    });
+};

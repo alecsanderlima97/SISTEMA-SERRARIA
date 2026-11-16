@@ -37,6 +37,9 @@
                     <button type="button" id="btnEtiquetasAvulsasPatio" class="btn-patio-print" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;">
                         <i class="fa-solid fa-tag"></i> Etiquetas Avulsas
                     </button>
+                    <button type="button" class="btn-patio-print" onclick="window.montarCargaPatio3D()" style="background:#0f766e !important;">
+                        <i class="fa-solid fa-cube"></i> Montar carga 3D
+                    </button>
                     <button type="button" onclick="window.fecharModalPatio()" class="btn-patio-exit">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
                     </button>
@@ -243,7 +246,7 @@
 
                     <div class="hide-on-print patio-selection-toolbar" style="display:flex; align-items:center; gap:12px; margin:0 0 10px 0; color:#f8fafc; font-size:.82rem; font-weight:800;">
                         <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-                            <input type="checkbox" onchange="window.selecionarTodosItensPatio(this.checked)" style="width:17px; height:17px; accent-color:#16a34a;">
+                            <input type="checkbox" onchange="window.selecionarTodosItensPatio(this.checked)" style="width:17px; height:17px; accent-color:#292524;">
                             Selecionar todos
                         </label>
                         <span id="patioSelecaoResumo" style="color:#cbd5e1;">Nenhum item selecionado</span>
@@ -251,25 +254,8 @@
                         <button type="button" id="btnExcluirSelecionadosPatio" onclick="window.excluirSelecionadosPatio()" disabled style="background:#b91c1c; color:#fff; border:none; border-radius:7px; padding:7px 10px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash-can"></i> Excluir selecionados</button>
                     </div>
 
-                    <div class="table-container" style="overflow-x: auto;">
-                        <table class="patio-lista-areia" style="width: 100%; border-collapse: collapse; text-align: left;">
-                            <thead>
-                                <tr style="border-bottom: 1.5px solid #543725;">
-                                    <th class="hide-on-print" style="font-size: 0.75rem; padding: 12px 8px; font-weight: bold; text-transform: uppercase; text-align: center;">SEL.</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">CLASSE</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase;">MEDIDAS</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">PACOTES</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">TOTAL PÇS</th>
-                                    <th style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: right;">VOLUME (M³)</th>
-                                    <th class="hide-on-print" style="font-size: 0.75rem; padding: 12px 10px; font-weight: bold; text-transform: uppercase; text-align: center;">AÇÕES</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaItensPatioTemp">
-                                <tr>
-                                    <td colspan="6" style="text-align: center; color: #c4a482; padding: 30px; font-size: 0.9rem;">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div id="listaItensPatioTemp" class="cp-lista">
+                        <div class="cp-vazio">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</div>
                     </div>
                 </div>
             </div>

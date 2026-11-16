@@ -43,7 +43,7 @@ function configurarProtecaoVoltarNavegador() {
 
 const ROLE_PERMISSIONS = {
     'gerente': {
-        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-paletes', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
         readOnly: false
     },
     'patrao': {
@@ -84,10 +84,11 @@ const SECTION_PERMISSIONS = [
     { id: 'view-historico', label: 'Historico de Vendas' },
     { id: 'view-clientes', label: 'Clientes' },
     { id: 'view-transportes', label: 'Transportadoras' },
-    { id: 'view-entrada', label: 'Conferencia de Cargas' },
+    { id: 'view-entrada', label: 'Conferencia de Carga de Tora' },
     { id: 'view-mapa', label: 'Mapa' },
     { id: 'view-cavaco', label: 'Venda de Subprodutos' },
-    { id: 'view-produtos', label: 'Gestao de Madeira' },
+    { id: 'view-produtos', label: 'Cadastro de Medidas' },
+    { id: 'view-paletes', label: 'Paletes' },
     { id: 'view-estoque', label: 'Controle de Estoque' },
     { id: 'view-frotas', label: 'Controle de Frota' },
     { id: 'view-financeiro', label: 'Financeiro' },
@@ -107,7 +108,7 @@ const SUBSECTION_PERMISSIONS = {
         ]
     },
     'view-entrada': {
-        label: 'Conferencia de Cargas',
+        label: 'Conferencia de Carga de Tora',
         items: [
             { id: 'registro', label: 'Registrar tora' },
             { id: 'lista', label: 'Ultimas entradas / historico' },
@@ -1490,6 +1491,7 @@ const App = {
                         inicializarMascarasPerfil();
                         atualizarResumoBackup();
                         this.applyPermissionVisibility();
+                        window.atualizarLembretesFinanceirosPorPermissao?.();
                         if (canRunCloudSnapshotForRole(novoCargo) && window.FS?.gerarSnapshotNuvem && !this.cloudSnapshotAgendado) {
                             this.cloudSnapshotAgendado = true;
                             window.setTimeout(() => {
@@ -1598,6 +1600,17 @@ const App = {
 
     async logout() {
         try {
+            try {
+                const resultado = await Promise.race([
+                    window.prepararSaidaFinanceiro?.() || Promise.resolve(null),
+                    new Promise(resolve => setTimeout(() => resolve(null), 8000))
+                ]);
+                if (resultado && resultado.limpo === false && resultado.falhas) {
+                    console.warn(`Financeiro: ${resultado.falhas} lancamento(s) nao sincronizado(s); copia local mantida.`);
+                }
+            } catch (error) {
+                console.warn('Financeiro: nao foi possivel conferir a copia local antes de sair.', error);
+            }
             this.pararPresencaUsuario();
             await signOut(auth);
             window.location.href = 'login.html';

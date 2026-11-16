@@ -2,7 +2,7 @@ const {
     REFRESH_COOKIE,
     META_COOKIE,
     serializeCookie
-} = require('./outlook-utils');
+} = require('./_outlook-utils');
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {

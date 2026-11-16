@@ -1,6 +1,6 @@
-import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from './firebase-init.js';
+import { db, auth, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc, runTransaction } from './firebase-init.js';
 
-// ---- MÃ“DULO DE CONTROLE DE PÃTIO & ETIQUETAS ----
+// ---- MÓDULO DE CONTROLE DE PÁTIO & ETIQUETAS ----
 
 let itensPatioTemp = [];
 let historicoPatioAtuais = [];
@@ -101,7 +101,7 @@ document.addEventListener('produtosUpdated', () => {
     configuracoesMadeiraPatioCacheEm = 0;
 });
 
-// UtilitÃ¡rios de FormataÃ§Ã£o e ConversÃ£o
+// Utilitários de Formatação e Conversão
 function parseDecimal(val) {
     if (val === null || val === undefined) return 0;
     let s = val.toString().trim();
@@ -164,7 +164,7 @@ function instalarSugestoesConfiguracaoPatio() {
     });
 }
 
-// Inicializar Eventos Safely (Independente do momento do carregamento do mÃ³dulo ES)
+// Inicializar Eventos Safely (Independente do momento do carregamento do módulo ES)
 function inicializarPatioListeners() {
     const btnAbrir = document.getElementById('btnAbrirControleProducao');
     const formAdicionar = document.getElementById('formAdicionarItemPatio');
@@ -320,7 +320,7 @@ window.abrirModalPatio = async function() {
     modalPatio.style.display = 'flex';
     document.body.classList.add('modal-open');
 
-    // Preencher Data e Hora Atuais por padrÃ£o
+    // Preencher Data e Hora Atuais por padrão
     const inputData = document.getElementById('patioData');
     const inputHorario = document.getElementById('patioHorario');
     const selectPeriodo = document.getElementById('patioPeriodo');
@@ -343,10 +343,14 @@ window.abrirModalPatio = async function() {
     atualizarEstadoEdicaoPatio();
 
     // Carregar histórico do Firebase e calcular acumulados de hoje
-    await carregarHistoricoPatio();
-    const relHoje = historicoPatioAtuais.find(rel => rel.data === dataAtualString);
-    if (relHoje) {
-        carregarRelatorioPatioNoFormulario(relHoje, relHoje.id);
+    await carregarHistoricoPatio(true);
+    // segue sempre a lista mais atualizada (a do Fluxo do Patio, se a empilhadeira lancou por ultimo)
+    const maisNova = historicoPatioAtuais.find(rel => Array.isArray(rel.itens) && rel.itens.length) || historicoPatioAtuais[0];
+    if (maisNova && maisNova.data === dataAtualString) {
+        carregarRelatorioPatioNoFormulario(maisNova, maisNova.id);
+    } else if (maisNova) {
+        // lista de outro dia: traz os pacotes para a contagem de hoje (salva como lista nova do dia)
+        carregarRelatorioPatioNoFormulario({ ...maisNova, data: dataAtualString, horario: horaAtualPatio(), periodo: 'Atualizacao do dia' }, null);
     }
     atualizarAvisoUltimaAlteracaoPatio();
     await calcularAcumuladosHoje(dataAtualString);
@@ -374,8 +378,8 @@ window.fecharFluxoPatio = function() {
     if (panel) panel.style.display = 'none';
 };
 
-async function carregarRelatorioPatioAtual() {
-    const relatorios = await carregarRelatoriosPatioCache();
+async function carregarRelatorioPatioAtual(force = false) {
+    const relatorios = await carregarRelatoriosPatioCache(force);
     // Um relatorio vazio pode existir por abertura anterior da tela. Para o fluxo
     // operacional, priorizamos a ultima lista que realmente possui pacotes.
     return relatorios.find(relatorio => Array.isArray(relatorio.itens) && relatorio.itens.length > 0)
@@ -384,6 +388,10 @@ async function carregarRelatorioPatioAtual() {
 }
 
 async function garantirRelatorioProducaoPatioAtual() {
+    // Controle de Producao (escritorio) e Fluxo do Patio (empilhadeira) gravam listas no mesmo lugar:
+    // sempre segue a mais atualizada das duas, para um nao trabalhar em cima de lista velha.
+    const maisNova = await carregarRelatorioPatioAtual(true).catch(() => null);
+    if (maisNova?.id) producaoPatioRelatorioAtual = maisNova;
     if (producaoPatioRelatorioAtual?.id) return producaoPatioRelatorioAtual;
 
     producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
@@ -566,15 +574,14 @@ window.abrirProducaoPatio = async function() {
     const panel = document.getElementById('panelProducaoPatio');
     if (!panel) return;
     panel.style.display = 'block';
+    // O Fluxo do Patio abre sozinho na tela (sem pedacos do Inicio em volta) para qualquer usuario.
+    document.body.classList.add('fluxo-patio-foco');
     setFormProducaoPatioAberto(ehFluxoPatioOperacionalExclusivo());
     aplicarPermissoesDashboardPatio();
-    if (!ehFluxoPatioOperacionalExclusivo()) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    // Apenas abrir o Fluxo nao deve criar uma lista vazia nem substituir a lista ativa.
-    if (!producaoPatioRelatorioAtual?.id) {
-        producaoPatioRelatorioAtual = await carregarRelatorioPatioAtual();
-    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    // Apenas abrir o Fluxo nao deve criar uma lista vazia; abre sempre a lista mais atualizada
+    // (pode ter sido lancada no Controle de Producao por outra pessoa).
+    producaoPatioRelatorioAtual = (await carregarRelatorioPatioAtual(true).catch(() => null)) || producaoPatioRelatorioAtual;
     await renderizarProducaoPatio();
 };
 
@@ -616,6 +623,7 @@ function registrarDesfazerListaPatio(itensAnteriores, descricao) {
 
 window.fecharProducaoPatio = function() {
     setFormProducaoPatioAberto(false);
+    document.body.classList.remove('fluxo-patio-foco');
     const panel = document.getElementById('panelProducaoPatio');
     if (panel) panel.style.display = 'none';
 };
@@ -719,7 +727,7 @@ async function sugerirConfiguracaoMadeiraPatio(origem = 'producao') {
     const encontrada = configuracoes.find(item => chaveCubagemConfiguracao(item.espessura, item.largura, item.comprimentoReferencia) === chave);
 
     if (!encontrada) {
-        campos.sugestao.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>Nenhuma configuracao padrao encontrada na Gestao de Madeira para esta cubagem.</span>';
+        campos.sugestao.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>Nenhuma configuracao padrao encontrada no Cadastro de Medidas para esta cubagem.</span>';
         campos.sugestao.hidden = false;
         delete sugestoesConfiguracaoPatio[origem];
         return;
@@ -800,6 +808,15 @@ async function atualizarResumoFluxoPatioCompleto() {
         })
     ];
     container.innerHTML = cards.join('');
+
+    const resumoMobile = document.getElementById('producaoPatioResumoMobile');
+    if (resumoMobile) {
+        const itens = (producaoPatioRelatorioAtual.itens || []).length;
+        resumoMobile.innerHTML = `
+            <div><b>${totais.pacotes || 0}</b><span>Pacotes</span></div>
+            <div><b>${formatDecimalMockup(totais.volume || 0, 2)} m³</b><span>Volume</span></div>
+            <div><b>${itens}</b><span>Itens</span></div>`;
+    }
 }
 
 function atualizarStatusProducaoPatio(relatorio) {
@@ -831,7 +848,30 @@ async function salvarRelatorioProducaoPatio(relatorio) {
         atualizadoEm: new Date().toISOString()
     };
     delete dados.id;
-    await updateDoc(doc(db, 'patio_relatorios', relatorio.id), dados);
+    // Grava so se o patio nao mudou no banco desde que esta tela leu (ex.: um romaneio baixou
+    // pacotes ou outro aparelho lancou). Se mudou, recarrega em vez de sobrescrever.
+    const ref = doc(db, 'patio_relatorios', relatorio.id);
+    const versaoLida = relatorio.atualizadoEm || null;
+    try {
+        await runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(ref);
+            const versaoBanco = snap.exists() ? (snap.data().atualizadoEm || null) : null;
+            if (versaoLida && versaoBanco && versaoBanco !== versaoLida) {
+                const conflito = new Error('PATIO_ALTERADO');
+                conflito.code = 'PATIO_ALTERADO';
+                throw conflito;
+            }
+            transaction.update(ref, dados);
+        });
+    } catch (error) {
+        if (error?.code === 'PATIO_ALTERADO') {
+            patioRelatoriosCacheEm = 0;
+            alert('O patio foi alterado por outro lancamento (romaneio ou outro aparelho) enquanto esta tela estava aberta. A lista foi atualizada; confira e refaca a ultima acao.');
+            try { await renderizarProducaoPatio({ recarregar: true }); } catch (_) {}
+            error.avisado = true;
+        }
+        throw error;
+    }
     producaoPatioRelatorioAtual = { id: relatorio.id, ...dados };
     patioRelatoriosCacheEm = 0;
 }
@@ -879,7 +919,7 @@ async function renderizarProducaoPatio(options = {}) {
                 ? badgeClasseFluxo(classeItem)
                 : '<span style="color:#334155; font-weight:900;">*</span>';
             const cubagemHtml = primeiraCubagem
-                ? `<div style="font-weight:900; color:${corClasse} !important;">${formatCubagemFluxo(item)}</div>
+                ? `<div style="font-weight:900; color:${corClasse} !important; display:flex; align-items:center; gap:6px;">${formatCubagemFluxo(item)}<button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${item.id}')" title="Adicionar pacote com esta cubagem e classe" aria-label="Adicionar pacote com esta cubagem">+</button></div>
                    <small style="display:block; margin-top:3px; color:#334155; font-size:0.74rem; font-weight:800;">* ${formatarResumoPacoteProducao(item)}</small>`
                 : `<small style="display:block; color:#334155; font-size:0.78rem; font-weight:900;">* ${formatarResumoPacoteProducao(item)}</small>`;
             return `
@@ -904,6 +944,7 @@ async function renderizarProducaoPatio(options = {}) {
             </tr>
         `}).join('') : '<tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Sem cubagens neste controle.</td></tr>';
         atualizarResumoSelecaoFluxoPatio();
+        renderizarCardsProducaoPatio(atual.itens);
         await atualizarResumoFluxoPatioCompleto();
     } catch (error) {
         console.error('Erro na producao do patio:', error);
@@ -968,8 +1009,11 @@ function atualizarResumoSelecaoFluxoPatio() {
 window.toggleSelecionarItemFluxoPatio = function(id, checked) {
     if (checked) itensFluxoPatioSelecionados.add(id);
     else itensFluxoPatioSelecionados.delete(id);
-    const linha = document.querySelector(`[data-fluxo-patio-id="${id}"]`);
-    if (linha) linha.classList.toggle('is-selected', checked);
+    document.querySelectorAll(`[data-fluxo-patio-id="${id}"]`).forEach(linha => {
+        linha.classList.toggle('is-selected', checked);
+        const caixa = linha.querySelector('input[type="checkbox"]');
+        if (caixa) caixa.checked = checked;
+    });
     atualizarResumoSelecaoFluxoPatio();
 };
 
@@ -1029,10 +1073,30 @@ window.alterarPacotesProducaoPatio = async function(id, delta, origem = null) {
         registrarDesfazerFluxoPatio(itensAnteriores, `${delta > 0 ? 'Pacote adicionado' : 'Pacote removido'} no Fluxo do Patio.`);
     } catch (error) {
         console.error('Erro ao atualizar pacotes no fluxo do patio:', error);
-        alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
+        if (!error?.avisado) alert('Nao foi possivel atualizar os pacotes. Verifique a internet e a permissao de edicao deste usuario.');
     } finally {
         window.__salvandoFluxoPatio = false;
     }
+};
+
+window.novoPacoteMesmaCubagemProducaoPatio = function(id) {
+    if (!producaoPatioRelatorioAtual) return;
+    const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
+    if (!item) return;
+
+    // Preenche o formulario com a cubagem e a classe do grupo. A configuracao do pacote (alturas, largura, amarras) fica para a pessoa informar.
+    document.getElementById('prodPatioClasse').value = item.classe || '1a CLASSE';
+    document.getElementById('prodPatioEsp').value = formatDecimal(item.espessura, 1);
+    document.getElementById('prodPatioLarg').value = formatDecimal(item.largura, 1);
+    document.getElementById('prodPatioComp').value = formatDecimal(item.comprimento, 2);
+    document.getElementById('prodPatioPacotes').value = 1;
+    document.getElementById('prodPatioAlturas').value = '';
+    document.getElementById('prodPatioLarguraPacote').value = '';
+    document.getElementById('prodPatioAmarras').value = 0;
+
+    setFormProducaoPatioAberto(true);
+    atualizarResumoNovaCubagemProducaoPatio();
+    document.getElementById('prodPatioAlturas')?.focus();
 };
 
 window.editarCubagemProducaoPatio = function(id) {
@@ -1056,6 +1120,118 @@ window.editarCubagemProducaoPatio = function(id) {
     document.getElementById('prodPatioEsp')?.focus();
 };
 
+// Visao mobile do Fluxo do Patio: uma lista por classe (1a, depois 2a, depois 3a) e, dentro de cada
+// classe, um card por cubagem da maior para a menor (mesma regra de ordenarItensPatio: comprimento,
+// espessura e largura decrescentes). Usa os mesmos dados e funcoes de acao da tabela (desktop).
+function renderizarCardsProducaoPatio(itens) {
+    const box = document.getElementById('producaoPatioCards');
+    if (!box) return;
+    if (!Array.isArray(itens) || !itens.length) {
+        box.innerHTML = '<p class="fluxo-patio-cards-vazio">Sem cubagens neste controle.</p>';
+        return;
+    }
+
+    const classes = new Map();
+    ordenarItensPatio(itens).forEach(item => {
+        const numero = obterNumeroClasse(obterClasseItemFluxo(item)) || 0;
+        if (!classes.has(numero)) classes.set(numero, new Map());
+        const cubagens = classes.get(numero);
+        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        if (!cubagens.has(chave)) cubagens.set(chave, { cubagem: formatCubagemFluxo(item).replace(/m$/, ' m'), primeiroId: item.id, itens: [] });
+        cubagens.get(chave).itens.push(item);
+    });
+
+    const pecasDe = lista => lista.reduce((soma, item) => soma + (Number(item.totalPecas) || ((Number(item.pecas) || 0) * (Number(item.pacotes) || 0))), 0);
+    const pacotesDe = lista => lista.reduce((soma, item) => soma + (Number(item.pacotes) || 0), 0);
+    const volumeDe = lista => lista.reduce((soma, item) => soma + (Number(item.volume) || 0), 0);
+    const resumoDe = lista => `${pacotesDe(lista)} pct · ${pecasDe(lista)} pç · ${formatDecimalMockup(volumeDe(lista))} m³`;
+
+    const fmtInt = n => Number(n || 0).toLocaleString('pt-BR');
+    const fmtM3 = n => `${formatDecimalMockup(Number(n) || 0)} m³`;
+
+    // Cada classe e um bloco proprio (1a em cima, 2a embaixo...). Dentro dele, cada cubagem mostra
+    // primeiro o total daquela madeira (pacotes, pecas, m3) e depois as configuracoes de pacote.
+    box.innerHTML = [...classes.entries()]
+        .sort((a, b) => (a[0] || 99) - (b[0] || 99))
+        .map(([numero, cubagens]) => {
+            const nivel = numero >= 1 && numero <= 3 ? numero : 0;
+            const todos = [...cubagens.values()].flatMap(grupo => grupo.itens);
+            const cards = [...cubagens.values()].map(grupo => {
+                const linhas = grupo.itens.map(item => {
+                    const marcado = itensFluxoPatioSelecionados.has(item.id) ? 'checked' : '';
+                    const qtd = Number(item.pacotes) || 0;
+                    const d = obterDetalhesPacoteEtiqueta(item);
+                    const pecasPacote = Number(d.totalPecas || item.pecas || 0);
+                    const amarras = Number(d.amarras) || 0;
+                    const config = `(${d.alturas || 0}×${d.largura || 0})${amarras ? ` + ${amarras}<small class="fp-am">am</small>` : ''}`;
+                    return `
+                    <div class="fp-pacote ${marcado ? 'is-selected' : ''}" data-fluxo-patio-id="${item.id}">
+                        <input type="checkbox" ${marcado} onchange="window.toggleSelecionarItemFluxoPatio('${item.id}', this.checked)" aria-label="Selecionar esta configuração">
+                        <div class="fp-formula">
+                            <div class="fp-linha-principal">
+                                <span class="fp-qtd-pacotes"><b>${qtd}</b> ${qtd === 1 ? 'pacote' : 'pacotes'}</span>
+                                <span class="fp-config">${config}</span>
+                            </div>
+                            <span class="fp-qtd">${fmtInt(pecasPacote)} pç/pacote · ${fmtInt(pecasDe([item]))} pç · ${fmtM3(item.volume)}</span>
+                        </div>
+                        <div class="fp-acoes">
+                            <button type="button" class="fp-btn-qtd" onclick="window.alterarPacotesProducaoPatio('${item.id}', -1, this)" aria-label="Tirar 1 pacote">−1</button>
+                            <button type="button" class="fp-btn-qtd" onclick="window.alterarPacotesProducaoPatio('${item.id}', 1, this)" aria-label="Adicionar 1 pacote">+1</button>
+                            <button type="button" class="fp-btn-editar" onclick="window.editarCubagemProducaoPatio('${item.id}')">Editar</button>
+                            <button type="button" class="fp-btn-excluir" onclick="window.excluirCubagemProducaoPatio('${item.id}')" aria-label="Excluir só esta configuração">Excluir</button>
+                        </div>
+                    </div>`;
+                }).join('');
+                return `
+                <section class="fp-grupo">
+                    <header class="fp-grupo-head">
+                        <div class="fp-grupo-titulo">
+                            <span class="fp-cubagem">${grupo.cubagem}</span>
+                            <span class="fp-grupo-total"><b>${fmtInt(pacotesDe(grupo.itens))}</b> pacotes · <b>${fmtInt(pecasDe(grupo.itens))}</b> pç · <b>${fmtM3(volumeDe(grupo.itens))}</b></span>
+                        </div>
+                        <button type="button" class="btn-fluxo-mais-cubagem" onclick="window.novoPacoteMesmaCubagemProducaoPatio('${grupo.primeiroId}')" aria-label="Adicionar nova configuração com esta cubagem" title="Adicionar nova configuração com esta cubagem">+</button>
+                    </header>
+                    ${linhas}
+                    <footer class="fp-grupo-foot">
+                        <button type="button" class="fp-excluir" onclick="window.excluirGrupoCubagemProducaoPatio('${grupo.itens.map(i => i.id).join(',')}')">Excluir cubagem inteira</button>
+                    </footer>
+                </section>`;
+            }).join('');
+            return `
+            <div class="fp-classe fp-classe-n${nivel}">
+                <div class="fp-classe-tit">
+                    <span class="fp-badge">${numero ? `${numero}ª CLASSE` : 'SEM CLASSE'}</span>
+                    <span class="fp-classe-total">${fmtInt(pacotesDe(todos))} pacotes · ${fmtInt(pecasDe(todos))} pç · ${fmtM3(volumeDe(todos))}</span>
+                </div>
+                <div class="fp-classe-lista">${cards}</div>
+            </div>`;
+        }).join('');
+}
+
+window.renderizarCardsProducaoPatio = renderizarCardsProducaoPatio;
+
+window.excluirGrupoCubagemProducaoPatio = async function(idsCsv) {
+    if (!producaoPatioRelatorioAtual) return;
+    const ids = String(idsCsv || '').split(',').filter(Boolean);
+    const alvo = (producaoPatioRelatorioAtual.itens || []).filter(i => ids.includes(i.id));
+    if (!alvo.length) return;
+
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir ${alvo.length} pacote(s) da cubagem ${formatCubagemFluxo(alvo[0])} do Fluxo do Patio?`);
+    if (!autorizado) return;
+
+    try {
+        const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual.itens || []);
+        producaoPatioRelatorioAtual.itens = (producaoPatioRelatorioAtual.itens || []).filter(i => !ids.includes(i.id));
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`Excluiu cubagem ${formatCubagemFluxo(alvo[0])}`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        await renderizarProducaoPatio({ recarregar: false });
+        registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
+    } catch (error) {
+        console.error('Erro ao excluir grupo de cubagem do fluxo do patio:', error);
+        if (!error?.avisado) alert('Nao foi possivel excluir esta cubagem agora.');
+    }
+};
+
 window.excluirCubagemProducaoPatio = async function(id) {
     if (!producaoPatioRelatorioAtual) return;
     const item = (producaoPatioRelatorioAtual.itens || []).find(i => i.id === id);
@@ -1073,7 +1249,7 @@ window.excluirCubagemProducaoPatio = async function(id) {
         registrarDesfazerFluxoPatio(itensAnteriores, 'Cubagem excluida do Fluxo do Patio.');
     } catch (error) {
         console.error('Erro ao excluir cubagem do fluxo do patio:', error);
-        alert('Nao foi possivel excluir esta cubagem agora.');
+        if (!error?.avisado) alert('Nao foi possivel excluir esta cubagem agora.');
     }
 };
 
@@ -1559,7 +1735,7 @@ window.salvarEdicaoGrupoCubagemPatio = async function() {
         window.fecharEdicaoGrupoCubagemPatio();
     } catch (error) {
         console.error('Erro ao editar cubagem em grupo:', error);
-        alert('Nao foi possivel salvar a edicao da cubagem agora.');
+        if (!error?.avisado) alert('Nao foi possivel salvar a edicao da cubagem agora.');
     }
 };
 
@@ -1586,7 +1762,7 @@ function formatarResumoPacoteProducao(item) {
     return `(${alturas}x${largura})+${amarras} = ${total} pç`;
 }
 
-// Adicionar Item via FormulÃ¡rio
+// Adicionar Item via Formulário
 function obterDetalhesPacoteEtiqueta(item) {
     const raw = (item.pecasRaw || '').toString().trim();
     const detalhes = {
@@ -1674,7 +1850,7 @@ function adicionarItemAoPatio() {
     const comp = parseDecimal(compRaw);
 
     if (esp <= 0 || larg <= 0 || comp <= 0 || pacotes <= 0 || pecas <= 0) {
-        alert("⚠️ Por favor, insira valores vÃ¡lidos e maiores que zero.");
+        alert("⚠️ Por favor, insira valores válidos e maiores que zero.");
         return;
     }
 
@@ -1751,7 +1927,7 @@ function limparTudoPatio() {
     }
 }
 
-// Ações dinÃ¢micas de incremento/decremento (+1 / -)
+// Ações dinâmicas de incremento/decremento (+1 / -)
 window.alterarPacotesPatio = async function(id, delta) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
@@ -1789,8 +1965,8 @@ window.editarItemPatio = function(id) {
     const item = itensPatioTemp.find(i => i.id === id);
     if (!item) return;
 
-    document.getElementById('patioItemTipo').value = item.tipo || 'TÃBUA';
-    selecionarClassePatio(document.getElementById('patioItemClasse'), item.classe || '1Âª CLASSE');
+    document.getElementById('patioItemTipo').value = item.tipo || 'TÁBUA';
+    selecionarClassePatio(document.getElementById('patioItemClasse'), item.classe || '1ª CLASSE');
     const especieInput = document.querySelector(`input[name="patioItemEspecie"][value="${item.especie || 'EUCALIPTO'}"]`);
     if (especieInput) especieInput.checked = true;
 
@@ -2135,122 +2311,130 @@ function ordenarItensPatioTemp() {
     itensPatioTemp = ordenarItensPatio(itensPatioTemp);
 }
 
-// Renderizar lista do pátio exatamente igual ao mockup
+// Renderizar lista do Controle de Produção Geral: blocos por classe > cubagem (maior para menor)
 function renderizarItensPatioTemp() {
-    const tbody = document.getElementById('listaItensPatioTemp');
-    if (!tbody) return;
+    const lista = document.getElementById('listaItensPatioTemp');
+    if (!lista) return;
 
     ordenarItensPatioTemp();
 
     if (itensPatioTemp.length === 0) {
         itensPatioSelecionados.clear();
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; color: #64748b; padding: 30px; font-size: 0.9rem;">
-                    Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.
-                </td>
-            </tr>
-        `;
+        lista.innerHTML = `<div class="cp-vazio">Nenhum pacote na lista de pátio. Adicione ou configure os lotes acima.</div>`;
         atualizarConsolidatedStats();
         atualizarResumoSelecaoPatio();
         return;
     }
 
-    let html = '';
-    let ultimaChaveCubagem = '';
+    const fmtInt = n => (Number(n) || 0).toLocaleString('pt-BR');
+    const fmtM3 = n => formatDecimalMockup(Number(n) || 0);
+    const classes = new Map();
     itensPatioTemp.forEach(item => {
-        // Tag badge da classe
-        let classeBadge = '';
-        const numeroClasse = obterNumeroClasse(item.classe);
-        if (numeroClasse === 1) {
-            classeBadge = `<span class="patio-tag-classe patio-tag-1a">1&ordf;</span>`;
-        } else if (numeroClasse === 2) {
-            classeBadge = `<span class="patio-tag-classe patio-tag-2a">2&ordf;</span>`;
-        } else {
-            classeBadge = `<span class="patio-tag-classe patio-tag-3a">3&ordf;</span>`;
-        }
-
-        const chaveCubagem = `${obterNumeroClasse(item.classe)}|${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
-        const primeiraCubagem = chaveCubagem !== ultimaChaveCubagem;
-        ultimaChaveCubagem = chaveCubagem;
-        const classeHtml = primeiraCubagem ? classeBadge : '<span style="color:#e2e8f0; font-weight:900;">↳</span>';
-        const corClasseCubagem = coresClasseFluxo(item.classe).color;
-        const configTexto = `${formatarResumoPacoteProducao(item)} / ${formatDecimalMockup(item.volumeUnidade)} m³`;
-        const etiquetaIcone = item.etiquetado
-            ? '<span title="Etiqueta impressa" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(22,163,74,.14); color:#16a34a; font-size:.72rem; margin-left:6px;"><i class="fa-solid fa-tag"></i></span>'
-            : '';
-        const ultimoUso = item.ultimoUsoRomaneio;
-        const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
-        const mostrarUsoRomaneio = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000;
-        const usoRomaneioHtml = mostrarUsoRomaneio ? `<div style="margin-top:4px; color:#0f766e; font-size:.72rem; font-weight:800;"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>` : '';
-        const medidasHtml = primeiraCubagem
-            ? `
-                <div class="patio-lista-cubagem" style="color:${corClasseCubagem} !important;">${formatDecimal(item.espessura, 1)} / ${formatDecimal(item.largura, 1)} / ${formatDecimal(item.comprimento, 2)}${etiquetaIcone}</div>
-                <div class="patio-lista-config">
-                    <span>*</span>
-                    <span>${configTexto}</span>
-                </div>${usoRomaneioHtml}`
-            : `
-                <div class="patio-lista-config">
-                    <span>*</span>
-                    <span>${configTexto}${etiquetaIcone}</span>
-                </div>${usoRomaneioHtml}`;
-
-        html += `
-            <tr class="patio-lista-row ${item.id === itemPatioEditandoId ? 'patio-linha-editando' : ''}">
-                <td class="hide-on-print" style="text-align:center;">
-                    <input type="checkbox" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)" title="Selecionar para imprimir" style="width:18px; height:18px; accent-color:#16a34a;">
-                </td>
-                <!-- CLASSE -->
-                <td>
-                    ${classeHtml}
-                </td>
-                <!-- MEDIDAS + CONFIGURACAO DO PACOTE -->
-                <td>
-                    ${medidasHtml}
-                </td>
-                <!-- PACOTES -->
-                <td>
-                    <div class="patio-lista-numero">${item.pacotes}</div>
-                </td>
-                <!-- TOTAL PECAS -->
-                <td>
-                    <div class="patio-lista-numero">${item.totalPecas || 0}</div>
-                    <small>pçs</small>
-                </td>
-                <!-- VOLUME TOTAL -->
-                <td>
-                    <div class="patio-lista-numero patio-lista-volume">
-                        <span>${formatDecimalMockup(item.volume)}</span>
-                    </div>
-                    <small>(${formatDecimalMockup(item.volumeUnidade)}/un)</small>
-                </td>
-                <!-- AÃ‡Ã•ES (Mockup buttons) -->
-                <td class="hide-on-print" style="min-width:225px;">
-                    <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:nowrap;">
-                        ${botaoPacotePatio('remove', `alterarPacotesPatio('${item.id}', -1)`, 'Diminuir Pacote')}
-                        ${botaoPacotePatio('add', `alterarPacotesPatio('${item.id}', 1)`, 'Aumentar Pacote')}
-                        <button type="button" onclick="editarItemPatio('${item.id}')" style="background:none; border:none; color: #2563eb; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" title="Editar este pacote e sua configuracao">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button type="button" onclick="imprimirEtiquetaItemPatio('${item.id}')" style="background:none; border:none; color: #16a34a; cursor:pointer; font-size: 1rem; transition: color 0.15s;" title="Imprimir Etiqueta">
-                            <i class="fa-solid fa-print"></i>
-                        </button>
-                        <button type="button" onclick="removerLinhaPatio('${item.id}')" style="background:none; border:none; color: #94a3b8; cursor:pointer; font-size: 1rem; margin-left: 5px; transition: color 0.15s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="Excluir Lote">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
+        const numero = obterNumeroClasse(item.classe) || 3;
+        if (!classes.has(numero)) classes.set(numero, new Map());
+        const chave = `${formatDecimal(item.espessura, 1)}|${formatDecimal(item.largura, 1)}|${formatDecimal(item.comprimento, 2)}`;
+        const grupos = classes.get(numero);
+        if (!grupos.has(chave)) grupos.set(chave, []);
+        grupos.get(chave).push(item);
     });
 
-    tbody.innerHTML = html;
+    const somar = itens => itens.reduce((acc, item) => {
+        acc.pacotes += Number(item.pacotes) || 0;
+        acc.pecas += Number(item.totalPecas) || (Number(item.pacotes) || 0) * (obterDetalhesPacoteEtiqueta(item).totalPecas || Number(item.pecas) || 0);
+        acc.volume += Number(item.volume) || 0;
+        return acc;
+    }, { pacotes: 0, pecas: 0, volume: 0 });
+
+    const linhaHtml = item => {
+        const d = obterDetalhesPacoteEtiqueta(item);
+        const amarras = Number(d.amarras) || 0;
+        const config = `(${d.alturas || 0}×${d.largura || 0})${amarras ? ` + ${amarras}<small class="fp-am">am</small>` : ''}`;
+        const pcPacote = d.totalPecas || item.pecas || 0;
+        const totalPc = Number(item.totalPecas) || (Number(item.pacotes) || 0) * pcPacote;
+        const volUn = Number(item.volumeUnidade) || ((Number(item.pacotes) || 0) ? (Number(item.volume) || 0) / Number(item.pacotes) : 0);
+        const etiqueta = item.etiquetado ? '<span class="cp-etiqueta" title="Etiqueta impressa"><i class="fa-solid fa-tag"></i><span class="cp-etiqueta-txt"> etiquetado</span></span>' : '';
+        const ultimoUso = item.ultimoUsoRomaneio;
+        const usoRecenteMs = ultimoUso?.dataHora ? Date.now() - new Date(ultimoUso.dataHora).getTime() : Infinity;
+        const usoHtml = ultimoUso && usoRecenteMs >= 0 && usoRecenteMs < 2 * 60 * 60 * 1000
+            ? `<div class="cp-uso"><i class="fa-solid fa-truck-arrow-right"></i> ${ultimoUso.pacotes || 0} pct usado(s) no romaneio ${ultimoUso.romaneio || '-'}${ultimoUso.cliente ? ` - ${ultimoUso.cliente}` : ''}. Saldo: ${ultimoUso.saldo ?? item.pacotes ?? 0} pct.</div>`
+            : '';
+        return `
+            <div class="cp-linha ${item.id === itemPatioEditandoId ? 'patio-linha-editando' : ''}">
+                <label class="cp-sel hide-on-print" title="Selecionar">
+                    <input type="checkbox" data-patio-sel="${item.id}" ${itensPatioSelecionados.has(item.id) ? 'checked' : ''} onchange="window.toggleSelecionarItemPatio('${item.id}', this.checked)">
+                </label>
+                <div class="cp-info">
+                    <div class="fp-linha-principal">
+                        <span class="fp-qtd-pacotes"><b>${fmtInt(item.pacotes)}</b> ${Number(item.pacotes) === 1 ? 'pacote' : 'pacotes'}</span>
+                        <span class="fp-config">${config}</span>
+                        ${etiqueta}
+                    </div>
+                    <div class="fp-qtd">${fmtInt(pcPacote)} pç/pacote · ${fmtInt(totalPc)} pç · ${fmtM3(item.volume)} m³ <span class="cp-un">(${fmtM3(volUn)} m³/pct)</span></div>
+                    ${usoHtml}
+                </div>
+                <div class="cp-acoes hide-on-print">
+                    <button type="button" class="fp-btn-qtd" onclick="alterarPacotesPatio('${item.id}', -1)" title="Diminuir 1 pacote" aria-label="Diminuir 1 pacote">−1</button>
+                    <button type="button" class="fp-btn-qtd" onclick="alterarPacotesPatio('${item.id}', 1)" title="Aumentar 1 pacote" aria-label="Aumentar 1 pacote">+1</button>
+                    <button type="button" class="fp-btn-editar" onclick="editarItemPatio('${item.id}')" title="Editar esta linha" aria-label="Editar esta linha"><i class="fa-solid fa-pen"></i> Editar</button>
+                    <button type="button" class="cp-btn-etiqueta" onclick="imprimirEtiquetaItemPatio('${item.id}')" title="Imprimir etiqueta" aria-label="Imprimir etiqueta"><i class="fa-solid fa-print"></i> Etiqueta</button>
+                    <button type="button" class="fp-btn-excluir" onclick="removerLinhaPatio('${item.id}')" title="Excluir esta linha" aria-label="Excluir esta linha"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                </div>
+            </div>`;
+    };
+
+    let html = '';
+    [...classes.keys()].sort((a, b) => a - b).forEach(numero => {
+        const grupos = classes.get(numero);
+        const todos = [...grupos.values()].flat();
+        const tc = somar(todos);
+        let gruposHtml = '';
+        grupos.forEach(itens => {
+            const ref = itens[0];
+            const t = somar(itens);
+            const ids = itens.map(i => i.id);
+            gruposHtml += `
+                <section class="fp-grupo cp-grupo">
+                    <header class="cp-grupo-topo">
+                        <div>
+                            <div class="fp-cubagem">${formatDecimal(ref.espessura, 1)} × ${formatDecimal(ref.largura, 1)} × ${formatDecimal(ref.comprimento, 2)}</div>
+                            <div class="fp-grupo-total"><b>${fmtInt(t.pacotes)}</b> pct · ${fmtInt(t.pecas)} pç · <b>${fmtM3(t.volume)}</b> m³</div>
+                        </div>
+                        <div class="cp-grupo-acoes hide-on-print">
+                            <button type="button" class="cp-btn-texto cp-btn-azul" onclick="editarGrupoCubagemPatio('${ref.id}', 'controle')" title="Editar a cubagem inteira"><i class="fa-solid fa-pen-ruler"></i> Editar<span class="cp-txt-desk"> cubagem</span></button>
+                            <button type="button" class="cp-btn-texto cp-btn-vermelho" onclick="excluirCubagemControlePatio(${JSON.stringify(ids).replace(/"/g, '&quot;')})" title="Excluir a cubagem inteira"><i class="fa-solid fa-trash-can"></i> Excluir<span class="cp-txt-desk"> cubagem</span></button>
+                        </div>
+                    </header>
+                    <div class="cp-linhas">${itens.map(linhaHtml).join('')}</div>
+                </section>`;
+        });
+        html += `
+            <div class="fp-classe fp-classe-n${numero} cp-classe">
+                <div class="fp-classe-tit">
+                    <span class="fp-classe-badge">${numero}ª CLASSE</span>
+                    <span class="fp-classe-tot"><b>${fmtInt(tc.pacotes)}</b> pct · ${fmtInt(tc.pecas)} pç · <b>${fmtM3(tc.volume)}</b> m³</span>
+                </div>
+                <div class="fp-classe-lista">${gruposHtml}</div>
+            </div>`;
+    });
+
+    lista.innerHTML = html;
     atualizarResumoSelecaoPatio();
     atualizarConsolidatedStats();
 }
 
-// Atualizar estatÃ­sticas dos cards em tempo real
+window.excluirCubagemControlePatio = async function(ids) {
+    const alvo = new Set((ids || []).filter(id => itensPatioTemp.some(item => item.id === id)));
+    if (!alvo.size) return;
+    const autorizado = await window.confirmarExclusaoComSenha(`Deseja excluir a cubagem inteira (${alvo.size} linha(s)) da lista do Patio?`);
+    if (!autorizado) return;
+    const itensAnteriores = clonarItensParaDesfazer(itensPatioTemp);
+    itensPatioTemp = itensPatioTemp.filter(item => !alvo.has(item.id));
+    alvo.forEach(id => itensPatioSelecionados.delete(id));
+    renderizarItensPatioTemp();
+    registrarDesfazerListaPatio(itensAnteriores, 'Cubagem removida da lista do Patio.');
+};
+
+// Atualizar estatísticas dos cards em tempo real
 function atualizarConsolidatedStats() {
     let totalPacotes = 0;
     let totalVolume = 0;
@@ -2486,7 +2670,7 @@ function atualizarEstadoEdicaoPatio() {
 
 async function salvarRelatorioPatio() {
     if (itensPatioTemp.length === 0) {
-        alert("⚠️ O pátio estÃ¡ vazio! Insira pelo menos um lote ou pacote para poder salvar.");
+        alert("⚠️ O pátio está vazio! Insira pelo menos um lote ou pacote para poder salvar.");
         return;
     }
 
@@ -2496,7 +2680,7 @@ async function salvarRelatorioPatio() {
     const serrandoVal = document.getElementById('patioSerrando').value.toUpperCase().trim();
 
     if (!serrandoVal) {
-        alert("⚠️ Por favor, digite qual madeira estÃ¡ sendo serrada no momento.");
+        alert("⚠️ Por favor, digite qual madeira está sendo serrada no momento.");
         document.getElementById('patioSerrando').focus();
         return;
     }
@@ -2542,6 +2726,13 @@ async function salvarRelatorioPatio() {
 
     try {
         if (relatorioPatioEditandoId) {
+            // se a empilhadeira lancou no Fluxo do Patio depois que esta tela abriu, avisa antes de sobrescrever
+            const snapAtual = await getDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId)).catch(() => null);
+            const versaoBanco = snapAtual?.exists?.() ? snapAtual.data().atualizadoEm : null;
+            if (versaoBanco && relatorioExistente?.atualizadoEm && versaoBanco !== relatorioExistente.atualizadoEm
+                && !confirm('Esta lista foi alterada no Fluxo do Pátio depois que você abriu.\nOK = salvar por cima com a sua contagem.\nCancelar = não salvar (feche e abra de novo para ver a lista atualizada).')) {
+                return;
+            }
             await updateDoc(doc(db, 'patio_relatorios', relatorioPatioEditandoId), relatorio);
             alert(`✅ Contagem do Pátio atualizada com sucesso!\nVolume Total: ${formatDecimalMockup(totalVolume)} m³.`);
         } else {
@@ -2577,7 +2768,7 @@ async function carregarHistoricoPatio(force = false) {
         await carregarRelatoriosPatioCache(force);
 
         if (historicoPatioAtuais.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diÃ¡ria registrada ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding: 15px;">Nenhuma contagem diária registrada ainda.</td></tr>';
             return;
         }
 
@@ -2648,7 +2839,7 @@ window.deletarHistoricoPatio = async function(id) {
     if (await window.confirmarExclusaoComSenha("Tem certeza absoluta que deseja excluir este relatorio de contagem do patio?")) {
         try {
             await deleteDoc(doc(db, 'patio_relatorios', id));
-            alert("✅ Relatório de pátio excluÃ­do com sucesso!");
+            alert("✅ Relatório de pátio excluído com sucesso!");
             await carregarHistoricoPatio(true);
             
             const dataVal = document.getElementById('patioData').value;
@@ -2979,14 +3170,14 @@ function renderizarFilaEtiquetasAvulsasPatio() {
 
 window.removerEtiquetaAvulsaPatio = removerEtiquetaAvulsaPatio;
 
-// Imprimir etiquetas fÃ­sicas (Mockup Circle Blue Action)
+// Imprimir etiquetas físicas (Mockup Circle Blue Action)
 function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     if (!Array.isArray(lista)) {
         lista = itensPatioTemp;
     }
 
     if (lista.length === 0) {
-        alert("⚠️ Não hÃ¡ pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
+        alert("⚠️ Não há pacotes listados para imprimir etiquetas! Lance pelo menos um pacote.");
         return;
     }
 
@@ -3004,7 +3195,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     const telefoneSerraria = emitente.telefone || emitente.celular || "(15) 99629-7072";
     const emailSerraria = emitente.email || "escritoriovanmarte@hotmail.com";
 
-    // Gerar etiquetas individuais por pacote fÃ­sico
+    // Gerar etiquetas individuais por pacote físico
     lista.forEach(item => {
         for (let p = 1; p <= item.pacotes; p++) {
             const zeroPaddedSerial = String(serialGlobal).padStart(3, '0');
@@ -3138,7 +3329,7 @@ function imprimirEtiquetasFisicas(lista = itensPatioTemp) {
     win.focus();
 }
 
-// Gerar layout de fechamento do pátio para impressÃ£o agrupado
+// Gerar layout de fechamento do pátio para impressão agrupado
 function gerarLayoutImpressaoPatio(rel) {
     const dtObj = new Date(rel.data + 'T12:00:00');
     const dtStr = dtObj.toLocaleDateString('pt-BR');
@@ -3461,3 +3652,329 @@ function gerarLayoutImpressaoPatio(rel) {
     win.document.close();
     win.print();
 }
+
+// ---- LEITURA DA FOTO DA CONTAGEM (folha escrita a mao) ----
+// A foto vai para /api/patio-foto, volta como linhas e o usuario confere antes de lancar.
+let leituraFotoPatio = [];
+
+function redimensionarFotoContagemPatio(file, maxLado = 1800) {
+    return new Promise((resolve, reject) => {
+        const leitor = new FileReader();
+        leitor.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+        leitor.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Arquivo nao e uma imagem valida.'));
+            img.onload = () => {
+                const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * escala);
+                canvas.height = Math.round(img.height * escala);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.src = leitor.result;
+        };
+        leitor.readAsDataURL(file);
+    });
+}
+
+function numeroFotoPatio(valor) {
+    return Number(String(valor ?? '').trim().replace(',', '.')) || 0;
+}
+
+function converterMedidaFotoPatio(medida) {
+    const partes = String(medida || '').split(/[\/\\|]/).map(p => p.trim()).filter(Boolean);
+    if (partes.length < 3) return null;
+    const ler = (valor, divisor) => {
+        if (/[.,]/.test(valor)) return numeroFotoPatio(valor);
+        const n = Number(valor.replace(/\D/g, ''));
+        return n ? n / divisor : 0;
+    };
+    return { espessura: ler(partes[0], 10), largura: ler(partes[1], 10), comprimento: ler(partes[2], 1000) };
+}
+
+function normalizarLeituraFotoPatio(dados) {
+    const linhas = [];
+    (dados?.classes || []).forEach(grupo => {
+        const classe = [1, 2, 3].includes(Number(grupo.classe)) ? Number(grupo.classe) : 1;
+        (grupo.linhas || []).forEach(linha => {
+            const medida = converterMedidaFotoPatio(linha.medida) || { espessura: 0, largura: 0, comprimento: 0 };
+            const configs = (linha.configuracoes || []).map(c => ({
+                pacotes: Number(c.pacotes) || 0,
+                alturas: Number(c.alturas) || 0,
+                largura: Number(c.largura) || 0,
+                amarras: Number(c.amarras) || 0
+            }));
+            linhas.push({
+                classe,
+                totalCirculo: grupo.totalCirculo ?? null,
+                ...medida,
+                totalLinha: linha.totalLinha ?? null,
+                duvida: !!linha.duvida,
+                observacao: String(linha.observacao || ''),
+                configs: configs.length ? configs : [{ pacotes: 1, alturas: 0, largura: 0, amarras: 0 }]
+            });
+        });
+    });
+    return linhas;
+}
+
+function escapeHtmlFotoPatio(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function garantirModalFotoPatio() {
+    let modal = document.getElementById('modalFotoContagemPatio');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'modalFotoContagemPatio';
+    modal.className = 'foto-patio-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'fotoPatioTitulo');
+    modal.innerHTML = `
+        <div class="foto-patio-caixa">
+            <header class="foto-patio-topo">
+                <div>
+                    <h3 id="fotoPatioTitulo">Conferir leitura da foto</h3>
+                    <p>Confira cada linha. Corrija o que estiver errado antes de lançar.</p>
+                </div>
+                <button type="button" class="foto-patio-fechar" onclick="window.fecharFotoContagemPatio()" aria-label="Fechar">×</button>
+            </header>
+            <div id="fotoPatioConteudo" class="foto-patio-conteudo"></div>
+            <footer class="foto-patio-rodape">
+                <button type="button" class="foto-patio-btn foto-patio-btn-sec" onclick="window.fecharFotoContagemPatio()">Cancelar</button>
+                <button type="button" class="foto-patio-btn foto-patio-btn-alerta" onclick="window.aplicarFotoContagemPatio('substituir')">Substituir contagem do pátio</button>
+                <button type="button" class="foto-patio-btn foto-patio-btn-ok" onclick="window.aplicarFotoContagemPatio('somar')">Somar ao pátio</button>
+            </footer>
+        </div>`;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function renderizarPreviaFotoPatio() {
+    const alvo = document.getElementById('fotoPatioConteudo');
+    if (!alvo) return;
+    if (!leituraFotoPatio.length) {
+        alvo.innerHTML = '<div class="foto-patio-vazio">Nenhuma linha foi lida na foto.</div>';
+        return;
+    }
+    const num = (v, passo = '1') => `value="${v === null || v === undefined ? '' : v}" inputmode="decimal" step="${passo}"`;
+    const porClasse = new Map();
+    leituraFotoPatio.forEach((linha, i) => {
+        if (!porClasse.has(linha.classe)) porClasse.set(linha.classe, []);
+        porClasse.get(linha.classe).push({ linha, i });
+    });
+    let html = '';
+    [...porClasse.keys()].sort((a, b) => a - b).forEach(classe => {
+        const itens = porClasse.get(classe);
+        const somaClasse = itens.reduce((s, { linha }) => s + linha.configs.reduce((a, c) => a + (Number(c.pacotes) || 0), 0), 0);
+        const circulo = itens.find(({ linha }) => linha.totalCirculo !== null && linha.totalCirculo !== undefined)?.linha.totalCirculo;
+        const okClasse = circulo === undefined || circulo === null || Number(circulo) === somaClasse;
+        html += `<section class="foto-patio-classe fp-classe-n${classe}">
+            <div class="foto-patio-classe-tit"><b>${classe}ª CLASSE</b>
+                <span class="${okClasse ? '' : 'foto-patio-erro'}">${somaClasse} pct${circulo !== undefined && circulo !== null ? ` · folha: ${circulo}${okClasse ? ' ✓' : ' ✗ não bate'}` : ''}</span>
+            </div>`;
+        itens.forEach(({ linha, i }) => {
+            const soma = linha.configs.reduce((a, c) => a + (Number(c.pacotes) || 0), 0);
+            const okLinha = linha.totalLinha === null || linha.totalLinha === undefined || Number(linha.totalLinha) === soma;
+            html += `<div class="foto-patio-linha ${okLinha && !linha.duvida ? '' : 'is-alerta'}">
+                <div class="foto-patio-medida">
+                    <label>Classe<select onchange="window.editarFotoPatio(${i}, null, 'classe', this.value)">
+                        ${[1, 2, 3].map(n => `<option value="${n}" ${n === linha.classe ? 'selected' : ''}>${n}ª</option>`).join('')}
+                    </select></label>
+                    <label>Esp.<input type="number" ${num(linha.espessura, '0.1')} onchange="window.editarFotoPatio(${i}, null, 'espessura', this.value)"></label>
+                    <label>Larg.<input type="number" ${num(linha.largura, '0.1')} onchange="window.editarFotoPatio(${i}, null, 'largura', this.value)"></label>
+                    <label>Comp.<input type="number" ${num(linha.comprimento, '0.01')} onchange="window.editarFotoPatio(${i}, null, 'comprimento', this.value)"></label>
+                    <button type="button" class="foto-patio-remover" onclick="window.removerLinhaFotoPatio(${i})" aria-label="Remover linha">Remover</button>
+                </div>
+                ${linha.configs.map((c, j) => `
+                <div class="foto-patio-config">
+                    <label>Pacotes<input type="number" ${num(c.pacotes)} onchange="window.editarFotoPatio(${i}, ${j}, 'pacotes', this.value)"></label>
+                    <span class="foto-patio-formula">(<input type="number" ${num(c.alturas)} aria-label="Alturas" onchange="window.editarFotoPatio(${i}, ${j}, 'alturas', this.value)">×<input type="number" ${num(c.largura)} aria-label="Largura do pacote" onchange="window.editarFotoPatio(${i}, ${j}, 'largura', this.value)">) +<input type="number" ${num(c.amarras)} aria-label="Amarras" onchange="window.editarFotoPatio(${i}, ${j}, 'amarras', this.value)"><small>am</small></span>
+                </div>`).join('')}
+                <div class="foto-patio-conferencia ${okLinha ? '' : 'foto-patio-erro'}">
+                    Soma: <b>${soma}</b> pct${linha.totalLinha !== null && linha.totalLinha !== undefined ? ` · folha: ${linha.totalLinha}${okLinha ? ' ✓' : ' ✗ não bate'}` : ''}
+                    ${linha.duvida ? ' · <span class="foto-patio-erro">leitura com dúvida</span>' : ''}
+                    ${linha.observacao ? ` · ${escapeHtmlFotoPatio(linha.observacao)}` : ''}
+                </div>
+            </div>`;
+        });
+        html += '</section>';
+    });
+    alvo.innerHTML = html;
+}
+
+window.editarFotoPatio = function(i, j, campo, valor) {
+    const linha = leituraFotoPatio[i];
+    if (!linha) return;
+    if (j === null) {
+        linha[campo] = campo === 'classe' ? Number(valor) : numeroFotoPatio(valor);
+    } else if (linha.configs[j]) {
+        linha.configs[j][campo] = parseInt(valor, 10) || 0;
+    }
+    if (campo === 'pacotes' || campo === 'classe') renderizarPreviaFotoPatio();
+};
+
+window.removerLinhaFotoPatio = function(i) {
+    leituraFotoPatio.splice(i, 1);
+    renderizarPreviaFotoPatio();
+};
+
+window.fecharFotoContagemPatio = function() {
+    const modal = document.getElementById('modalFotoContagemPatio');
+    if (modal) modal.style.display = 'none';
+};
+
+window.abrirFotoContagemPatio = function() {
+    let input = document.getElementById('inputFotoContagemPatio');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.setAttribute('capture', 'environment');
+        input.id = 'inputFotoContagemPatio';
+        input.style.display = 'none';
+        input.addEventListener('change', () => {
+            const arquivo = input.files?.[0];
+            input.value = '';
+            if (arquivo) lerFotoContagemPatio(arquivo);
+        });
+        document.body.appendChild(input);
+    }
+    input.click();
+};
+
+async function lerFotoContagemPatio(arquivo) {
+    const modal = garantirModalFotoPatio();
+    const conteudo = document.getElementById('fotoPatioConteudo');
+    modal.style.display = 'flex';
+    modal.classList.add('is-lendo');
+    conteudo.innerHTML = '<div class="foto-patio-vazio" aria-live="polite">Lendo a foto… pode levar até 30 segundos.</div>';
+    try {
+        const imagem = await redimensionarFotoContagemPatio(arquivo);
+        const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) throw new Error('Sessao expirada. Entre novamente.');
+        const resposta = await fetch('/api/patio-foto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagem, idToken })
+        });
+        const retorno = await resposta.json().catch(() => ({}));
+        if (!resposta.ok) throw new Error(retorno.error || 'Nao foi possivel ler a foto.');
+        leituraFotoPatio = normalizarLeituraFotoPatio(retorno.dados);
+        renderizarPreviaFotoPatio();
+    } catch (error) {
+        leituraFotoPatio = [];
+        conteudo.innerHTML = `<div class="foto-patio-vazio foto-patio-erro">${escapeHtmlFotoPatio(error.message || 'Erro ao ler a foto.')}</div>`;
+    } finally {
+        modal.classList.remove('is-lendo');
+    }
+}
+
+window.aplicarFotoContagemPatio = async function(modo) {
+    const itensNovos = [];
+    for (const linha of leituraFotoPatio) {
+        for (const c of linha.configs) {
+            const pecas = (c.alturas || 0) * (c.largura || 0) + (c.amarras || 0);
+            if (!(linha.espessura > 0 && linha.largura > 0 && linha.comprimento > 0 && c.pacotes > 0 && pecas > 0)) {
+                alert(`Linha ${formatDecimal(linha.espessura || 0, 1)} / ${formatDecimal(linha.largura || 0, 1)} / ${formatDecimal(linha.comprimento || 0, 2)} está incompleta. Corrija ou remova antes de lançar.`);
+                return;
+            }
+            itensNovos.push({ linha, c, pecas });
+        }
+    }
+    if (!itensNovos.length) {
+        alert('Nada para lançar.');
+        return;
+    }
+    if (modo === 'substituir' && !confirm('Substituir toda a contagem atual do Fluxo do Pátio pela leitura da foto? (Dá para desfazer depois.)')) return;
+
+    try {
+        await garantirRelatorioProducaoPatioAtual();
+        await sincronizarRelatorioProducaoPatioAtual();
+        const itensAnteriores = clonarItensParaDesfazer(producaoPatioRelatorioAtual?.itens || []);
+        if (modo === 'substituir') producaoPatioRelatorioAtual.itens = [];
+        const dataRaw = producaoPatioRelatorioAtual.data || new Date().toISOString().slice(0, 10);
+        itensNovos.forEach(({ linha, c, pecas }, idx) => {
+            const volumeUnidade = (linha.espessura / 100) * (linha.largura / 100) * linha.comprimento * pecas;
+            mesclarCubagemProducaoPatio({
+                id: `${Date.now()}${idx}${Math.random().toString(36).slice(2, 6)}`,
+                dataRaw,
+                dataFormatted: new Date(`${dataRaw}T12:00:00`).toLocaleDateString('pt-BR'),
+                tipo: 'MADEIRA',
+                classe: `${linha.classe}a CLASSE`,
+                especie: 'EUCALIPTO',
+                espessura: linha.espessura,
+                largura: linha.largura,
+                comprimento: linha.comprimento,
+                pacotes: c.pacotes,
+                pecas,
+                pecasRaw: `${c.alturas}x${c.largura}${c.amarras > 0 ? `+${c.amarras}` : ''}`,
+                totalPecas: c.pacotes * pecas,
+                volumeUnidade,
+                volume: volumeUnidade * c.pacotes
+            });
+        });
+        const totalPct = itensNovos.reduce((s, { c }) => s + c.pacotes, 0);
+        producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio(`${modo === 'substituir' ? 'Substituiu a contagem' : 'Somou contagem'} pela foto (${totalPct} pct)`);
+        await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
+        window.fecharFotoContagemPatio();
+        await renderizarProducaoPatio({ recarregar: false });
+        registrarDesfazerFluxoPatio(itensAnteriores, `Contagem da foto ${modo === 'substituir' ? 'substituiu' : 'somou'} ${totalPct} pacote(s) no Fluxo do Patio.`);
+    } catch (error) {
+        if (!error?.avisado) alert('Não foi possível lançar a contagem da foto. Tente novamente.');
+    }
+};
+
+
+// Montador 3D com os pacotes do Controle de Producao (somente planejamento, nao grava).
+function itensPatioPara3D(lista) {
+    return (lista || []).filter(i => Number(i.pacotes) > 0).map(i => {
+        const cfg = parseConfigPacote(i.pecasRaw);
+        const det = obterDetalhesPacoteEtiqueta(i);
+        const larg = Number(i.largura) || 0;
+        let cam = Number(cfg.cam) || Number(det.largura) || 0, alt = Number(cfg.alt) || Number(det.alturas) || 0;
+        let am = Number(cfg.am) || Number(det.amarras) || 0;
+        if (!cam && larg) cam = Math.max(1, Math.floor(120 / larg + 0.001));
+        if (!alt && cam) { alt = Math.max(1, Math.round((Number(i.pecas) || cam) / cam)); am = 0; }
+        return { qtd: Number(i.pacotes) || 0, p: { especie: i.especie || '', classe: obterNumeroClasse(i.classe) || 1, esp: Number(i.espessura) || 0, larg, comp: Number(i.comprimento) || 0, alt, cam, am } };
+    }).filter(x => x.p.esp > 0 && x.p.larg > 0 && x.p.comp > 0);
+}
+window.montarCargaPatio3D = function() {
+    window.abrirMontadorCarga3D?.(itensPatioPara3D(itensPatioTemp), { titulo: 'Montar carga do pátio', origem: 'Pacotes do Controle de Produção' });
+};
+// Fluxo do Patio: ver os pacotes que estao no patio em 3D e simular como carregar (nao grava nada)
+window.verPctsPatio3D = async function() {
+    try {
+        const atual = await carregarRelatorioPatioAtual();
+        const itens = itensPatioPara3D(atual?.itens || []);
+        if (!itens.length) { alert('Não há pacotes no pátio para ver em 3D.'); return; }
+        window.abrirMontadorCarga3D?.(itens, { titulo: 'Pacotes do pátio em 3D', origem: 'Pacotes no pátio' });
+    } catch (e) {
+        alert('Não foi possível carregar o pátio. Tente de novo.');
+    }
+};
+
+// Patio em 3D: galpao com os pacotes do patio nas fileiras (1a, 2a e 3a). Base do Laboratorio. So mostra.
+window.verPatio3D = async function() {
+    try {
+        // so os pacotes lancados no Fluxo do Patio: a lista que esta na tela; se nao estiver aberta, a ultima lista salva
+        const relatorios = await carregarRelatoriosPatioCache(true);
+        const atual = await carregarRelatorioPatioAtual();
+        const itens = itensPatioPara3D(atual?.itens || []);
+        if (!itens.length) { alert('Não há pacotes lançados no Fluxo do Pátio.'); return; }
+        // arrumacao salva: a mais recente entre os relatorios (passa de um dia para o outro)
+        const comLayout = relatorios.filter(r => r?.layout3d?.salvoEm).sort((a, b) => String(b.layout3d.salvoEm).localeCompare(String(a.layout3d.salvoEm)))[0];
+        window.abrirPatio3D?.(itens, {
+            titulo: 'Pátio em 3D',
+            layout: comLayout?.layout3d || null,
+            aoSalvar: atual?.id ? async layout3d => {
+                await window.FS.updateDoc('patio_relatorios', atual.id, { layout3d });
+                atual.layout3d = layout3d;
+            } : null
+        });
+    } catch (e) {
+        alert('Não foi possível carregar o pátio. Tente de novo.');
+    }
+};

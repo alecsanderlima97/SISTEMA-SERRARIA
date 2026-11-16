@@ -133,7 +133,7 @@ function atualizarKpisDashboard(totalClientes = null) {
     const volumeMadeira = romaneiosPeriodo.reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
     const faturamentoMadeira = romaneiosPeriodo.reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0);
     const volumeToras = entradasPeriodo.reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
-    const volumeSub = subprodutosPeriodo.reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
+    const volumeSub = subprodutosPeriodo.reduce((acc, s) => acc + getVolumeSubprodutoM3(s), 0);
     const faturamentoSub = subprodutosPeriodo.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     const faturamentoTotal = faturamentoMadeira + faturamentoSub;
     const resumoFinanceiro = getResumoFinanceiroLocal(periodo.inicio, periodo.fim);
@@ -155,8 +155,9 @@ function atualizarKpisDashboard(totalClientes = null) {
         recebido,
         fontesDespesas: resumoFinanceiro.detalhes.fontes
     };
-    const saldoSubEstimado = Math.max(volumeToras - volumeMadeira - volumeSub, 0);
-    const aproveitamentoTotal = volumeToras > 0 ? ((volumeMadeira + volumeSub + saldoSubEstimado) / volumeToras) * 100 : 0;
+    // Rendimento = madeira serrada vendida / toras recebidas no periodo.
+    // (A formula antiga somava o proprio saldo e sempre dava 100% ou mais.)
+    const aproveitamentoTotal = volumeToras > 0 ? (volumeMadeira / volumeToras) * 100 : 0;
     const itensAcabando = getItensAlmoxarifadoAcabando();
 
     setText('dash-total-cargas', totalCargas);
@@ -586,6 +587,24 @@ function addGroup(acc, key, value) {
     return acc;
 }
 
+// Subprodutos sao vendidos em m3, tonelada, carga ou saco: so o que esta em m3 entra em somas de volume.
+function getVolumeSubprodutoM3(s = {}) {
+    const unidade = String(s.unidade || 'm3').trim().toLowerCase();
+    if (unidade && unidade !== 'm3' && unidade !== 'm³') return 0;
+    return Number(s.quantidade) || 0;
+}
+
+// Mesma regra do modulo Financeiro: nota fiscal/XML nao gera cobranca (o boleto dela ja e lancado),
+// entao nao entra como despesa para nao contar a mesma compra duas vezes.
+function lancamentoFinanceiroGeraDespesa(item = {}) {
+    if (typeof window.financeiroGeraCobranca === 'function') return window.financeiroGeraCobranca(item);
+    if (item.geraCobranca === false) return false;
+    const texto = [item.tipo, item.descricao, item.documento?.nome].filter(Boolean).join(' ').toUpperCase();
+    const categoria = String(item.documento?.categoria || item.categoriaDocumento || '').toLowerCase();
+    return !(categoria === 'nota_fiscal' || categoria === 'xml' || item.situacaoDocumento === 'AGUARDANDO_BOLETO'
+        || /(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(texto));
+}
+
 function getVolumeRomaneio(r) {
     return (r.pacotes || []).reduce((sum, p) => sum + (Number(p.m3VendaTotal) || 0), 0);
 }
@@ -615,17 +634,17 @@ function agruparEntradasPorEmpreiteiro() {
 }
 
 function agruparSubprodutosPorDia() {
-    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getDataKey(s), s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getDataKey(s), getVolumeSubprodutoM3(s)), {});
 }
 
 function agruparSubprodutosPorTipo() {
-    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, s.tipo, s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, s.tipo, getVolumeSubprodutoM3(s)), {});
 }
 
 function calcularRendimentoSerraria() {
     const toras = dadosPeriodo('entradas').reduce((acc, e) => acc + (Number(e.volume) || 0), 0);
     const madeira = dadosPeriodo('romaneios').reduce((acc, r) => acc + getVolumeRomaneio(r), 0);
-    const subVendido = dadosPeriodo('subprodutos').reduce((acc, s) => acc + (Number(s.quantidade) || 0), 0);
+    const subVendido = dadosPeriodo('subprodutos').reduce((acc, s) => acc + getVolumeSubprodutoM3(s), 0);
     const saldoSub = Math.max(toras - madeira - subVendido, 0);
     return {
         'Toras recebidas': toras,
@@ -639,7 +658,7 @@ function agruparRendimentoPorMes() {
     const grupos = {};
     dadosPeriodo('entradas').forEach(e => addGroup(grupos, `Toras ${getMesKey(e)}`, e.volume || 0));
     dadosPeriodo('romaneios').forEach(r => addGroup(grupos, `Madeira ${getMesKey(r)}`, getVolumeRomaneio(r)));
-    dadosPeriodo('subprodutos').forEach(s => addGroup(grupos, `Subprodutos ${getMesKey(s)}`, s.quantidade || 0));
+    dadosPeriodo('subprodutos').forEach(s => addGroup(grupos, `Subprodutos ${getMesKey(s)}`, getVolumeSubprodutoM3(s)));
     return grupos;
 }
 
@@ -692,7 +711,7 @@ function calcularDespesasDetalhadas(inicio = getInicioMesAtual(), fim = getFimMe
 function obterFontesDespesasFinanceiras(inicio, fim) {
     const dentroPeriodo = data => Boolean(data) && (!inicio || data >= inicio) && (!fim || data <= fim);
     const fontes = [];
-    const lancamentos = obterLancamentosFinanceirosLocal().filter(item => dentroPeriodo(
+    const lancamentos = obterLancamentosFinanceirosLocal().filter(item => lancamentoFinanceiroGeraDespesa(item) && dentroPeriodo(
         normalizarDataISO(item, ['vencimento', 'dataCompetencia', 'dataEmissao', 'data', 'criadoEm'])
     ));
     const referenciasManuais = new Set();
@@ -824,7 +843,7 @@ function renderResumoFinanceiroDashboard() {
     const faturamento = dadosPeriodo('romaneios').reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
         + dadosPeriodo('subprodutos').reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     setResumo(
-        `Lucro geral: ${formatBRL(faturamento)}`,
+        `Faturamento: ${formatBRL(faturamento)}`,
         `Despesas gerais: ${formatBRL(resumo.despesas)}`,
         `Comparativo: ${formatBRL(faturamento - resumo.despesas)}`
     );
@@ -863,7 +882,7 @@ function renderResumoToras() {
 }
 
 function renderResumoSubprodutos() {
-    const maior = dadosPeriodo('subprodutos').reduce((best, s) => (Number(s.quantidade) || 0) > best.volume ? { volume: Number(s.quantidade) || 0, label: s.romaneio || s.romaneioCliente || '-' } : best, { volume: 0, label: '-' });
+    const maior = dadosPeriodo('subprodutos').reduce((best, s) => getVolumeSubprodutoM3(s) > best.volume ? { volume: getVolumeSubprodutoM3(s), label: s.romaneio || s.romaneioCliente || '-' } : best, { volume: 0, label: '-' });
     const melhorDia = topEntry(agruparSubprodutosPorDia(), formatM3);
     const tipos = topList(agruparSubprodutosPorTipo(), formatM3);
     const mensal = topList(agruparSubprodutosPorMes(), formatM3);
@@ -871,7 +890,7 @@ function renderResumoSubprodutos() {
 }
 
 function agruparSubprodutosPorMes() {
-    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getMesKey(s), s.quantidade || 0), {});
+    return dadosPeriodo('subprodutos').reduce((acc, s) => addGroup(acc, getMesKey(s), getVolumeSubprodutoM3(s)), {});
 }
 
 function agruparItensAcabando(itens) {

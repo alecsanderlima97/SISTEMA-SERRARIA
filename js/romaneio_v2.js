@@ -1,4 +1,4 @@
-﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from './firebase-init.js?v=romaneio-salvamento-seguro-2';
+﻿import { db, auth, onAuthStateChanged, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc, runTransaction } from './firebase-init.js?v=romaneio-salvamento-seguro-2';
 
 console.log("Romaneio V2: Script carregado");
 
@@ -577,10 +577,13 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
     });
 
     const relatoriosAfetados = [...new Set(vinculados.map(p => p.patioRelatorioId))];
+    // Cada relatorio do patio e lido e gravado numa transacao: se o empilhadeirista mexer no
+    // fluxo ao mesmo tempo, o Firestore repete a operacao com o saldo atual em vez de sobrescrever.
     for (const relatorioId of relatoriosAfetados) {
         const ref = doc(db, 'patio_relatorios', relatorioId);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) continue;
+        await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(ref);
+        if (!snap.exists()) return;
 
         const dados = snap.data();
         const itens = Array.isArray(dados.itens) ? [...dados.itens] : [];
@@ -629,7 +632,7 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
             }
         }
 
-        await updateDoc(ref, {
+        transaction.update(ref, {
             itens,
             totais: recalcularTotaisPatioItens(itens),
             atualizadoEm: new Date().toISOString(),
@@ -641,8 +644,28 @@ async function ajustarPacotesPatioRomaneio(pacotes, sinal, contexto = {}) {
                 dataHora: new Date().toISOString()
             }
         });
+        });
     }
 }
+
+// Modulo Paletes: transferir pacotes do patio para a fabrica de paletes (mesma baixa do romaneio).
+window.PatioParaPaletes = {
+    async listar() {
+        let snap;
+        try { snap = await getDocs(query(collection(db, 'patio_relatorios'), orderBy('atualizadoEm', 'desc'), limit(1))); }
+        catch { snap = await getDocs(collection(db, 'patio_relatorios')); }
+        const relatorios = [];
+        snap.forEach(d => relatorios.push({ id: d.id, ...d.data() }));
+        relatorios.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || b.data || 0) - new Date(a.atualizadoEm || a.criadoEm || a.data || 0));
+        const rel = relatorios[0] || null;
+        return { relatorioId: rel?.id || null, itens: agruparItensPatioRomaneio(rel?.itens || []) };
+    },
+    async baixar(relatorioId, item, qtd, contexto = {}) {
+        const pacote = { origemPatio: true, patioRelatorioId: relatorioId, patioItemId: item.patioItemIds?.[0] || item.id, patioItemIds: item.patioItemIds, patioQtdPacotes: qtd, qtdPacotes: qtd };
+        await validarSaldoPatioRomaneio([pacote]);
+        await ajustarPacotesPatioRomaneio([pacote], -1, contexto);
+    }
+};
 
 window.estornarPacotesPatioRomaneio = async function(pacotes, contexto = {}) {
     return ajustarPacotesPatioRomaneio(pacotes, 1, contexto);
@@ -1802,7 +1825,18 @@ window.romaneioDocActions = {
 
 window.modalDetalhesActions = window.romaneioDocActions;
 
+// Leitura para a Montagem de Carga (js/montagem-carga.js). Copia: o desenho nao altera o romaneio.
+// Montagem 3D da carga (arranjo dos pacotes no caminhao), gravada junto com o romaneio
+window.definirMontagem3DRomaneio = arranjo => { romaneioAtual.montagem3d = arranjo || null; };
+window.obterRomaneioParaMontagem = () => ({
+    montagem3d: romaneioAtual.montagem3d ? JSON.parse(JSON.stringify(romaneioAtual.montagem3d)) : null,
+    pacotes: JSON.parse(JSON.stringify(romaneioAtual.pacotes || [])),
+    placa: (document.getElementById('v2-placa')?.value || romaneioAtual.logistica?.placa || '').trim(),
+    caminhao: (document.getElementById('v2-caminhao')?.value || romaneioAtual.logistica?.caminhao || '').trim()
+});
+
 function renderizarTabelaPacotes() {
+    setTimeout(() => document.dispatchEvent(new Event('romaneioPacotesAlterados')), 0);
     const container = document.getElementById('v2-lista-classes');
     if (!container) return;
     if (romaneioAtual.pacotes.length === 0) {
@@ -2054,6 +2088,7 @@ window.carregarRomaneioParaEdicao = function(r) {
     // 1. Setar o romaneioAtual com os dados carregados
     romaneioAtual = {
         idFirebase: r.id, // Guardamos o ID do Firebase para usar no updateDoc depois
+        montagem3d: r.montagem3d || null,
         numero: r.numero || r.numeroCarga,
         clienteId: r.clienteId || '',
         cliente: r.cliente,
@@ -2312,6 +2347,7 @@ window.finalizarRomaneioV2 = async () => {
         // Resetar o estado sem idFirebase
         romaneioAtual.idFirebase = null;
         romaneioAtual.pacotes = [];
+        romaneioAtual.montagem3d = null;
         romaneioAtual.numero = `ROM-${Date.now().toString().slice(-6)}`;
         if (document.getElementById('v2-numero-ordem')) document.getElementById('v2-numero-ordem').value = romaneioAtual.numero;
         

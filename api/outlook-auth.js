@@ -1,4 +1,4 @@
-const { getOutlookConfig } = require('./outlook-utils');
+const { getOutlookConfig } = require('./_outlook-utils');
 
 function buildAuthUrl() {
     const { clientId, redirectUri, tenantId } = getOutlookConfig();

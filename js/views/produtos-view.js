@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: PRODUTOS / MADEIRAS ====== -->
             <section id="view-produtos" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-tree-city"></i> Gestão de Madeira</h1>
+                    <h1><i class="fa-solid fa-ruler-combined"></i> Cadastro de Medidas</h1>
                     <p>Cadastre as madeiras, classes e configuracoes de pacote</p>
                 </div>
 
@@ -13,6 +13,9 @@
                     </button>
                     <button type="button" id="btnTabProdForm" onclick="window.switchTabProdutos('form')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-plus-circle"></i> Nova Madeira
+                    </button>
+                    <button type="button" id="btnTabProdPalete" class="aba-modulo-paletes" onclick="window.switchTabProdutos('palete')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-pallet"></i> Medidas de palete
                     </button>
                 </div>
 
@@ -27,6 +30,7 @@
                                 <tr>
                                     <th>Classe</th>
                                     <th>Medidas</th>
+                                    <th>Config. do pacote</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -114,12 +118,14 @@
                             <strong id="prodVolumePacote">0,000 m3</strong>
                         </div>
                         <div class="produto-config-save">
+                            <button type="button" class="btn-secondary btn-3d-madeira" onclick="window.verFormularioMadeira3D()"><i class="fa-solid fa-cube"></i> Ver em 3D</button>
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Madeira</button>
                         </div>
                             </div>
                         </section>
                     </form>
                 </div>
+                <div id="tabProdPalete" class="glass-panel" style="margin-bottom: 0; display: none;"><div id="paletesModelos" class="pal-painel"></div></div>
             </section>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();

@@ -123,7 +123,7 @@
                                 <input type="text" id="veicLarguraCarga" inputmode="decimal" placeholder="Largura">
                                 <input type="text" id="veicComprimentoCarga" inputmode="decimal" placeholder="Comprimento">
                             </div>
-                            <small>Essas medidas serão sugeridas na Conferência de Cargas e na venda de subprodutos quando o veículo for selecionado.</small>
+                            <small>Essas medidas serão sugeridas na Conferência de Carga de Tora e na venda de subprodutos quando o veículo for selecionado.</small>
                         </div>
 
                         <!-- Anexar Documento do Veículo -->

@@ -40,17 +40,21 @@
                 <div id="panelProducaoPatio" class="glass-panel fluxo-patio-panel" data-dashboard-permission="fluxo-patio" style="display: none; margin-bottom: 25px; padding: 22px; border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 16px;">
                         <div>
-                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Patio</h2>
+                            <h2 style="margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-truck-ramp-box" style="color: #60a5fa;"></i> Fluxo do Pátio</h2>
                             <p id="producaoPatioInfo" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Atualizacao operacional do fluxo do patio.</p>
                             <div id="producaoPatioUltimaAlteracao" class="fluxo-patio-status" style="display:none;"></div>
                         </div>
                         <button type="button" class="btn-secondary" onclick="window.fecharProducaoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
                     </div>
-                    <div class="fluxo-patio-toolbar" style="display:grid; grid-template-columns:minmax(240px, 1fr) auto auto; gap:10px; align-items:end; margin-bottom:16px;">
+                    <div id="producaoPatioResumoMobile" class="fp-resumo-mobile" aria-live="polite"></div>
+                    <div class="fluxo-patio-toolbar" style="display:grid; grid-template-columns:minmax(240px, 1fr) auto auto auto auto auto; gap:10px; align-items:end; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Madeira sendo serrada</label><input type="text" id="producaoPatioSerrando" class="text-uppercase-input" placeholder="Ex: 1,7/11,0/1,20"></div>
                         <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
                         <button type="button" class="btn-secondary" onclick="window.toggleFormProducaoPatio()" style="height:42px;"><i class="fa-solid fa-plus"></i> Nova cubagem</button>
+                        <button type="button" class="btn-secondary btn-foto-contagem" onclick="window.abrirFotoContagemPatio()" style="height:42px;"><i class="fa-solid fa-camera"></i> Ler foto</button>
                         <button type="button" class="btn-secondary" onclick="window.imprimirListaProducaoPatio()" style="height:42px;"><i class="fa-solid fa-print"></i> Imprimir</button>
+                        <button type="button" class="btn-secondary" onclick="window.verPctsPatio3D()" style="height:42px;"><i class="fa-solid fa-cube"></i> Ver PCTs em 3D</button>
+                        <button type="button" class="btn-secondary" onclick="window.verPatio3D()" style="height:42px;"><i class="fa-solid fa-warehouse"></i> Pátio em 3D</button>
                     </div>
                     <div id="formProducaoPatio" class="package-entry-grid" data-aberto="0" style="display:none; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Classe</label><select id="prodPatioClasse"><option value="1a CLASSE">1a</option><option value="2a CLASSE">2a</option><option value="3a CLASSE">3a</option></select></div>
@@ -72,6 +76,7 @@
                         <div id="prodPatioConfigSugestao" class="patio-config-suggestion" hidden></div>
                         <button type="button" class="btn-primary" onclick="window.adicionarCubagemProducaoPatio()" style="height:42px;"><i class="fa-solid fa-check"></i> Adicionar</button>
                     </div>
+                    <p class="fp-legenda-mobile">Primeiro a 1ª classe, depois a 2ª e a 3ª, da maior cubagem para a menor. Cor = classe: 1ª verde · 2ª amarelo · 3ª vermelho. (altura × largura) + amarras = peças por pacote.</p>
                     <div id="resumoProducaoPatioClasses" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;"></div>
                     <div class="fluxo-patio-selection-bar" id="fluxoPatioSelectionBar">
                         <label class="fluxo-patio-select-all"><input type="checkbox" id="fluxoPatioSelecionarTodos" onchange="window.selecionarTodosFluxoPatio(this.checked)"> Selecionar todos</label>
@@ -88,81 +93,82 @@
                             <tbody id="producaoPatioLista"><tr><td colspan="6" style="text-align:center; padding: 18px; color: var(--text-muted);">Abra a producao para carregar os dados.</td></tr></tbody>
                         </table>
                     </div>
+                    <div id="producaoPatioCards" class="fluxo-patio-cards" aria-live="polite"></div>
                 </div>
 
                 <!-- Cards de Resumo -->
                 <div class="dashboard-grid" data-dashboard-permission="indicadores">
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Total de romaneios/cargas de madeira serrada registrados no sistema para o periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
                         <div class="kpi-icon"><i class="fa-solid fa-truck-moving"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-cargas">0</h3>
                             <p>Total de Cargas</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Soma do volume em m³ de madeira serrada vendida nos romaneios do periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
                         <div class="kpi-icon"><i class="fa-solid fa-layer-group"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-volume-total">0 m³</h3>
                             <p>Madeira Vendida</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="toras" title="Soma do volume em m³ das entradas registradas na Conferencia de Cargas no periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="toras">
                         <div class="kpi-icon"><i class="fa-solid fa-tree"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-entrada-toras">0 m³</h3>
-                            <p>Conferência de Cargas</p>
+                            <p>Conferência de Carga de Tora</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="madeira" title="Valor total em reais dos romaneios de madeira serrada registrados no periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="madeira">
                         <div class="kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-faturamento-madeira">R\$ 0,00</h3>
                             <p>Faturamento Madeira</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos" title="Valor total em reais das vendas de cavaco e po registradas no periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos">
                         <div class="kpi-icon"><i class="fa-solid fa-leaf"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-faturamento-sub">R\$ 0,00</h3>
                             <p>Fat. Cavaco/Pó</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos" title="Soma dos metros carregados em vendas de cavaco e po no periodo analisado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="subprodutos">
                         <div class="kpi-icon"><i class="fa-solid fa-fill-drip"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-volume-sub">0 m³</h3>
                             <p>Vol. Cavaco/Pó</p>
                         </div>
                     </div>
-	                    <div class="kpi-card glass-panel" data-dashboard-view="rendimento" title="Comparativo entre volume de madeira serrada vendida e volume de toras recebidas/conferidas no periodo.">
+	                    <div class="kpi-card glass-panel" data-dashboard-view="rendimento">
 	                        <div class="kpi-icon"><i class="fa-solid fa-industry"></i></div>
 	                        <div class="kpi-data">
 	                            <h3 id="dash-rendimento-serraria">0%</h3>
 	                            <p>Rendimento Serraria</p>
 	                        </div>
 	                    </div>
-	                    <div class="kpi-card glass-panel" title="Quantidade de clientes cadastrados e marcados como ativos no sistema.">
+	                    <div class="kpi-card glass-panel">
 	                        <div class="kpi-icon"><i class="fa-solid fa-user-tie"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-clientes">0</h3>
                             <p>Clientes Ativos</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="estoque" title="Quantidade de itens do estoque com saldo baixo ou abaixo do minimo configurado.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="estoque">
                         <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-total-estoque">0</h3>
                             <p>Itens Acabando</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="despesas" title="Soma das despesas financeiras registradas para o mes/periodo atual.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="despesas">
                         <div class="kpi-icon" style="color:#ef4444;"><i class="fa-solid fa-arrow-trend-down"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-despesas-mes">R\$ 0,00</h3>
                             <p>Despesas</p>
                         </div>
                     </div>
-                    <div class="kpi-card glass-panel" data-dashboard-view="financeiro" title="Resultado comparando receitas registradas e despesas do periodo.">
+                    <div class="kpi-card glass-panel" data-dashboard-view="financeiro">
                         <div class="kpi-icon" style="color:#16a34a;"><i class="fa-solid fa-scale-balanced"></i></div>
                         <div class="kpi-data">
                             <h3 id="dash-comparativo-financeiro">R\$ 0,00</h3>

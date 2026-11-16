@@ -2,7 +2,7 @@
     const html = `            <!-- ====== TELA: ENTRADA DE MADEIRA/TORA ====== -->
             <section id="view-entrada" class="view-section" style="display: none;">
                 <div class="main-header">
-                    <h1><i class="fa-solid fa-clipboard-check"></i> Conferência de Cargas (M³)</h1>
+                    <h1><i class="fa-solid fa-clipboard-check"></i> Conferência de Carga de Tora (M³)</h1>
                     <p>Cadastro de empreiteiros, controle de cubagem de cargas e financeiro de extração.</p>
                 </div>
 
@@ -174,7 +174,7 @@
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; align-items:start;">
                                 <div class="input-group" style="margin:0;">
                                     <label for="entValorDescarga">Valor descarregamento (R\$ / m³)</label>
-                                    <input type="text" id="entValorDescarga" inputmode="decimal" placeholder="R\$ 0,00" value="R\$ 0,00" title="Valor calculado pelas regras de pagamento. Marque valor manual para alterar.">
+                                    <input type="text" id="entValorDescarga" inputmode="decimal" placeholder="R\$ 0,00" value="R\$ 0,00">
                                     <label style="display:flex; align-items:center; gap:6px; margin-top:6px; color:#64748b; font-size:.75rem; cursor:pointer;"><input type="checkbox" id="entValorDescargaManual" style="accent-color:#0f766e;"> Valor manual, inclusive R\$ 0,00</label>
                                     <small id="entAvisoDescargaHorario" style="color:#22c55e; font-size: 0.75rem; line-height: 1.3;">Definido pelas regras de pagamento.</small>
                                 </div>
@@ -257,6 +257,7 @@
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Volume M³</h4>
                                         <div id="entResultadoVolume" style="font-size: 1.8rem; font-weight: bold; color:var(--accent-color); margin-top: 5px;">0.000 m³</div>
                                         <small id="entInfoMedia" style="color:#aaa; font-size: 0.75rem;">Média: 0.00m</small>
+                                        <button type="button" class="btn-secondary btn-3d-madeira" onclick="window.verCargaTora3D()" style="margin-top:8px; width:100%;"><i class="fa-solid fa-cube"></i> Ver carga em 3D</button>
                                     </div>
                                     <div id="entCardFinanceiroEmpreiteiro" style="text-align: center; padding: 15px; background: rgba(52, 152, 219, 0.1); border: 1px dashed #3498db; border-radius: 8px;">
                                         <h4 style="margin: 0; color:#ccc; font-size: 0.8rem;">Acerto Empreiteiro</h4>

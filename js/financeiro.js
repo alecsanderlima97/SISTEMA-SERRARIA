@@ -1,4 +1,6 @@
-﻿console.log("Modulo Financeiro: inicializando...");
+﻿import { auth } from './firebase-init.js';
+
+console.log("Modulo Financeiro: inicializando...");
 
 const FINANCEIRO_KEY = 'orquestra_financeiro_lancamentos';
 const FINANCEIRO_RELATORIOS_KEY = 'orquestra_financeiro_relatorios_mensais';
@@ -73,10 +75,10 @@ function obterPastaFinanceiraItem(item = {}) {
     const desc = normalizarTexto(`${item.descricao || ''} ${item.observacao || ''}`);
     if (item.conferenciaStatus === 'pendente') return 'conferir';
     if (/IMPOSTO|DARF|FGTS|INSS|RECEITA|SINDICATO|TAXA/.test(`${tipo} ${desc}`)) return 'impostos';
-    if (/FUNCIONARIO|FUNCIONÃRIO|HOLERITE|VALE|SALARIO|SALÃRIO/.test(`${tipo} ${desc}`)) return 'funcionarios';
+    if (/FUNCIONARIO|FUNCIONÁRIO|HOLERITE|VALE|SALARIO|SALÁRIO/.test(`${tipo} ${desc}`)) return 'funcionarios';
     if (/ENERGIA|INTERNET|TELEFONE|ALUGUEL|CONTABILIDADE|SISTEMA/.test(desc)) return 'fixas';
-    if (/FORNECEDOR|AIR EXPRESS|MATERIAIS|SERVICO|SERVIÃ‡O/.test(desc)) return 'fornecedores';
-    if (/BOLETO|COBRANCA|COBRANÃ‡A|PARCELA/.test(`${tipo} ${desc}`)) return 'boletos';
+    if (/FORNECEDOR|AIR EXPRESS|MATERIAIS|SERVICO|SERVIÇO/.test(desc)) return 'fornecedores';
+    if (/BOLETO|COBRANCA|COBRANÇA|PARCELA/.test(`${tipo} ${desc}`)) return 'boletos';
     return 'conferir';
 }
 
@@ -222,7 +224,7 @@ function financeiroEhNotaFiscal(item = {}) {
     return categoria === 'nota_fiscal'
         || categoria === 'xml'
         || item.situacaoDocumento === 'AGUARDANDO_BOLETO'
-        || /NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|DOCUMENTO NFE/.test(texto);
+        || /(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(texto);
 }
 
 function financeiroGeraCobranca(item = {}) {
@@ -230,6 +232,8 @@ function financeiroGeraCobranca(item = {}) {
     if (financeiroEhNotaFiscal(item)) return false;
     return true;
 }
+
+window.financeiroGeraCobranca = financeiroGeraCobranca;
 
 function obterDataFinanceiroExibicao(item = {}) {
     if (financeiroEhNotaFiscal(item)) return item.dataEmissao || item.emissao || '';
@@ -297,7 +301,7 @@ function detectarCategoriaDocumentoFinanceiro(anexo = {}, dados = {}) {
     const tipo = normalizarTexto(anexo.tipo || '');
     const texto = normalizarTexto(`${dados.tipo || ''} ${dados.descricao || ''} ${dados.observacao || ''}`);
     if (nome.endsWith('.XML') || tipo.includes('XML') || texto.includes('NF-E') || texto.includes('NFE')) return 'xml';
-    if (/NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E/.test(`${nome} ${texto}`)) return 'nota_fiscal';
+    if (/(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(`${nome} ${texto}`)) return 'nota_fiscal';
     if (/BOLETO|BLOQUETO|FICHA DE COMPENSACAO|FICHA DE COMPENSAÇÃO|LINHA DIGITAVEL|PAGAVEL|PAGÁVEL|SICREDI|NOSSO NUMERO|NOSSO NÚMERO/.test(`${nome} ${texto}`)) return 'boleto';
     if (/COMPROVANTE|PAGAMENTO REALIZADO|PIX|TRANSFERENCIA|TRANSFERÊNCIA/.test(`${nome} ${texto}`)) return 'comprovante';
     return 'outro';
@@ -416,7 +420,7 @@ function diferencaDiasFinanceiro(dataA, dataB) {
 
 function grupoVinculoFinanceiro(item = {}) {
     const tipo = normalizarTexto(item.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (/NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|XML/.test(tipo)) return 'NOTA_FISCAL';
+    if (/(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E|XML)(?![A-Z])/.test(tipo)) return 'NOTA_FISCAL';
     if (/BOLETO|BLOQUETO|COBRANCA|FICHA DE COMPENSACAO/.test(tipo)) return 'BOLETO';
     if (/COMPROVANTE|PAGAMENTO|PIX|TRANSFERENCIA/.test(tipo)) return 'COMPROVANTE';
     return grupoTipoFinanceiro(item);
@@ -906,15 +910,12 @@ function obterBoletosAVencerFinanceiro() {
         .sort((a, b) => a.diasVencimento - b.diasVencimento || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR'));
 }
 
+// Lembretes de vencimento so aparecem para quem tem acesso ao Financeiro no seu nivel de permissao.
+// (Exibicao apenas; o acesso aos dados continua protegido pelas regras do Firestore.)
 function usuarioPodeVerLembreteFinanceiro() {
-    const emailsPermitidos = ['escritoriovanmarte@hotmail.com', 'escritoriovanmarte@gmail.com'];
-    const email = String(
-        window.App?.userData?.email ||
-        window.auth?.currentUser?.email ||
-        document.getElementById('perfilEmail')?.value ||
-        ''
-    ).toLowerCase().trim();
-    return emailsPermitidos.includes(email);
+    const permissoes = window.App?.userPermissions;
+    const secoes = Array.isArray(permissoes?.allowedSections) ? permissoes.allowedSections : [];
+    return secoes.includes('view-financeiro');
 }
 
 function textoVencimentoLembrete(item) {
@@ -1054,6 +1055,51 @@ function mostrarLembretesFinanceiros() {
     linkFinanceiro?.classList.add('financeiro-menu-alerta');
     document.body.classList.add('financeiro-tem-alerta');
 }
+
+// Chamado pelo core quando as permissoes do usuario logado sao carregadas/alteradas:
+// quem tem Financeiro ve os lembretes ja no login; quem nao tem, nao ve nada.
+window.atualizarLembretesFinanceirosPorPermissao = async function() {
+    if (usuarioPodeVerLembreteFinanceiro() && !financeiroNuvemCarregada && window.FS) {
+        try {
+            const nuvem = await window.FS.getCollection(FINANCEIRO_COLLECTION);
+            if (nuvem.length > 0) salvarLancamentosFinanceiros(nuvem);
+        } catch (error) {
+            console.warn('Lembretes financeiros: usando cache local.', error);
+        }
+    }
+    mostrarLembretesFinanceiros();
+};
+
+// Ao sair do sistema: envia ao banco os lancamentos que so existem neste navegador e,
+// se tudo subiu, apaga a copia local (em aparelho compartilhado ela ficava para o proximo usuario).
+// Se algo nao subir, mantem a copia para nao perder dado.
+window.prepararSaidaFinanceiro = async function() {
+    const locais = obterLancamentosFinanceiros();
+    if (!locais.length) {
+        localStorage.removeItem(FINANCEIRO_RELATORIOS_KEY);
+        return { limpo: true };
+    }
+    if (!window.FS) return { limpo: false };
+    let idsNuvem = null;
+    try {
+        idsNuvem = new Set((await window.FS.getCollection(FINANCEIRO_COLLECTION)).map(item => item.id));
+    } catch (_) {
+        idsNuvem = null; // usuario sem leitura do financeiro (ex.: frota): tenta enviar os itens dele
+    }
+    const pendentes = locais.filter(item => item?.id && (!idsNuvem || !idsNuvem.has(item.id)));
+    let falhas = 0;
+    for (const item of pendentes) {
+        try {
+            await window.FS.setDoc(FINANCEIRO_COLLECTION, item.id, prepararFinanceiroParaNuvem(item));
+        } catch (_) {
+            falhas++;
+        }
+    }
+    if (falhas) return { limpo: false, falhas };
+    localStorage.removeItem(FINANCEIRO_KEY);
+    localStorage.removeItem(FINANCEIRO_RELATORIOS_KEY);
+    return { limpo: true };
+};
 
 window.alternarListaLembretesFinanceiros = function() {
     document.getElementById('btnHeaderNotifications')?.click();
@@ -1438,7 +1484,7 @@ function limparDescricaoDocumentoFinanceiro(valor) {
         .replace(/^BENEFICI\S*\s*/i, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}.*$/g, '')
         .replace(/\s+\d{2}\.\d{3}\.\d{3}\/\d{4}.*$/g, '')
-        .replace(/\s+(VENCIMENTO|AGENCIA|AGÃŠNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
+        .replace(/\s+(VENCIMENTO|AGENCIA|AGÊNCIA|DATA PROCESSAMENTO|ACEITE|ESP\.? DOC).*$/i, '')
         .replace(/\s+(RUA|AV\.?|AVENIDA|RODOVIA)\s+.*$/i, '')
         .replace(/\s{2,}/g, ' ')
         .slice(0, 90)
@@ -1518,7 +1564,7 @@ function normalizarDadosIAFinanceiro(dados = {}) {
     const descricao = dados.descricao || fornecedor || dados.tipo || 'PENDENTE DE CONFERENCIA';
     const produtos = Array.isArray(dados.produtos) ? dados.produtos.filter(p => p?.descricao) : [];
     const tipo = normalizarTexto(dados.tipo || 'DOCUMENTO');
-    const ehNota = /NOTA FISCAL|DANFE|NF-E|NFE|NFSE|NFS-E|XML/.test(tipo);
+    const ehNota = /(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E|XML)(?![A-Z])/.test(tipo);
     return {
         tipo,
         descricao: normalizarTexto(descricao).slice(0, 90),
@@ -1563,9 +1609,10 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
     try {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), 30000);
+        const idToken = await auth.currentUser?.getIdToken();
         const response = await fetch('/api/financeiro-ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken || ''}` },
             signal: controller.signal,
             body: JSON.stringify({
                 nomeArquivo: anexo?.nome || '',
@@ -1618,7 +1665,7 @@ function extrairDescricaoBoletoFinanceiro(texto) {
 
 function extrairVencimentoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
-    const aposPagavel = limpo.match(/PAG[AÃ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
+    const aposPagavel = limpo.match(/PAG[AÁ]VEL[\s\S]{0,180}?(\d{2}\/\d{2}\/\d{4})/i)?.[1];
     const todas = Array.from(limpo.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)).map(match => match[1]);
     return aposPagavel || todas[todas.length - 1] || '';
 }
@@ -1780,7 +1827,7 @@ function extrairDadosTextoFinanceiro(texto) {
         || limpo.match(/R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/)?.[1];
     const favorecido = limparDescricaoDocumentoFinanceiro(
         extrairLinhaAposRotuloFinanceiro(texto, /^(benefici|cedente|favorecido|fornecedor)\b[:\s-]*/i)
-        || limpo.match(/(?:benefici[Ã¡a]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
+        || limpo.match(/(?:benefici[áa]rio|cedente|favorecido|fornecedor)[:\s-]*([A-Z0-9 .&\\/,-]{4,80})/i)?.[1]
         || primeiraLinhaUtilFinanceiro(texto)
     );
     const vencimento = data ? data.split(/[\/.-]/).reverse().join('-') : '';
@@ -1795,7 +1842,7 @@ function extrairDadosTextoFinanceiro(texto) {
     }
     const dadosNota = extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo);
     if (dadosNota) return dadosNota;
-    const isBoleto = /boleto|nosso n[uÃƒÂº]mero|ficha de compensa|linha digitavel|linha digitÃ¡vel/i.test(limpo);
+    const isBoleto = /boleto|nosso n[uú]mero|ficha de compensa|linha digitavel|linha digitável/i.test(limpo);
     if (isBoleto) {
         const vencimentoBoleto = extrairVencimentoBoletoRobustoFinanceiro(texto);
         const valorBoleto = extrairValorBoletoRobustoFinanceiro(texto) || (valor ? parseMoeda(valor) : 0);
@@ -3140,6 +3187,7 @@ window.renderFinanceiro = function() {
 
     if (lista.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:var(--text-muted);">Nenhum documento financeiro encontrado nesta pasta.</td></tr>';
+        renderCaixaConferenciaFinanceiro();
         mostrarLembretesFinanceiros();
         return;
     }
@@ -3193,7 +3241,332 @@ window.renderFinanceiro = function() {
             </tr>
         `;
     }).join('');
+    renderCaixaConferenciaFinanceiro();
     mostrarLembretesFinanceiros();
+};
+
+// =====================================================================
+// AUTOMACAO: caixa de conferencia
+// Tudo que entra (arquivo, pasta, SIGEWIN, fila, e-mail) cai aqui ja lido.
+// O que veio completo e aprovado com 1 clique; o que falta dado mostra o que falta.
+// Vinculos NF <-> boleto <-> comprovante sao sugeridos automaticamente.
+// =====================================================================
+const FINANCEIRO_OUTLOOK_IMPORTADOS_KEY = 'orquestra_financeiro_outlook_importados';
+let financeiroCaixaExpandida = false;
+
+function camposFaltandoFinanceiro(item = {}) {
+    const faltando = [];
+    if (descricaoFinanceiraRuim(item.descricao)) faltando.push('fornecedor');
+    if (!(Number(item.valor) > 0)) faltando.push('valor');
+    if (!financeiroEhNotaFiscal(item) && !item.vencimento) faltando.push('vencimento');
+    return faltando;
+}
+
+function financeiroPrecisaConferir(item = {}) {
+    return item.conferenciaStatus === 'pendente';
+}
+
+function financeiroTemVinculoSugerido(item = {}) {
+    return !item.processoVinculoId && Array.isArray(item.processoVinculoSugestao) && item.processoVinculoSugestao.length > 0;
+}
+
+function usuarioPodeAcessarEstoqueFinanceiro() {
+    const secoes = window.App?.userPermissions?.allowedSections || [];
+    return secoes.includes('view-estoque');
+}
+
+function anexoXmlFinanceiro(item = {}) {
+    return normalizarDocumentosVinculadosFinanceiro(item)
+        .find(doc => /\.xml$/i.test(doc?.nome || '') || /xml/i.test(doc?.tipo || '') || doc?.categoria === 'xml') || null;
+}
+
+function notaAguardandoEstoqueFinanceiro(item = {}) {
+    return financeiroEhNotaFiscal(item)
+        && !item.vinculoRomaneioId
+        && !item.entradaEstoqueEm
+        && !item.entradaEstoqueIgnorada
+        && Boolean(anexoXmlFinanceiro(item))
+        && usuarioPodeAcessarEstoqueFinanceiro();
+}
+
+// Nome que da para ler: arquivos com nome embaralhado (codigo do e-mail, chave da NF-e)
+// viram "Tipo · fornecedor · nº da nota · chegou em dd/mm".
+function nomeEmbaralhadoFinanceiro(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return true;
+    const maior = Math.max(...t.split(/[\s._-]+/).map(p => p.length));
+    return maior >= 18;
+}
+function nomeLegivelCaixaFinanceiro(item = {}) {
+    const desc = String(item.descricao || '').trim();
+    if (desc && !nomeEmbaralhadoFinanceiro(desc) && !descricaoFinanceiraRuim(desc)) return desc;
+    const docs = normalizarDocumentosVinculadosFinanceiro(item);
+    const nomeArquivo = item.documento?.nome || docs[0]?.nome || desc;
+    const chave = String(nomeArquivo || desc).match(/\d{44}/)?.[0] || '';
+    const ehNota = financeiroEhNotaFiscal(item) || Boolean(chave) || /\.xml$/i.test(nomeArquivo || '');
+    const tipoTxt = ehNota ? 'Nota fiscal' : String(item.tipo || 'Documento').toLowerCase().replace(/^./, c => c.toUpperCase());
+    const fornecedor = item.ia?.fornecedor || item.fornecedor || item.emitente || '';
+    const numeroNota = chave ? String(Number(chave.slice(25, 34))) : '';
+    const cnpj = chave ? chave.slice(6, 20).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '';
+    const entrada = item.criadoEm || item.importadoEm || item.createdAt || '';
+    const partes = [
+        tipoTxt,
+        fornecedor || (cnpj ? `CNPJ ${cnpj}` : ''),
+        numeroNota ? `nº ${numeroNota}` : '',
+        /IMPORTADO RAPIDO DE E-?MAIL/i.test(item.observacao || '') ? 'do e-mail' : '',
+        entrada && !Number.isNaN(new Date(entrada).getTime()) ? `chegou em ${new Date(entrada).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''
+    ].filter(Boolean);
+    return partes.join(' · ');
+}
+function anexoPrincipalCaixaFinanceiro(item = {}) {
+    return item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante') || null;
+}
+window.abrirArquivoCaixaFinanceiro = async function(id) {
+    const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
+    const anexo = await hidratarAnexoFinanceiro(anexoPrincipalCaixaFinanceiro(item));
+    if (!anexo || (!anexo.dados && !anexo.localUrl)) {
+        alert('O arquivo deste documento não está neste computador (ele fica salvo no computador que importou). Abra por lá ou anexe o PDF de novo em Editar.');
+        return;
+    }
+    abrirAnexoFinanceiroDireto(anexo);
+};
+let financeiroLeituraLote = null;
+window.lerTodosCaixaFinanceiro = async function() {
+    if (financeiroLeituraLote) return;
+    const alvos = obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && camposFaltandoFinanceiro(item).length);
+    if (!alvos.length) return;
+    if (!confirm(`Ler de novo ${alvos.length} documento(s) com a IA? Pode levar alguns minutos; pode continuar usando o sistema.`)) return;
+    financeiroLeituraLote = { total: alvos.length, feitos: 0, lidos: 0, semArquivo: 0, falhas: 0 };
+    renderCaixaConferenciaFinanceiro();
+    for (const item of alvos) {
+        const anexo = await hidratarAnexoFinanceiro(anexoPrincipalCaixaFinanceiro(item));
+        if (!anexo?.dados) financeiroLeituraLote.semArquivo++;
+        else if (await window.analisarFinanceiroDocumento(item.id, true, true)) financeiroLeituraLote.lidos++;
+        else financeiroLeituraLote.falhas++;
+        financeiroLeituraLote.feitos++;
+        renderCaixaConferenciaFinanceiro();
+        await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    const r = financeiroLeituraLote;
+    financeiroLeituraLote = null;
+    try { await sugerirVinculosFinanceiroSilencioso(); } catch (_) { /* opcional */ }
+    renderFinanceiro();
+    alert(`Leitura concluída: ${r.lidos} preenchido(s), ${r.falhas} sem dados reconhecidos${r.semArquivo ? `, ${r.semArquivo} sem o arquivo neste computador` : ''}.`);
+};
+
+function cartaoCaixaConferenciaFinanceiro(item) {
+    const id = escapeJsStringFinanceiro(item.id);
+    const faltando = camposFaltandoFinanceiro(item);
+    const pronto = financeiroPrecisaConferir(item) && !faltando.length;
+    const sugestao = financeiroTemVinculoSugerido(item) ? item.processoVinculoSugestao[0] : null;
+    const alvoSugestao = sugestao ? obterLancamentosFinanceiros().find(reg => reg.id === sugestao.registroId) : null;
+    const ehNota = financeiroEhNotaFiscal(item);
+    const data = ehNota ? (item.dataEmissao ? `Emissão ${dataBR(item.dataEmissao)}` : 'Sem emissão') : (item.vencimento ? `Vence ${dataBR(item.vencimento)}` : 'Sem vencimento');
+    const estado = financeiroPrecisaConferir(item)
+        ? (pronto ? '<span class="fin-caixa-tag ok">Pronto para aprovar</span>' : `<span class="fin-caixa-tag falta">Falta: ${faltando.join(', ')}</span>`)
+        : (sugestao ? '<span class="fin-caixa-tag vinculo">Vínculo sugerido</span>' : '<span class="fin-caixa-tag vinculo">Nota de compra: dar entrada no estoque?</span>');
+    const botoes = [];
+    if (pronto) botoes.push(`<button type="button" class="btn-primary" onclick="window.aprovarConferenciaFinanceiro('${id}')">Aprovar</button>`);
+    if (sugestao && alvoSugestao) botoes.push(`<button type="button" class="btn-secondary" onclick="window.confirmarVinculoFinanceiro('${id}', '${escapeJsStringFinanceiro(sugestao.registroId)}')">Vincular a ${escapeHtmlFinanceiro((alvoSugestao.tipo || 'documento').toLowerCase())}</button>`);
+    if (anexoPrincipalCaixaFinanceiro(item)) botoes.push(`<button type="button" class="btn-secondary" onclick="window.abrirArquivoCaixaFinanceiro('${id}')" title="Ver o PDF ou a imagem"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Ver arquivo</button>`);
+    if (financeiroPrecisaConferir(item) && !pronto) botoes.push(`<button type="button" class="btn-secondary" onclick="window.analisarFinanceiroDocumento('${id}')">Ler de novo</button>`);
+    if (notaAguardandoEstoqueFinanceiro(item)) {
+        botoes.push(`<button type="button" class="btn-secondary" onclick="window.darEntradaEstoqueNotaFinanceiro('${id}')">Entrada no estoque</button>`);
+        botoes.push(`<button type="button" class="btn-secondary" onclick="window.ignorarEntradaEstoqueFinanceiro('${id}')">Não é do estoque</button>`);
+    }
+    botoes.push(`<button type="button" class="btn-secondary" onclick="window.editarFinanceiro('${id}')">Editar</button>`);
+    return `
+        <div class="fin-caixa-item${pronto ? ' is-pronto' : ''}">
+            <div class="fin-caixa-info">
+                <strong title="${escapeHtmlFinanceiro(anexoPrincipalCaixaFinanceiro(item)?.nome || item.descricao || '')}">${escapeHtmlFinanceiro(nomeLegivelCaixaFinanceiro(item) || 'Sem descrição')}</strong>
+                <small>${escapeHtmlFinanceiro(item.tipo || 'Documento')} · ${data}${sugestao && alvoSugestao ? ` · combina com ${escapeHtmlFinanceiro(alvoSugestao.descricao || alvoSugestao.tipo || '')} (${escapeHtmlFinanceiro(sugestao.confianca || 'baixa')})` : ''}</small>
+                ${estado}
+            </div>
+            <div class="fin-caixa-valor">${formatarMoeda(item.valor)}</div>
+            <div class="fin-caixa-acoes">${botoes.join('')}</div>
+        </div>`;
+}
+
+function renderCaixaConferenciaFinanceiro() {
+    const box = document.getElementById('financeiroCaixaConferencia');
+    if (!box) return;
+    const lista = obterLancamentosFinanceiros();
+    const conferir = lista.filter(financeiroPrecisaConferir);
+    const vinculos = lista.filter(item => !financeiroPrecisaConferir(item) && financeiroTemVinculoSugerido(item));
+    const notasEstoque = lista.filter(item => !financeiroPrecisaConferir(item) && !financeiroTemVinculoSugerido(item) && notaAguardandoEstoqueFinanceiro(item));
+    const prontos = conferir.filter(item => !camposFaltandoFinanceiro(item).length);
+    const itens = [...prontos, ...conferir.filter(item => camposFaltandoFinanceiro(item).length), ...vinculos, ...notasEstoque];
+    if (!itens.length) {
+        box.innerHTML = `<div class="fin-caixa-vazia"><strong>Caixa de conferência em dia.</strong> <span>Documentos novos aparecem aqui já lidos, prontos para aprovar.</span></div>`;
+        return;
+    }
+    const limite = financeiroCaixaExpandida ? itens.length : 6;
+    box.innerHTML = `
+        <div class="fin-caixa-head">
+            <div>
+                <h3>Caixa de conferência</h3>
+                <small>${conferir.length} para conferir · ${prontos.length} pronto(s) · ${vinculos.length} vínculo(s) sugerido(s)${notasEstoque.length ? ` · ${notasEstoque.length} nota(s) para o estoque` : ''}</small>
+            </div>
+            <div class="fin-caixa-head-acoes">
+                ${financeiroLeituraLote ? `<span class="fin-caixa-progresso" role="status">Lendo ${financeiroLeituraLote.feitos}/${financeiroLeituraLote.total}…</span>`
+                    : (conferir.length - prontos.length > 0 ? `<button type="button" class="btn-secondary" onclick="window.lerTodosCaixaFinanceiro()"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ler todos de novo (${conferir.length - prontos.length})</button>` : '')}
+                ${prontos.length ? `<button type="button" class="btn-primary" onclick="window.aprovarProntosFinanceiro()">Aprovar ${prontos.length} pronto(s)</button>` : ''}
+            </div>
+        </div>
+        <div class="fin-caixa-lista">${itens.slice(0, limite).map(cartaoCaixaConferenciaFinanceiro).join('')}</div>
+        ${itens.length > 6 ? `<button type="button" class="fin-caixa-mais" onclick="window.alternarCaixaConferenciaFinanceiro()">${financeiroCaixaExpandida ? 'Mostrar menos' : `Ver todos (${itens.length})`}</button>` : ''}`;
+}
+
+window.alternarCaixaConferenciaFinanceiro = function() {
+    financeiroCaixaExpandida = !financeiroCaixaExpandida;
+    renderCaixaConferenciaFinanceiro();
+};
+
+window.aprovarConferenciaFinanceiro = async function(id, renderizar = true) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(reg => reg.id === id);
+    if (!item) return false;
+    const faltando = camposFaltandoFinanceiro(item);
+    if (faltando.length) {
+        alert(`Falta preencher: ${faltando.join(', ')}. Use Editar.`);
+        return false;
+    }
+    item.conferenciaStatus = 'conferido';
+    item.conferidoEm = new Date().toISOString();
+    item.conferidoPor = window.App?.userName || '';
+    item.atualizadoEm = new Date().toISOString();
+    salvarLancamentosFinanceiros(lista);
+    await salvarFinanceiroNuvem(item);
+    if (renderizar) renderFinanceiro();
+    return true;
+};
+
+window.aprovarProntosFinanceiro = async function() {
+    const prontos = obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && !camposFaltandoFinanceiro(item).length);
+    if (!prontos.length) return;
+    if (!confirm(`Aprovar ${prontos.length} documento(s) com fornecedor, valor e data já identificados?`)) return;
+    for (const item of prontos) await window.aprovarConferenciaFinanceiro(item.id, false);
+    renderFinanceiro();
+};
+
+// Recalcula sugestoes de vinculo sem perguntar (so sugestoes; nada e juntado sozinho).
+async function sugerirVinculosFinanceiroSilencioso() {
+    const lista = obterLancamentosFinanceiros();
+    if (lista.length < 2) return 0;
+    const alterados = [];
+    lista.forEach(item => {
+        if (item.processoVinculoId) return;
+        const sugestoes = obterSugestoesVinculoFinanceiro(item, lista.filter(registro => registro.id !== item.id));
+        if (JSON.stringify(item.processoVinculoSugestao || []) !== JSON.stringify(sugestoes)) {
+            item.processoVinculoSugestao = sugestoes;
+            item.atualizadoEm = new Date().toISOString();
+            alterados.push(item);
+        }
+    });
+    if (alterados.length) {
+        salvarLancamentosFinanceiros(lista);
+        await Promise.all(alterados.map(item => salvarFinanceiroNuvem(item)));
+    }
+    return alterados.length;
+}
+
+function textoDeDataUrlFinanceiro(dataUrl = '') {
+    const [cabecalho, conteudo = ''] = String(dataUrl).split(',');
+    if (!/;base64/i.test(cabecalho)) return decodeURIComponent(conteudo);
+    const binario = atob(conteudo);
+    const bytes = Uint8Array.from(binario, c => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+}
+
+window.darEntradaEstoqueNotaFinanceiro = async function(id) {
+    const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
+    const anexo = item ? await hidratarAnexoFinanceiro(anexoXmlFinanceiro(item)) : null;
+    if (!anexo?.dados) {
+        alert('O XML desta nota não está neste aparelho. Importe o XML aqui ou abra a nota no aparelho onde ela foi importada.');
+        return;
+    }
+    if (typeof window.abrirNotaFiscalNoEstoque !== 'function') {
+        alert('O módulo de estoque ainda não carregou. Tente novamente em instantes.');
+        return;
+    }
+    window.abrirNotaFiscalNoEstoque(textoDeDataUrlFinanceiro(anexo.dados), anexo.nome || 'nfe.xml', id);
+};
+
+window.ignorarEntradaEstoqueFinanceiro = async function(id) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(reg => reg.id === id);
+    if (!item) return;
+    item.entradaEstoqueIgnorada = true;
+    item.atualizadoEm = new Date().toISOString();
+    salvarLancamentosFinanceiros(lista);
+    await salvarFinanceiroNuvem(item);
+    renderFinanceiro();
+};
+
+window.marcarEntradaEstoqueFinanceiro = async function(id) {
+    const lista = obterLancamentosFinanceiros();
+    const item = lista.find(reg => reg.id === id);
+    if (!item) return;
+    item.entradaEstoqueEm = new Date().toISOString();
+    item.atualizadoEm = item.entradaEstoqueEm;
+    salvarLancamentosFinanceiros(lista);
+    await salvarFinanceiroNuvem(item);
+};
+
+function arquivoDeBase64Financeiro(base64, nome, tipo) {
+    const binario = atob(base64);
+    const bytes = Uint8Array.from(binario, c => c.charCodeAt(0));
+    return new File([bytes], nome, { type: tipo || 'application/octet-stream' });
+}
+
+// Busca boletos, notas e comprovantes anexados nos e-mails do Outlook conectado e importa
+// para a caixa de conferencia (arquivos repetidos sao ignorados pela assinatura do arquivo).
+window.importarAnexosOutlookFinanceiro = async function(opcoes = {}) {
+    const silencioso = Boolean(opcoes.silencioso);
+    let dados;
+    try {
+        const resposta = await fetch('/api/outlook-messages?limite=30', { cache: 'no-store' });
+        dados = await resposta.json().catch(() => ({}));
+        if (resposta.status === 401) {
+            if (!silencioso) alert('O e-mail ainda não está conectado. Conecte o Outlook em Configurações > Integração de e-mail.');
+            return { importados: 0, desconectado: true };
+        }
+        if (!resposta.ok) throw new Error(dados.error || 'Falha ao listar e-mails.');
+    } catch (error) {
+        if (!silencioso) alert(`Não foi possível ler o e-mail agora: ${error.message}`);
+        return { importados: 0, erro: true };
+    }
+    let jaImportados = [];
+    try { jaImportados = JSON.parse(localStorage.getItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY) || '[]'); } catch (_) {}
+    const vistos = new Set(jaImportados);
+    const arquivos = [];
+    const chavesNovas = [];
+    for (const mensagem of (Array.isArray(dados.messages) ? dados.messages : [])) {
+        for (const anexo of (mensagem.anexos || [])) {
+            if (!/\.(pdf|xml|png|jpe?g|webp)$/i.test(anexo.nome || '') && !/pdf|xml|image\//i.test(anexo.tipo || '')) continue;
+            const chave = `${mensagem.id}|${anexo.id}`;
+            if (vistos.has(chave)) continue;
+            try {
+                const r = await fetch(`/api/outlook-attachment?messageId=${encodeURIComponent(mensagem.id)}&attachmentId=${encodeURIComponent(anexo.id)}`, { cache: 'no-store' });
+                const conteudo = await r.json();
+                if (!r.ok || !conteudo.conteudoBase64) continue;
+                arquivos.push(arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo));
+                chavesNovas.push(chave);
+            } catch (error) {
+                console.warn('Anexo do e-mail não baixado:', anexo.nome, error);
+            }
+        }
+    }
+    const resultado = arquivos.length
+        ? await window.importarPastaFinanceira(arquivos, { silencioso: true, origem: 'outlook', rotuloOrigem: 'E-MAIL' })
+        : { importados: 0, duplicados: 0 };
+    localStorage.setItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY, JSON.stringify([...chavesNovas, ...jaImportados].slice(0, 600)));
+    if (!silencioso) {
+        alert(resultado.importados
+            ? `${resultado.importados} documento(s) do e-mail importado(s). Eles aparecem na caixa de conferência conforme forem lidos.`
+            : 'Nenhum anexo novo de boleto, nota ou comprovante no e-mail.');
+    }
+    return resultado;
 };
 
 window.toggleFinanceiroLinha = function(id, event) {
@@ -3279,7 +3652,7 @@ window.ordenarFinanceiroPor = function(campo) {
     window.renderFinanceiro();
 };
 
-window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
+window.analisarFinanceiroDocumento = async function(id, silencioso = false, semExcluirDuplicado = false) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
     if (!item) return false;
@@ -3314,6 +3687,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
         }
         const duplicado = buscarLancamentoDuplicadoFinanceiro(atualizado, id);
         if (duplicado) {
+            if (silencioso && semExcluirDuplicado) return false;
             if (silencioso) {
                 const restantes = obterLancamentosFinanceiros().filter(reg => reg.id !== id);
                 salvarLancamentosFinanceiros(restantes);
@@ -3349,6 +3723,7 @@ async function analisarFinanceiroImportados(ids = []) {
         else falhas++;
         await new Promise(resolve => setTimeout(resolve, 120));
     }
+    try { await sugerirVinculosFinanceiroSilencioso(); } catch (error) { console.warn('Sugestao automatica de vinculos falhou:', error); }
     renderFinanceiro();
     if (resumo) resumo.textContent = `${ids.length} importado(s) | ${lidos} lido(s), ${falhas} pendente(s)`;
 }
@@ -4148,6 +4523,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
+    document.addEventListener('click', event => {
+        document.querySelectorAll('.financeiro-mais-acoes[open]').forEach(menu => {
+            if (!menu.contains(event.target) || event.target.closest('.financeiro-mais-acoes-menu button')) menu.open = false;
+        });
+    });
     document.getElementById('financeiroArquivosInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroPastaInput')?.addEventListener('change', event => window.importarPastaFinanceira(event.target.files));
     document.getElementById('financeiroSigewinInput')?.addEventListener('change', event => {
@@ -4168,6 +4548,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 });
 
-window.SectionLoader?.register('view-financeiro', carregarFinanceiroNuvem);
+// Ao abrir o Financeiro: carrega do banco e, se o Outlook estiver conectado, busca anexos novos
+// do e-mail em segundo plano (no maximo a cada 10 minutos).
+async function carregarFinanceiroComAutomacao() {
+    await carregarFinanceiroNuvem();
+    const agora = Date.now();
+    if (agora - Number(window.__financeiroEmailVerificadoEm || 0) < 10 * 60 * 1000) return;
+    window.__financeiroEmailVerificadoEm = agora;
+    try {
+        const status = await fetch('/api/outlook-status', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+        if (status?.connected) await window.importarAnexosOutlookFinanceiro({ silencioso: true });
+    } catch (_) {
+        // sem e-mail conectado: segue normalmente
+    }
+}
+
+window.SectionLoader?.register('view-financeiro', carregarFinanceiroComAutomacao);
 
 

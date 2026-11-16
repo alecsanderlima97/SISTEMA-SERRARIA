@@ -1,3 +1,4 @@
+import { auth } from './firebase-init.js';
 const KEYS_ASSISTENTE = {
     estoque: 'orquestra_estoque',
     frotas: 'orquestra_frota',
@@ -103,16 +104,18 @@ function ajudaAssistenteAtiva() {
     return preferenciaLigada(ASSISTANT_HELP_ENABLED_KEY, true);
 }
 
+// Guia da tela removido a pedido do cliente.
 function guiaAssistenteAtivo() {
-    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_SCREEN_GUIDE_KEY, true);
+    return false;
 }
 
 function assistenteFlutuanteAtivo() {
     return preferenciaLigada(ASSISTANT_FLOAT_ENABLED_KEY, true);
 }
 
+// Acompanhante de tela removido a pedido do cliente.
 function companionAssistenteAtivo() {
-    return ajudaAssistenteAtiva() && preferenciaLigada(ASSISTANT_COMPANION_ENABLED_KEY, true);
+    return false;
 }
 
 const GUIAS_TELA = {
@@ -141,7 +144,7 @@ const GUIAS_TELA = {
         ]
     },
     'view-entrada': {
-        titulo: 'Conferencia de Cargas',
+        titulo: 'Conferencia de Carga de Tora',
         passos: [
             'Registre a entrada com fornecedor/empreiteiro, mato, produto e romaneio.',
             'Confira os valores de tora, lenha, outros e corte/remocao antes de salvar.',
@@ -157,7 +160,7 @@ const GUIAS_TELA = {
         ]
     },
     'view-produtos': {
-        titulo: 'Gestao de Madeira',
+        titulo: 'Cadastro de Medidas',
         passos: [
             'Cadastre classe, medidas e configuracao do pacote.',
             'Mantenha a ordem por classe e medida para facilitar o romaneio.',
@@ -479,9 +482,10 @@ async function executarComandoAgenteOrquestra(comando) {
 }
 
 async function responderPerguntaOpenAI(pergunta) {
+    const idToken = await auth.currentUser?.getIdToken();
     const response = await fetch('/api/assistente', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken || ''}` },
         body: JSON.stringify({
             pergunta,
             contexto: coletarContexto()

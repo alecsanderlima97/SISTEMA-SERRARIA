@@ -1,3 +1,4 @@
+const { exigirUsuario } = require('./_firebase-auth');
 const OPENAI_INPUT_USD_PER_1M = 0.05;
 const OPENAI_OUTPUT_USD_PER_1M = 0.40;
 
@@ -73,6 +74,9 @@ module.exports = async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        if (!(await exigirUsuario(req, body))) {
+            return enviarErro(res, 401, 'unauthorized', 'Sessao invalida. Entre novamente no sistema.');
+        }
         const pergunta = String(body.pergunta || '').trim();
         if (!pergunta) {
             return enviarErro(res, 400, 'missing_question', 'Digite uma pergunta para o assistente.');
