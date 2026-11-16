@@ -1324,3 +1324,6 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 @media (prefers-reduced-motion: reduce) { #modalRadarClientes .lc-card, #modalRadarClientes .lc-btn { transition: none; } }
 #modalRadarClientes .lc-pin-serraria { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #dc2626; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 #modalRadarClientes .lc-pin-serraria i { color: #fff !important; font-size: 14px; }
+#financeiroCaixaConferencia .fin-caixa-head-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#financeiroCaixaConferencia .fin-caixa-progresso { font-weight: 700; color: #1d4ed8; padding: 6px 10px; background: #eff6ff; border-radius: 8px; }
+#financeiroCaixaConferencia .fin-caixa-acoes .btn-secondary i { margin-right: 4px; }

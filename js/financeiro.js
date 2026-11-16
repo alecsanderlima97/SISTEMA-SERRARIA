@@ -3287,6 +3287,71 @@ function notaAguardandoEstoqueFinanceiro(item = {}) {
         && usuarioPodeAcessarEstoqueFinanceiro();
 }
 
+// Nome que da para ler: arquivos com nome embaralhado (codigo do e-mail, chave da NF-e)
+// viram "Tipo · fornecedor · nº da nota · chegou em dd/mm".
+function nomeEmbaralhadoFinanceiro(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return true;
+    const maior = Math.max(...t.split(/[\s._-]+/).map(p => p.length));
+    return maior >= 18;
+}
+function nomeLegivelCaixaFinanceiro(item = {}) {
+    const desc = String(item.descricao || '').trim();
+    if (desc && !nomeEmbaralhadoFinanceiro(desc) && !descricaoFinanceiraRuim(desc)) return desc;
+    const docs = normalizarDocumentosVinculadosFinanceiro(item);
+    const nomeArquivo = item.documento?.nome || docs[0]?.nome || desc;
+    const chave = String(nomeArquivo || desc).match(/\d{44}/)?.[0] || '';
+    const ehNota = financeiroEhNotaFiscal(item) || Boolean(chave) || /\.xml$/i.test(nomeArquivo || '');
+    const tipoTxt = ehNota ? 'Nota fiscal' : String(item.tipo || 'Documento').toLowerCase().replace(/^./, c => c.toUpperCase());
+    const fornecedor = item.ia?.fornecedor || item.fornecedor || item.emitente || '';
+    const numeroNota = chave ? String(Number(chave.slice(25, 34))) : '';
+    const cnpj = chave ? chave.slice(6, 20).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '';
+    const entrada = item.criadoEm || item.importadoEm || item.createdAt || '';
+    const partes = [
+        tipoTxt,
+        fornecedor || (cnpj ? `CNPJ ${cnpj}` : ''),
+        numeroNota ? `nº ${numeroNota}` : '',
+        /IMPORTADO RAPIDO DE E-?MAIL/i.test(item.observacao || '') ? 'do e-mail' : '',
+        entrada && !Number.isNaN(new Date(entrada).getTime()) ? `chegou em ${new Date(entrada).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''
+    ].filter(Boolean);
+    return partes.join(' · ');
+}
+function anexoPrincipalCaixaFinanceiro(item = {}) {
+    return item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(doc => doc.categoria !== 'comprovante') || null;
+}
+window.abrirArquivoCaixaFinanceiro = async function(id) {
+    const item = obterLancamentosFinanceiros().find(reg => reg.id === id);
+    const anexo = await hidratarAnexoFinanceiro(anexoPrincipalCaixaFinanceiro(item));
+    if (!anexo || (!anexo.dados && !anexo.localUrl)) {
+        alert('O arquivo deste documento não está neste computador (ele fica salvo no computador que importou). Abra por lá ou anexe o PDF de novo em Editar.');
+        return;
+    }
+    abrirAnexoFinanceiroDireto(anexo);
+};
+let financeiroLeituraLote = null;
+window.lerTodosCaixaFinanceiro = async function() {
+    if (financeiroLeituraLote) return;
+    const alvos = obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && camposFaltandoFinanceiro(item).length);
+    if (!alvos.length) return;
+    if (!confirm(`Ler de novo ${alvos.length} documento(s) com a IA? Pode levar alguns minutos; pode continuar usando o sistema.`)) return;
+    financeiroLeituraLote = { total: alvos.length, feitos: 0, lidos: 0, semArquivo: 0, falhas: 0 };
+    renderCaixaConferenciaFinanceiro();
+    for (const item of alvos) {
+        const anexo = await hidratarAnexoFinanceiro(anexoPrincipalCaixaFinanceiro(item));
+        if (!anexo?.dados) financeiroLeituraLote.semArquivo++;
+        else if (await window.analisarFinanceiroDocumento(item.id, true, true)) financeiroLeituraLote.lidos++;
+        else financeiroLeituraLote.falhas++;
+        financeiroLeituraLote.feitos++;
+        renderCaixaConferenciaFinanceiro();
+        await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    const r = financeiroLeituraLote;
+    financeiroLeituraLote = null;
+    try { await sugerirVinculosFinanceiroSilencioso(); } catch (_) { /* opcional */ }
+    renderFinanceiro();
+    alert(`Leitura concluída: ${r.lidos} preenchido(s), ${r.falhas} sem dados reconhecidos${r.semArquivo ? `, ${r.semArquivo} sem o arquivo neste computador` : ''}.`);
+};
+
 function cartaoCaixaConferenciaFinanceiro(item) {
     const id = escapeJsStringFinanceiro(item.id);
     const faltando = camposFaltandoFinanceiro(item);
@@ -3301,6 +3366,7 @@ function cartaoCaixaConferenciaFinanceiro(item) {
     const botoes = [];
     if (pronto) botoes.push(`<button type="button" class="btn-primary" onclick="window.aprovarConferenciaFinanceiro('${id}')">Aprovar</button>`);
     if (sugestao && alvoSugestao) botoes.push(`<button type="button" class="btn-secondary" onclick="window.confirmarVinculoFinanceiro('${id}', '${escapeJsStringFinanceiro(sugestao.registroId)}')">Vincular a ${escapeHtmlFinanceiro((alvoSugestao.tipo || 'documento').toLowerCase())}</button>`);
+    if (anexoPrincipalCaixaFinanceiro(item)) botoes.push(`<button type="button" class="btn-secondary" onclick="window.abrirArquivoCaixaFinanceiro('${id}')" title="Ver o PDF ou a imagem"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Ver arquivo</button>`);
     if (financeiroPrecisaConferir(item) && !pronto) botoes.push(`<button type="button" class="btn-secondary" onclick="window.analisarFinanceiroDocumento('${id}')">Ler de novo</button>`);
     if (notaAguardandoEstoqueFinanceiro(item)) {
         botoes.push(`<button type="button" class="btn-secondary" onclick="window.darEntradaEstoqueNotaFinanceiro('${id}')">Entrada no estoque</button>`);
@@ -3310,7 +3376,7 @@ function cartaoCaixaConferenciaFinanceiro(item) {
     return `
         <div class="fin-caixa-item${pronto ? ' is-pronto' : ''}">
             <div class="fin-caixa-info">
-                <strong>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</strong>
+                <strong title="${escapeHtmlFinanceiro(anexoPrincipalCaixaFinanceiro(item)?.nome || item.descricao || '')}">${escapeHtmlFinanceiro(nomeLegivelCaixaFinanceiro(item) || 'Sem descrição')}</strong>
                 <small>${escapeHtmlFinanceiro(item.tipo || 'Documento')} · ${data}${sugestao && alvoSugestao ? ` · combina com ${escapeHtmlFinanceiro(alvoSugestao.descricao || alvoSugestao.tipo || '')} (${escapeHtmlFinanceiro(sugestao.confianca || 'baixa')})` : ''}</small>
                 ${estado}
             </div>
@@ -3339,7 +3405,11 @@ function renderCaixaConferenciaFinanceiro() {
                 <h3>Caixa de conferência</h3>
                 <small>${conferir.length} para conferir · ${prontos.length} pronto(s) · ${vinculos.length} vínculo(s) sugerido(s)${notasEstoque.length ? ` · ${notasEstoque.length} nota(s) para o estoque` : ''}</small>
             </div>
-            ${prontos.length ? `<button type="button" class="btn-primary" onclick="window.aprovarProntosFinanceiro()">Aprovar ${prontos.length} pronto(s)</button>` : ''}
+            <div class="fin-caixa-head-acoes">
+                ${financeiroLeituraLote ? `<span class="fin-caixa-progresso" role="status">Lendo ${financeiroLeituraLote.feitos}/${financeiroLeituraLote.total}…</span>`
+                    : (conferir.length - prontos.length > 0 ? `<button type="button" class="btn-secondary" onclick="window.lerTodosCaixaFinanceiro()"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ler todos de novo (${conferir.length - prontos.length})</button>` : '')}
+                ${prontos.length ? `<button type="button" class="btn-primary" onclick="window.aprovarProntosFinanceiro()">Aprovar ${prontos.length} pronto(s)</button>` : ''}
+            </div>
         </div>
         <div class="fin-caixa-lista">${itens.slice(0, limite).map(cartaoCaixaConferenciaFinanceiro).join('')}</div>
         ${itens.length > 6 ? `<button type="button" class="fin-caixa-mais" onclick="window.alternarCaixaConferenciaFinanceiro()">${financeiroCaixaExpandida ? 'Mostrar menos' : `Ver todos (${itens.length})`}</button>` : ''}`;
@@ -3542,7 +3612,7 @@ window.ordenarFinanceiroPor = function(campo) {
     window.renderFinanceiro();
 };
 
-window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
+window.analisarFinanceiroDocumento = async function(id, silencioso = false, semExcluirDuplicado = false) {
     const lista = obterLancamentosFinanceiros();
     const item = lista.find(reg => reg.id === id);
     if (!item) return false;
@@ -3577,6 +3647,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false) {
         }
         const duplicado = buscarLancamentoDuplicadoFinanceiro(atualizado, id);
         if (duplicado) {
+            if (silencioso && semExcluirDuplicado) return false;
             if (silencioso) {
                 const restantes = obterLancamentosFinanceiros().filter(reg => reg.id !== id);
                 salvarLancamentosFinanceiros(restantes);
