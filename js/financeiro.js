@@ -1284,6 +1284,38 @@ function bytesDeAnexoBase64(anexo) {
     return bytes;
 }
 
+// PDFs com senha (boletos costumam vir protegidos, ex.: inicio do CNPJ/CPF).
+// As senhas que funcionaram ficam guardadas so neste computador e sao tentadas nos proximos.
+const FINANCEIRO_SENHAS_PDF_KEY = 'orquestra_financeiro_senhas_pdf';
+let financeiroPedirSenhaPdf = true;
+function senhasPdfFinanceiro() {
+    try { return JSON.parse(localStorage.getItem(FINANCEIRO_SENHAS_PDF_KEY) || '[]').filter(Boolean).slice(0, 20); } catch (_) { return []; }
+}
+function guardarSenhaPdfFinanceiro(senha) {
+    try { localStorage.setItem(FINANCEIRO_SENHAS_PDF_KEY, JSON.stringify([senha, ...senhasPdfFinanceiro().filter(x => x !== senha)].slice(0, 20))); } catch (_) {}
+}
+async function abrirPdfFinanceiro(bytes, nome = '') {
+    const tentar = senha => window.pdfjsLib.getDocument({ data: bytes.slice(), ...(senha ? { password: senha } : {}) }).promise;
+    try {
+        return await tentar('');
+    } catch (erro) {
+        if (erro?.name !== 'PasswordException') throw erro;
+    }
+    for (const senha of senhasPdfFinanceiro()) {
+        try { return await tentar(senha); } catch (_) { /* proxima */ }
+    }
+    if (financeiroPedirSenhaPdf) {
+        for (let i = 0; i < 3; i++) {
+            const senha = window.prompt(`O PDF "${nome || 'documento'}" tem senha.\nDigite a senha (em boletos costuma ser o início do CNPJ ou CPF). Ela fica guardada neste computador para os próximos.`);
+            if (!senha) break;
+            try { const pdf = await tentar(senha.trim()); guardarSenhaPdfFinanceiro(senha.trim()); return pdf; } catch (_) { /* senha errada */ }
+        }
+    }
+    const e = new Error('PDF protegido por senha. Use "Ler de novo" e digite a senha.');
+    e.pdfComSenha = true;
+    throw e;
+}
+
 async function extrairTextoPdfFinanceiro(anexo) {
     if (!window.pdfjsLib) {
         throw new Error('Biblioteca PDF.js não carregada.');
@@ -1291,7 +1323,7 @@ async function extrairTextoPdfFinanceiro(anexo) {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
     const bytes = bytesDeAnexoBase64(anexo);
     if (!bytes) return '';
-    const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+    const pdf = await abrirPdfFinanceiro(bytes, anexo.nome);
     const paginas = [];
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
@@ -1320,7 +1352,7 @@ async function renderizarPrimeiraPaginaPdfFinanceiro(anexo) {
     const bytes = bytesDeAnexoBase64(anexo);
     if (!bytes) return '';
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
-    const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+    const pdf = await abrirPdfFinanceiro(bytes, anexo.nome);
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: 1.7 });
     const canvas = document.createElement('canvas');
@@ -3289,6 +3321,43 @@ function notaAguardandoEstoqueFinanceiro(item = {}) {
         && usuarioPodeAcessarEstoqueFinanceiro();
 }
 
+// Documentos da caixa que ja tem lancamento igual salvo (mesmo arquivo, chave da NF-e etc.)
+const financeiroDuplicadosLote = new Set();
+let financeiroIndiceConferidos = null;
+function indiceConferidosFinanceiro(lista = obterLancamentosFinanceiros()) {
+    const mapa = new Map();
+    lista.filter(reg => !financeiroPrecisaConferir(reg)).forEach(reg => {
+        obterAssinaturasLancamentoFinanceiro(reg).forEach(chave => { if (!mapa.has(chave)) mapa.set(chave, reg); });
+    });
+    return mapa;
+}
+function lancamentoJaExisteCaixaFinanceiro(item) {
+    const indice = financeiroIndiceConferidos || indiceConferidosFinanceiro();
+    for (const chave of obterAssinaturasLancamentoFinanceiro(item)) {
+        const reg = indice.get(chave);
+        if (reg && reg.id !== item.id) return reg;
+    }
+    return null;
+}
+async function removerDuplicadosCaixaFinanceiro(ids) {
+    if (!ids.length) return 0;
+    const autorizado = await window.confirmarExclusaoComSenha(`Tirar ${ids.length} documento(s) repetido(s) da caixa de conferência? O lançamento original continua salvo.`);
+    if (!autorizado) return 0;
+    let removidos = 0;
+    for (const id of ids) {
+        if (await excluirFinanceiroNuvem(id).catch(() => false)) removidos++;
+    }
+    const tirar = new Set(ids);
+    salvarLancamentosFinanceiros(obterLancamentosFinanceiros().filter(reg => !tirar.has(reg.id)));
+    renderFinanceiro();
+    return removidos;
+}
+window.tirarRepetidosCaixaFinanceiro = async function(id) {
+    financeiroIndiceConferidos = null;
+    const ids = id ? [id] : obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && lancamentoJaExisteCaixaFinanceiro(item)).map(item => item.id);
+    await removerDuplicadosCaixaFinanceiro(ids);
+};
+
 // Nome que da para ler: arquivos com nome embaralhado (codigo do e-mail, chave da NF-e)
 // viram "Tipo · fornecedor · nº da nota · chegou em dd/mm".
 function nomeEmbaralhadoFinanceiro(texto) {
@@ -3336,12 +3405,16 @@ window.lerTodosCaixaFinanceiro = async function() {
     const alvos = obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && camposFaltandoFinanceiro(item).length);
     if (!alvos.length) return;
     if (!confirm(`Ler de novo ${alvos.length} documento(s) com a IA? Pode levar alguns minutos; pode continuar usando o sistema.`)) return;
-    financeiroLeituraLote = { total: alvos.length, feitos: 0, lidos: 0, semArquivo: 0, falhas: 0 };
+    financeiroLeituraLote = { total: alvos.length, feitos: 0, lidos: 0, semArquivo: 0, falhas: 0, senha: 0 };
+    financeiroDuplicadosLote.clear();
+    financeiroPedirSenhaPdf = false; // no lote nao para pedindo senha; usa as ja guardadas
     renderCaixaConferenciaFinanceiro();
     for (const item of alvos) {
         const anexo = await hidratarAnexoFinanceiro(anexoPrincipalCaixaFinanceiro(item));
         if (!anexo?.dados) financeiroLeituraLote.semArquivo++;
         else if (await window.analisarFinanceiroDocumento(item.id, true, true)) financeiroLeituraLote.lidos++;
+        else if (financeiroDuplicadosLote.has(item.id)) { /* contado abaixo */ }
+        else if (obterLancamentosFinanceiros().find(reg => reg.id === item.id)?.leituraErro === 'senha') financeiroLeituraLote.senha++;
         else financeiroLeituraLote.falhas++;
         financeiroLeituraLote.feitos++;
         renderCaixaConferenciaFinanceiro();
@@ -3349,9 +3422,18 @@ window.lerTodosCaixaFinanceiro = async function() {
     }
     const r = financeiroLeituraLote;
     financeiroLeituraLote = null;
+    financeiroPedirSenhaPdf = true;
     try { await sugerirVinculosFinanceiroSilencioso(); } catch (_) { /* opcional */ }
     renderFinanceiro();
-    alert(`Leitura concluída: ${r.lidos} preenchido(s), ${r.falhas} sem dados reconhecidos${r.semArquivo ? `, ${r.semArquivo} sem o arquivo neste computador` : ''}.`);
+    const dups = [...financeiroDuplicadosLote];
+    alert([
+        `Leitura concluída: ${r.lidos} preenchido(s).`,
+        dups.length ? `${dups.length} já estavam lançados (repetidos).` : '',
+        r.senha ? `${r.senha} PDF(s) com senha: clique em "Ler de novo" neles e digite a senha uma vez.` : '',
+        r.falhas ? `${r.falhas} sem dados reconhecidos (confira em "Ver arquivo" e use Editar).` : '',
+        r.semArquivo ? `${r.semArquivo} sem o arquivo neste computador.` : ''
+    ].filter(Boolean).join('\n'));
+    if (dups.length) await removerDuplicadosCaixaFinanceiro(dups);
 };
 
 function cartaoCaixaConferenciaFinanceiro(item) {
@@ -3362,11 +3444,16 @@ function cartaoCaixaConferenciaFinanceiro(item) {
     const alvoSugestao = sugestao ? obterLancamentosFinanceiros().find(reg => reg.id === sugestao.registroId) : null;
     const ehNota = financeiroEhNotaFiscal(item);
     const data = ehNota ? (item.dataEmissao ? `Emissão ${dataBR(item.dataEmissao)}` : 'Sem emissão') : (item.vencimento ? `Vence ${dataBR(item.vencimento)}` : 'Sem vencimento');
-    const estado = financeiroPrecisaConferir(item)
+    const jaLancado = financeiroPrecisaConferir(item) ? lancamentoJaExisteCaixaFinanceiro(item) : null;
+    const estado = jaLancado
+        ? `<span class="fin-caixa-tag vinculo">Já lançado: ${escapeHtmlFinanceiro(jaLancado.descricao || jaLancado.tipo || 'registro')}${Number(jaLancado.valor) ? ` · ${formatarMoeda(jaLancado.valor)}` : ''}</span>`
+        : item.leituraErro === 'senha' ? '<span class="fin-caixa-tag falta">PDF com senha: clique em Ler de novo e digite a senha</span>'
+        : financeiroPrecisaConferir(item)
         ? (pronto ? '<span class="fin-caixa-tag ok">Pronto para aprovar</span>' : `<span class="fin-caixa-tag falta">Falta: ${faltando.join(', ')}</span>`)
         : (sugestao ? '<span class="fin-caixa-tag vinculo">Vínculo sugerido</span>' : '<span class="fin-caixa-tag vinculo">Nota de compra: dar entrada no estoque?</span>');
     const botoes = [];
-    if (pronto) botoes.push(`<button type="button" class="btn-primary" onclick="window.aprovarConferenciaFinanceiro('${id}')">Aprovar</button>`);
+    if (jaLancado) botoes.push(`<button type="button" class="btn-primary" onclick="window.tirarRepetidosCaixaFinanceiro('${id}')">Tirar da caixa</button>`);
+    if (pronto && !jaLancado) botoes.push(`<button type="button" class="btn-primary" onclick="window.aprovarConferenciaFinanceiro('${id}')">Aprovar</button>`);
     if (sugestao && alvoSugestao) botoes.push(`<button type="button" class="btn-secondary" onclick="window.confirmarVinculoFinanceiro('${id}', '${escapeJsStringFinanceiro(sugestao.registroId)}')">Vincular a ${escapeHtmlFinanceiro((alvoSugestao.tipo || 'documento').toLowerCase())}</button>`);
     if (anexoPrincipalCaixaFinanceiro(item)) botoes.push(`<button type="button" class="btn-secondary" onclick="window.abrirArquivoCaixaFinanceiro('${id}')" title="Ver o PDF ou a imagem"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Ver arquivo</button>`);
     if (financeiroPrecisaConferir(item) && !pronto) botoes.push(`<button type="button" class="btn-secondary" onclick="window.analisarFinanceiroDocumento('${id}')">Ler de novo</button>`);
@@ -3400,6 +3487,8 @@ function renderCaixaConferenciaFinanceiro() {
         box.innerHTML = `<div class="fin-caixa-vazia"><strong>Caixa de conferência em dia.</strong> <span>Documentos novos aparecem aqui já lidos, prontos para aprovar.</span></div>`;
         return;
     }
+    financeiroIndiceConferidos = indiceConferidosFinanceiro(lista);
+    const repetidos = conferir.filter(item => lancamentoJaExisteCaixaFinanceiro(item)).length;
     const limite = financeiroCaixaExpandida ? itens.length : 6;
     box.innerHTML = `
         <div class="fin-caixa-head">
@@ -3408,6 +3497,7 @@ function renderCaixaConferenciaFinanceiro() {
                 <small>${conferir.length} para conferir · ${prontos.length} pronto(s) · ${vinculos.length} vínculo(s) sugerido(s)${notasEstoque.length ? ` · ${notasEstoque.length} nota(s) para o estoque` : ''}</small>
             </div>
             <div class="fin-caixa-head-acoes">
+                ${repetidos ? `<button type="button" class="btn-secondary" onclick="window.tirarRepetidosCaixaFinanceiro()">Tirar ${repetidos} já lançado(s)</button>` : ''}
                 ${financeiroLeituraLote ? `<span class="fin-caixa-progresso" role="status">Lendo ${financeiroLeituraLote.feitos}/${financeiroLeituraLote.total}…</span>`
                     : (conferir.length - prontos.length > 0 ? `<button type="button" class="btn-secondary" onclick="window.lerTodosCaixaFinanceiro()"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ler todos de novo (${conferir.length - prontos.length})</button>` : '')}
                 ${prontos.length ? `<button type="button" class="btn-primary" onclick="window.aprovarProntosFinanceiro()">Aprovar ${prontos.length} pronto(s)</button>` : ''}
@@ -3680,6 +3770,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
             geraCobranca: !ehNota,
             situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : (item.situacaoDocumento || 'A_PAGAR'),
             ia: dadosIA,
+            leituraErro: '',
             atualizadoEm: new Date().toISOString()
         };
         if (!atualizado.processoVinculoId) {
@@ -3687,14 +3778,15 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         }
         const duplicado = buscarLancamentoDuplicadoFinanceiro(atualizado, id);
         if (duplicado) {
-            if (silencioso && semExcluirDuplicado) return false;
+            if (silencioso && semExcluirDuplicado) { financeiroDuplicadosLote.add(id); return false; }
             if (silencioso) {
                 const restantes = obterLancamentosFinanceiros().filter(reg => reg.id !== id);
                 salvarLancamentosFinanceiros(restantes);
                 await excluirFinanceiroNuvem(id).catch(() => false);
                 return false;
             }
-            alert(mensagemLancamentoDuplicadoFinanceiro(atualizado, duplicado));
+            const msg = mensagemLancamentoDuplicadoFinanceiro(atualizado, duplicado).replace('A importação foi cancelada para evitar boleto/nota repetido.', 'Este da caixa é uma cópia. Quer tirar da caixa de conferência?');
+            if (confirm(msg)) await removerDuplicadosCaixaFinanceiro([id]);
             return false;
         }
         Object.assign(item, atualizado);
@@ -3706,6 +3798,12 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         return true;
     } catch (error) {
         console.error('Falha ao analisar documento financeiro:', error);
+        if (error?.pdfComSenha) {
+            const listaAtual = obterLancamentosFinanceiros();
+            const reg = listaAtual.find(x => x.id === id);
+            if (reg) { reg.leituraErro = 'senha'; salvarLancamentosFinanceiros(listaAtual); }
+            if (!silencioso) renderCaixaConferenciaFinanceiro();
+        }
         if (!silencioso) alert(error.message || 'Não foi possível analisar este documento.');
         return false;
     }
