@@ -1327,3 +1327,20 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 #financeiroCaixaConferencia .fin-caixa-head-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 #financeiroCaixaConferencia .fin-caixa-progresso { font-weight: 700; color: #1d4ed8; padding: 6px 10px; background: #eff6ff; border-radius: 8px; }
 #financeiroCaixaConferencia .fin-caixa-acoes .btn-secondary i { margin-right: 4px; }
+/* Financeiro: baixa em lote dos vencidos */
+.fin-baixa-overlay { position: fixed; inset: 0; z-index: 10050; background: rgba(15, 23, 42, .55); display: grid; place-items: center; padding: 16px; }
+.fin-baixa-caixa { width: min(720px, 100%); max-height: calc(100dvh - 32px); display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; gap: 10px; background: #fff; color: #1f1c18; border-radius: 14px; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.fin-baixa-caixa header { display: flex; justify-content: space-between; align-items: center; }
+.fin-baixa-caixa h3 { margin: 0; color: #1f1c18 !important; }
+.fin-baixa-caixa p { margin: 0; color: #475569 !important; font-size: .9rem; }
+.fin-baixa-fechar { width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-size: 1.4rem; cursor: pointer; color: #1f1c18; }
+.fin-baixa-todos { display: flex; gap: 8px; align-items: center; font-weight: 700; color: #1f1c18 !important; }
+.fin-baixa-lista { overflow: auto; display: grid; gap: 6px; padding-right: 4px; }
+.fin-baixa-item { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; color: #1f1c18 !important; }
+.fin-baixa-item span { display: grid; min-width: 0; }
+.fin-baixa-item b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f1c18 !important; }
+.fin-baixa-item small { color: #64748b !important; }
+.fin-baixa-item strong { color: #1f1c18 !important; }
+.fin-baixa-item input, .fin-baixa-todos input { width: 18px; height: 18px; accent-color: #1d4ed8; }
+.fin-baixa-caixa footer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.fin-baixa-caixa footer span { margin-right: auto; font-weight: 700; color: #1f1c18 !important; }
