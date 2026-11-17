@@ -46,6 +46,8 @@ const FINANCEIRO_PASTAS = {
     todos: { titulo: 'Todos os documentos', icone: 'fa-folder-open', cor: '#8a6f3d', subpastas: ['GERAL'] },
     impostos: { titulo: 'Impostos', icone: 'fa-landmark', cor: '#f59e0b', subpastas: ['RECEITA FEDERAL', 'FGTS', 'INSS', 'SINDICATO', 'TAXAS'] },
     boletos: { titulo: 'Boletos', icone: 'fa-barcode', cor: '#8a6f3d', subpastas: ['SICREDI', 'FORNECEDORES', 'ALUGUEL', 'OUTROS BOLETOS'] },
+    notas: { titulo: 'Notas fiscais', icone: 'fa-file-invoice', cor: '#f59e0b', subpastas: ['COMPRAS', 'SERVICOS', 'OUTRAS NOTAS'] },
+    comprovantes: { titulo: 'Comprovantes', icone: 'fa-receipt', cor: '#22c55e', subpastas: ['SICREDI', 'PIX', 'OUTROS COMPROVANTES'] },
     fornecedores: { titulo: 'Fornecedores', icone: 'fa-truck-field', cor: '#22c55e', subpastas: ['AIR EXPRESS', 'MATERIAIS', 'SERVICOS', 'OUTROS FORNECEDORES'] },
     funcionarios: { titulo: 'Funcionarios', icone: 'fa-users', cor: '#a78bfa', subpastas: ['HOLERITES', 'VALES', 'BENEFICIOS', 'OUTROS'] },
     fixas: { titulo: 'Despesas Fixas', icone: 'fa-repeat', cor: '#fb7185', subpastas: ['ENERGIA', 'INTERNET', 'TELEFONE', 'CONTABILIDADE', 'SISTEMAS'] },
@@ -69,8 +71,27 @@ let financeiroNuvemCarregada = false;
 let financeiroOrdenacaoTabela = { campo: 'vencimento', direcao: 'asc' };
 let financeiroClassificacaoManual = false;
 
+// Classe do documento: cada um no seu lugar (comprovante nao e boleto; nota nao e cobranca).
+const FIN_REGEX_COMPROVANTE_NOME = /^SICREDI[\s_-]*\d{6,}(?:\.PDF)?$/;
+function classeDocumentoFinanceiro(item = {}) {
+    const doc = item.documento || (Array.isArray(item.documentosVinculados) ? item.documentosVinculados[0] : null) || {};
+    const cat = String(doc.categoria || '').toLowerCase();
+    const sem = v => normalizarTexto(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const tipo = sem(item.tipo);
+    const desc = sem(item.descricao);
+    const nome = sem(doc.nome || '').replace(/^.*[\\/]/, '');
+    if (cat === 'comprovante' || /COMPROVANTE/.test(tipo) || /COMPROVANTE/.test(desc)
+        || FIN_REGEX_COMPROVANTE_NOME.test(desc) || FIN_REGEX_COMPROVANTE_NOME.test(nome)) return 'comprovante';
+    if (financeiroEhNotaFiscal(item)) return 'nota';
+    if (cat === 'boleto' || /BOLETO|BLOQUETO|COBRANCA|FICHA DE COMPENSACAO/.test(tipo)) return 'boleto';
+    return 'outro';
+}
+
 function obterPastaFinanceiraItem(item = {}) {
     if (item.pastaFinanceira) return item.pastaFinanceira;
+    const classe = classeDocumentoFinanceiro(item);
+    if (classe === 'comprovante') return 'comprovantes';
+    if (classe === 'nota') return 'notas';
     const tipo = normalizarTexto(item.tipo);
     const desc = normalizarTexto(`${item.descricao || ''} ${item.observacao || ''}`);
     if (item.conferenciaStatus === 'pendente') return 'conferir';
@@ -202,6 +223,8 @@ function normalizarMetadadosLeituraFinanceira(dados = {}, anexo = null) {
         banco: String(dados.banco || '').trim(),
         nossoNumero: String(dados.nossoNumero || dados.nossoNumeroBoleto || '').trim(),
         produtos: Array.isArray(dados.produtos) ? dados.produtos.slice(0, 200) : [],
+        parcelas: Array.isArray(dados.parcelas) ? dados.parcelas.slice(0, 24) : [],
+        formaPagamento: dados.pagamento?.descricao || '',
         confianca: dados.confiancaIA || dados.confianca || 'media',
         confiancaData: dados.confiancaData || dados.confiancaVencimento || 'media',
         fonteVencimento: dados.fonteVencimento || '',
@@ -230,6 +253,7 @@ function financeiroEhNotaFiscal(item = {}) {
 function financeiroGeraCobranca(item = {}) {
     if (item.geraCobranca === false) return false;
     if (financeiroEhNotaFiscal(item)) return false;
+    if (classeDocumentoFinanceiro(item) === 'comprovante') return false;
     return true;
 }
 
@@ -302,6 +326,8 @@ function detectarCategoriaDocumentoFinanceiro(anexo = {}, dados = {}) {
     const texto = normalizarTexto(`${dados.tipo || ''} ${dados.descricao || ''} ${dados.observacao || ''}`);
     if (nome.endsWith('.XML') || tipo.includes('XML') || texto.includes('NF-E') || texto.includes('NFE')) return 'xml';
     if (/(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(`${nome} ${texto}`)) return 'nota_fiscal';
+    const nomeBase = nome.replace(/^.*[\\/]/, '');
+    if (/COMPROVANTE|PAGAMENTO REALIZADO|PAGAMENTO EFETUADO|AUTENTICA[CÇ][AÃ]O MEC/.test(`${nome} ${texto}`) || FIN_REGEX_COMPROVANTE_NOME.test(nomeBase)) return 'comprovante';
     if (/BOLETO|BLOQUETO|FICHA DE COMPENSACAO|FICHA DE COMPENSAÇÃO|LINHA DIGITAVEL|PAGAVEL|PAGÁVEL|SICREDI|NOSSO NUMERO|NOSSO NÚMERO/.test(`${nome} ${texto}`)) return 'boleto';
     if (/COMPROVANTE|PAGAMENTO REALIZADO|PIX|TRANSFERENCIA|TRANSFERÊNCIA/.test(`${nome} ${texto}`)) return 'comprovante';
     return 'outro';
@@ -419,11 +445,23 @@ function diferencaDiasFinanceiro(dataA, dataB) {
 }
 
 function grupoVinculoFinanceiro(item = {}) {
+    const classe = classeDocumentoFinanceiro(item);
+    if (classe === 'comprovante') return 'COMPROVANTE';
+    if (classe === 'nota') return 'NOTA_FISCAL';
     const tipo = normalizarTexto(item.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (/(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E|XML)(?![A-Z])/.test(tipo)) return 'NOTA_FISCAL';
     if (/BOLETO|BLOQUETO|COBRANCA|FICHA DE COMPENSACAO/.test(tipo)) return 'BOLETO';
     if (/COMPROVANTE|PAGAMENTO|PIX|TRANSFERENCIA/.test(tipo)) return 'COMPROVANTE';
     return grupoTipoFinanceiro(item);
+}
+
+// Numero da nota sem zeros a esquerda (boleto costuma trazer "19541/1" ou "000019541-01").
+function numeroNotaVinculoFinanceiro(item = {}) {
+    const bruto = String(item.ia?.numeroDocumento || '').trim();
+    const chave = String(item.ia?.chaveNfe || '').replace(/\D/g, '');
+    const numero = bruto ? bruto.split(/[\/\-\s]/)[0].replace(/\D/g, '') : (chave.length === 44 ? chave.slice(25, 34) : '');
+    const limpo = numero.replace(/^0+/, '');
+    return limpo.length >= 3 ? limpo : '';
 }
 
 function obterSugestoesVinculoFinanceiro(registro, lista = []) {
@@ -446,12 +484,16 @@ function obterSugestoesVinculoFinanceiro(registro, lista = []) {
             const identificadorComum = Array.from(fortesAtuais).find(chave => fortesItem.has(chave));
             const cnpjComum = cnpjAtual && cnpjAtual === String(item.ia?.cnpj || '').replace(/\D/g, '') ? cnpjAtual : '';
             const fornecedorComum = fornecedorAtual && fornecedorAtual === normalizarFornecedorVinculoFinanceiro(item);
-            const mesmoValor = valorAtual > 0 && valorAtual === valorCentavosFinanceiro(item.valor);
+            const valoresItem = [valorCentavosFinanceiro(item.valor), ...(item.ia?.parcelas || []).map(p => valorCentavosFinanceiro(p.valor))];
+            const valoresAtual = [valorAtual, ...(registro.ia?.parcelas || []).map(p => valorCentavosFinanceiro(p.valor))];
+            const mesmoValor = valoresAtual.some(v => v > 0 && valoresItem.includes(v));
+            const numA = numeroNotaVinculoFinanceiro(registro), numB = numeroNotaVinculoFinanceiro(item);
+            const mesmaNota = Boolean(numA && numB && numA === numB && (cnpjAtual ? (!String(item.ia?.cnpj || '').replace(/\D/g, '') || cnpjAtual === String(item.ia?.cnpj || '').replace(/\D/g, '')) : true));
             const dias = diferencaDiasFinanceiro(dataAtual, item.dataEmissao || item.emissao || item.vencimento || '');
             const dataProxima = dias !== null && dias <= 45;
-            if (!identificadorComum && !(cnpjComum && mesmoValor && dataProxima) && !(fornecedorComum && mesmoValor && dataProxima)) return null;
+            if (!identificadorComum && !mesmaNota && !(cnpjComum && mesmoValor && dataProxima) && !(fornecedorComum && mesmoValor && dataProxima)) return null;
 
-            const confianca = identificadorComum ? 'alta' : (cnpjComum ? 'media' : 'baixa');
+            const confianca = (identificadorComum || (mesmaNota && (cnpjComum || mesmoValor))) ? 'alta' : (cnpjComum || mesmaNota ? 'media' : 'baixa');
             return {
                 registroId: item.id,
                 tipo: item.tipo || 'DOCUMENTO',
@@ -1118,6 +1160,12 @@ window.irParaFinanceiroAlertas = function() {
 
 function obterStatusItem(item) {
     const status = item.statusFinanceiro || obterStatusFinanceiro(item);
+    const classe = classeDocumentoFinanceiro(item);
+    if (classe === 'comprovante') return { label: 'Comprovante', classe: 'pago' };
+    if (classe === 'nota' && status !== 'PAGO') {
+        if (item.conferenciaStatus !== 'pendente' && item.situacaoDocumento === 'AGUARDANDO_BOLETO') return { label: 'Aguardando boleto', classe: 'pendente' };
+        if (status === 'REGISTRADO') return { label: 'Nota (sem cobrança)', classe: 'aberto' };
+    }
     if (status === 'PAGO') return { label: 'Pago', classe: 'pago' };
     if (status === 'PENDENTE') return { label: 'Pendente', classe: 'pendente' };
     if (status === 'VENCIDO') return { label: 'Vencido', classe: 'vencido' };
@@ -1430,10 +1478,51 @@ function extrairProdutosXmlFinanceiro(xml) {
     }).filter(Boolean);
 }
 
+// Forma de pagamento da NF-e (tag tPag): a vista ja nasce paga; boleto/duplicata aguarda o boleto.
+const FIN_TPAG_A_VISTA = new Set(['01', '02', '03', '04', '10', '11', '12', '13', '17', '18', '20']);
+const FIN_TPAG_NOMES = { '01': 'Dinheiro', '02': 'Cheque', '03': 'Cartão de crédito', '04': 'Cartão de débito', '05': 'Crédito loja', '10': 'Vale alimentação', '11': 'Vale refeição', '12': 'Vale presente', '13': 'Vale combustível', '14': 'Duplicata mercantil', '15': 'Boleto bancário', '16': 'Depósito bancário', '17': 'PIX', '18': 'Transferência', '19': 'Fidelidade', '20': 'PIX', '90': 'Sem pagamento', '99': 'Outros' };
+function extrairParcelasXmlFinanceiro(xml) {
+    return elementosXmlPorNome(xml, 'dup').map(dup => ({
+        numero: valorXmlNoElemento(dup, 'nDup'),
+        vencimento: normalizarDataXmlFinanceiro(valorXmlNoElemento(dup, 'dVenc')),
+        valor: numeroXmlFinanceiro(valorXmlNoElemento(dup, 'vDup'))
+    })).filter(p => p.valor > 0 || p.vencimento);
+}
+function extrairPagamentoXmlFinanceiro(xml) {
+    const formas = elementosXmlPorNome(xml, 'detPag').map(det => ({
+        codigo: valorXmlNoElemento(det, 'tPag'),
+        valor: numeroXmlFinanceiro(valorXmlNoElemento(det, 'vPag')),
+        indPag: valorXmlNoElemento(det, 'indPag')
+    })).filter(f => f.codigo);
+    const indPagIde = valorXmlNoElemento(primeiroElementoXmlPorNome(xml, 'ide'), 'indPag');
+    return { formas, indPag: formas[0]?.indPag || indPagIde || '' };
+}
+// NFS-e (servico) tem layout diferente da NF-e; le os campos principais dos padroes mais comuns.
+function extrairDadosNfseXmlFinanceiro(xml) {
+    const valor = valorXmlPorTag(xml, ['ValorLiquidoNfse', 'ValorServicos', 'vServ', 'ValorTotal', 'vLiq']);
+    if (!valor) return null;
+    const prestador = primeiroElementoXmlPorNome(xml, 'PrestadorServico') || primeiroElementoXmlPorNome(xml, 'Prestador') || primeiroElementoXmlPorNome(xml, 'emit');
+    const nome = valorXmlNoElemento(prestador, 'RazaoSocial') || valorXmlNoElemento(prestador, 'xNome') || valorXmlPorTag(xml, ['RazaoSocial', 'xNome']);
+    const cnpj = valorXmlNoElemento(prestador, 'Cnpj') || valorXmlNoElemento(prestador, 'CNPJ');
+    return {
+        tipo: 'NOTA FISCAL', descricao: nome || 'NFS-E', fornecedor: nome, cnpj,
+        numeroDocumento: valorXmlPorTag(xml, ['Numero', 'nNFSe', 'nDFSe']),
+        vencimento: '', dataEmissao: normalizarDataXmlFinanceiro(valorXmlPorTag(xml, ['DataEmissao', 'dhEmi', 'dhProc'])),
+        valor: numeroXmlFinanceiro(valor), produtos: [], parcelas: [], pagamento: { formas: [], indPag: '' },
+        confianca: 'alta', confiancaData: 'alta', fonteVencimento: 'XML NFS-e', analisadoPorIA: false,
+        geraCobranca: false, situacaoDocumento: 'AGUARDANDO_BOLETO'
+    };
+}
+
 function extrairDadosXmlFinanceiro(texto) {
-    const xml = new DOMParser().parseFromString(texto, 'text/xml');
+    const limpo = String(texto || '').replace(/^\uFEFF/, '').replace(/^[^<]+/, '');
+    const xml = new DOMParser().parseFromString(limpo, 'text/xml');
     const erro = xml.getElementsByTagName('parsererror')?.[0];
     if (erro) return null;
+    if (!primeiroElementoXmlPorNome(xml, 'infNFe') && !primeiroElementoXmlPorNome(xml, 'ICMSTot')) {
+        const nfse = extrairDadosNfseXmlFinanceiro(xml);
+        if (nfse) return nfse;
+    }
     const emit = primeiroElementoXmlPorNome(xml, 'emit');
     const dest = primeiroElementoXmlPorNome(xml, 'dest');
     const ide = primeiroElementoXmlPorNome(xml, 'ide');
@@ -1447,6 +1536,12 @@ function extrairDadosXmlFinanceiro(texto) {
     const produtos = extrairProdutosXmlFinanceiro(xml);
     const chaveNfe = extrairChaveNfeXmlFinanceiro(xml);
     const descricao = nome || 'DOCUMENTO XML';
+    const parcelas = extrairParcelasXmlFinanceiro(xml);
+    const pagamento = extrairPagamentoXmlFinanceiro(xml);
+    const codigos = pagamento.formas.map(f => f.codigo);
+    const aVista = !parcelas.length && codigos.length > 0 && codigos.every(c => FIN_TPAG_A_VISTA.has(c));
+    const situacaoDocumento = aVista ? 'PAGO_A_VISTA' : 'AGUARDANDO_BOLETO';
+    const formaTexto = [...new Set(codigos.map(c => FIN_TPAG_NOMES[c] || `Código ${c}`))].join(', ');
     return {
         tipo: 'NOTA FISCAL',
         descricao,
@@ -1466,7 +1561,10 @@ function extrairDadosXmlFinanceiro(texto) {
         fonteVencimento: 'XML NF-e',
         analisadoPorIA: false,
         geraCobranca: false,
-        situacaoDocumento: 'AGUARDANDO_BOLETO'
+        parcelas,
+        pagamento: { ...pagamento, descricao: formaTexto },
+        observacaoIA: [formaTexto ? `Pagamento: ${formaTexto}` : '', parcelas.length ? `${parcelas.length} parcela(s): ${parcelas.map(p => `${p.numero || ''} venc. ${p.vencimento ? p.vencimento.split('-').reverse().join('/') : '?'} R$ ${p.valor.toFixed(2).replace('.', ',')}`).join('; ')}` : ''].filter(Boolean).join(' | '),
+        situacaoDocumento
     };
 }
 
@@ -1621,7 +1719,7 @@ function normalizarDadosIAFinanceiro(dados = {}) {
         analisadoPorIA: true,
         precisaConferencia: dados.confianca === 'baixa' || dados.confiancaData === 'baixa',
         geraCobranca: !ehNota,
-        situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : (dados.situacaoDocumento || 'A_PAGAR')
+        situacaoDocumento: ehNota ? (dados.situacaoDocumento === 'PAGO_A_VISTA' ? 'PAGO_A_VISTA' : 'AGUARDANDO_BOLETO') : (dados.situacaoDocumento || 'A_PAGAR')
     };
 }
 
@@ -2207,7 +2305,7 @@ window.importarPastaFinanceira = async function(files, opcoes = {}) {
             const registro = {
                 id,
                 aba: 'caixa-financeira',
-                tipo: categoriaDocumento === 'boleto' ? 'BOLETO' : (ehNotaImportada ? 'NOTA FISCAL' : 'DOCUMENTO'),
+                tipo: categoriaDocumento === 'boleto' ? 'BOLETO' : (ehNotaImportada ? 'NOTA FISCAL' : (categoriaDocumento === 'comprovante' ? 'COMPROVANTE' : 'DOCUMENTO')),
                 descricao: normalizarTexto(file.name.replace(/\.(pdf|xml)$/i, '').replace(/[-_]+/g, ' ')) || 'PENDENTE DE CONFERENCIA',
                 vencimento: '',
                 dataEmissao: '',
@@ -2588,10 +2686,23 @@ window.confirmarVinculoFinanceiro = async function(id, alvoId) {
         registro.atualizadoEm = agora;
     });
 
+    // comprovante no processo = o boleto foi pago
+    const comprovante = afetados.find(registro => classeDocumentoFinanceiro(registro) === 'comprovante');
+    let baixados = 0;
+    if (comprovante) {
+        const dataPagamento = comprovante.dataEmissao || comprovante.vencimento || agora.slice(0, 10);
+        afetados.filter(registro => registro !== comprovante && financeiroGeraCobranca(registro) && !registro.pago).forEach(registro => {
+            registro.pago = true;
+            registro.pagoEm = dataPagamento;
+            registro.pagoOrigem = `Comprovante: ${comprovante.descricao || 'pagamento'}`;
+            registro.pagoPor = window.App?.userName || '';
+            baixados++;
+        });
+    }
     salvarLancamentosFinanceiros(lista);
     await Promise.all(afetados.map(registro => salvarFinanceiroNuvem(registro)));
     renderFinanceiro();
-    alert('Vínculo financeiro confirmado. Os documentos permanecem separados e agora fazem parte do mesmo processo.');
+    alert(`Vínculo financeiro confirmado.${baixados ? ` ${baixados} boleto(s) marcado(s) como pago pelo comprovante.` : ''}`);
     return true;
 };
 
@@ -3224,6 +3335,15 @@ window.renderFinanceiro = function() {
         return;
     }
 
+    const listaCompletaVinculos = obterLancamentosFinanceiros();
+    const porIdVinculos = new Map(listaCompletaVinculos.map(reg => [reg.id, reg]));
+    const rotuloVinculo = reg => {
+        const classe = classeDocumentoFinanceiro(reg);
+        const valor = Number(reg.valor) ? ` ${formatarMoeda(reg.valor)}` : '';
+        if (classe === 'nota') return `Nota${numeroNotaVinculoFinanceiro(reg) ? ` nº ${numeroNotaVinculoFinanceiro(reg)}` : ''}${reg.ia?.fornecedor ? ` ${reg.ia.fornecedor}` : ''}${valor}`;
+        if (classe === 'comprovante') return `Comprovante${reg.dataEmissao || reg.vencimento ? ` de ${dataBR(reg.dataEmissao || reg.vencimento)}` : ''}${valor}`;
+        return `${classe === 'boleto' ? 'Boleto' : (reg.tipo || 'Documento')} ${reg.descricao || ''}${reg.vencimento ? ` venc. ${dataBR(reg.vencimento)}` : ''}${valor}${reg.pago ? ' (pago)' : ''}`;
+    };
     tbody.innerHTML = lista.map(item => {
         const status = obterStatusItem(item);
         const duplicado = idsDuplicados.has(item.id);
@@ -3241,11 +3361,18 @@ window.renderFinanceiro = function() {
         const vinculoRomaneio = item.vinculoRomaneioId
             ? `<small class="financeiro-ia-line"><i class="fa-solid fa-file-circle-check"></i> NF-e vinculada ao romaneio ${escapeHtmlFinanceiro(item.vinculoRomaneio?.numeroRomaneio || item.vinculoRomaneioId)}</small>`
             : '';
+        const outrosVinculados = processoVinculado
+            ? [...new Set(obterMembrosProcessoVinculoFinanceiro(listaCompletaVinculos, item.processoVinculoId))].filter(mid => mid !== item.id).map(mid => porIdVinculos.get(mid)).filter(Boolean)
+            : [];
+        const parcelasNota = Array.isArray(item.ia?.parcelas) && item.ia.parcelas.length && classeDocumentoFinanceiro(item) === 'nota'
+            ? `<small class="financeiro-ia-line"><i class="fa-solid fa-calendar-days"></i> ${item.ia.formaPagamento ? `${escapeHtmlFinanceiro(item.ia.formaPagamento)} · ` : ''}${item.ia.parcelas.map(p => `${p.numero ? `${escapeHtmlFinanceiro(p.numero)}: ` : ''}${dataBR(p.vencimento)} ${formatarMoeda(p.valor)}`).join(' · ')}</small>`
+            : (item.ia?.formaPagamento && classeDocumentoFinanceiro(item) === 'nota' ? `<small class="financeiro-ia-line"><i class="fa-solid fa-money-bill"></i> ${escapeHtmlFinanceiro(item.ia.formaPagamento)}</small>` : '');
+        const pagoOrigem = item.pago && item.pagoOrigem ? `<small class="financeiro-ia-line"><i class="fa-solid fa-circle-check"></i> ${escapeHtmlFinanceiro(item.pagoOrigem)}</small>` : '';
         const vinculoResumo = processoVinculado
-            ? '<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Processo financeiro vinculado</small>'
+            ? `${outrosVinculados.length ? outrosVinculados.map(reg => `<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> ${escapeHtmlFinanceiro(rotuloVinculo(reg))}</small>`).join('') : '<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Processo financeiro vinculado</small>'}${parcelasNota}${pagoOrigem}`
             : (sugestaoVinculo
-                ? `<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Vínculo sugerido (${escapeHtmlFinanceiro(sugestaoVinculo.confianca || 'baixa')})</small>`
-                : '');
+                ? `<small class="financeiro-ia-line"><i class="fa-solid fa-link"></i> Combina com ${escapeHtmlFinanceiro(sugestaoVinculo.descricao || sugestaoVinculo.tipo || 'outro documento')} (${escapeHtmlFinanceiro(sugestaoVinculo.confianca || 'baixa')})</small>${parcelasNota}${pagoOrigem}`
+                : `${parcelasNota}${pagoOrigem}`);
         const vinculoAcao = sugestaoVinculo
             ? `<button type="button" class="btn-icon financeiro-acao-vinculo" onclick="event.stopPropagation(); window.confirmarVinculoFinanceiro('${escapeJsStringFinanceiro(item.id)}', '${escapeJsStringFinanceiro(sugestaoVinculo.registroId)}')" title="Revisar vínculo sugerido com ${escapeHtmlFinanceiro(sugestaoVinculo.descricao || 'outro documento')}" aria-label="Revisar vínculo sugerido"><i class="fa-solid fa-link"></i></button>`
             : (processoVinculado
@@ -3295,7 +3422,7 @@ function camposFaltandoFinanceiro(item = {}) {
 }
 
 function financeiroPrecisaConferir(item = {}) {
-    return item.conferenciaStatus === 'pendente';
+    return item.conferenciaStatus === 'pendente' && classeDocumentoFinanceiro(item) !== 'comprovante';
 }
 
 function financeiroTemVinculoSugerido(item = {}) {
@@ -3761,14 +3888,15 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         const ehNota = financeiroEhNotaFiscal(dados);
         const atualizado = {
             ...item,
-            tipo: ehNota ? 'NOTA FISCAL' : normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO'),
+            tipo: ehNota ? 'NOTA FISCAL' : ((classeDocumentoFinanceiro(item) === 'comprovante' || /COMPROVANTE/i.test(dados.tipo || '')) ? 'COMPROVANTE' : normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO')),
             descricao: normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA'),
             vencimento: ehNota ? '' : (dados.vencimento || item.vencimento || ''),
             dataEmissao: ehNota ? (dados.dataEmissao || dados.emissao || item.dataEmissao || '') : (item.dataEmissao || ''),
             valor: Number(dados.valor || item.valor || 0),
             conferenciaStatus: leituraFinanceiraIncompleta(dados) ? 'pendente' : 'conferido',
             geraCobranca: !ehNota,
-            situacaoDocumento: ehNota ? 'AGUARDANDO_BOLETO' : (item.situacaoDocumento || 'A_PAGAR'),
+            situacaoDocumento: ehNota ? (dados.situacaoDocumento === 'PAGO_A_VISTA' ? 'PAGO_A_VISTA' : 'AGUARDANDO_BOLETO') : (item.situacaoDocumento || 'A_PAGAR'),
+            ...(ehNota && dados.situacaoDocumento === 'PAGO_A_VISTA' ? { pago: true, pagoEm: dados.dataEmissao || item.pagoEm || new Date().toISOString(), pagoOrigem: 'XML: pagamento à vista' } : {}),
             ia: dadosIA,
             leituraErro: '',
             atualizadoEm: new Date().toISOString()
@@ -4664,3 +4792,219 @@ async function carregarFinanceiroComAutomacao() {
 window.SectionLoader?.register('view-financeiro', carregarFinanceiroComAutomacao);
 
 
+
+// =====================================================================
+// Reorganizar por classe (boleto / nota / comprovante) e baixa em lote dos vencidos.
+// Nada e apagado: o estado anterior fica guardado e da para desfazer.
+// =====================================================================
+async function salvarVariosFinanceiroNuvem(registros) {
+    for (let i = 0; i < registros.length; i += 10) {
+        await Promise.all(registros.slice(i, i + 10).map(reg => salvarFinanceiroNuvem(reg).catch(() => false)));
+    }
+}
+
+function planoReorganizacaoFinanceiro(lista) {
+    const mudancas = [];
+    lista.forEach(item => {
+        const classe = classeDocumentoFinanceiro(item);
+        const alvo = {};
+        const desc = normalizarTexto(item.descricao);
+        if (classe === 'comprovante') {
+            if (item.tipo !== 'COMPROVANTE') alvo.tipo = 'COMPROVANTE';
+            if (item.pastaFinanceira !== 'comprovantes') { alvo.pastaFinanceira = 'comprovantes'; alvo.subpastaFinanceira = /SICREDI/.test(desc) ? 'SICREDI' : (/PIX/.test(desc) ? 'PIX' : 'OUTROS COMPROVANTES'); }
+            if (item.geraCobranca !== false) alvo.geraCobranca = false;
+            if (item.conferenciaStatus === 'pendente') alvo.conferenciaStatus = 'conferido';
+            if (item.documento && item.documento.categoria !== 'comprovante') alvo.documentoCategoria = 'comprovante';
+        } else if (classe === 'nota') {
+            if (item.pastaFinanceira !== 'notas') { alvo.pastaFinanceira = 'notas'; alvo.subpastaFinanceira = /SERVI/.test(desc) ? 'SERVICOS' : 'COMPRAS'; }
+            if (item.geraCobranca !== false) alvo.geraCobranca = false;
+        } else if (classe === 'boleto' && ['conferir', 'comprovantes', 'notas'].includes(item.pastaFinanceira) && item.conferenciaStatus !== 'pendente') {
+            alvo.pastaFinanceira = 'boletos';
+            alvo.subpastaFinanceira = /SICREDI/.test(desc) ? 'SICREDI' : 'OUTROS BOLETOS';
+        }
+        if (Object.keys(alvo).length) mudancas.push({ item, classe, alvo });
+    });
+    return mudancas;
+}
+
+window.reorganizarFinanceiro = async function() {
+    const lista = obterLancamentosFinanceiros();
+    const mudancas = planoReorganizacaoFinanceiro(lista);
+    if (!mudancas.length) { alert('Tudo já está na pasta certa.'); return; }
+    const conta = c => mudancas.filter(m => m.classe === c).length;
+    if (!confirm([
+        `Reorganizar ${mudancas.length} documento(s)?`,
+        '',
+        conta('comprovante') ? `• ${conta('comprovante')} comprovante(s) → pasta Comprovantes (deixam de ser cobrança)` : '',
+        conta('nota') ? `• ${conta('nota')} nota(s) fiscal(is) → pasta Notas fiscais (nota não é cobrada; cobra o boleto)` : '',
+        conta('boleto') ? `• ${conta('boleto')} boleto(s) → pasta Boletos` : '',
+        '',
+        'Nada é apagado e dá para desfazer.'
+    ].filter((l, i, arr) => l || (arr[i - 1] && arr[i - 1] !== '')).join('\n'))) return;
+    const agora = new Date().toISOString();
+    const alterados = [];
+    mudancas.forEach(({ item, alvo }) => {
+        item.classificacaoAnterior = {
+            tipo: item.tipo || '', pastaFinanceira: item.pastaFinanceira || '', subpastaFinanceira: item.subpastaFinanceira || '',
+            geraCobranca: item.geraCobranca !== false, conferenciaStatus: item.conferenciaStatus || '', documentoCategoria: item.documento?.categoria || '', em: agora
+        };
+        const { documentoCategoria, ...resto } = alvo;
+        Object.assign(item, resto);
+        if (documentoCategoria) {
+            item.documento = { ...item.documento, categoria: documentoCategoria };
+            if (Array.isArray(item.documentosVinculados)) item.documentosVinculados = item.documentosVinculados.map(d => (d.id === item.documento.id ? { ...d, categoria: documentoCategoria } : d));
+        }
+        item.atualizadoEm = agora;
+        alterados.push(item);
+    });
+    salvarLancamentosFinanceiros(lista);
+    renderFinanceiro();
+    await salvarVariosFinanceiroNuvem(alterados);
+    const vinculados = await vincularNotasBoletosFinanceiro();
+    alert(`${alterados.length} documento(s) reorganizado(s).${vinculados ? ` ${vinculados} nota(s) ligada(s) ao boleto da mesma compra.` : ''} Para voltar como estava, use "Desfazer reorganização".`);
+};
+
+// Liga sozinho nota <-> boleto quando a confianca e alta (mesmo numero de nota + CNPJ/valor, ou chave/linha digitavel).
+// Nao mexe em pagamento. Comprovante -> boleto continua pedindo confirmacao (porque da baixa).
+async function vincularNotasBoletosFinanceiro() {
+    try { await sugerirVinculosFinanceiroSilencioso(); } catch (_) { return 0; }
+    const lista = obterLancamentosFinanceiros();
+    const porId = new Map(lista.map(reg => [reg.id, reg]));
+    const agora = new Date().toISOString();
+    const alterados = new Set();
+    let ligados = 0;
+    lista.forEach(item => {
+        if (item.processoVinculoId || grupoVinculoFinanceiro(item) !== 'NOTA_FISCAL') return;
+        const sug = (item.processoVinculoSugestao || []).find(sg => sg.confianca === 'alta' && grupoVinculoFinanceiro(porId.get(sg.registroId) || {}) === 'BOLETO');
+        const alvo = sug && porId.get(sug.registroId);
+        if (!alvo) return;
+        const processoVinculoId = alvo.processoVinculoId || `proc_fin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const membros = new Set([item.id, alvo.id, ...(alvo.processoVinculoMembros || [])]);
+        [item, alvo].forEach(reg => {
+            reg.processoVinculoId = processoVinculoId;
+            reg.processoVinculoStatus = 'CONFIRMADO';
+            reg.processoVinculoMembros = [...membros];
+            reg.processoVinculoConfirmadoEm = agora;
+            reg.processoVinculoAutomatico = true;
+            reg.processoVinculoSugestao = [];
+            reg.atualizadoEm = agora;
+            alterados.add(reg);
+        });
+        ligados++;
+    });
+    if (alterados.size) {
+        salvarLancamentosFinanceiros(lista);
+        renderFinanceiro();
+        await salvarVariosFinanceiroNuvem([...alterados]);
+    }
+    return ligados;
+}
+
+window.desfazerReorganizacaoFinanceiro = async function() {
+    const lista = obterLancamentosFinanceiros();
+    const alvos = lista.filter(item => item.classificacaoAnterior);
+    if (!alvos.length) { alert('Não há reorganização para desfazer.'); return; }
+    if (!confirm(`Voltar ${alvos.length} documento(s) para a classificação anterior?`)) return;
+    alvos.forEach(item => {
+        const a = item.classificacaoAnterior;
+        item.tipo = a.tipo;
+        if (a.pastaFinanceira) item.pastaFinanceira = a.pastaFinanceira; else delete item.pastaFinanceira;
+        if (a.subpastaFinanceira) item.subpastaFinanceira = a.subpastaFinanceira; else delete item.subpastaFinanceira;
+        if (a.geraCobranca !== undefined) item.geraCobranca = a.geraCobranca;
+        if (a.conferenciaStatus) item.conferenciaStatus = a.conferenciaStatus;
+        if (a.documentoCategoria && item.documento) item.documento = { ...item.documento, categoria: a.documentoCategoria };
+        delete item.classificacaoAnterior;
+        item.atualizadoEm = new Date().toISOString();
+    });
+    salvarLancamentosFinanceiros(lista);
+    renderFinanceiro();
+    await salvarVariosFinanceiroNuvem(alvos);
+};
+
+window.abrirBaixaVencidosFinanceiro = function() {
+    const vencidos = obterLancamentosFinanceiros().filter(estaVencido).sort((a, b) => (a.vencimento || '').localeCompare(b.vencimento || ''));
+    const temLote = obterLancamentosFinanceiros().some(item => item.baixaLote?.id);
+    if (!vencidos.length) {
+        if (temLote && confirm('Não há contas vencidas em aberto. Quer desfazer a última baixa em lote?')) window.desfazerUltimaBaixaLoteFinanceiro();
+        else if (!temLote) alert('Não há contas a pagar vencidas em aberto.');
+        return;
+    }
+    document.getElementById('finBaixaOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'finBaixaOverlay';
+    overlay.className = 'fin-baixa-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'finBaixaTitulo');
+    overlay.innerHTML = `
+        <div class="fin-baixa-caixa">
+            <header><h3 id="finBaixaTitulo">Dar baixa nos vencidos</h3><button type="button" class="fin-baixa-fechar" aria-label="Fechar">×</button></header>
+            <p>Contas a pagar com vencimento antes de hoje e ainda em aberto. <b>Desmarque as que você NÃO pagou.</b> As marcadas ficam como pagas na data do vencimento.</p>
+            <label class="fin-baixa-todos"><input type="checkbox" id="finBaixaTodos" checked> Marcar todas</label>
+            <div class="fin-baixa-lista">${vencidos.map(item => `
+                <label class="fin-baixa-item"><input type="checkbox" value="${escapeHtmlFinanceiro(item.id)}" checked>
+                    <span><b>${escapeHtmlFinanceiro(item.descricao || item.tipo || 'Documento')}</b><small>${escapeHtmlFinanceiro(item.tipo || '')} · venceu ${dataBR(item.vencimento)}</small></span>
+                    <strong>${formatarMoeda(item.valor)}</strong></label>`).join('')}</div>
+            <footer>
+                <span id="finBaixaTotal"></span>
+                ${temLote ? '<button type="button" class="btn-secondary" data-acao="desfazer">Desfazer última baixa em lote</button>' : ''}
+                <button type="button" class="btn-secondary" data-acao="cancelar">Cancelar</button>
+                <button type="button" class="btn-primary" data-acao="confirmar">Dar baixa</button>
+            </footer>
+        </div>`;
+    document.body.appendChild(overlay);
+    const atualizarTotal = () => {
+        const marcados = [...overlay.querySelectorAll('.fin-baixa-item input:checked')].map(i => vencidos.find(v => v.id === i.value));
+        overlay.querySelector('#finBaixaTotal').textContent = `${marcados.length} de ${vencidos.length} · ${formatarMoeda(marcados.reduce((s, v) => s + Number(v?.valor || 0), 0))}`;
+    };
+    atualizarTotal();
+    const fechar = () => overlay.remove();
+    overlay.addEventListener('change', e => {
+        if (e.target.id === 'finBaixaTodos') overlay.querySelectorAll('.fin-baixa-item input').forEach(i => { i.checked = e.target.checked; });
+        atualizarTotal();
+    });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') fechar(); });
+    overlay.addEventListener('click', async e => {
+        if (e.target.closest('.fin-baixa-fechar') || e.target.closest('[data-acao="cancelar"]')) { fechar(); return; }
+        if (e.target.closest('[data-acao="desfazer"]')) { fechar(); window.desfazerUltimaBaixaLoteFinanceiro(); return; }
+        if (!e.target.closest('[data-acao="confirmar"]')) return;
+        const ids = [...overlay.querySelectorAll('.fin-baixa-item input:checked')].map(i => i.value);
+        if (!ids.length) { alert('Nenhuma conta marcada.'); return; }
+        const autorizado = await window.confirmarExclusaoComSenha(`Dar baixa (marcar como pago) em ${ids.length} conta(s) vencida(s)?`, 'Digite sua senha operacional para confirmar a baixa:');
+        if (!autorizado) return;
+        const lista = obterLancamentosFinanceiros();
+        const lote = { id: `lote_${Date.now()}`, em: new Date().toISOString(), por: window.App?.userName || '' };
+        const alterados = [];
+        ids.forEach(id => {
+            const item = lista.find(reg => reg.id === id);
+            if (!item || item.pago) return;
+            item.pago = true;
+            item.pagoEm = item.vencimento || lote.em.slice(0, 10);
+            item.pagoOrigem = `Baixa em lote em ${dataBR(lote.em.slice(0, 10))}${lote.por ? ` por ${lote.por}` : ''}`;
+            item.baixaLote = lote;
+            item.atualizadoEm = lote.em;
+            alterados.push(item);
+        });
+        salvarLancamentosFinanceiros(lista);
+        fechar();
+        renderFinanceiro();
+        await salvarVariosFinanceiroNuvem(alterados);
+        alert(`${alterados.length} conta(s) marcada(s) como paga(s). Para voltar, use "Dar baixa nos vencidos" → "Desfazer última baixa em lote".`);
+    });
+    overlay.querySelector('[data-acao="confirmar"]').focus();
+};
+
+window.desfazerUltimaBaixaLoteFinanceiro = async function() {
+    const lista = obterLancamentosFinanceiros();
+    const ultimo = lista.map(item => item.baixaLote?.id).filter(Boolean).sort().pop();
+    if (!ultimo) { alert('Não há baixa em lote para desfazer.'); return; }
+    const alvos = lista.filter(item => item.baixaLote?.id === ultimo);
+    if (!confirm(`Desfazer a última baixa em lote (${alvos.length} conta(s) voltam a ficar em aberto)?`)) return;
+    alvos.forEach(item => {
+        item.pago = false; item.pagoEm = null; item.pagoOrigem = ''; item.baixaLoteDesfeito = item.baixaLote; delete item.baixaLote;
+        item.atualizadoEm = new Date().toISOString();
+    });
+    salvarLancamentosFinanceiros(lista);
+    renderFinanceiro();
+    await salvarVariosFinanceiroNuvem(alvos);
+};
