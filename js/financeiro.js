@@ -236,6 +236,8 @@ function normalizarMetadadosLeituraFinanceira(dados = {}, anexo = null) {
 }
 
 function financeiroEhNotaFiscal(item = {}) {
+    const tipoExplicito = normalizarTexto(item.tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (/BOLETO|COMPROVANTE|IMPOSTO|^CONTA/.test(tipoExplicito)) return false;
     const categoria = normalizarCategoriaDocumentoFinanceiro(item.documento?.categoria || item.categoriaDocumento || '');
     const texto = normalizarTexto([
         item.tipo,
@@ -1766,6 +1768,15 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
     }
 }
 
+// Tira do nome do beneficiario o que vem colado na mesma linha: agencia/codigo, CNPJ, datas.
+function limparNomeBeneficiarioFinanceiro(nome = '') {
+    return String(nome)
+        .replace(/\s+\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}.*$/, '')
+        .replace(/\s+\d{3,5}-?\d?\s*\/\s*\d{4,}.*$/, '')
+        .replace(/\s+\d{2}\/\d{2}\/\d{4}.*$/, '')
+        .trim();
+}
+
 function extrairDescricaoBoletoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const linhas = String(texto || '').split(/\r?\n/).map(linha => linha.replace(/\s+/g, ' ').trim()).filter(Boolean);
@@ -1773,16 +1784,17 @@ function extrairDescricaoBoletoFinanceiro(texto) {
     if (boletoAssistencial) return boletoAssistencial.toUpperCase();
     for (let i = 0; i < linhas.length; i++) {
         if (/NOME\s+DO\s+BENEFICI|BENEFICI|CEDENTE/i.test(linhas[i])) {
-            const mesmaLinha = limparDescricaoDocumentoFinanceiro(linhas[i]);
-            if (mesmaLinha && !/LOCAL DE PAGAMENTO|VENCIMENTO|PAGADOR/i.test(mesmaLinha) && mesmaLinha.length >= 5) {
-                return mesmaLinha;
+            const mesmaLinha = limparDescricaoDocumentoFinanceiro(linhas[i].replace(/^.*?(NOME\s+DO\s+)?BENEFICI\S*\s*:?\s*/i, ''));
+            const ehCabecalho = /AG[ÊE]NCIA|C[ÓO]DIGO|CNPJ|CPF|MOTIVO|SACADO|AVALISTA|ENTREGA|VENCIMENTO|LOCAL DE PAGAMENTO|PAGADOR/i.test(linhas[i]);
+            if (!ehCabecalho && mesmaLinha && mesmaLinha.length >= 5) {
+                return limparNomeBeneficiarioFinanceiro(mesmaLinha);
             }
             const proximas = linhas.slice(i + 1, i + 5).filter(linha =>
                 linha.length >= 5
                 && !/LOCAL DE PAGAMENTO|VENCIMENTO|AG[ÊE]NCIA|DATA|DOCUMENTO|ESP[ÉE]CIE|ACEITE|PAGADOR|CNPJ:?\s*$/i.test(linha)
             );
             const fornecedorLinha = proximas.find(linha => /[A-Z]{3,}/.test(linha) && !/^\d/.test(linha));
-            if (fornecedorLinha) return limparDescricaoDocumentoFinanceiro(fornecedorLinha);
+            if (fornecedorLinha) return limparNomeBeneficiarioFinanceiro(limparDescricaoDocumentoFinanceiro(fornecedorLinha));
         }
     }
     const beneficiario = limpo.match(/NOME\s+DO\s+BENEFICI\S*\s+([A-Z0-9 .&\\/,-]{4,120}?)(?:\s+\d{2}\.\d{3}\.\d{3}|\s+CNPJ|\s+CPF|\s+RUA|\s+AV\.|\s+ENDERE|\s+VENCIMENTO)/i)?.[1]
@@ -1905,8 +1917,17 @@ function descricaoFinanceiraRuim(descricao) {
         || /PENDENTE|DOCUMENTO|IMPORTADO|EM CASO DE D[ÚU]VIDAS|CONTATE SEU GERENTE|CENTRAL NO|INSTRU[CÇ][OÕ]ES|AP[ÓO]S O VENCIMENTO/i.test(descricao);
 }
 
+// Boleto costuma citar a nota ("NFE019456-3/3") no numero do documento; isso nao o torna nota fiscal.
+function textoEhBoletoFinanceiro(textoBusca) {
+    const marcasBoleto = [/NOSSO NUMERO/, /LOCAL DE PAGAMENTO/, /FICHA DE COMPENSACAO/, /RECIBO DO PAGADOR/, /VALOR DO DOCUMENTO/, /CEDENTE|BENEFICIARIO/, /PAGAVEL/, /LINHA DIGITAVEL/]
+        .filter(r => r.test(textoBusca)).length;
+    const marcasNota = /DANFE|CHAVE DE ACESSO|NATUREZA DA OPERACAO|PROTOCOLO DE AUTORIZACAO|DOCUMENTO AUXILIAR DA NOTA/.test(textoBusca);
+    return marcasBoleto >= 2 && !marcasNota;
+}
+
 function extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo) {
     if (!/DANFE|NOTA FISCAL|NF-E|NFE|NFS-E|NFSE/.test(textoBusca)) return null;
+    if (textoEhBoletoFinanceiro(textoBusca)) return null;
     const linhas = linhasFinanceiro(texto);
     const emissao = limpo.match(/(?:EMISS[AÃ]O|DATA\s+DE\s+EMISS[AÃ]O|DATA\s+DO\s+DOCUMENTO)[^\d]{0,40}(\d{2}[\/.-]\d{2}[\/.-]\d{4})/i)?.[1]
         || limpo.match(/\b(\d{2}[\/.-]\d{2}[\/.-]\d{4})\b/)?.[1];
@@ -2028,8 +2049,16 @@ function extrairDadosTextoFinanceiro(texto) {
         const vencimentoBoleto = extrairVencimentoBoletoRobustoFinanceiro(texto);
         const valorBoleto = extrairValorBoletoRobustoFinanceiro(texto) || (valor ? parseMoeda(valor) : 0);
         const descricaoBoleto = extrairDescricaoBoletoFinanceiro(texto);
+        const numeroNotaBoleto = limpo.match(/\bNF-?E?\s*0*(\d{3,9})(?:\s*[-\/]\s*\d{1,3}(?:\s*\/\s*\d{1,3})?)?\b/i)?.[0]?.replace(/\s+/g, '') || '';
+        const cnpjBeneficiario = String(texto || '').split(/\r?\n/)
+            .filter(linha => !/PAGADOR|SACADO/i.test(linha))
+            .map(linha => linha.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/)?.[0])
+            .find(Boolean) || '';
         return aplicarRegrasFornecedorFinanceiro({
             tipo: 'BOLETO',
+            numeroDocumento: numeroNotaBoleto ? numeroNotaBoleto.replace(/^NF-?E?0*/i, '') : '',
+            cnpj: cnpjBeneficiario,
+            fornecedor: descricaoBoleto || '',
             descricao: descricaoBoleto || favorecido || 'BOLETO IMPORTADO',
             vencimento: vencimentoBoleto ? vencimentoBoleto.split(/[\/.-]/).reverse().join('-') : vencimento,
             valor: valorBoleto || 0
