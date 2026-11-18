@@ -1,6 +1,7 @@
 const { exigirUsuario } = require('./_firebase-auth');
-const OPENAI_INPUT_USD_PER_1M = 0.05;
-const OPENAI_OUTPUT_USD_PER_1M = 0.40;
+// precos de referencia do gpt-5-mini (estimativa de custo exibida no sistema)
+const OPENAI_INPUT_USD_PER_1M = 0.25;
+const OPENAI_OUTPUT_USD_PER_1M = 2.00;
 
 function calcularCustoEstimadoOpenAI(usage = {}) {
     const inputTokens = Number(usage.input_tokens || 0);
@@ -88,8 +89,11 @@ module.exports = async function handler(req, res) {
             });
         }
 
+        const modelo = process.env.OPENAI_MODEL || 'gpt-5-mini';
         const payload = {
-            model: process.env.OPENAI_MODEL || 'gpt-5-nano',
+            model: modelo,
+            ...(/^(gpt-5|o\d)/.test(modelo) ? { reasoning: { effort: 'minimal' } } : {}),
+            text: { format: { type: 'json_object' } },
             instructions: [
                 'Voce extrai dados financeiros de documentos brasileiros para um sistema de serraria.',
                 'Responda somente JSON valido, sem markdown.',
@@ -102,7 +106,9 @@ module.exports = async function handler(req, res) {
                 'Para boleto, o valor principal deve vir de (=) VALOR DO DOCUMENTO, VALOR COBRADO, VALOR A PAGAR ou da linha digitavel; nao use juros, multa, mora, desconto, abatimento ou quantidade como valor.',
                 'Para boleto, fornecedor deve ser o BENEFICIARIO/CEDENTE, nunca o PAGADOR.',
                 'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, chaveNfe, valorTotal e produtos quando existirem.',
-                'Para boleto, extraia linhaDigitavel, codigoBarras, banco e nossoNumero somente quando estiverem legiveis. Nunca invente identificadores.'
+                'Para boleto, extraia linhaDigitavel, codigoBarras, banco e nossoNumero somente quando estiverem legiveis. Nunca invente identificadores.',
+                'Comprovante de pagamento (PIX, TED, pagamento de boleto, autenticacao bancaria) e tipo COMPROVANTE: use a data do pagamento em emissao e o valor pago; vencimento vazio.',
+                'Se o texto vier vazio ou ruim, leia a imagem do documento.'
             ].join(' '),
             input: [{ role: 'user', content: conteudoUsuario }]
         };

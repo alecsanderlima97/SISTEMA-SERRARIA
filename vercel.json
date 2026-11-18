@@ -14,6 +14,9 @@
   "functions": {
     "api/patio-foto.js": {
       "maxDuration": 60
+    },
+    "api/financeiro-ai.js": {
+      "maxDuration": 60
     }
   }
 }

@@ -1738,7 +1738,7 @@ async function analisarDocumentoFinanceiroIA(textoDocumento, anexo, sugestaoLoca
     let timeout;
     try {
         const controller = new AbortController();
-        timeout = setTimeout(() => controller.abort(), 30000);
+        timeout = setTimeout(() => controller.abort(), 58000);
         const idToken = await auth.currentUser?.getIdToken();
         const response = await fetch('/api/financeiro-ai', {
             method: 'POST',
@@ -1946,6 +1946,57 @@ function extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo) {
     };
 }
 
+// Linha digitavel / codigo de barras: valor e vencimento sao exatos (padrao FEBRABAN).
+// Boleto bancario (47 digitos): campo 5 = fator de vencimento (4) + valor (10).
+// Fator: base 07/10/1997; a partir de 22/02/2025 recomeca em 1000. Escolhe a data mais proxima de hoje.
+// Arrecadacao/concessionaria (48 digitos, comeca com 8): so o valor.
+function decodificarLinhaDigitavelFinanceiro(texto) {
+    const bruto = String(texto || '');
+    const m = bruto.match(/(\d{5})[.\s]?(\d{5})\s+(\d{5})[.\s]?(\d{6})\s+(\d{5})[.\s]?(\d{6})\s+(\d)\s+(\d{14})/);
+    let linha = m ? m.slice(1).join('') : '';
+    if (!linha) linha = bruto.replace(/[.\s-]/g, '').match(/(?<!\d)[0-7]\d{46}(?!\d)/)?.[0] || '';
+    if (linha.length === 47) {
+        const campo5 = linha.slice(33);
+        return montarLinhaDecodificadaFinanceiro(linha, Number(campo5.slice(0, 4)), Number(campo5.slice(4)));
+    }
+    const barras = bruto.replace(/[.\s-]/g, '').match(/(?<!\d)[0-7]\d{43}(?!\d)/)?.[0];
+    if (barras) return montarLinhaDecodificadaFinanceiro(barras, Number(barras.slice(5, 9)), Number(barras.slice(9, 19)));
+    const arrec = bruto.match(/(8\d{10})[-\s]?\d\s+(\d{11})[-\s]?\d\s+(\d{11})[-\s]?\d\s+(\d{11})[-\s]?\d/);
+    if (arrec) {
+        const codigo = arrec.slice(1).join('');
+        const valor = ['6', '8'].includes(codigo[2]) ? Number(codigo.slice(4, 15)) / 100 : 0;
+        return { linhaDigitavel: codigo, valor, vencimento: '', arrecadacao: true };
+    }
+    return null;
+}
+function montarLinhaDecodificadaFinanceiro(linha, fator, centavos) {
+    let vencimento = '';
+    if (fator >= 1000) {
+        const dia = 86400000;
+        const d1 = Date.UTC(1997, 9, 7) + fator * dia;
+        const d2 = Date.UTC(2025, 1, 22) + (fator - 1000) * dia;
+        const agora = Date.now();
+        vencimento = new Date(Math.abs(d2 - agora) < Math.abs(d1 - agora) ? d2 : d1).toISOString().slice(0, 10);
+    }
+    return { linhaDigitavel: linha, valor: centavos > 0 ? centavos / 100 : 0, vencimento };
+}
+// Completa/corrige a leitura com o que a linha digitavel garante.
+function aplicarLinhaDigitavelFinanceiro(dados, texto) {
+    if (!dados || financeiroEhNotaFiscal(dados) || /COMPROVANTE/i.test(dados.tipo || '')) return dados;
+    const ld = decodificarLinhaDigitavelFinanceiro(texto) || decodificarLinhaDigitavelFinanceiro(dados.linhaDigitavel || dados.codigoBarras || '');
+    if (!ld) return dados;
+    const out = { ...dados, linhaDigitavel: dados.linhaDigitavel || ld.linhaDigitavel };
+    if (ld.valor > 0) out.valor = ld.valor;
+    if (ld.vencimento && (!out.vencimento || out.confiancaData === 'baixa' || out.precisaConferencia)) {
+        out.vencimento = ld.vencimento;
+        out.confiancaData = 'alta';
+        out.fonteVencimento = 'linha digitável';
+    }
+    if (!out.tipo || /DOCUMENTO/i.test(out.tipo)) out.tipo = ld.arrecadacao ? 'CONTA' : 'BOLETO';
+    if (out.valor > 0 && out.vencimento && !descricaoFinanceiraRuim(out.descricao)) out.precisaConferencia = false;
+    return out;
+}
+
 function extrairDadosTextoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const textoBusca = limpo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
@@ -2048,14 +2099,16 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
     const dadosIABruta = !ehXml
         ? await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal || {}, imagemDocumento)
         : null;
-    const dadosIA = marcarConflitoDataFinanceiro(dadosIABruta, dadosLocal);
-    const dadosEscolhidos = leituraFinanceiraUtil(dadosIA) ? dadosIA : dadosLocal;
+    const dadosIA = ehXml ? null : aplicarLinhaDigitavelFinanceiro(marcarConflitoDataFinanceiro(dadosIABruta, dadosLocal), texto);
+    const dadosLocalLD = ehXml ? dadosLocal : aplicarLinhaDigitavelFinanceiro(dadosLocal, texto);
+    const dadosEscolhidos = leituraFinanceiraUtil(dadosIA) ? dadosIA : dadosLocalLD;
     if (dadosEscolhidos && !ehXml && !dadosIA) {
+        const exato = dadosEscolhidos.fonteVencimento === 'linha digitável' && dadosEscolhidos.valor > 0;
         return {
             dados: {
                 ...dadosEscolhidos,
-                precisaConferencia: true,
-                fonteVencimento: 'leitura_local_sem_IA',
+                precisaConferencia: !exato || descricaoFinanceiraRuim(dadosEscolhidos.descricao),
+                fonteVencimento: exato ? 'linha digitável' : 'leitura_local_sem_IA',
                 observacaoIA: 'A IA não ficou disponível. Confira a data diretamente no documento antes de salvar.'
             },
             usouIA: false,
@@ -2063,7 +2116,7 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
         };
     }
     return {
-        dados: dadosEscolhidos || dadosIA || dadosLocal,
+        dados: dadosEscolhidos || dadosIA || dadosLocalLD,
         usouIA: Boolean(dadosIA?.analisadoPorIA),
         texto
     };
@@ -2130,13 +2183,15 @@ async function extrairDadosAnexoFinanceiro(anexo) {
         : extrairDadosTextoFinanceiro(texto);
     const ehXml = nomeArquivo.endsWith('.xml') || tipoArquivo.includes('xml') || /<\?xml|<nfeProc|<NFe|<cteProc|<CFe/i.test(texto);
     if (ehXml) return dadosLocal;
-    const dadosIA = marcarConflitoDataFinanceiro(
+    const dadosIA = aplicarLinhaDigitavelFinanceiro(marcarConflitoDataFinanceiro(
         await analisarDocumentoFinanceiroIA(texto, anexo, dadosLocal),
         dadosLocal
-    );
+    ), texto);
     if (dadosIA && leituraFinanceiraUtil(dadosIA)) return dadosIA;
+    const local = aplicarLinhaDigitavelFinanceiro(dadosLocal, texto);
+    if (local && local.fonteVencimento === 'linha digitável' && leituraFinanceiraUtil(local)) return local;
     return {
-        ...(dadosIA || dadosLocal),
+        ...(dadosIA || local),
         precisaConferencia: true,
         fonteVencimento: 'leitura_local_sem_IA',
         observacaoIA: dadosIA?.observacaoIA || 'Confira a data diretamente no documento antes de salvar.'
@@ -3879,11 +3934,13 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         return false;
     }
     try {
-        const { dados, usouIA } = await comTimeoutFinanceiro(extrairDadosFinanceirosDoAnexo(anexo), silencioso ? 45000 : 70000);
-        if (!dados || !leituraFinanceiraUtil(dados)) {
+        const { dados, usouIA } = await comTimeoutFinanceiro(extrairDadosFinanceirosDoAnexo(anexo), silencioso ? 75000 : 90000);
+        // aproveita leitura parcial (ex.: valor e vencimento certos mas fornecedor ilegivel)
+        if (!dados || !(Number(dados.valor) > 0 || dados.vencimento || dados.dataEmissao || dados.emissao)) {
             if (!silencioso) alert('Não foi possível identificar os dados deste documento.');
             return false;
         }
+        if (descricaoFinanceiraRuim(dados.descricao)) dados.descricao = dados.fornecedor && !descricaoFinanceiraRuim(dados.fornecedor) ? dados.fornecedor : item.descricao;
         const dadosIA = normalizarMetadadosLeituraFinanceira(dados, anexo);
         const ehNota = financeiroEhNotaFiscal(dados);
         const atualizado = {
