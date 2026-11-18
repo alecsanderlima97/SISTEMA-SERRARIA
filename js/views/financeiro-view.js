@@ -11,6 +11,7 @@
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroPastas', this)"><i class="fa-solid fa-folder-tree"></i> Ver pastas</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroFormBody', this)"><i class="fa-solid fa-plus"></i> Novo registro</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroListaBody', this)"><i class="fa-solid fa-list"></i> Ver lista</button>
+                    <button type="button" class="financeiro-toggle-btn" onclick="window.abrirFornecedoresFinanceiro()"><i class="fa-solid fa-folder-tree"></i> Fornecedores</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.abrirBaixaVencidosFinanceiro()"><i class="fa-solid fa-calendar-check"></i> Dar baixa nos vencidos</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.reorganizarFinanceiro()"><i class="fa-solid fa-layer-group"></i> Reorganizar</button>
                 </div>

@@ -1164,6 +1164,7 @@ function obterStatusItem(item) {
     const status = item.statusFinanceiro || obterStatusFinanceiro(item);
     const classe = classeDocumentoFinanceiro(item);
     if (classe === 'comprovante') return { label: 'Comprovante', classe: 'pago' };
+    if (classe === 'nota' && status !== 'PAGO' && item.processoVinculoId && item.processoVinculoStatus === 'CONFIRMADO') return { label: 'Boleto ligado', classe: 'aberto' };
     if (classe === 'nota' && status !== 'PAGO') {
         if (item.conferenciaStatus !== 'pendente' && item.situacaoDocumento === 'AGUARDANDO_BOLETO') return { label: 'Aguardando boleto', classe: 'pendente' };
         if (status === 'REGISTRADO') return { label: 'Nota (sem cobrança)', classe: 'aberto' };
@@ -5094,3 +5095,167 @@ window.desfazerUltimaBaixaLoteFinanceiro = async function() {
     renderFinanceiro();
     await salvarVariosFinanceiroNuvem(alvos);
 };
+
+// =====================================================================
+// Pastas por fornecedor: cada fornecedor vira uma pasta automaticamente.
+// Dentro, os documentos ligados (nota + boleto + comprovante) aparecem juntos.
+// =====================================================================
+const FIN_PALAVRAS_GENERICAS = /\b(FATURA|FAT|BOLETO|BOL|NF|NFE|NF-E|NFS|NFSE|NOTA|FISCAL|COMP|COMPROVANTE|PARC|PARCELA|DOCUMENTO|DOC|IMPORTADO|PAGAMENTO|PGTO|REF|VENC|VENCIMENTO|DE|DA|DO|DAS|DOS|E|LTDA|ME|EPP|EIRELI|S\/?A|SA|CIA|COMERCIO|COM|INDUSTRIA|IND|SERVICOS|SERV)\b/g;
+function chaveNomeFornecedorFinanceiro(nome = '') {
+    const limpo = normalizarTexto(nome).normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^A-Z0-9 ]+/g, ' ').replace(FIN_PALAVRAS_GENERICAS, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
+    return limpo.split(' ').filter(p => p.length >= 2).slice(0, 2).join(' ');
+}
+function nomeFornecedorFinanceiro(item = {}) {
+    const candidatos = [item.ia?.fornecedor, item.fornecedor, item.descricao].filter(Boolean);
+    for (const c of candidatos) {
+        if (descricaoFinanceiraRuim(c) || nomeEmbaralhadoFinanceiro(c)) continue;
+        if (classeDocumentoFinanceiro(item) === 'comprovante' && FIN_REGEX_COMPROVANTE_NOME.test(normalizarTexto(c))) continue;
+        if (c === item.ia?.fornecedor || c === item.fornecedor) return String(c).trim();
+        // nome vindo do nome do arquivo: tira "FATURA", "BOLETO", "NF", numeros etc.
+        const limpo = normalizarTexto(c).replace(/\b(FATURA|FAT|BOLETO|BOL|NF|NFE|NF-E|NOTA|COMP|COMPROVANTE|PARC|PARCELA|DOC|REF|VENC)\b/g, ' ')
+            .replace(/\b\d[\d\/.-]*\b/g, ' ').replace(/\s+/g, ' ').trim();
+        if (limpo.length >= 3) return limpo;
+    }
+    return '';
+}
+function montarPastasFornecedoresFinanceiro(lista) {
+    const pastas = new Map();
+    const porCnpj = new Map();
+    const porNome = new Map();
+    lista.forEach(item => {
+        const cnpj = String(item.ia?.cnpj || '').replace(/\D/g, '');
+        const nome = nomeFornecedorFinanceiro(item);
+        if (!nome && cnpj.length < 11 && item.processoVinculoId) return; // aparece junto do grupo ligado
+        const chaveNome = chaveNomeFornecedorFinanceiro(nome);
+        let chave = (cnpj.length >= 11 && porCnpj.get(cnpj)) || (chaveNome && porNome.get(chaveNome))
+            || (cnpj.length >= 11 ? `cnpj:${cnpj}` : (chaveNome ? `nome:${chaveNome}` : 'sem'));
+        if (cnpj.length >= 11) porCnpj.set(cnpj, chave);
+        if (chaveNome) porNome.set(chaveNome, chave);
+        if (!pastas.has(chave)) pastas.set(chave, { chave, nomes: new Map(), cnpj: '', itens: [] });
+        const pasta = pastas.get(chave);
+        if (cnpj && !pasta.cnpj) pasta.cnpj = cnpj;
+        if (nome) pasta.nomes.set(nome, (pasta.nomes.get(nome) || 0) + (item.ia?.fornecedor ? 3 : 1));
+        pasta.itens.push(item);
+    });
+    return [...pastas.values()].map(p => {
+        const nome = [...p.nomes.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0]?.[0] || 'Sem fornecedor identificado';
+        const cobrancas = p.itens.filter(financeiroGeraCobranca);
+        return {
+            ...p, nome,
+            aberto: cobrancas.filter(i => !i.pago).reduce((s, i) => s + Number(i.valor || 0), 0),
+            vencido: cobrancas.filter(estaVencido).reduce((s, i) => s + Number(i.valor || 0), 0),
+            ultima: p.itens.map(i => i.vencimento || i.dataEmissao || (i.criadoEm || '').slice(0, 10)).filter(Boolean).sort().pop() || ''
+        };
+    }).sort((a, b) => (a.chave === 'sem') - (b.chave === 'sem') || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+let finFornecedorAberto = null;
+let finFornecedorBusca = '';
+function iconeClasseFinanceiro(classe) {
+    return { nota: 'fa-file-invoice', boleto: 'fa-barcode', comprovante: 'fa-receipt' }[classe] || 'fa-file-lines';
+}
+function linhaDocFornecedorFinanceiro(item) {
+    const classe = classeDocumentoFinanceiro(item);
+    const status = obterStatusItem(item);
+    const data = classe === 'nota' ? (item.dataEmissao ? `emissão ${dataBR(item.dataEmissao)}` : '')
+        : classe === 'comprovante' ? (item.dataEmissao || item.vencimento ? `pago ${dataBR(item.dataEmissao || item.vencimento)}` : '')
+        : (item.vencimento ? `vence ${dataBR(item.vencimento)}` : 'sem vencimento');
+    const num = classe === 'boleto' && item.ia?.numeroDocumento ? String(item.ia.numeroDocumento).replace(/^NF-?E?0*/i, '') : numeroNotaVinculoFinanceiro(item);
+    const id = escapeJsStringFinanceiro(item.id);
+    return `<div class="fin-forn-doc classe-${classe}">
+        <i class="fa-solid ${iconeClasseFinanceiro(classe)}" aria-hidden="true"></i>
+        <div class="fin-forn-doc-info"><b>${escapeHtmlFinanceiro({ nota: 'Nota fiscal', boleto: 'Boleto', comprovante: 'Comprovante' }[classe] || (item.tipo || 'Documento'))}${num ? ` nº ${escapeHtmlFinanceiro(num)}` : ''}</b>
+            <small>${escapeHtmlFinanceiro(data)}${item.pagoOrigem && item.pago ? ` · ${escapeHtmlFinanceiro(item.pagoOrigem)}` : ''}</small></div>
+        <strong>${formatarMoeda(item.valor)}</strong>
+        <span class="financeiro-status-badge ${status.classe}">${status.label}</span>
+        <div class="fin-forn-doc-acoes">
+            ${anexoPrincipalCaixaFinanceiro(item) ? `<button type="button" class="btn-secondary" onclick="window.abrirArquivoCaixaFinanceiro('${id}')">Ver arquivo</button>` : ''}
+            <button type="button" class="btn-secondary" onclick="window.fecharFornecedoresFinanceiro(); window.editarFinanceiro('${id}')">Editar</button>
+        </div>
+    </div>`;
+}
+function renderFornecedoresFinanceiro() {
+    const caixa = document.getElementById('finFornCaixa');
+    if (!caixa) return;
+    const lista = obterLancamentosFinanceiros();
+    const pastas = montarPastasFornecedoresFinanceiro(lista);
+    const busca = normalizarTexto(finFornecedorBusca).normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const visiveis = pastas.filter(p => !busca || normalizarTexto(p.nome).normalize('NFD').replace(/[̀-ͯ]/g, '').includes(busca) || p.cnpj.includes(busca.replace(/\D/g, '') || '###'));
+    const aberta = pastas.find(p => p.chave === finFornecedorAberto);
+    const ordemClasse = { nota: 0, boleto: 1, comprovante: 2, outro: 3 };
+    let detalhe = '<p class="fin-forn-vazio">Escolha um fornecedor à esquerda.</p>';
+    if (aberta) {
+        const grupos = new Map();
+        const soltos = [];
+        aberta.itens.forEach(item => {
+            if (item.processoVinculoId) {
+                if (!grupos.has(item.processoVinculoId)) grupos.set(item.processoVinculoId, []);
+                grupos.get(item.processoVinculoId).push(item);
+            } else soltos.push(item);
+        });
+        // traz para o grupo os membros ligados que ficaram em outra pasta (ex.: comprovante sem nome)
+        grupos.forEach((itens, pid) => {
+            lista.filter(reg => reg.processoVinculoId === pid && !itens.includes(reg)).forEach(reg => itens.push(reg));
+        });
+        const ordenar = arr => arr.sort((a, b) => (ordemClasse[classeDocumentoFinanceiro(a)] - ordemClasse[classeDocumentoFinanceiro(b)]) || String(a.vencimento || a.dataEmissao || '').localeCompare(String(b.vencimento || b.dataEmissao || '')));
+        const grupoHtml = [...grupos.values()].map(itens => {
+            const classes = new Set(itens.map(classeDocumentoFinanceiro));
+            const titulo = [classes.has('nota') ? 'Nota' : '', classes.has('boleto') ? 'Boleto' : '', classes.has('comprovante') ? 'Comprovante' : ''].filter(Boolean).join(' + ');
+            const pago = itens.filter(financeiroGeraCobranca).every(i => i.pago);
+            return `<section class="fin-forn-grupo${pago ? ' pago' : ''}"><h4><i class="fa-solid fa-link" aria-hidden="true"></i> ${escapeHtmlFinanceiro(titulo || 'Documentos ligados')}${pago ? ' <span>pago</span>' : ''}</h4>${ordenar(itens).map(linhaDocFornecedorFinanceiro).join('')}</section>`;
+        }).join('');
+        const soltosHtml = soltos.length ? `<section class="fin-forn-grupo soltos"><h4>Sem ligação</h4>${ordenar(soltos).map(item => {
+            const sug = Array.isArray(item.processoVinculoSugestao) ? item.processoVinculoSugestao[0] : null;
+            return linhaDocFornecedorFinanceiro(item) + (sug ? `<div class="fin-forn-sug">Combina com ${escapeHtmlFinanceiro(sug.descricao || sug.tipo || 'outro documento')} <button type="button" class="btn-secondary" onclick="window.confirmarVinculoFinanceiro('${escapeJsStringFinanceiro(item.id)}', '${escapeJsStringFinanceiro(sug.registroId)}').then(() => window.renderFornecedoresFinanceiro && window.renderFornecedoresFinanceiro())">Ligar</button></div>` : '');
+        }).join('')}</section>` : '';
+        detalhe = `<header class="fin-forn-det-topo"><div><h3>${escapeHtmlFinanceiro(aberta.nome)}</h3><small>${aberta.cnpj ? `CNPJ ${aberta.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')} · ` : ''}${aberta.itens.length} documento(s)</small></div>
+            <div class="fin-forn-totais"><span>Em aberto <b>${formatarMoeda(aberta.aberto)}</b></span>${aberta.vencido ? `<span class="venc">Vencido <b>${formatarMoeda(aberta.vencido)}</b></span>` : ''}</div></header>
+            ${grupoHtml}${soltosHtml}`;
+    }
+    caixa.innerHTML = `
+        <div class="fin-forn-lista">
+            <input type="search" id="finFornBusca" value="${escapeHtmlFinanceiro(finFornecedorBusca)}" placeholder="Buscar fornecedor ou CNPJ" aria-label="Buscar fornecedor">
+            <div class="fin-forn-pastas">${visiveis.map(p => `<button type="button" class="fin-forn-pasta${p.chave === finFornecedorAberto ? ' ativa' : ''}" data-forn="${escapeHtmlFinanceiro(p.chave)}">
+                <i class="fa-solid fa-folder${p.chave === finFornecedorAberto ? '-open' : ''}" aria-hidden="true"></i>
+                <span><b>${escapeHtmlFinanceiro(p.nome)}</b><small>${p.itens.length} doc · ${p.aberto ? `${formatarMoeda(p.aberto)} em aberto` : 'nada em aberto'}</small></span>
+                ${p.vencido ? '<em title="Tem conta vencida">!</em>' : ''}</button>`).join('') || '<p class="fin-forn-vazio">Nenhum fornecedor encontrado.</p>'}</div>
+        </div>
+        <div class="fin-forn-detalhe">${detalhe}</div>`;
+    const input = caixa.querySelector('#finFornBusca');
+    if (document.activeElement?.id !== 'finFornBusca' && finFornecedorBusca) { /* mantem */ }
+    return input;
+}
+window.renderFornecedoresFinanceiro = renderFornecedoresFinanceiro;
+
+window.abrirFornecedoresFinanceiro = function() {
+    document.getElementById('finFornOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'finFornOverlay';
+    overlay.className = 'fin-forn-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Fornecedores');
+    overlay.innerHTML = `<div class="fin-forn-janela">
+        <header class="fin-forn-topo"><h2><i class="fa-solid fa-folder-tree" aria-hidden="true"></i> Fornecedores</h2>
+            <small>Uma pasta por fornecedor, criada automaticamente. Documentos ligados (nota + boleto + comprovante) aparecem juntos.</small>
+            <button type="button" class="fin-forn-fechar" aria-label="Fechar" onclick="window.fecharFornecedoresFinanceiro()">×</button></header>
+        <div id="finFornCaixa" class="fin-forn-caixa"></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => {
+        const pasta = e.target.closest('[data-forn]');
+        if (pasta) { finFornecedorAberto = pasta.dataset.forn; renderFornecedoresFinanceiro(); overlay.querySelector('.fin-forn-detalhe')?.scrollIntoView({ block: 'nearest' }); }
+    });
+    overlay.addEventListener('input', e => {
+        if (e.target.id !== 'finFornBusca') return;
+        finFornecedorBusca = e.target.value;
+        const pos = e.target.selectionStart;
+        renderFornecedoresFinanceiro();
+        const campo = overlay.querySelector('#finFornBusca');
+        if (campo) { campo.focus(); campo.setSelectionRange(pos, pos); }
+    });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') window.fecharFornecedoresFinanceiro(); });
+    renderFornecedoresFinanceiro();
+    overlay.querySelector('#finFornBusca')?.focus();
+};
+window.fecharFornecedoresFinanceiro = function() { document.getElementById('finFornOverlay')?.remove(); };

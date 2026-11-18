@@ -1344,3 +1344,59 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 .fin-baixa-item input, .fin-baixa-todos input { width: 18px; height: 18px; accent-color: #1d4ed8; }
 .fin-baixa-caixa footer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
 .fin-baixa-caixa footer span { margin-right: auto; font-weight: 700; color: #1f1c18 !important; }
+/* Financeiro: pastas por fornecedor */
+.fin-forn-overlay { position: fixed; inset: 0; z-index: 10040; background: rgba(15,23,42,.55); display: grid; place-items: center; padding: 12px; }
+.fin-forn-janela { width: min(1180px, 100%); height: min(92dvh, 900px); background: #fff; color: #1f1c18; border-radius: 14px; display: grid; grid-template-rows: auto minmax(0,1fr); overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.fin-forn-topo { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
+.fin-forn-topo h2 { margin: 0; font-size: 1.2rem; color: #1f1c18 !important; }
+.fin-forn-topo small { grid-column: 1; color: #64748b !important; }
+.fin-forn-fechar { grid-row: 1 / span 2; grid-column: 2; width: 42px; height: 42px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-size: 1.5rem; cursor: pointer; color: #1f1c18; }
+.fin-forn-caixa { display: grid; grid-template-columns: 320px minmax(0,1fr); min-height: 0; }
+.fin-forn-lista { border-right: 1px solid #e2e8f0; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; padding: 10px; gap: 8px; background: #f8fafc; }
+.fin-forn-lista input { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; font-size: .95rem; background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; }
+.fin-forn-pastas { overflow: auto; display: grid; gap: 4px; align-content: start; }
+.fin-forn-pasta { display: grid; grid-template-columns: 22px minmax(0,1fr) auto; gap: 8px; align-items: center; text-align: left; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; color: #1f1c18; }
+.fin-forn-pasta:hover { background: #fff; border-color: #e2e8f0; }
+.fin-forn-pasta.ativa { background: #fff; border-color: #c4a464; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.fin-forn-pasta i { color: #c08a2b !important; }
+.fin-forn-pasta span { display: grid; min-width: 0; }
+.fin-forn-pasta b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f1c18 !important; font-size: .9rem; }
+.fin-forn-pasta small { color: #64748b !important; font-size: .76rem; }
+.fin-forn-pasta em { font-style: normal; font-weight: 800; color: #fff !important; background: #dc2626; border-radius: 999px; width: 20px; height: 20px; display: grid; place-items: center; font-size: .75rem; }
+.fin-forn-detalhe { overflow: auto; padding: 14px 16px; display: grid; gap: 12px; align-content: start; }
+.fin-forn-det-topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: end; }
+.fin-forn-det-topo h3 { margin: 0; color: #1f1c18 !important; }
+.fin-forn-det-topo small { color: #64748b !important; }
+.fin-forn-totais { display: flex; gap: 12px; flex-wrap: wrap; }
+.fin-forn-totais span { color: #475569 !important; font-size: .85rem; }
+.fin-forn-totais b { color: #1f1c18 !important; }
+.fin-forn-totais .venc b { color: #b91c1c !important; }
+.fin-forn-grupo { border: 1px solid #e2e8f0; border-left: 4px solid #c08a2b; border-radius: 12px; padding: 8px 10px; display: grid; gap: 6px; }
+.fin-forn-grupo.pago { border-left-color: #16a34a; }
+.fin-forn-grupo.soltos { border-left-color: #94a3b8; }
+.fin-forn-grupo h4 { margin: 0; font-size: .85rem; color: #334155 !important; display: flex; gap: 6px; align-items: center; }
+.fin-forn-grupo h4 span { color: #15803d !important; font-weight: 800; }
+.fin-forn-doc { display: grid; grid-template-columns: 22px minmax(0,1fr) auto auto auto; gap: 10px; align-items: center; padding: 6px 4px; border-top: 1px dashed #e2e8f0; }
+.fin-forn-doc:first-of-type { border-top: 0; }
+.fin-forn-doc > i { color: #64748b !important; }
+.fin-forn-doc.classe-nota > i { color: #d97706 !important; } .fin-forn-doc.classe-boleto > i { color: #8a6f3d !important; } .fin-forn-doc.classe-comprovante > i { color: #16a34a !important; }
+.fin-forn-doc-info { display: grid; min-width: 0; }
+.fin-forn-doc-info b { color: #1f1c18 !important; font-size: .9rem; }
+.fin-forn-doc-info small { color: #64748b !important; font-size: .78rem; }
+.fin-forn-doc strong { color: #1f1c18 !important; white-space: nowrap; }
+.fin-forn-doc-acoes { display: flex; gap: 6px; }
+.fin-forn-doc-acoes .btn-secondary, .fin-forn-sug .btn-secondary { min-height: 34px; padding: 0 10px; font-size: .8rem; }
+.fin-forn-sug { font-size: .8rem; color: #1d4ed8 !important; display: flex; gap: 8px; align-items: center; padding: 0 0 6px 36px; }
+.fin-forn-vazio { color: #64748b !important; text-align: center; padding: 24px; }
+@media (max-width: 860px) {
+  .fin-forn-janela { height: 100dvh; border-radius: 0; }
+  .fin-forn-overlay { padding: 0; }
+  .fin-forn-caixa { grid-template-columns: 1fr; grid-template-rows: 40% minmax(0,1fr); }
+  .fin-forn-lista { border-right: 0; border-bottom: 1px solid #e2e8f0; }
+  .fin-forn-doc { grid-template-columns: 22px minmax(0,1fr) auto; }
+  .fin-forn-doc .financeiro-status-badge, .fin-forn-doc-acoes { grid-column: 2 / -1; }
+}
+.fin-forn-lista input#finFornBusca { background: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18; border: 1px solid #94a3b8 !important; }
+.fin-forn-lista input#finFornBusca::placeholder { color: #64748b !important; -webkit-text-fill-color: #64748b; }
+.fin-forn-janela .btn-secondary { display: inline-flex !important; align-items: center; background: #fff !important; color: #1f1c18 !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; cursor: pointer; font-weight: 600; visibility: visible !important; opacity: 1 !important; }
+.fin-forn-janela .btn-secondary:hover { background: #f1f5f9 !important; }
