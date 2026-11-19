@@ -20,6 +20,9 @@
                     <button type="button" id="btnTabEntradaEmpreiteiros" onclick="window.switchTabEntrada('empreiteiros')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-users-gear"></i> Empreiteiros
                     </button>
+                    <button type="button" id="btnRendimentoMatos" onclick="window.abrirRendimentoMatos()" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer;">
+                        <i class="fa-solid fa-chart-line"></i> Rendimento por mato
+                    </button>
                 </div>
 
                 <!-- GRID UNIFICADO BILATERAL DE DUAS COLUNAS PARA ENTRADA DE TORAS -->

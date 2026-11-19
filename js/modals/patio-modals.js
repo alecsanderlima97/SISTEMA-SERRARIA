@@ -105,6 +105,11 @@
                     <label><i class="fa-solid fa-tree"></i> Madeira Serrada no Momento *</label>
                     <input type="text" id="patioSerrando" class="text-uppercase-input" placeholder="Ex: TÁBUA DE 1,7 / 8,5 / 1,20" required>
                 </div>
+                <div class="input-group" style="margin-bottom: 0; max-width: 360px;">
+                    <label for="patioMato"><i class="fa-solid fa-tree"></i> Mato da tora serrada</label>
+                    <input type="text" id="patioMato" class="text-uppercase-input" list="listaMatosSerrados" placeholder="Ex: MATO DO JOÃO (vários: separe com /)" autocomplete="off">
+                    <datalist id="listaMatosSerrados"></datalist>
+                </div>
             </div>
 
             <!-- CARDS DE CONTAGEM / KPIS DO MOCKUP -->
