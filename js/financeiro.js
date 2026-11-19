@@ -163,8 +163,22 @@ window.alternarClassificacaoFinanceira = function() {
     });
 };
 
+// Regra da empresa: nota aguardando boleto ha mais de 5 dias, sem boleto ligado e sem parcelas/boleto
+// no XML, foi paga a vista. Nao grava nada: se o boleto chegar e for ligado, o status muda sozinho.
+const FIN_DIAS_NOTA_A_VISTA = 5;
+function notaPresumidaAVistaFinanceiro(item = {}) {
+    if (item.pago || item.situacaoDocumento !== 'AGUARDANDO_BOLETO' || item.conferenciaStatus === 'pendente') return false;
+    if (item.processoVinculoId && item.processoVinculoStatus === 'CONFIRMADO') return false;
+    if ((item.ia?.parcelas || []).length || /BOLETO|DUPLICATA/i.test(item.ia?.formaPagamento || '')) return false;
+    const base = item.dataEmissao || item.emissao || String(item.criadoEm || '').slice(0, 10);
+    if (!base) return false;
+    const dias = (Date.now() - new Date(`${base}T12:00:00`).getTime()) / 86400000;
+    return dias > FIN_DIAS_NOTA_A_VISTA;
+}
+
 function obterStatusFinanceiro(item = {}) {
     if (item.pago || item.situacaoDocumento === 'PAGO_A_VISTA') return 'PAGO';
+    if (notaPresumidaAVistaFinanceiro(item)) return 'PAGO';
     if (item.conferenciaStatus === 'pendente' || ['AGUARDANDO_BOLETO', 'AGUARDANDO_NOTA'].includes(item.situacaoDocumento)) return 'PENDENTE';
     if (estaVencido(item)) return 'VENCIDO';
     return financeiroGeraCobranca(item) ? 'A_PAGAR' : 'REGISTRADO';
@@ -1164,6 +1178,7 @@ function obterStatusItem(item) {
     const status = item.statusFinanceiro || obterStatusFinanceiro(item);
     const classe = classeDocumentoFinanceiro(item);
     if (classe === 'comprovante') return { label: 'Comprovante', classe: 'pago' };
+    if (classe === 'nota' && notaPresumidaAVistaFinanceiro(item)) return { label: 'Paga à vista (sem boleto)', classe: 'pago' };
     if (classe === 'nota' && status !== 'PAGO' && item.processoVinculoId && item.processoVinculoStatus === 'CONFIRMADO') return { label: 'Boleto ligado', classe: 'aberto' };
     if (classe === 'nota' && status !== 'PAGO') {
         if (item.conferenciaStatus !== 'pendente' && item.situacaoDocumento === 'AGUARDANDO_BOLETO') return { label: 'Aguardando boleto', classe: 'pendente' };
