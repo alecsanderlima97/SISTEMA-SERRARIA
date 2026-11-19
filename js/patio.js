@@ -904,6 +904,9 @@ async function renderizarProducaoPatio(options = {}) {
         instalarListenersProducaoPatio();
         atualizarResumoNovaCubagemProducaoPatio();
         if (serrandoInput) serrandoInput.value = atual.serrando || '';
+        const matoInputFluxo = document.getElementById('producaoPatioMato');
+        if (matoInputFluxo) matoInputFluxo.value = atual.matoSerrado || '';
+        preencherListaMatosSerrados('listaMatosSerradosFluxo');
         const dataFmt = atual.data ? new Date(`${atual.data}T12:00:00`).toLocaleDateString('pt-BR') : '-';
         if (info) info.textContent = `Controle atual: ${dataFmt} ${atual.horario || ''} | ${atual.periodo || '-'}`;
         atualizarStatusProducaoPatio(atual);
@@ -1257,6 +1260,7 @@ window.salvarSerrandoProducaoPatio = async function() {
     if (!producaoPatioRelatorioAtual) return;
     const input = document.getElementById('producaoPatioSerrando');
     producaoPatioRelatorioAtual.serrando = (input?.value || '').toUpperCase().trim();
+    producaoPatioRelatorioAtual.matoSerrado = (document.getElementById('producaoPatioMato')?.value || '').toUpperCase().trim();
     producaoPatioRelatorioAtual.ultimaAlteracaoPatio = montarUltimaAlteracaoPatio('Atualizou madeira sendo serrada');
     await salvarRelatorioProducaoPatio(producaoPatioRelatorioAtual);
         await renderizarProducaoPatio({ recarregar: false });
@@ -2505,6 +2509,8 @@ async function importarFluxoPatioParaControleProducao() {
 
     const serrandoInput = document.getElementById('patioSerrando');
     if (serrandoInput && rel.serrando) serrandoInput.value = rel.serrando;
+    const matoInputImport = document.getElementById('patioMato');
+    if (matoInputImport && rel.matoSerrado) matoInputImport.value = rel.matoSerrado;
     renderizarItensPatioTemp();
     alert(`Fluxo do Patio importado com sucesso. ${itensPatioTemp.length} item(ns) foram carregados no Controle de Producao.`);
 }
@@ -2701,6 +2707,7 @@ async function salvarRelatorioPatio() {
         periodo: periodoVal,
         horario: horarioVal,
         serrando: serrandoVal,
+        matoSerrado: (document.getElementById('patioMato')?.value || '').toUpperCase().trim(),
         itens: itensOrdenados.map(item => ({ ...item })),
         totais: {
             totalVolume: totalVolume,
@@ -2928,6 +2935,8 @@ function carregarRelatorioPatioNoFormulario(rel, id) {
     if (selectPeriodo) selectPeriodo.value = rel.periodo || 'Atualizacao do dia';
     if (inputHorario) inputHorario.value = rel.horario || horaAtualPatio();
     if (inputSerrando) inputSerrando.value = rel.serrando || '';
+    const inputMato = document.getElementById('patioMato');
+    if (inputMato) inputMato.value = rel.matoSerrado || '';
 
     relatorioPatioEditandoId = id;
     itensPatioTemp = Array.isArray(rel.itens) ? rel.itens.map(item => ({ ...item })) : [];
@@ -3978,3 +3987,24 @@ window.verPatio3D = async function() {
         alert('Não foi possível carregar o pátio. Tente de novo.');
     }
 };
+
+
+// Lista de matos (das cargas de tora e do mapa) para o campo "Mato da tora serrada":
+// assim o nome bate com a Conferencia de Carga e o relatorio de rendimento por mato funciona.
+let cacheMatosSerrados = null;
+async function preencherListaMatosSerrados(idLista = 'listaMatosSerrados') {
+    const lista = document.getElementById(idLista);
+    if (!lista) return;
+    if (!cacheMatosSerrados) {
+        const nomes = new Set();
+        try { (await window.FS.getCollection('entradas')).forEach(en => { if (en.mato) nomes.add(String(en.mato).toUpperCase().trim()); }); } catch (_) { /* sem permissao */ }
+        try { JSON.parse(localStorage.getItem('orquestra_mapa_matos') || '[]').forEach(m => { if (m?.nome) nomes.add(String(m.nome).toUpperCase().trim()); }); } catch (_) {}
+        cacheMatosSerrados = [...nomes].filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    lista.innerHTML = cacheMatosSerrados.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+}
+window.preencherListaMatosSerrados = preencherListaMatosSerrados;
+document.addEventListener('focusin', e => {
+    if (e.target?.id === 'patioMato') preencherListaMatosSerrados('listaMatosSerrados');
+    if (e.target?.id === 'producaoPatioMato') preencherListaMatosSerrados('listaMatosSerradosFluxo');
+});

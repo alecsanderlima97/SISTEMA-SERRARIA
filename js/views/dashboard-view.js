@@ -47,8 +47,9 @@
                         <button type="button" class="btn-secondary" onclick="window.fecharProducaoPatio()" style="padding: 8px 14px; border-radius: 8px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
                     </div>
                     <div id="producaoPatioResumoMobile" class="fp-resumo-mobile" aria-live="polite"></div>
-                    <div class="fluxo-patio-toolbar" style="display:grid; grid-template-columns:minmax(240px, 1fr) auto auto auto auto auto; gap:10px; align-items:end; margin-bottom:16px;">
+                    <div class="fluxo-patio-toolbar" style="display:grid; grid-template-columns:minmax(200px, 1fr) minmax(180px, 1fr) auto auto auto auto auto; gap:10px; align-items:end; margin-bottom:16px;">
                         <div class="input-group" style="margin:0;"><label>Madeira sendo serrada</label><input type="text" id="producaoPatioSerrando" class="text-uppercase-input" placeholder="Ex: 1,7/11,0/1,20"></div>
+                        <div class="input-group" style="margin:0;"><label for="producaoPatioMato">Mato da tora</label><input type="text" id="producaoPatioMato" class="text-uppercase-input" list="listaMatosSerradosFluxo" placeholder="Ex: MATO DO JOÃO" autocomplete="off"><datalist id="listaMatosSerradosFluxo"></datalist></div>
                         <button type="button" class="btn-primary" onclick="window.salvarSerrandoProducaoPatio()" style="height:42px;"><i class="fa-solid fa-floppy-disk"></i> Atualizar</button>
                         <button type="button" class="btn-secondary" onclick="window.toggleFormProducaoPatio()" style="height:42px;"><i class="fa-solid fa-plus"></i> Nova cubagem</button>
                         <button type="button" class="btn-secondary btn-foto-contagem" onclick="window.abrirFotoContagemPatio()" style="height:42px;"><i class="fa-solid fa-camera"></i> Ler foto</button>
