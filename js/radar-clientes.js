@@ -220,17 +220,20 @@ function render() {
 function garantirModal() {
     let m = document.getElementById('modalRadarClientes');
     if (m) return m;
+    const host = document.getElementById('tabClienteRadar');
     m = document.createElement('div');
     m.id = 'modalRadarClientes';
-    m.className = 'radar-modal';
-    m.setAttribute('role', 'dialog');
-    m.setAttribute('aria-modal', 'true');
+    m.className = host ? 'radar-inline' : 'radar-modal';
+    if (!host) {
+        m.setAttribute('role', 'dialog');
+        m.setAttribute('aria-modal', 'true');
+    }
     m.setAttribute('aria-labelledby', 'radarTitulo');
     m.innerHTML = `
       <div class="radar-caixa">
         <header class="radar-topo">
           <div><h2 id="radarTitulo"><i class="fa-solid fa-satellite-dish"></i> Radar de Clientes</h2><p>Madeira serrada · romaneios e Google Maps</p></div>
-          <button type="button" class="radar-fechar" aria-label="Fechar" onclick="window.fecharRadarClientes()">×</button>
+          ${host ? '' : '<button type="button" class="radar-fechar" aria-label="Fechar" onclick="window.fecharRadarClientes()">×</button>'}
         </header>
         <div class="radar-filtros">
           <div class="radar-abas" role="tablist">
@@ -243,7 +246,7 @@ function garantirModal() {
         </div>
         <div id="radarCorpo" class="radar-corpo"><p class="radar-vazio">Carregando…</p></div>
       </div>`;
-    document.body.appendChild(m);
+    (host || document.body).appendChild(m);
     m.addEventListener('click', e => {
         const aba = e.target.closest('[data-radar-aba]');
         if (aba) { radar.aba = aba.dataset.radarAba; render(); return; }
@@ -251,7 +254,7 @@ function garantirModal() {
         if (med) { const d = m.querySelector(`[data-radar-det="${med.dataset.radarMedida}"]`); if (d) d.hidden = !d.hidden; }
     });
     m.addEventListener('keydown', e => {
-        if (e.key === 'Escape') window.fecharRadarClientes();
+        if (e.key === 'Escape' && !host) window.fecharRadarClientes();
         const med = e.target.closest?.('[data-radar-medida]');
         if (med && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); med.click(); }
     });
@@ -261,10 +264,8 @@ function garantirModal() {
     return m;
 }
 
-window.abrirRadarClientes = async function() {
-    const m = garantirModal();
-    m.style.display = 'flex';
-    document.body.classList.add('modal-open');
+async function carregarRadar() {
+    garantirModal();
     try {
         radar.dados = await carregar();
         await carregarLeads();
@@ -273,6 +274,19 @@ window.abrirRadarClientes = async function() {
         console.error('Radar de clientes', err);
         document.getElementById('radarCorpo').innerHTML = '<p class="radar-vazio">Não foi possível carregar os dados. Verifique a conexão e tente de novo.</p>';
     }
+}
+window.carregarRadarClientes = carregarRadar;
+// Atalho antigo: abre a tela Clientes na aba Radar.
+window.abrirRadarClientes = function() {
+    if (document.getElementById('tabClienteRadar')) {
+        document.querySelector('a[data-target="view-clientes"]')?.click();
+        window.switchTabClientes?.('radar');
+        return;
+    }
+    const m = garantirModal();
+    m.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    carregarRadar();
 };
 window.fecharRadarClientes = function() {
     const m = document.getElementById('modalRadarClientes');
