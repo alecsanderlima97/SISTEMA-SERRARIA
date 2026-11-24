@@ -168,27 +168,6 @@
                         <button type="button" class="btn-primary" onclick="window.salvarModulosSistema()"><i class="fa-solid fa-floppy-disk"></i> Salvar módulos</button>
                         <span id="cfgModulosAviso" role="status" style="margin-left:10px; font-weight:600;"></span>
                     </div>
-                    <div class="glass-panel" data-subsection-permission="view-configuracoes:regras-pagamento">
-                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-                            <i class="fa-solid fa-hand-holding-dollar" style="font-size:24px; color:#f59e0b;"></i>
-                            <div>
-                                <h2 style="margin:0; font-size:20px;">Regras de Pagamento</h2>
-                                <p style="margin:4px 0 0; color:var(--text-muted); font-size:12px;">Valores usados em descarregamentos e diárias de fim de semana.</p>
-                            </div>
-                        </div>
-                        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;">
-                            <div class="input-group" style="margin:0;"><label for="configDescargaDiaUtil">Descarga dia útil (R$/m³)</label><input id="configDescargaDiaUtil" type="text" inputmode="decimal" value="1,30"></div>
-                            <div class="input-group" style="margin:0;"><label for="configDescargaEspecial">Descarga fim de semana/feriado (R$/m³)</label><input id="configDescargaEspecial" type="text" inputmode="decimal" value="1,50"></div>
-                            <div class="input-group" style="margin:0;"><label for="configDiariaFimSemana">Diária integral fim de semana (R$)</label><input id="configDiariaFimSemana" type="text" inputmode="decimal" value="150,00"></div>
-                            <div class="input-group" style="margin:0;"><label for="configMeiaDiariaFimSemana">Meia diária fim de semana (R$)</label><input id="configMeiaDiariaFimSemana" type="text" inputmode="decimal" value="75,00"></div>
-                            <div class="input-group" style="grid-column:1 / -1; margin:0;"><label for="configLocalizacaoEmpresa">Cidade e estado de referência</label><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><input id="configLocalizacaoEmpresa" type="text" readonly placeholder="Use sua localização para identificar a cidade e o estado" style="flex:1; min-width:220px;"><button type="button" class="btn-secondary" id="btnUsarLocalizacaoEmpresa" onclick="window.identificarLocalizacaoEmpresa && window.identificarLocalizacaoEmpresa()" style="padding:10px 12px;"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button></div><small id="configLocalizacaoEmpresaInfo" style="color:var(--text-muted);">A localização serve apenas para identificar cidade e UF. Coordenadas não são salvas.</small></div>
-                            <div class="input-group" style="grid-column:1 / -1; margin:0;"><label for="configFeriadosDescarga">Feriados</label><textarea id="configFeriadosDescarga" rows="5" placeholder="2026-10-12 - Nossa Senhora Aparecida&#10;2026-12-08 - Feriado municipal" style="width:100%; resize:vertical;"></textarea><small style="color:var(--text-muted);">Um por linha, no formato AAAA-MM-DD - descrição. Sábados e domingos são classificados automaticamente.</small></div>
-                        </div>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
-                            <button type="button" class="btn-secondary" id="btnImportarFeriadosNacionais" onclick="window.importarFeriadosNacionais && window.importarFeriadosNacionais()" style="padding:12px 14px;"><i class="fa-solid fa-calendar-plus"></i> Atualizar feriados nacionais</button>
-                            <button type="button" class="btn-primary" id="btnSalvarRegrasPagamento" onclick="window.salvarRegrasPagamentoDescarga && window.salvarRegrasPagamentoDescarga()" style="flex:1; min-width:230px; justify-content:center;"><i class="fa-solid fa-floppy-disk"></i> Salvar regras de pagamento</button>
-                        </div>
-                    </div>
                     
                     <div class="glass-panel" data-subsection-permission="view-configuracoes:backup">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
@@ -278,34 +257,10 @@
                     <div class="glass-panel" data-subsection-permission="view-configuracoes:seguranca">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                             <i class="fa-solid fa-shield" style="font-size: 24px; color: #0ea5e9;"></i>
-                            <h2 style="margin: 0; font-size: 20px;">Seguranca</h2>
+                            <h2 style="margin: 0; font-size: 20px;">Segurança</h2>
                         </div>
                         
-                        <div style="display: flex; flex-direction: column; gap: 16px;">
-                            <div>
-                                <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Senha Atual</label>
-                                <input type="password" id="perfilSenhaAtual" autocomplete="current-password" minlength="6" placeholder="Digite a senha usada no login" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Nova Senha</label>
-                                <input type="password" id="perfilNovaSenha" autocomplete="new-password" minlength="6" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 12px; color: #888; margin-bottom: 6px;">Confirmar Senha</label>
-                                <input type="password" id="perfilConfirmarSenha" autocomplete="new-password" minlength="6" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: white;">
-                            </div>
-                            <button class="btn-primary" id="btnAlterarSenhaPerfil" style="background: #0ea5e9; border-color: #0ea5e9; width: 100%; justify-content: center;" onclick="window.alterarSenhaPerfil && window.alterarSenhaPerfil()">
-                                Alterar Senha
-                            </button>
-                        </div>
-
-                        <div style="margin-top: 24px; padding: 15px; background: rgba(14, 165, 233, 0.05); border-radius: 12px; border: 1px solid rgba(14, 165, 233, 0.1);">
-                            <p style="color: #0ea5e9; font-size: 12px; margin: 0;">
-                                Sua autenticacao e feita com seguranca usando Firebase Auth.
-                            </p>
-                        </div>
-
-                        <div style="margin-top: 22px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <div>
                             <h3 style="margin: 0 0 8px; font-size: 16px; color: #f59e0b;">Senha operacional</h3>
                             <p style="color: #cbd5e1; font-size: 12px; line-height: 1.5; margin: 0 0 14px;">
                                 Senha independente do login, usada para confirmar exclusões e estornos protegidos. Na primeira configuração, deixe a senha atual em branco.
