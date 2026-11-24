@@ -1475,3 +1475,8 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 #financeiroCaixaConferencia .fin-caixa-recolhida { margin-bottom: 0; }
 #financeiroCaixaConferencia .fin-caixa-acoes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 @media (max-width: 760px) { #financeiroCaixaConferencia .fin-caixa-item { grid-template-columns: 1fr !important; } #financeiroCaixaConferencia .fin-caixa-acoes { justify-content: flex-start; } }
+
+/* Radar de Clientes dentro da tela Clientes */
+.radar-inline { display: block; background: #fff; color: #1f1c18; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+.radar-inline .radar-caixa { width: auto; height: auto; min-height: 0; }
+.radar-inline .radar-corpo { overflow: visible; max-height: none; }

@@ -14,6 +14,9 @@
                     <button type="button" id="btnTabClienteLista" onclick="window.switchTabClientes('lista')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-users"></i> Gerenciar Clientes
                     </button>
+                    <button type="button" id="btnTabClienteRadar" onclick="window.switchTabClientes('radar')" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-satellite-dish"></i> Radar de Clientes
+                    </button>
                 </div>
 
                 <!-- TAB: FORMULÁRIO -->
@@ -189,6 +192,9 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- TAB: RADAR DE CLIENTES -->
+                <div id="tabClienteRadar" class="radar-inline-host" style="display: none;"></div>
             </section>`;
     document.currentScript.insertAdjacentHTML('beforebegin', html);
 })();

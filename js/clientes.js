@@ -301,39 +301,34 @@ function inicializarModuloClientes() {
 }
 
 window.switchTabClientes = function(tabName, isEditing = false) {
-    const tabForm = document.getElementById('tabClienteForm');
-    const tabLista = document.getElementById('tabClienteLista');
-    const btnForm = document.getElementById('btnTabClienteForm');
-    const btnLista = document.getElementById('btnTabClienteLista');
-
-    if (!tabForm || !tabLista || !btnForm || !btnLista) return;
-
-    if (tabName === 'form') {
-        tabForm.style.display = 'block';
-        tabLista.style.display = 'none';
-        btnForm.style.color = 'var(--accent-color)';
-        btnForm.style.borderBottom = '3px solid var(--accent-color)';
-        btnLista.style.color = 'var(--text-muted)';
-        btnLista.style.borderBottom = 'none';
-
-        if (!isEditing) {
-            formCliente.reset();
-            window.atualizarCamposPagamentoCliente('');
-            clienteEditandoId = null;
-            const submitBtn = formCliente.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
-                submitBtn.classList.replace('btn-secondary', 'btn-primary');
-            }
+    const abas = {
+        form: [document.getElementById('tabClienteForm'), document.getElementById('btnTabClienteForm')],
+        lista: [document.getElementById('tabClienteLista'), document.getElementById('btnTabClienteLista')],
+        radar: [document.getElementById('tabClienteRadar'), document.getElementById('btnTabClienteRadar')]
+    };
+    if (!abas.form[0] || !abas.lista[0]) return;
+    if (!abas[tabName]) tabName = 'lista';
+    Object.entries(abas).forEach(([nome, [tab, btn]]) => {
+        const ativa = nome === tabName;
+        if (tab) tab.style.display = ativa ? 'block' : 'none';
+        if (btn) {
+            btn.style.color = ativa ? 'var(--accent-color)' : 'var(--text-muted)';
+            btn.style.borderBottom = ativa ? '3px solid var(--accent-color)' : 'none';
+            btn.setAttribute('aria-pressed', String(ativa));
         }
-    } else {
-        tabForm.style.display = 'none';
-        tabLista.style.display = 'block';
-        btnLista.style.color = 'var(--accent-color)';
-        btnLista.style.borderBottom = '3px solid var(--accent-color)';
-        btnForm.style.color = 'var(--text-muted)';
-        btnForm.style.borderBottom = 'none';
+    });
+
+    if (tabName === 'form' && !isEditing) {
+        formCliente.reset();
+        window.atualizarCamposPagamentoCliente('');
+        clienteEditandoId = null;
+        const submitBtn = formCliente.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Cliente';
+            submitBtn.classList.replace('btn-secondary', 'btn-primary');
+        }
     }
+    if (tabName === 'radar') window.carregarRadarClientes?.();
 }
 
 // Executar de forma segura
