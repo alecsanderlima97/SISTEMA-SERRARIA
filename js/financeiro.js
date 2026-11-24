@@ -600,8 +600,12 @@ function buscarLancamentoDuplicadoFinanceiro(registro, ignorarRegistroId = '') {
     const assinaturas = new Set(obterAssinaturasLancamentoFinanceiro(registro));
     if (!assinaturas.size) return null;
 
+    const classeRegistro = classeDocumentoFinanceiro(registro);
     for (const item of obterLancamentosFinanceiros()) {
         if (ignorarRegistroId && item.id === ignorarRegistroId) continue;
+        // comprovante, boleto e nota da mesma compra compartilham codigos; isso e vinculo, nao duplicidade
+        const classeItem = classeDocumentoFinanceiro(item);
+        if (classeItem !== classeRegistro && [classeItem, classeRegistro].some(c => ['comprovante', 'boleto', 'nota'].includes(c))) continue;
         const comum = obterAssinaturasLancamentoFinanceiro(item).find(chave => assinaturas.has(chave));
         if (comum) return { item, assinatura: comum };
     }
@@ -1640,7 +1644,7 @@ function limparDescricaoDocumentoFinanceiro(valor) {
 }
 
 function pareceDocumentoFinanceiro(textoBusca, limpo) {
-    return /BOLETO|VENCIMENTO|VALOR A PAGAR|VALOR DO DOCUMENTO|NOTA FISCAL|DANFE|DARF|FGTS|RECEITA FEDERAL|TELEFONICA|VIVO|FICHA DE COMPENSA/.test(textoBusca)
+    return /COMPROVANTE|PIX|TRANSFERENCIA|BOLETO|VENCIMENTO|VALOR A PAGAR|VALOR DO DOCUMENTO|NOTA FISCAL|DANFE|DARF|FGTS|RECEITA FEDERAL|TELEFONICA|VIVO|FICHA DE COMPENSA/.test(textoBusca)
         || /R\$\s*[0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}/.test(limpo);
 }
 
@@ -1713,13 +1717,14 @@ function normalizarDadosIAFinanceiro(dados = {}) {
     const produtos = Array.isArray(dados.produtos) ? dados.produtos.filter(p => p?.descricao) : [];
     const tipo = normalizarTexto(dados.tipo || 'DOCUMENTO');
     const ehNota = /(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E|XML)(?![A-Z])/.test(tipo);
+    const ehComprovante = /COMPROVANTE/.test(tipo);
     return {
         tipo,
         descricao: normalizarTexto(descricao).slice(0, 90),
         fornecedor: normalizarTexto(fornecedor),
         cnpj: dados.cnpj || '',
-        vencimento: ehNota ? '' : (dados.vencimento || ''),
-        dataEmissao: dados.dataEmissao || dados.emissao || '',
+        vencimento: ehNota || ehComprovante ? '' : (dados.vencimento || ''),
+        dataEmissao: dados.dataEmissao || dados.emissao || (ehComprovante ? dados.vencimento || '' : ''),
         valor: Number(dados.valor || dados.valorTotal || 0),
         numeroDocumento: dados.numeroDocumento || '',
         chaveNfe: dados.chaveNfe || dados.chaveNFe || dados.chave || '',
@@ -2034,6 +2039,46 @@ function aplicarLinhaDigitavelFinanceiro(dados, texto) {
     return out;
 }
 
+// Comprovante de pagamento (Sicredi, PIX, TED, pagamento de boleto): para quem foi pago, valor pago,
+// data do pagamento e o codigo do boleto pago (liga com o boleto com certeza).
+function textoEhComprovanteFinanceiro(textoBusca) {
+    return /COMPROVANTE (DE )?(PAGAMENTO|PIX|TRANSFERENCIA|TED|DOC|AGENDAMENTO|OPERACAO)|PIX ENVIADO|TRANSFERENCIA (REALIZADA|EFETUADA|ENVIADA)|PAGAMENTO (REALIZADO|EFETUADO|AGENDADO)|AUTENTICACAO (MECANICA|ELETRONICA|BANCARIA)|TRANSACAO EFETUADA/.test(textoBusca)
+        || (/COMPROVANTE/.test(textoBusca) && /VALOR PAGO|DATA DO PAGAMENTO|DATA DE PAGAMENTO|DATA DA TRANSACAO|FAVORECIDO|RECEBEDOR/.test(textoBusca));
+}
+function extrairDadosComprovanteFinanceiro(texto, textoBusca, limpo) {
+    if (!textoEhComprovanteFinanceiro(textoBusca)) return null;
+    const moeda = rotulo => limpo.match(new RegExp(`(?:${rotulo})[^0-9]{0,30}([0-9]{1,3}(?:\\.[0-9]{3})*,[0-9]{2})`, 'i'))?.[1];
+    const valorTxt = moeda('VALOR PAGO|VALOR TOTAL PAGO|VALOR DO PAGAMENTO|VALOR COBRADO|VALOR DA TRANSFER[ÊE]NCIA|VALOR DO PIX|VALOR TOTAL|VALOR')
+        || limpo.match(/R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/)?.[1];
+    const dataPag = limpo.match(/(?:DATA (?:DO |DE |DA )?(?:PAGAMENTO|TRANSA[CÇ][AÃ]O|D[EÉ]BITO|EFETIVA[CÇ][AÃ]O|OPERA[CÇ][AÃ]O)|PAGO EM|REALIZAD[OA] EM|EFETUAD[OA] EM)[^0-9]{0,25}(\d{2}\/\d{2}\/\d{4})/i)?.[1]
+        || limpo.match(/\b(\d{2}\/\d{2}\/\d{4})\b/)?.[1] || '';
+    const linhas = String(texto || '').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    let favorecido = '';
+    const rotuloFav = /^(?:NOME DO )?(?:FAVORECIDO|BENEFICI[ÁA]RIO(?: FINAL)?|RECEBEDOR|DESTINAT[ÁA]RIO|PARA|CEDENTE|NOME DO RECEBEDOR|RAZ[ÃA]O SOCIAL)\b\s*:?\s*/i;
+    for (let i = 0; i < linhas.length && !favorecido; i++) {
+        if (!rotuloFav.test(linhas[i])) continue;
+        const resto = linhas[i].replace(rotuloFav, '').trim();
+        const candidato = resto && /[A-Z]{3,}/i.test(resto) ? resto : (linhas[i + 1] || '');
+        if (!/PAGADOR|CPF|CNPJ\s*:?$|AG[ÊE]NCIA|CONTA|VALOR|DATA/i.test(candidato)) favorecido = candidato;
+    }
+    favorecido = limparNomeBeneficiarioFinanceiro(limparDescricaoDocumentoFinanceiro(String(favorecido || '').replace(/^(?:NOME|RAZ[ÃA]O SOCIAL)\s*:?\s*/i, '')));
+    const cnpjFav = (limpo.match(/(?:FAVORECIDO|BENEFICI[ÁA]RIO|RECEBEDOR|DESTINO|DESTINAT)[\s\S]{0,160}?(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i) || [])[1] || '';
+    const ld = decodificarLinhaDigitavelFinanceiro(texto);
+    return {
+        tipo: 'COMPROVANTE',
+        descricao: favorecido || 'COMPROVANTE DE PAGAMENTO',
+        fornecedor: favorecido,
+        cnpj: cnpjFav,
+        vencimento: '',
+        dataEmissao: dataPag ? dataPag.split('/').reverse().join('-') : '',
+        valor: valorTxt ? parseMoeda(valorTxt) : (ld?.valor || 0),
+        linhaDigitavel: ld?.linhaDigitavel || '',
+        geraCobranca: false,
+        situacaoDocumento: 'PAGO_A_VISTA',
+        confianca: favorecido && valorTxt && dataPag ? 'alta' : 'media'
+    };
+}
+
 function extrairDadosTextoFinanceiro(texto) {
     const limpo = String(texto || '').replace(/\s+/g, ' ');
     const textoBusca = limpo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
@@ -2058,6 +2103,8 @@ function extrairDadosTextoFinanceiro(texto) {
             precisaConferencia: true
         };
     }
+    const dadosComprovante = extrairDadosComprovanteFinanceiro(texto, textoBusca, limpo);
+    if (dadosComprovante) return dadosComprovante;
     const dadosNota = extrairDadosNotaFiscalTextoFinanceiro(texto, textoBusca, limpo);
     if (dadosNota) return dadosNota;
     const isBoleto = /boleto|nosso n[uú]mero|ficha de compensa|linha digitavel|linha digitável/i.test(limpo);
@@ -2146,7 +2193,21 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
         : null;
     const dadosIA = ehXml ? null : aplicarLinhaDigitavelFinanceiro(marcarConflitoDataFinanceiro(dadosIABruta, dadosLocal), texto);
     const dadosLocalLD = ehXml ? dadosLocal : aplicarLinhaDigitavelFinanceiro(dadosLocal, texto);
-    const dadosEscolhidos = leituraFinanceiraUtil(dadosIA) ? dadosIA : dadosLocalLD;
+    let dadosEscolhidos = leituraFinanceiraUtil(dadosIA) ? dadosIA : dadosLocalLD;
+    // comprovante: a leitura local entende o layout do banco; a IA so completa o que faltar
+    if (dadosLocal?.tipo === 'COMPROVANTE') {
+        const ia = dadosIA || {};
+        dadosEscolhidos = {
+            ...ia, ...dadosLocal,
+            fornecedor: dadosLocal.fornecedor || ia.fornecedor || '',
+            descricao: dadosLocal.fornecedor || ia.fornecedor || dadosLocal.descricao,
+            valor: dadosLocal.valor || ia.valor || 0,
+            dataEmissao: dadosLocal.dataEmissao || ia.dataEmissao || '',
+            cnpj: dadosLocal.cnpj || ia.cnpj || '',
+            linhaDigitavel: dadosLocal.linhaDigitavel || ia.linhaDigitavel || '',
+            tipo: 'COMPROVANTE', vencimento: '', analisadoPorIA: Boolean(ia.analisadoPorIA)
+        };
+    }
     if (dadosEscolhidos && !ehXml && !dadosIA) {
         const exato = dadosEscolhidos.fonteVencimento === 'linha digitável' && dadosEscolhidos.valor > 0;
         return {
@@ -3560,9 +3621,10 @@ function indiceConferidosFinanceiro(lista = obterLancamentosFinanceiros()) {
 }
 function lancamentoJaExisteCaixaFinanceiro(item) {
     const indice = financeiroIndiceConferidos || indiceConferidosFinanceiro();
+    const classeItem = classeDocumentoFinanceiro(item);
     for (const chave of obterAssinaturasLancamentoFinanceiro(item)) {
         const reg = indice.get(chave);
-        if (reg && reg.id !== item.id) return reg;
+        if (reg && reg.id !== item.id && classeDocumentoFinanceiro(reg) === classeItem) return reg;
     }
     return null;
 }
@@ -3629,7 +3691,8 @@ window.abrirArquivoCaixaFinanceiro = async function(id) {
 let financeiroLeituraLote = null;
 window.lerTodosCaixaFinanceiro = async function() {
     if (financeiroLeituraLote) return;
-    const alvos = obterLancamentosFinanceiros().filter(item => financeiroPrecisaConferir(item) && camposFaltandoFinanceiro(item).length);
+    const alvos = obterLancamentosFinanceiros().filter(item => (financeiroPrecisaConferir(item) && camposFaltandoFinanceiro(item).length)
+        || (classeDocumentoFinanceiro(item) === 'comprovante' && (!(Number(item.valor) > 0) || !item.dataEmissao || descricaoFinanceiraRuim(item.descricao) || FIN_REGEX_COMPROVANTE_NOME.test(normalizarTexto(item.descricao)))));
     if (!alvos.length) return;
     if (!confirm(`Ler de novo ${alvos.length} documento(s) com a IA? Pode levar alguns minutos; pode continuar usando o sistema.`)) return;
     financeiroLeituraLote = { total: alvos.length, feitos: 0, lidos: 0, semArquivo: 0, falhas: 0, senha: 0 };
@@ -3688,7 +3751,8 @@ function cartaoCaixaConferenciaFinanceiro(item) {
         botoes.push(`<button type="button" class="btn-secondary" onclick="window.darEntradaEstoqueNotaFinanceiro('${id}')">Entrada no estoque</button>`);
         botoes.push(`<button type="button" class="btn-secondary" onclick="window.ignorarEntradaEstoqueFinanceiro('${id}')">Não é do estoque</button>`);
     }
-    botoes.push(`<button type="button" class="btn-secondary" onclick="window.editarFinanceiro('${id}')">Editar</button>`);
+    botoes.push(`<button type="button" class="btn-secondary" onclick="window.editarFinanceiro('${id}')"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar</button>`);
+    botoes.push(`<button type="button" class="btn-secondary fin-caixa-excluir" onclick="window.excluirFinanceiro('${id}')" title="Excluir" aria-label="Excluir"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>`);
     return `
         <div class="fin-caixa-item${pronto ? ' is-pronto' : ''}">
             <div class="fin-caixa-info">
@@ -3700,6 +3764,14 @@ function cartaoCaixaConferenciaFinanceiro(item) {
             <div class="fin-caixa-acoes">${botoes.join('')}</div>
         </div>`;
 }
+
+function caixaFinanceiroOculta() {
+    try { return localStorage.getItem('orquestra_fin_caixa_oculta') === '1'; } catch (_) { return false; }
+}
+window.alternarOcultarCaixaFinanceiro = function() {
+    try { localStorage.setItem('orquestra_fin_caixa_oculta', caixaFinanceiroOculta() ? '0' : '1'); } catch (_) {}
+    renderCaixaConferenciaFinanceiro();
+};
 
 function renderCaixaConferenciaFinanceiro() {
     const box = document.getElementById('financeiroCaixaConferencia');
@@ -3716,6 +3788,10 @@ function renderCaixaConferenciaFinanceiro() {
     }
     financeiroIndiceConferidos = indiceConferidosFinanceiro(lista);
     const repetidos = conferir.filter(item => lancamentoJaExisteCaixaFinanceiro(item)).length;
+    if (caixaFinanceiroOculta()) {
+        box.innerHTML = `<div class="fin-caixa-head fin-caixa-recolhida"><div><h3>Caixa de conferência</h3><small>${conferir.length} para conferir · oculta</small></div><button type="button" class="btn-secondary" onclick="window.alternarOcultarCaixaFinanceiro()" aria-expanded="false"><i class="fa-solid fa-eye" aria-hidden="true"></i> Mostrar</button></div>`;
+        return;
+    }
     const limite = financeiroCaixaExpandida ? itens.length : 6;
     box.innerHTML = `
         <div class="fin-caixa-head">
@@ -3726,8 +3802,9 @@ function renderCaixaConferenciaFinanceiro() {
             <div class="fin-caixa-head-acoes">
                 ${repetidos ? `<button type="button" class="btn-secondary" onclick="window.tirarRepetidosCaixaFinanceiro()">Tirar ${repetidos} já lançado(s)</button>` : ''}
                 ${financeiroLeituraLote ? `<span class="fin-caixa-progresso" role="status">Lendo ${financeiroLeituraLote.feitos}/${financeiroLeituraLote.total}…</span>`
-                    : (conferir.length - prontos.length > 0 ? `<button type="button" class="btn-secondary" onclick="window.lerTodosCaixaFinanceiro()"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ler todos de novo (${conferir.length - prontos.length})</button>` : '')}
+                    : `<button type="button" class="btn-secondary" onclick="window.lerTodosCaixaFinanceiro()" title="Lê de novo os documentos sem valor/vencimento e os comprovantes sem favorecido, valor ou data"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ler todos de novo</button>`}
                 ${prontos.length ? `<button type="button" class="btn-primary" onclick="window.aprovarProntosFinanceiro()">Aprovar ${prontos.length} pronto(s)</button>` : ''}
+                <button type="button" class="btn-secondary" onclick="window.alternarOcultarCaixaFinanceiro()" aria-expanded="true" title="Ocultar a caixa de conferência"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> Ocultar</button>
             </div>
         </div>
         <div class="fin-caixa-lista">${itens.slice(0, limite).map(cartaoCaixaConferenciaFinanceiro).join('')}</div>
@@ -4003,6 +4080,14 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
             leituraErro: '',
             atualizadoEm: new Date().toISOString()
         };
+        if (atualizado.tipo === 'COMPROVANTE') {
+            atualizado.geraCobranca = false;
+            atualizado.vencimento = '';
+            atualizado.situacaoDocumento = 'PAGO_A_VISTA';
+            atualizado.conferenciaStatus = 'conferido';
+            atualizado.pastaFinanceira = 'comprovantes';
+            atualizado.subpastaFinanceira = /SICREDI/.test(normalizarTexto(`${item.descricao} ${dados.banco || ''}`)) ? 'SICREDI' : 'OUTROS COMPROVANTES';
+        }
         if (!atualizado.processoVinculoId) {
             atualizado.processoVinculoSugestao = obterSugestoesVinculoFinanceiro(atualizado, lista.filter(registro => registro.id !== id));
         }
@@ -4021,6 +4106,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         }
         Object.assign(item, atualizado);
         item.atualizadoEm = new Date().toISOString();
+        if (item.tipo === 'COMPROVANTE') setTimeout(() => vincularComprovanteAutomaticoFinanceiro(item.id).catch(() => 0), 0);
         salvarLancamentosFinanceiros(lista);
         await salvarFinanceiroNuvem(item);
         if (!silencioso) renderFinanceiro();
@@ -5274,3 +5360,36 @@ window.abrirFornecedoresFinanceiro = function() {
     overlay.querySelector('#finFornBusca')?.focus();
 };
 window.fecharFornecedoresFinanceiro = function() { document.getElementById('finFornOverlay')?.remove(); };
+
+
+// Comprovante com o MESMO codigo de barras/linha digitavel de um boleto: liga e da baixa sozinho
+// (certeza total). Outros casos ficam como sugestao para confirmar.
+async function vincularComprovanteAutomaticoFinanceiro(id) {
+    const lista = obterLancamentosFinanceiros();
+    const comp = lista.find(reg => reg.id === id);
+    if (!comp || comp.processoVinculoId) return 0;
+    const sug = (comp.processoVinculoSugestao || []).find(sg => sg.confianca === 'alta' && /linha|barcode/.test(sg.motivo || ''));
+    const boleto = sug && lista.find(reg => reg.id === sug.registroId);
+    if (!boleto || classeDocumentoFinanceiro(boleto) !== 'boleto') return 0;
+    const agora = new Date().toISOString();
+    const processoVinculoId = boleto.processoVinculoId || `proc_fin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const membros = new Set([comp.id, boleto.id, ...(boleto.processoVinculoMembros || [])]);
+    const afetados = lista.filter(reg => membros.has(reg.id));
+    afetados.forEach(reg => {
+        reg.processoVinculoId = processoVinculoId;
+        reg.processoVinculoStatus = 'CONFIRMADO';
+        reg.processoVinculoMembros = [...membros];
+        reg.processoVinculoConfirmadoEm = agora;
+        reg.processoVinculoSugestao = [];
+        reg.atualizadoEm = agora;
+    });
+    if (!boleto.pago) {
+        boleto.pago = true;
+        boleto.pagoEm = comp.dataEmissao || agora.slice(0, 10);
+        boleto.pagoOrigem = `Comprovante: ${comp.descricao || 'pagamento'} (mesmo código do boleto)`;
+    }
+    salvarLancamentosFinanceiros(lista);
+    await Promise.all(afetados.map(reg => salvarFinanceiroNuvem(reg).catch(() => false)));
+    renderFinanceiro();
+    return 1;
+}

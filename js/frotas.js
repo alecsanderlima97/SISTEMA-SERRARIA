@@ -122,10 +122,16 @@ function normalizarPlacaFrota(valor) {
     return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
+// Placas dos caminhoes padrao que o usuario excluiu: nao recriar.
+function placasPadraoExcluidas() {
+    try { return JSON.parse(localStorage.getItem('orquestra_frota_padrao_excluidos') || '[]'); } catch (_) { return []; }
+}
 function garantirVeiculosPropriosBasicos(lista) {
     const resultado = Array.isArray(lista) ? [...lista] : [];
     const adicionados = [];
+    const excluidas = new Set(placasPadraoExcluidas().map(normalizarPlacaFrota));
     FROTA_PROPRIA_PADRAO.forEach(base => {
+        if (excluidas.has(normalizarPlacaFrota(base.placa))) return;
         const existe = resultado.some(item => normalizarPlacaFrota(item.placa) === normalizarPlacaFrota(base.placa));
         if (!existe) {
             const novo = { ...base, medidas: { ...(base.medidas || {}) } };
@@ -162,23 +168,42 @@ async function ajustarSaldoEstoqueFrota(item, delta) {
     return item;
 }
 
+// Copia local (offline). Fotos e documentos em base64 enchem o limite do navegador (~5 MB):
+// se estourar, guarda sem eles; se ainda assim nao couber, segue sem copia local (a nuvem e a fonte).
 function salvarBanco(key, dados) {
-    localStorage.setItem(key, JSON.stringify(dados));
+    try {
+        localStorage.setItem(key, JSON.stringify(dados));
+    } catch (_) {
+        try {
+            const leve = (Array.isArray(dados) ? dados : []).map(item => {
+                if (!item || typeof item !== 'object') return item;
+                const { foto, documento, ...resto } = item;
+                return { ...resto, foto: foto && String(foto).startsWith('data:') ? '' : (foto || ''), documento: documento && String(documento).startsWith('data:') ? '' : (documento || '') };
+            });
+            localStorage.setItem(key, JSON.stringify(leve));
+        } catch (erro) {
+            console.warn(`Copia local de ${key} nao coube no navegador; usando so a nuvem.`, erro);
+            try { localStorage.removeItem(key); } catch (_) {}
+        }
+    }
 }
 
 async function carregarColecaoFrota(collName, key, defaults = []) {
     const cacheLocal = obterBanco(key, defaults);
     if (!window.FS) return cacheLocal;
     try {
-        const nuvem = await window.FS.getCollection(collName);
-        if (nuvem.length > 0) {
-            salvarBanco(key, nuvem);
-            return nuvem;
+        const nuvem = (await window.FS.getCollection(collName)).filter(item => !String(item.id || '').startsWith('_'));
+        // a nuvem e a fonte da verdade: nunca reenvia copia antiga do navegador (era isso que
+        // fazia registros excluidos voltarem). So cria os padroes na primeira vez de todas.
+        if (nuvem.length === 0 && !localStorage.getItem(`${key}_nuvem_ok`) && defaults.length) {
+            await Promise.all(defaults.map(item => window.FS.setDoc(collName, item.id, item)));
+            try { localStorage.setItem(`${key}_nuvem_ok`, '1'); } catch (_) {}
+            salvarBanco(key, defaults);
+            return defaults;
         }
-        const base = cacheLocal.length > 0 ? cacheLocal : defaults;
-        await Promise.all(base.map(item => window.FS.setDoc(collName, item.id, item)));
-        salvarBanco(key, base);
-        return base;
+        try { localStorage.setItem(`${key}_nuvem_ok`, '1'); } catch (_) {}
+        salvarBanco(key, nuvem);
+        return nuvem;
     } catch (error) {
         console.error(`Falha ao carregar ${collName} no Firestore. Usando cache local.`, error);
         return cacheLocal;
@@ -208,7 +233,7 @@ async function excluirDocFrota(collName, id) {
 }
 
 // Estados Locais
-const frotaInicial = garantirVeiculosPropriosBasicos(obterBanco(KEYS.FROTA, DEFAULT_FROTA));
+const frotaInicial = garantirVeiculosPropriosBasicos(obterBanco(KEYS.FROTA, FROTA_PROPRIA_PADRAO));
 let frota = frotaInicial.lista;
 if (frotaInicial.adicionados.length) salvarBanco(KEYS.FROTA, frota);
 let abastecimentos = obterBanco(KEYS.ABASTECIMENTOS, []);
@@ -265,7 +290,12 @@ document.addEventListener('DOMContentLoaded', () => {
 window.SectionLoader?.register('view-frotas', carregarDadosFrotaNuvem);
 
 async function carregarDadosFrotaNuvem() {
-    frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, DEFAULT_FROTA);
+    frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, FROTA_PROPRIA_PADRAO);
+    // config compartilhada: placas padrao excluidas (vale para todos os computadores)
+    try {
+        const cfg = await window.FS?.getDoc?.(FROTA_COLLECTIONS.FROTA, '_config');
+        if (Array.isArray(cfg?.placasPadraoExcluidas)) localStorage.setItem('orquestra_frota_padrao_excluidos', JSON.stringify(cfg.placasPadraoExcluidas));
+    } catch (_) { /* sem config */ }
     const integracaoProprios = garantirVeiculosPropriosBasicos(frota);
     frota = integracaoProprios.lista;
     if (integracaoProprios.adicionados.length) {
@@ -410,12 +440,65 @@ function redimensionarFotoFrota(file, maxSize = 900) {
     });
 }
 
+// Foto do veiculo: colar (Ctrl+V), arrastar ou escolher arquivo.
 window.trocarFotoFrota = function(id) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-        const file = input.files?.[0];
+    document.getElementById('frotaFotoOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'frotaFotoOverlay';
+    overlay.className = 'frota-foto-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Foto do veículo');
+    overlay.tabIndex = -1;
+    overlay.innerHTML = `<div class="frota-foto-caixa">
+        <h3>Foto do veículo</h3>
+        <div class="frota-foto-zona" tabindex="0">
+            <i class="fa-solid fa-image" aria-hidden="true"></i>
+            <b>Cole a imagem aqui (Ctrl+V)</b>
+            <small>ou arraste a foto para cá</small>
+        </div>
+        <div class="frota-foto-acoes">
+            <button type="button" class="btn-secondary" data-acao="arquivo"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Escolher arquivo</button>
+            <button type="button" class="btn-secondary" data-acao="cancelar">Cancelar</button>
+        </div>
+        <p class="frota-foto-msg" role="status"></p>
+    </div>`;
+    document.body.appendChild(overlay);
+    const fechar = () => { overlay.remove(); document.removeEventListener('paste', aoColar); };
+    const msg = overlay.querySelector('.frota-foto-msg');
+    const usar = async file => {
+        if (!file || !String(file.type || '').startsWith('image/')) { msg.textContent = 'Isso não é uma imagem.'; return; }
+        msg.textContent = 'Salvando foto…';
+        await aplicarFotoFrota(id, file);
+        fechar();
+    };
+    const aoColar = e => {
+        const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+        if (item) { e.preventDefault(); usar(item.getAsFile()); }
+        else msg.textContent = 'Nenhuma imagem na área de transferência. Copie a foto e tente de novo.';
+    };
+    document.addEventListener('paste', aoColar);
+    const zona = overlay.querySelector('.frota-foto-zona');
+    zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('ativa'); });
+    zona.addEventListener('dragleave', () => zona.classList.remove('ativa'));
+    zona.addEventListener('drop', e => { e.preventDefault(); zona.classList.remove('ativa'); usar(e.dataTransfer?.files?.[0]); });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') fechar(); });
+    overlay.addEventListener('click', e => {
+        const acao = e.target.closest('[data-acao]')?.dataset.acao;
+        if (acao === 'cancelar' || e.target === overlay) fechar();
+        if (acao === 'arquivo') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = () => usar(input.files?.[0]);
+            input.click();
+        }
+    });
+    zona.focus();
+};
+
+async function aplicarFotoFrota(id, file) {
+    {
         if (!file) return;
         try {
             const foto = await redimensionarFotoFrota(file);
@@ -433,9 +516,8 @@ window.trocarFotoFrota = function(id) {
             console.error('Erro ao trocar foto da frota:', error);
             alert('Nao foi possivel atualizar a foto deste veiculo.');
         }
-    };
-    input.click();
-};
+    }
+}
 
 async function salvarVeiculo() {
     const id = document.getElementById('veiculoId').value;
@@ -538,6 +620,12 @@ window.excluirVeiculo = async function(id) {
     const okNuvem = await excluirDocFrota(FROTA_COLLECTIONS.FROTA, id);
     if (!okNuvem) return;
 
+    const removido = frota.find(v => v.id === id);
+    if (removido && FROTA_PROPRIA_PADRAO.some(b => normalizarPlacaFrota(b.placa) === normalizarPlacaFrota(removido.placa))) {
+        const lista = [...new Set([...placasPadraoExcluidas(), removido.placa])];
+        try { localStorage.setItem('orquestra_frota_padrao_excluidos', JSON.stringify(lista)); } catch (_) {}
+        try { await window.FS?.setDoc?.(FROTA_COLLECTIONS.FROTA, '_config', { placasPadraoExcluidas: lista }); } catch (_) {}
+    }
     frota = frota.filter(v => v.id !== id);
     salvarBanco(KEYS.FROTA, frota);
     renderizarFrota();

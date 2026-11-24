@@ -1435,3 +1435,43 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 @media (max-width: 640px) { .rm-overlay { padding: 0; } .rm-janela { max-height: 100dvh; height: 100dvh; border-radius: 0; } }
 @media print { body.modal-open > *:not(#modalRendimentoMatos) { display: none !important; } #modalRendimentoMatos { position: static; background: #fff; display: block !important; } .rm-janela { box-shadow: none; max-height: none; } .rm-filtros, .rm-fechar { display: none !important; } }
 #modalRendimentoMatos .rm-filtros input[type="date"], #modalRendimentoMatos .rm-filtros select { background: #fff !important; background-color: #fff !important; color: #1f1c18 !important; -webkit-text-fill-color: #1f1c18 !important; color-scheme: light; }
+/* Frota: colar foto */
+.frota-foto-overlay { position: fixed; inset: 0; z-index: 10060; background: rgba(15,23,42,.55); display: grid; place-items: center; padding: 16px; }
+.frota-foto-caixa { width: min(440px, 100%); background: #fff; color: #1f1c18; border-radius: 14px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.frota-foto-caixa h3 { margin: 0; color: #1f1c18 !important; }
+.frota-foto-zona { display: grid; place-items: center; gap: 4px; padding: 28px 12px; border: 2px dashed #94a3b8; border-radius: 12px; text-align: center; background: #f8fafc; outline: none; }
+.frota-foto-zona:focus-visible, .frota-foto-zona.ativa { border-color: #1d4ed8; background: #eff6ff; }
+.frota-foto-zona i { font-size: 2rem; color: #64748b !important; }
+.frota-foto-zona b { color: #1f1c18 !important; } .frota-foto-zona small { color: #64748b !important; }
+.frota-foto-acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.frota-foto-acoes .btn-secondary { min-height: 40px; background: #fff !important; color: #1f1c18 !important; border: 1px solid #cbd5e1 !important; border-radius: 8px; padding: 0 12px; cursor: pointer; }
+.frota-foto-msg { margin: 0; min-height: 1.2em; color: #475569 !important; font-size: .88rem; }
+/* Financeiro: formulário sem o buraco à esquerda (pasta/subpasta ficam escondidas na classificação automática) */
+@media (min-width: 900px) {
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) {
+    grid-template-columns: 170px minmax(260px, 1fr) 160px 150px 120px;
+    grid-template-areas:
+      "sec-doc sec-doc sec-doc sec-doc sec-doc"
+      "classificacao classificacao classificacao classificacao classificacao"
+      "tipo desc venc valor status"
+      "situacao situacao . . ."
+      "sec-arq sec-arq sec-arq sec-arq sec-arq"
+      "doc doc doc doc doc"
+      "sec-final sec-final sec-final sec-final sec-final"
+      "obs obs obs save save" !important;
+  }
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) .fin-situacao { grid-area: situacao !important; max-width: none; }
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) .fin-save { grid-area: save !important; align-self: end; }
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) .fin-doc { grid-area: doc !important; }
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) .fin-obs { grid-area: obs !important; }
+  #view-financeiro .financeiro-form-grid:has(.fin-pasta[hidden]) .fin-status .financeiro-status-toggle { width: 100%; }
+}
+/* barra de ferramentas do financeiro: botões alinhados, sem quebrar feio */
+#view-financeiro .financeiro-view-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#view-financeiro .financeiro-view-tools .financeiro-toggle-btn { white-space: nowrap; }
+/* caixa de conferência: excluir e ocultar */
+#financeiroCaixaConferencia .fin-caixa-excluir { color: #b91c1c !important; min-width: 38px; }
+#financeiroCaixaConferencia .fin-caixa-excluir i { color: #b91c1c !important; }
+#financeiroCaixaConferencia .fin-caixa-recolhida { margin-bottom: 0; }
+#financeiroCaixaConferencia .fin-caixa-acoes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 760px) { #financeiroCaixaConferencia .fin-caixa-item { grid-template-columns: 1fr !important; } #financeiroCaixaConferencia .fin-caixa-acoes { justify-content: flex-start; } }
