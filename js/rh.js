@@ -134,6 +134,20 @@ window.switchTabRH = function(tabName, isEditing = false) {
 
     if (!tabForm || !tabLista || !btnForm || !btnLista) return;
 
+    const tabRegras = document.getElementById('panelRegrasRH');
+    const btnRegras = document.getElementById('btnTabRHRegras');
+    if (btnRegras) { btnRegras.style.color = 'var(--text-muted)'; btnRegras.style.borderBottom = 'none'; }
+    if (tabRegras) tabRegras.style.display = 'none';
+    if (tabName === 'regras' && tabRegras && btnRegras && btnRegras.style.display !== 'none') {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'none';
+        tabRegras.style.display = 'block';
+        [btnForm, btnLista].forEach(b => { b.style.color = 'var(--text-muted)'; b.style.borderBottom = 'none'; });
+        btnRegras.style.color = 'var(--accent-color)';
+        btnRegras.style.borderBottom = '3px solid var(--accent-color)';
+        return;
+    }
+
     if (tabName === 'form') {
         tabForm.style.display = 'block';
         tabLista.style.display = 'none';

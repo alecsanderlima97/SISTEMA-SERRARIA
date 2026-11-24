@@ -63,9 +63,15 @@ onAuthStateChanged(auth, user => {
 });
 
 window.abrirRegrasCalendario = function() {
-    window.App?.showSection?.('view-configuracoes');
+    window.App?.showSection?.('view-rh');
     window.setTimeout(() => {
-        const painel = document.querySelector('[data-subsection-permission="view-configuracoes:regras-pagamento"]');
+        window.switchTabRH?.('regras');
+        const painel = document.getElementById('panelRegrasRH');
+        const btn = document.getElementById('btnTabRHRegras');
+        if (btn && btn.style.display === 'none') {
+            alert('Seu perfil não possui acesso às regras de pagamento e feriados. Solicite a liberação ao administrador.');
+            return;
+        }
         if (!painel || getComputedStyle(painel).display === 'none') {
             alert('Seu perfil não possui acesso às regras de pagamento e feriados. Solicite a liberação ao administrador.');
             return;
