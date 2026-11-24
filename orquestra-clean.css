@@ -1480,3 +1480,17 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 .radar-inline { display: block; background: #fff; color: #1f1c18; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
 .radar-inline .radar-caixa { width: auto; height: auto; min-height: 0; }
 .radar-inline .radar-corpo { overflow: visible; max-height: none; }
+
+/* RH: cadastrar pelo holerite */
+.rh-holerite-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; padding: 14px 16px; border: 1.5px dashed #c9b98f; border-radius: 12px; background: #fbf7ea; color: #2b2620; }
+.rh-holerite-box.arrastando { border-color: #b45309; background: #fff3d6; }
+.rh-holerite-texto { display: flex; flex-direction: column; gap: 3px; min-width: 220px; flex: 1 1 320px; }
+.rh-holerite-texto strong { font-size: .95rem; }
+.rh-holerite-texto small { color: #6b6255; font-size: .8rem; }
+#rhHoleriteStatus:empty { display: none; }
+#rhHoleriteStatus { font-weight: 700; color: #334155 !important; }
+#rhHoleriteStatus[data-tipo="ok"] { color: #15803d !important; }
+#rhHoleriteStatus[data-tipo="aviso"] { color: #b45309 !important; }
+#rhHoleriteStatus[data-tipo="erro"] { color: #b91c1c !important; }
+.rh-lido-holerite { box-shadow: 0 0 0 2px #86efac inset !important; background-color: #f0fdf4 !important; }
+@media (max-width: 600px) { .rh-holerite-box button { width: 100%; } }
