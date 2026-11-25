@@ -539,6 +539,7 @@ window.switchTabEstoque = function(tabName) {
     else if (tabName === 'movimentacoes') btnId = 'btnTabEstoqueMovimentacoes';
     else if (tabName === 'lancar') btnId = 'btnTabEstoqueLancar';
     else if (tabName === 'nota-fiscal') btnId = 'btnTabEstoqueNotaFiscal';
+    else if (tabName === 'compras') btnId = 'btnTabEstoqueCompras';
 
     const activeBtn = document.getElementById(btnId);
     if (activeBtn) {
@@ -554,6 +555,8 @@ window.switchTabEstoque = function(tabName) {
         window.renderSimuladores();
     } else if (tabName === 'movimentacoes') {
         window.renderizarMovimentacoesEstoque();
+    } else if (tabName === 'compras') {
+        window.renderPedidoCompraEstoque?.();
     } else if (tabName !== 'nota-fiscal') {
         renderizarEstoque();
     }
