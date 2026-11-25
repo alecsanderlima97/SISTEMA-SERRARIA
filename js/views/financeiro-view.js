@@ -26,6 +26,20 @@
                     <div class="kpi-card glass-panel"><div class="kpi-icon" style="background: rgba(220,38,38,0.14); color: #dc2626;"><i class="fa-solid fa-arrow-trend-down"></i></div><div class="kpi-data"><h3 id="financeiroKpiDespesas">R$ 0,00</h3><p>Total de despesas</p></div></div>
                 </div>
 
+                <section id="financeiroPrevisao" class="glass-panel fin-previsao hide-on-print" aria-labelledby="finPrevTitulo">
+                    <div class="fin-prev-topo">
+                        <h3 id="finPrevTitulo"><i class="fa-solid fa-calendar-week" aria-hidden="true"></i> Previsão de pagamentos</h3>
+                        <div class="fin-prev-periodos" role="group" aria-label="Período da previsão">
+                            <button type="button" data-prev-dias="7">7 dias</button>
+                            <button type="button" data-prev-dias="15">15 dias</button>
+                            <button type="button" data-prev-dias="30">1 mês</button>
+                            <button type="button" data-prev-dias="60">2 meses</button>
+                            <button type="button" data-prev-dias="90">3 meses</button>
+                        </div>
+                    </div>
+                    <div id="financeiroPrevisaoCorpo"></div>
+                </section>
+
                 <div id="financeiroPastas" class="financeiro-folder-board financeiro-collapsible hide-on-print"></div>
 
                 <div class="glass-panel financeiro-form-card hide-on-print">
