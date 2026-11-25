@@ -1,3 +1,4 @@
+import { auth } from './firebase-init.js';
 // Painel "Análise da madeira serrada" no Início (aba Madeira).
 // Mostra: cubagens que mais saíram (e para quem), preço médio por cliente comparado à média
 // da mesma medida, e a curva de preço por m³ das medidas mais vendidas (últimos 12 meses).
@@ -10,6 +11,80 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim(
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const CORES = ['#0f766e', '#b45309', '#1d4ed8', '#be123c', '#6d28d9'];
 let grafico = null;
+let ultimoResumoFrete = [];
+const CACHE_DIST = 'orquestra_dist_clientes_v1';
+const lerCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_DIST) || '{}'); } catch (_) { return {}; } };
+const gravarCache = c => { try { localStorage.setItem(CACHE_DIST, JSON.stringify(c)); } catch (_) { /* sem armazenamento */ } };
+let clientesCad = null;
+
+async function cadastroClientes() {
+    if (clientesCad) return clientesCad;
+    try { clientesCad = await window.FS.getCollection('clientes'); } catch (_) { clientesCad = []; }
+    return clientesCad;
+}
+function cidadeDoCliente(c, cad) {
+    const x = (c.clienteId && cad.find(k => k.id === c.clienteId)) || cad.find(k => norm(k.nome) === norm(c.nome));
+    return String(x?.cidade || '').trim();
+}
+
+function htmlFrete() {
+    const cache = lerCache();
+    const lista = ultimoResumoFrete.filter(c => c.freteMedio > 0 || cache[norm(c.nome)]);
+    if (!lista.length) return '<p class="dm-vazio">Sem frete lançado nos romaneios do período.</p>';
+    const linhas = lista.map(c => {
+        const d = cache[norm(c.nome)];
+        const km = d?.km || null;
+        const por100 = km && c.freteMedio ? c.freteMedio / km * 100 : null;
+        return { c, km, por100, cidade: d?.cidade || '' };
+    }).sort((a, b) => (b.por100 ?? -1) - (a.por100 ?? -1));
+    const validos = linhas.filter(l => l.por100 != null);
+    const media = validos.length ? validos.reduce((s, l) => s + l.por100, 0) / validos.length : null;
+    return `<div class="dm-tabela-wrap"><table class="dm-tabela" data-no-column-resize="true">
+      <thead><tr><th>Cliente</th><th>Frete R$/m³</th><th>Distância</th><th>R$/m³ a cada 100 km</th></tr></thead>
+      <tbody>${linhas.map(l => `<tr><td><b>${esc(l.c.nome)}</b>${l.cidade ? `<small>${esc(l.cidade)}</small>` : ''}</td>
+        <td class="num">${l.c.freteMedio ? fmtR(l.c.freteMedio) : '—'}</td>
+        <td class="num">${l.km ? `${fmtN(l.km, 0)} km` : '<span class="dm-sem">—</span>'}</td>
+        <td class="num">${l.por100 != null ? `${fmtR(l.por100)}${media ? `<span class="dm-dif ${l.por100 > media * 1.05 ? 'acima' : l.por100 < media * 0.95 ? 'abaixo' : ''}">${l.por100 >= media ? '+' : ''}${fmtN((l.por100 / media - 1) * 100, 0)}%</span>` : ''}` : '<span class="dm-sem">—</span>'}</td></tr>`).join('')}</tbody>
+    </table></div>${media ? `<p class="dm-dica">Verde: cobra mais frete por km que a média; vermelho: cobra menos.</p>` : ''}`;
+}
+
+async function apiProspeccao(corpo) {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('Sessão expirada. Entre novamente.');
+    const r = await fetch('/api/prospeccao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...corpo, idToken: token }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Não foi possível consultar agora.');
+    return d;
+}
+
+// Distância de estrada de cada cliente até a serraria. Fica guardada neste navegador
+// para não consultar o Google toda vez (só consulta quem ainda não tem distância).
+window.calcularDistanciasClientesMadeira = async function() {
+    const box = document.getElementById('dmFreteDistancia');
+    const aviso = t => { if (box) box.insertAdjacentHTML('afterbegin', `<p class="dm-aviso">${esc(t)}</p>`); };
+    let origem = null;
+    try { origem = (await window.FS.getDoc('prospeccao', '_config'))?.origem; } catch (_) { /* sem acesso */ }
+    if (!origem || origem.lat == null) { aviso('Defina a localização da serraria em Clientes → Radar de Clientes → Central de leads.'); return; }
+    const cad = await cadastroClientes();
+    const cache = lerCache();
+    const faltam = ultimoResumoFrete.filter(c => !cache[norm(c.nome)]);
+    if (!faltam.length) { if (box) box.innerHTML = htmlFrete(); return; }
+    if (box) box.innerHTML = `<p class="dm-vazio">Calculando ${faltam.length} distância(s)…</p>`;
+    let semCidade = 0, erro = 0;
+    for (const c of faltam) {
+        const cidade = cidadeDoCliente(c, cad);
+        if (!cidade) { semCidade++; continue; }
+        try {
+            const { local } = await apiProspeccao({ modo: 'local', cidade });
+            const { rota } = await apiProspeccao({ modo: 'rota', origem, destino: { lat: local.lat, lng: local.lng } });
+            if (rota?.km) cache[norm(c.nome)] = { km: rota.km, cidade, em: new Date().toISOString() };
+            else erro++;
+        } catch (_) { erro++; }
+    }
+    gravarCache(cache);
+    if (box) box.innerHTML = htmlFrete();
+    if (semCidade || erro) aviso(`${semCidade ? `${semCidade} cliente(s) sem cidade no cadastro. ` : ''}${erro ? `${erro} não encontrado(s).` : ''}`);
+};
 
 function dataRomaneio(r) {
     const s = r.logistica?.dataCarregamento || r.logistica?.dataDescarregamento || r.dataCriacao || r.data || '';
@@ -20,6 +95,59 @@ function medida(p) {
     const q = String(p.qualidade || '').toUpperCase();
     return `${q ? q + ' · ' : ''}${fmtN(p.esp, 1)} × ${fmtN(p.larg, 1)} × ${fmtN(p.compV || p.compR, 2)}`;
 }
+function classeDe(q) {
+    const t = String(q || '').toUpperCase();
+    if (t.includes('1')) return 1;
+    if (t.includes('2')) return 2;
+    if (t.includes('3')) return 3;
+    return 0;
+}
+const BASE_NF = { INTEIRA: 1, MEIA: 0.5, TERCO: 1 / 3, QUARTO: 0.25 };
+
+// Resumo por cliente: preço médio de 1ª e 2ª (comparado à média da mesma cubagem),
+// % da nota e preço final por m³ (madeira + ajuste + imposto da nota) e frete cobrado.
+function resumoClientes(romaneios, mediaMedida) {
+    const mapa = new Map();
+    (romaneios || []).forEach(r => {
+        if (String(r.status || '').toLowerCase() === 'cancelado') return;
+        const pacotes = (Array.isArray(r.pacotes) ? r.pacotes : []).filter(p => Number(p.m3VendaTotal || p.m3VendaExato || 0) > 0);
+        if (!pacotes.length) return;
+        const nome = String(r.cliente || 'Sem cliente').trim();
+        const ck = norm(nome);
+        const c = mapa.get(ck) || { nome, clienteId: r.clienteId || '', cargas: 0, m3: 0, madeira: 0, final: 0, classes: {}, taxaPond: 0, baseTxt: new Set(), freteM3: 0, freteValor: 0, freteM3Base: 0 };
+        if (!c.clienteId && r.clienteId) c.clienteId = r.clienteId;
+        let m3R = 0, madeiraR = 0;
+        pacotes.forEach(p => {
+            const m3 = Number(p.m3VendaTotal || p.m3VendaExato || 0);
+            const preco = Number(p.precoM3 || 0);
+            m3R += m3; madeiraR += m3 * preco;
+            const k = classeDe(p.qualidade);
+            const ref = mediaMedida.get(medida(p));
+            const cl = c.classes[k] || { m3: 0, valor: 0, ref: 0 };
+            if (preco > 0) { cl.m3 += m3; cl.valor += m3 * preco; if (ref > 0) cl.ref += m3 * ref; }
+            c.classes[k] = cl;
+        });
+        const adic = Number(r.financeiro?.adicionalMadeira || 0);
+        const taxa = Number(r.financeiro?.taxaNF || 0);
+        const base = String(r.financeiro?.baseNF || 'INTEIRA').toUpperCase();
+        const imposto = (madeiraR + adic) * (BASE_NF[base] ?? 1) * taxa / 100;
+        c.cargas++; c.m3 += m3R; c.madeira += madeiraR;
+        c.final += madeiraR + adic + imposto;
+        c.taxaPond += taxa * m3R;
+        if (taxa > 0) c.baseTxt.add(base);
+        const fr = Number(r.logistica?.valorFrete || 0);
+        if (fr > 0) { c.freteM3 += fr * m3R; c.freteM3Base += m3R; c.freteValor += fr * m3R + Number(r.logistica?.adicionalFrete || 0); }
+        mapa.set(ck, c);
+    });
+    return [...mapa.values()].map(c => ({
+        ...c,
+        taxa: c.m3 ? c.taxaPond / c.m3 : 0,
+        finalM3: c.m3 ? c.final / c.m3 : 0,
+        freteMedio: c.freteM3Base ? c.freteM3 / c.freteM3Base : 0,
+        classe: k => { const x = c.classes[k]; return x && x.m3 ? { preco: x.valor / x.m3, dif: x.ref ? (x.valor / x.ref - 1) * 100 : null, m3: x.m3 } : null; }
+    }));
+}
+
 function vendas(romaneios) {
     const lista = [];
     (romaneios || []).forEach(r => {
@@ -29,7 +157,7 @@ function vendas(romaneios) {
         (Array.isArray(r.pacotes) ? r.pacotes : []).forEach(p => {
             const m3 = Number(p.m3VendaTotal || p.m3VendaExato || 0);
             if (!(m3 > 0)) return;
-            lista.push({ d, cliente, ck: norm(cliente), medida: medida(p), m3, preco: Number(p.precoM3 || 0) });
+            lista.push({ d, cliente, ck: norm(cliente), medida: medida(p), classe: classeDe(p.qualidade), m3, preco: Number(p.precoM3 || 0) });
         });
     });
     return lista;
@@ -112,9 +240,24 @@ window.renderAnaliseMadeiraDashboard = function(romaneiosPeriodo, romaneiosTodos
     const totalM3 = medidas.reduce((s, m) => s + m.m3, 0);
     const top = medidas.slice(0, 8);
     const maxM3 = top[0]?.m3 || 1;
-    const melhores = clientes.slice(0, 6);
-    const piores = clientes.length > 6 ? clientes.slice(-4).reverse() : [];
-    const linhaCliente = c => `<li><span class="dm-nome">${esc(c.nome)}</span><span class="dm-num">${fmtR(c.preco)}/m³</span><span class="dm-dif ${c.dif > 1 ? 'acima' : c.dif < -1 ? 'abaixo' : ''}">${c.dif > 0 ? '+' : ''}${fmtN(c.dif, 1)}%</span></li>`;
+    const mediaMedida = new Map(medidas.map(m => [m.medida, m.media]));
+    const resumo = resumoClientes(romaneiosPeriodo, mediaMedida).sort((a, b) => b.m3 - a.m3);
+    const mediaFinal = resumo.reduce((s, c) => s + c.final, 0) / (resumo.reduce((s, c) => s + c.m3, 0) || 1);
+    const dif = v => v == null ? '' : `<span class="dm-dif ${v > 1 ? 'acima' : v < -1 ? 'abaixo' : ''}">${v > 0 ? '+' : ''}${fmtN(v, 1)}%</span>`;
+    const celClasse = (c, k) => { const x = c.classe(k); return x ? `<td class="num">${fmtR(x.preco)}${dif(x.dif)}</td>` : '<td class="num dm-sem">—</td>'; };
+    const nomeBase = { INTEIRA: 'inteira', MEIA: 'meia', TERCO: '1/3', QUARTO: '1/4' };
+    const tabelaClientes = resumo.length ? `<div class="dm-tabela-wrap"><table class="dm-tabela" data-no-column-resize="true">
+        <thead><tr><th>Cliente</th><th>m³</th><th>1ª R$/m³</th><th>2ª R$/m³</th><th>Nota</th><th>Preço final/m³</th><th>Frete R$/m³</th></tr></thead>
+        <tbody>${resumo.map(c => `<tr>
+          <td><b>${esc(c.nome)}</b><small>${c.cargas} carga(s)</small></td>
+          <td class="num">${fmtN(c.m3, 3)}</td>
+          ${celClasse(c, 1)}${celClasse(c, 2)}
+          <td class="num">${c.taxa > 0 ? `${fmtN(c.taxa, 1)}%<small>${[...c.baseTxt].map(b => nomeBase[b] || b.toLowerCase()).join(', ')}</small>` : '<span class="dm-sem">sem nota</span>'}</td>
+          <td class="num"><b>${fmtR(c.finalM3)}</b>${dif((c.finalM3 / mediaFinal - 1) * 100)}</td>
+          <td class="num">${c.freteMedio ? fmtR(c.freteMedio) : '<span class="dm-sem">—</span>'}</td>
+        </tr>`).join('')}</tbody></table></div>
+        <p class="dm-dica">% ao lado do preço da 1ª e 2ª: comparação com a média da mesma cubagem no período. "Preço final" = madeira + ajustes + imposto da nota, dividido pelo m³; o % compara com a média de todos os clientes.</p>` : '<p class="dm-vazio">Sem preços lançados nos pacotes.</p>';
+    ultimoResumoFrete = resumo;
 
     el.innerHTML = `
       <header class="dm-topo">
@@ -132,11 +275,15 @@ window.renderAnaliseMadeiraDashboard = function(romaneiosPeriodo, romaneiosTodos
           </li>`).join('')}</ol>
         </div>
         <div class="dm-bloco">
-          <h4>Preço por cliente x média</h4>
-          <p class="dm-dica">Compara o que cada cliente pagou com a média da mesma cubagem no período.</p>
-          ${clientes.length ? `<ul class="dm-clientes">${melhores.map(linhaCliente).join('')}</ul>
-          ${piores.length ? `<h5>Pagando menos</h5><ul class="dm-clientes">${piores.map(linhaCliente).join('')}</ul>` : ''}` : '<p class="dm-vazio">Sem preços lançados nos pacotes.</p>'}
+          <h4>Frete x distância</h4>
+          <p class="dm-dica">Frete cobrado por m³ de cada cliente e a distância de estrada até a serraria (cidade do cadastro do cliente).</p>
+          <div id="dmFreteDistancia">${htmlFrete()}</div>
+          <button type="button" class="btn-primary dm-btn" onclick="window.calcularDistanciasClientesMadeira()"><i class="fa-solid fa-route" aria-hidden="true"></i> Calcular distâncias</button>
         </div>
+      </div>
+      <div class="dm-bloco dm-curva">
+        <h4>Preço por cliente: 1ª, 2ª, nota e preço final</h4>
+        ${tabelaClientes}
       </div>
       <div class="dm-bloco dm-curva">
         <h4>Curva de preço por m³ · últimos 12 meses</h4>
