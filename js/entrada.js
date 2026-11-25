@@ -2490,6 +2490,50 @@ window.registrarPagamentoFechamentoExtracao = async function(id) {
     }
 };
 
+// Quita de uma vez todos os fechamentos de empreiteiro com saldo, registrando o pagamento do saldo como PIX.
+// Não apaga nada: cada fechamento ganha um pagamento no histórico (auditável).
+window.quitarTodosFechamentosExtracaoPix = async function() {
+    const base = (fechamentosSalvosExtracao.length ? fechamentosSalvosExtracao : obterFechamentosLocais())
+        .filter(item => item.tipo === 'EXTRACAO_EMPREITEIRO');
+    const pendentes = base.filter(item => item.status !== 'QUITADO' && Number(item.valorTotal || 0) - Number(item.valorPago || 0) > 0.009);
+    if (!pendentes.length) return alert('Todos os fechamentos já estão quitados.');
+    const total = pendentes.reduce((s, f) => s + (Number(f.valorTotal || 0) - Number(f.valorPago || 0)), 0);
+    const msg = `Marcar ${pendentes.length} fechamento(s) como PAGOS via PIX?\nTotal a registrar: ${formatarMoedaEntrada(total)}\n\nCada fechamento recebe um pagamento do saldo restante, com a data de hoje.`;
+    const ok = window.confirmarExclusaoComSenha
+        ? await window.confirmarExclusaoComSenha(msg, 'Digite sua senha operacional para confirmar os pagamentos:')
+        : confirm(msg);
+    if (!ok) return;
+
+    const usuario = getUsuarioAtualAuditoria();
+    const hoje = new Date().toISOString().split('T')[0];
+    const atualizados = pendentes.map(f => {
+        const saldo = Number(f.valorTotal || 0) - Number(f.valorPago || 0);
+        const pagamentos = [...(Array.isArray(f.pagamentos) ? f.pagamentos : []), {
+            id: `pag_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            data: hoje, dataHora: new Date().toISOString(), valor: saldo, forma: 'PIX',
+            observacao: 'Quitado em lote (todos os fechamentos pagos via PIX)', registradoPor: usuario
+        }];
+        const valorPago = pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0);
+        return { ...f, pagamentos, valorPago, saldoRestante: Number(f.valorTotal || 0) - valorPago,
+            status: obterStatusFechamento(f.valorTotal, valorPago), atualizadoEm: new Date().toISOString(), atualizadoPor: usuario };
+    });
+    const porId = new Map(atualizados.map(f => [f.id, f]));
+    const outros = obterFechamentosLocais().filter(f => f.tipo !== 'EXTRACAO_EMPREITEIRO');
+    salvarFechamentosLocais([...base.map(f => porId.get(f.id) || f), ...outros]);
+    fechamentosSalvosExtracao = base.map(f => porId.get(f.id) || f);
+    renderizarFechamentosSalvosExtracao();
+
+    let falhas = 0;
+    if (window.FS) {
+        for (const f of atualizados) {
+            try { await window.FS.setDoc('fechamentos_salvos', f.id, f); } catch (err) { falhas++; console.error('Quitar fechamento', f.id, err); }
+        }
+    }
+    alert(falhas
+        ? `${atualizados.length - falhas} fechamento(s) quitados na nuvem; ${falhas} ficaram só neste computador. Tente de novo mais tarde.`
+        : `${atualizados.length} fechamento(s) marcados como pagos via PIX.`);
+};
+
 window.visualizarFechamentoExtracao = function(id) {
     const fechamento = (fechamentosSalvosExtracao.length ? fechamentosSalvosExtracao : obterFechamentosLocais()).find(item => item.id === id);
     if (!fechamento) return alert('Fechamento nao encontrado.');

@@ -1494,3 +1494,81 @@ body.modulo-paletes-desligado .aba-modulo-paletes, body.modulo-paletes-desligado
 #rhHoleriteStatus[data-tipo="erro"] { color: #b91c1c !important; }
 .rh-lido-holerite { box-shadow: 0 0 0 2px #86efac inset !important; background-color: #f0fdf4 !important; }
 @media (max-width: 600px) { .rh-holerite-box button { width: 100%; } }
+
+/* ===== Telas mais largas (aproveita monitor grande) ===== */
+@media (min-width: 1400px) {
+  body.orquestra-theme .view-section { width: min(100%, 1640px) !important; max-width: 1640px !important; }
+}
+
+/* ===== Tabelas com colunas redimensionáveis: sem texto por cima de texto ===== */
+table.orq-colunas-redimensionaveis th,
+table.orq-colunas-redimensionaveis td { white-space: normal !important; overflow-wrap: break-word; }
+table.orq-colunas-redimensionaveis td:not(:last-child) { overflow: hidden; }
+table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
+
+/* ===== Início: análise da madeira serrada ===== */
+.dash-madeira { grid-column: 1 / -1; margin-top: 16px; padding: 18px; border-radius: 10px; }
+.dash-madeira[hidden] { display: none !important; }
+.dm-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.dm-topo h3 { margin: 0; font-size: 1.05rem; }
+.dm-topo small { color: #64748b; }
+.dm-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+.dm-bloco { background: #fffdf7; border: 1px solid #e5dccb; border-radius: 10px; padding: 14px; color: #1f2937; min-width: 0; }
+.dm-bloco h4 { margin: 0 0 10px; font-size: .92rem; }
+.dm-bloco h5 { margin: 12px 0 6px; font-size: .8rem; color: #b91c1c; text-transform: uppercase; letter-spacing: .03em; }
+.dm-dica { margin: -4px 0 10px; font-size: .78rem; color: #64748b; }
+.dm-barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.dm-linha { display: flex; justify-content: space-between; gap: 8px; font-size: .84rem; }
+.dm-linha span { color: #475569; white-space: nowrap; }
+.dm-barra { height: 8px; background: #efe7d6; border-radius: 99px; overflow: hidden; margin: 4px 0 3px; }
+.dm-barra i { display: block; height: 100%; background: linear-gradient(90deg, #0f766e, #14b8a6); border-radius: 99px; }
+.dm-barras small { color: #64748b; font-size: .76rem; }
+.dm-clientes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dm-clientes li { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; gap: 8px; align-items: center; font-size: .84rem; padding: 6px 8px; border-radius: 7px; background: #f8f4ea; }
+.dm-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.dm-num { color: #334155; font-variant-numeric: tabular-nums; }
+.dm-dif { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; color: #475569; }
+.dm-dif.acima { color: #15803d; }
+.dm-dif.abaixo { color: #b91c1c; }
+.dm-curva { margin-top: 16px; }
+.dm-canvas { position: relative; height: 280px; }
+.dm-vazio { color: #64748b; margin: 6px 0; }
+@media (max-width: 900px) { .dm-grid { grid-template-columns: 1fr; } }
+
+/* ===== Estoque: tanque de diesel com cara de tanque ===== */
+.tq-diesel { display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: stretch; }
+.tq-escala { height: 200px; margin-top: 18px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #b91c1c; font-size: .7rem; font-weight: 800; }
+.tq-corpo { display: flex; flex-direction: column; align-items: center; }
+.tq-bocal { width: 34px; height: 14px; border-radius: 5px 5px 0 0; background: linear-gradient(90deg, #64748b, #cbd5e1, #64748b); border: 1px solid #475569; border-bottom: 0; margin-bottom: -2px; position: relative; z-index: 2; }
+.tq-cilindro { position: relative; width: 100px; height: 204px; border-radius: 26px / 18px; overflow: hidden; border: 3px solid #475569;
+  background: linear-gradient(90deg, #94a3b8 0%, #e2e8f0 22%, #f8fafc 38%, #cbd5e1 62%, #94a3b8 100%); box-shadow: inset 0 -6px 12px rgba(0,0,0,.15), 0 6px 14px rgba(0,0,0,.18); }
+.tq-faixas { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0 39px, rgba(71,85,105,.35) 39px 41px); pointer-events: none; z-index: 3; }
+.tq-liquido { position: absolute; left: 0; right: 0; bottom: 0; min-height: 3px; background: linear-gradient(90deg, #c2410c, #f97316 35%, #fdba74 50%, #f97316 65%, #c2410c); transition: height 1s cubic-bezier(.4,0,.2,1); z-index: 1; }
+.tq-onda { position: absolute; left: 0; right: 0; top: -4px; height: 8px; background: rgba(255,237,213,.85); border-radius: 50%; }
+.tq-nivel { position: absolute; left: 50%; transform: translate(-50%, 50%); z-index: 4; background: #111827; color: #fff; font-size: .72rem; font-weight: 800; padding: 2px 7px; border-radius: 99px; transition: bottom 1s cubic-bezier(.4,0,.2,1); white-space: nowrap; }
+.tq-rotulo { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4; font-size: .66rem; font-weight: 900; letter-spacing: .12em; white-space: nowrap; color: #1e293b; background: #facc15; padding: 2px 8px; border-radius: 3px; border: 1px solid #a16207; }
+.tq-base { display: flex; justify-content: space-between; width: 80px; margin-top: -2px; }
+.tq-base i { width: 14px; height: 14px; background: #475569; border-radius: 0 0 3px 3px; }
+.tq-historico { margin-top: 6px; border-top: 1px dashed #d6cbb6; padding-top: 12px; }
+.tq-historico h4 { margin: 0 0 8px; font-size: .9rem; }
+.tq-hist-lista { max-height: 260px; overflow: auto; }
+.tq-hist { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.tq-hist th { text-align: left; font-size: .72rem; text-transform: uppercase; color: #64748b; padding: 6px; border-bottom: 1px solid #e5dccb; position: sticky; top: 0; background: #fffdf7; }
+.tq-hist td { padding: 6px; border-bottom: 1px solid #f1ece1; }
+.tq-hist .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tq-hist tfoot td { font-weight: 800; border-bottom: 0; }
+.tq-vazio { color: #64748b; font-size: .85rem; margin: 4px 0; }
+
+/* ===== Estoque: lubrificantes em lista compacta ===== */
+.tq-lub-busca { width: 100%; margin: 0 0 10px; height: 36px; padding: 0 10px; border-radius: 8px; }
+.tq-lub-lista { display: grid; gap: 6px; max-height: 470px; overflow: auto; padding-right: 4px; }
+.tq-lub { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #e5dccb; border-radius: 8px; background: #fffdf7; color: #1f2937; font-size: .84rem; }
+.tq-lub.baixo { border-color: #fca5a5; background: #fef2f2; }
+.tq-lub-nivel { width: 12px; height: 28px; border: 1px solid #94a3b8; border-radius: 3px; position: relative; overflow: hidden; background: #f1f5f9; }
+.tq-lub-nivel i { position: absolute; left: 0; right: 0; bottom: 0; background: #0f766e; }
+.tq-lub.baixo .tq-lub-nivel i { background: #dc2626; }
+.tq-lub-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+.tq-lub-vol { font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tq-lub-gal { color: #0f766e; white-space: nowrap; font-size: .78rem; }
+.tq-lub-alerta { color: #b91c1c; font-weight: 700; font-size: .74rem; white-space: nowrap; }
+@media (max-width: 600px) { .tq-lub { grid-template-columns: 14px minmax(0, 1fr) auto; } .tq-lub-gal, .tq-lub-alerta:empty { display: none; } }

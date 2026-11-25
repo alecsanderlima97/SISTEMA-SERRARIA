@@ -3444,6 +3444,8 @@ window.renderFinanceiro = function() {
     const idsDuplicados = obterIdsDuplicadosFinanceiro(listaCompleta);
     let lista = listaCompleta.filter(item => financeiroAbaAtiva === 'todos' || obterPastaFinanceiraItem(item) === financeiroAbaAtiva || item.aba === financeiroAbaAtiva);
 
+    const filtroClasse = document.getElementById('financeiroFiltroClasse')?.value || 'TODOS';
+    if (filtroClasse !== 'TODOS') lista = lista.filter(item => classeDocumentoFinanceiro(item) === filtroClasse);
     if (filtroStatus === 'PAGO') lista = lista.filter(item => item.pago);
     if (filtroStatus === 'ABERTO') lista = lista.filter(item => !item.pago && financeiroGeraCobranca(item));
     if (filtroStatus === 'PENDENTE') lista = lista.filter(item => obterStatusFinanceiro(item) === 'PENDENTE');

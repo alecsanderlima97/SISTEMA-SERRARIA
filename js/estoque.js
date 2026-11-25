@@ -1020,8 +1020,11 @@ window.renderSimuladores = function() {
         }
     }
 
-    // 2. Lubrificantes Simulator Grid (Conversão em baldes de 20L)
-    const lubs = itensEstoque.filter(i => i.categoria === 'LUBRIFICANTES');
+    renderHistoricoAbastecimentoDiesel(diesel);
+
+    // 2. Lubrificantes (lista compacta, os que estão abaixo do mínimo primeiro)
+    const buscaLub = (document.getElementById('buscaLubrificantesTanques')?.value || '').trim().toUpperCase();
+    const lubs = itensEstoque.filter(i => i.categoria === 'LUBRIFICANTES' && (!buscaLub || String(i.nome || '').toUpperCase().includes(buscaLub)));
     const container = document.getElementById('containerLubrificantesTanques');
     if (container) {
         if (lubs.length === 0) {
@@ -1044,28 +1047,39 @@ window.renderSimuladores = function() {
             const isLow = totalLitros <= limite;
             const colorCircle = isLow ? '#ef4444' : 'var(--accent-color)';
 
-            return `
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 15px; display: flex; gap: 15px; align-items: center;">
-                    <!-- Circular Liquid Indicator -->
-                    <div style="position: relative; width: 60px; height: 60px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.6);">
-                        <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: ${remainingBaldePercent}%; background: ${colorCircle}; opacity: 0.7; transition: height 0.5s; box-shadow: 0 0 8px ${colorCircle};"></div>
-                        <i class="fa-solid fa-oil-can" style="font-size: 1.25rem; color: white; position: relative; z-index: 2;"></i>
-                    </div>
-
-                    <!-- Breakdown Info -->
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0 0 4px 0; color: white; font-size: 0.95rem; font-weight: bold; text-transform: uppercase;">${lub.nome}</h4>
-                        <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; gap: 15px; flex-wrap: wrap;">
-                            <span>Volume: <strong style="color: white;">${totalLitros.toFixed(1)} L</strong></span>
-                            <span>Contém: <strong style="color: var(--accent-color);">${galoes} galão(ões) de ${capacidadeGalao.toLocaleString('pt-BR')} L</strong> + <strong style="color: var(--accent-color);">${litrosResto} L</strong></span>
-                        </div>
-                        ${isLow ? `<span style="font-size: 0.72rem; color: #f87171; font-weight: bold; display: block; margin-top: 5px;"><i class="fa-solid fa-triangle-exclamation"></i> ABAIXO DO MÍNIMO DE ALERTA (${limite}L)</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
+            return { isLow, html: `
+                <div class="tq-lub${isLow ? ' baixo' : ''}">
+                    <div class="tq-lub-nivel" title="Galão aberto: ${remainingBaldePercent.toFixed(0)}%"><i style="height:${remainingBaldePercent}%"></i></div>
+                    <strong class="tq-lub-nome">${escapeHtmlEstoque(lub.nome)}</strong>
+                    <span class="tq-lub-vol">${totalLitros.toFixed(1)} L</span>
+                    <span class="tq-lub-gal">${galoes} × ${capacidadeGalao.toLocaleString('pt-BR')} L + ${litrosResto} L</span>
+                    ${isLow ? `<span class="tq-lub-alerta" title="Abaixo do mínimo de ${limite} L"><i class="fa-solid fa-triangle-exclamation"></i> mín. ${limite} L</span>` : '<span></span>'}
+                </div>` };
+        }).sort((a, b) => Number(b.isLow) - Number(a.isLow)).map(x => x.html).join('');
     }
 };
+
+function escapeHtmlEstoque(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderHistoricoAbastecimentoDiesel(diesel) {
+    const el = document.getElementById('dieselHistoricoAbastecimento');
+    if (!el) return;
+    const movs = obterMovimentacoesEstoque().filter(m => normalizarTipoMovimento(m.tipo) === 'ENTRADA'
+        && ((diesel && m.itemId === diesel.id) || String(m.destino || '').toUpperCase().includes('TANQUE MESTRE DIESEL') || String(m.categoria || '').toUpperCase() === 'DIESEL'));
+    const dataMov = m => String(m.criadoEm || m.data || '');
+    const lista = movs.sort((a, b) => dataMov(b).localeCompare(dataMov(a))).slice(0, 20);
+    if (!lista.length) { el.innerHTML = '<p class="tq-vazio">Nenhum abastecimento registrado.</p>'; return; }
+    const fmtR = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtD = m => { const d = String(m.data || m.criadoEm || '').slice(0, 10).split('-'); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : (m.dataHora || '-'); };
+    const totalL = lista.reduce((s, m) => s + Number(m.quantidade || 0), 0);
+    el.innerHTML = `<table class="tq-hist" data-no-column-resize="true">
+        <thead><tr><th>Data</th><th>Litros</th><th>R$/L</th><th>Total</th></tr></thead>
+        <tbody>${lista.map(m => `<tr title="${escapeHtmlEstoque(m.observacao || '')}"><td>${fmtD(m)}</td><td class="num">${Math.round(Number(m.quantidade || 0)).toLocaleString('pt-BR')} L</td><td class="num">${fmtR(m.unitario)}</td><td class="num"><b>${fmtR(m.total || Number(m.quantidade || 0) * Number(m.unitario || 0))}</b></td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>${lista.length} abastec.</td><td class="num">${Math.round(totalL).toLocaleString('pt-BR')} L</td><td></td><td></td></tr></tfoot>
+      </table>`;
+}
 
 window.salvarCapacidadeTanqueDieselEstoque = function() {
     const input = document.getElementById('dieselTankCapacityInput');
