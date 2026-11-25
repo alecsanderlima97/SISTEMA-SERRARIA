@@ -3429,7 +3429,58 @@ window.limparFinanceiroForm = function() {
     atualizarClassificacaoFinanceiraUI({ tipo: '', descricao: '', conferenciaStatus: 'conferido' });
 };
 
+// Previsão do que ainda vai ser pago: contas em aberto com vencimento nos próximos N dias
+// (escolhidos pelo usuário), mais o que já está atrasado. Conta só o que gera cobrança
+// (boletos/contas), para não somar nota e boleto do mesmo gasto.
+let financeiroPrevisaoDias = (() => { try { return Number(localStorage.getItem('orquestra_fin_previsao_dias')) || 7; } catch (_) { return 7; } })();
+function renderPrevisaoFinanceiro() {
+    const corpo = document.getElementById('financeiroPrevisaoCorpo');
+    if (!corpo) return;
+    document.querySelectorAll('[data-prev-dias]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.prevDias) === financeiroPrevisaoDias)));
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hojeIso = iso(hoje);
+    const fim = new Date(hoje); fim.setDate(fim.getDate() + financeiroPrevisaoDias);
+    const fimIso = iso(fim);
+    const abertos = obterLancamentosFinanceiros().filter(i => !i.pago && financeiroGeraCobranca(i) && Number(i.valor || 0) > 0 && i.vencimento);
+    const atrasados = abertos.filter(i => i.vencimento < hojeIso);
+    const proximos = abertos.filter(i => i.vencimento >= hojeIso && i.vencimento <= fimIso).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+    const soma = l => l.reduce((s, i) => s + Number(i.valor || 0), 0);
+    const totalProx = soma(proximos), totalAtr = soma(atrasados);
+    // agrupa por semana (ou por dia quando o período é de 7 dias)
+    const grupos = new Map();
+    proximos.forEach(i => {
+        const d = new Date(i.vencimento + 'T12:00:00');
+        let chave, rotulo;
+        if (financeiroPrevisaoDias <= 7) { chave = i.vencimento; rotulo = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); }
+        else { const ini = new Date(d); ini.setDate(d.getDate() - ((d.getDay() + 6) % 7)); chave = iso(ini); const f = new Date(ini); f.setDate(ini.getDate() + 6); rotulo = `Semana ${ini.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${f.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`; }
+        const g = grupos.get(chave) || { rotulo, total: 0, qtd: 0 }; g.total += Number(i.valor || 0); g.qtd++; grupos.set(chave, g);
+    });
+    const maxG = Math.max(1, ...[...grupos.values()].map(g => g.total));
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const dataBR = v => new Date(v + 'T12:00:00').toLocaleDateString('pt-BR');
+    const diasAte = v => Math.round((new Date(v + 'T12:00:00') - hoje) / 86400000);
+    corpo.innerHTML = `
+      <div class="fin-prev-kpis">
+        <div><small>A pagar nos próximos ${financeiroPrevisaoDias} dias</small><b>${formatarMoeda(totalProx)}</b><small>${proximos.length} conta(s)</small></div>
+        <div class="${totalAtr > 0 ? 'atrasado' : ''}"><small>Já atrasado</small><b>${formatarMoeda(totalAtr)}</b><small>${atrasados.length} conta(s)</small></div>
+        <div><small>Total a desembolsar (atrasado + período)</small><b>${formatarMoeda(totalProx + totalAtr)}</b></div>
+      </div>
+      ${grupos.size ? `<div class="fin-prev-barras">${[...grupos.values()].map(g => `<div class="fin-prev-barra"><span>${esc(g.rotulo)}</span><div><i style="width:${Math.max(3, g.total / maxG * 100).toFixed(1)}%"></i></div><b>${formatarMoeda(g.total)}</b><small>${g.qtd}</small></div>`).join('')}</div>` : ''}
+      ${proximos.length ? `<div class="fin-prev-lista"><table data-no-column-resize="true"><thead><tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th></tr></thead><tbody>
+        ${proximos.map(i => { const d = diasAte(i.vencimento); return `<tr><td>${dataBR(i.vencimento)}<small>${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} dias`}</small></td><td><b>${esc(i.descricao || '-')}</b></td><td><small>${esc(i.tipo || '-')}</small></td><td class="num">${formatarMoeda(i.valor)}</td></tr>`; }).join('')}
+      </tbody></table></div>` : `<p class="fin-prev-vazio">Nenhuma conta em aberto vencendo nos próximos ${financeiroPrevisaoDias} dias.</p>`}`;
+}
+document.addEventListener('click', e => {
+    const b = e.target.closest('[data-prev-dias]');
+    if (!b) return;
+    financeiroPrevisaoDias = Number(b.dataset.prevDias) || 7;
+    try { localStorage.setItem('orquestra_fin_previsao_dias', String(financeiroPrevisaoDias)); } catch (_) { /* sem armazenamento */ }
+    renderPrevisaoFinanceiro();
+});
+
 window.renderFinanceiro = function() {
+    try { renderPrevisaoFinanceiro(); } catch (err) { console.error('Previsão financeira', err); }
     const tbody = document.getElementById('financeiroLista');
     if (!tbody) return;
 
