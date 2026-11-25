@@ -97,6 +97,118 @@ ${c.obs ? `<div class="box" style="margin-top:12px"><b>Observações:</b> ${esc(
     salvarHistorico('impressão');
 };
 
+function baixarArquivo(nome, conteudo, tipo) {
+    const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: nome });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const nomeArquivo = (c, ext) => `pedido-compra${c.numero ? '-' + c.numero : ''}${c.fornecedor ? '-' + c.fornecedor : ''}`.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9-]+/g, '-').toLowerCase().replace(/-+/g, '-') + '.' + ext;
+
+// Formulário que o fornecedor abre no celular/computador, preenche os preços (o total soma sozinho)
+// e devolve pelo WhatsApp ou salva em PDF. Arquivo único, funciona sem internet.
+window.pcBaixarFormulario = function() {
+    if (!validar()) return;
+    const e = window.dadosSerrariaEmitente || {};
+    const c = dadosCabecalho();
+    const itensJs = linhasPedido().map(x => ({ nome: x.i.nome, cod: x.i.codigoProduto || '', qtd: Number(x.qtd), un: unidade(x.i), obs: x.obs || '' }));
+    const zap = (String(e.contato || '').match(/\d/g) || []).join('');
+    const zapNum = zap.length >= 10 ? (zap.startsWith('55') ? zap : '55' + zap) : '';
+    const dados = { empresa: e.nome || e.nomeFantasia || '', fantasia: e.nomeFantasia || '', cnpj: e.cnpj || '', end: [e.logradouro, e.numero].filter(Boolean).join(', ') + (e.cidade ? ' · ' + e.cidade : ''), contato: e.contato || '', email: e.email || '', zap: zapNum,
+        numero: c.numero, fornecedor: c.fornecedor, prazo: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '', obs: c.obs, data: new Date().toLocaleDateString('pt-BR'), itens: itensJs };
+    const json = JSON.stringify(dados).replace(/</g, '\\u003c');
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orçamento - ${esc(dados.fantasia || dados.empresa)}</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937;background:#f4f1ea}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #e5dccb;border-radius:12px;padding:16px;margin-bottom:12px}
+h1{font-size:20px;margin:0 0 2px}small,.muted{color:#64748b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;text-transform:uppercase;color:#475569}
+input,textarea{font:inherit;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;width:100%}
+input:focus,textarea:focus{outline:3px solid #99f6e4;border-color:#0f766e}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 110px 130px 120px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #f1ece1}
+.item:last-child{border-bottom:0}.item b{display:block}.qtd{text-align:right;white-space:nowrap}.tot{text-align:right;font-weight:800;white-space:nowrap}
+.head{font-size:11px;text-transform:uppercase;color:#64748b;font-weight:700;padding-bottom:6px;border-bottom:2px solid #e5dccb}
+.total{display:flex;justify-content:space-between;font-size:18px;font-weight:800;margin-top:10px}
+.acoes{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
+.zap{background:#16a34a;color:#fff}.pdf{background:#1f2937;color:#fff}
+.aviso{color:#b91c1c;font-weight:600;min-height:1.2em}
+@media(max-width:640px){.item{grid-template-columns:1fr 1fr}.item>div:first-child{grid-column:1/-1}.head{display:none}.qtd,.tot{text-align:left}}
+@media print{body{background:#fff}.acoes,.aviso,.dica{display:none}.card{border:0;padding:6px 0}input,textarea{border:0;padding:0}}
+</style></head><body><div class="wrap">
+<div class="card"><h1>Orçamento solicitado${dados.numero ? ' · Pedido nº ' + esc(dados.numero) : ''}</h1>
+<div><b>${esc(dados.empresa)}</b>${dados.cnpj ? ' · CNPJ ' + esc(dados.cnpj) : ''}</div>
+<small>${esc(dados.end)}${dados.contato ? ' · ' + esc(dados.contato) : ''}${dados.email ? ' · ' + esc(dados.email) : ''}</small>
+<p class="muted" style="margin:8px 0 0">Data: ${esc(dados.data)}${dados.prazo ? ' · Precisamos receber até ' + esc(dados.prazo) : ''}${dados.obs ? '<br>Obs.: ' + esc(dados.obs) : ''}</p>
+<p class="dica" style="margin:10px 0 0;padding:8px 10px;background:#ecfdf5;border-radius:8px">Preencha o <b>preço unitário</b> de cada item e os dados abaixo. O total é calculado sozinho. Depois toque em <b>Enviar resposta pelo WhatsApp</b>.</p></div>
+<div class="card"><div class="grid">
+<label>Empresa (fornecedor)<input id="forn" value="${esc(dados.fornecedor)}" autocomplete="organization"></label>
+<label>Vendedor / contato<input id="vend" autocomplete="name"></label>
+<label>Prazo de entrega<input id="prazo" placeholder="Ex.: 5 dias úteis"></label>
+<label>Condição de pagamento<input id="pagto" placeholder="Ex.: 28 dias boleto"></label>
+<label>Validade da proposta<input id="valid" placeholder="Ex.: 10 dias"></label>
+<label>Frete<input id="frete" placeholder="CIF / FOB / valor"></label>
+</div></div>
+<div class="card"><div class="item head"><div>Item</div><div class="qtd">Quantidade</div><div>Preço unit. (R$)</div><div class="tot">Total</div></div><div id="itens"></div>
+<div class="total"><span>Total geral</span><span id="totalGeral">R$ 0,00</span></div>
+<label style="margin-top:12px">Observações do fornecedor<textarea id="obsf" rows="2"></textarea></label></div>
+<p class="aviso" id="aviso" role="status"></p>
+<div class="acoes"><button class="zap" id="btnZap">Enviar resposta pelo WhatsApp</button><button class="pdf" onclick="window.print()">Salvar em PDF / imprimir</button></div>
+</div>
+<script>
+const D=${json};
+const fmt=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const num=s=>{s=String(s||'').trim();if(!s)return 0;s=s.replace(/[^0-9,.-]/g,'');if(s.includes(','))s=s.replace(/\\./g,'').replace(',','.');return Number(s)||0};
+const box=document.getElementById('itens');
+box.innerHTML=D.itens.map((it,i)=>'<div class="item"><div><b>'+it.nome.replace(/[<&>]/g,'')+'</b>'+(it.cod?'<small>Cód. '+it.cod.replace(/[<&>]/g,'')+'</small> ':'')+(it.obs?'<small>'+it.obs.replace(/[<&>]/g,'')+'</small>':'')+'</div><div class="qtd">'+it.qtd.toLocaleString('pt-BR')+' '+it.un+'</div><div><input inputmode="decimal" data-i="'+i+'" class="preco" placeholder="0,00" aria-label="Preço unitário de '+it.nome.replace(/"/g,'')+'"></div><div class="tot" id="t'+i+'">—</div></div>').join('');
+function calc(){let g=0;document.querySelectorAll('.preco').forEach(inp=>{const i=+inp.dataset.i,p=num(inp.value),t=p*D.itens[i].qtd;g+=t;document.getElementById('t'+i).textContent=p?fmt(t):'—'});document.getElementById('totalGeral').textContent=fmt(g);return g}
+box.addEventListener('input',calc);
+document.getElementById('btnZap').onclick=()=>{
+ const v=id=>document.getElementById(id).value.trim();
+ const precos=[...document.querySelectorAll('.preco')].map(x=>num(x.value));
+ if(!precos.some(p=>p>0)){document.getElementById('aviso').textContent='Informe o preço de pelo menos um item.';return}
+ const g=calc();
+ const linhas=D.itens.map((it,i)=>(i+1)+'. '+it.nome+' — '+it.qtd.toLocaleString('pt-BR')+' '+it.un+' × '+(precos[i]?fmt(precos[i]):'sem preço')+(precos[i]?' = '+fmt(precos[i]*it.qtd):''));
+ const txt=['*ORÇAMENTO'+(D.numero?' – Pedido nº '+D.numero:'')+'*','Fornecedor: '+(v('forn')||'-')+(v('vend')?' ('+v('vend')+')':''),'',...linhas,'','*Total: '+fmt(g)+'*','Prazo de entrega: '+(v('prazo')||'-'),'Pagamento: '+(v('pagto')||'-'),'Validade: '+(v('valid')||'-'),'Frete: '+(v('frete')||'-'),v('obsf')?'Obs.: '+v('obsf'):''].filter(l=>l!==null).join('\\n');
+ window.open('https://wa.me/'+D.zap+'?text='+encodeURIComponent(txt),'_blank');
+};
+</script></body></html>`;
+    baixarArquivo(nomeArquivo(c, 'html'), html, 'text/html;charset=utf-8');
+    aviso('Formulário baixado. Envie esse arquivo ao fornecedor (WhatsApp ou e-mail): ele abre, preenche os preços e responde.', true);
+    salvarHistorico('formulário');
+};
+
+// Planilha que abre no Excel/LibreOffice/Google Planilhas com coluna de preço e total com fórmula.
+window.pcBaixarPlanilha = function() {
+    if (!validar()) return;
+    const e = window.dadosSerrariaEmitente || {};
+    const c = dadosCabecalho();
+    const linhas = linhasPedido();
+    const ini = 8;
+    const xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles><Style ss:ID="t"><Font ss:Bold="1" ss:Size="14"/></Style><Style ss:ID="h"><Font ss:Bold="1"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/></Style>
+<Style ss:ID="m"><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/></Style><Style ss:ID="p"><NumberFormat ss:Format="&quot;R$&quot; #,##0.00"/><Interior ss:Color="#FEF9C3" ss:Pattern="Solid"/></Style></Styles>
+<Worksheet ss:Name="Orçamento"><Table><Column ss:Width="30"/><Column ss:Width="260"/><Column ss:Width="70"/><Column ss:Width="40"/><Column ss:Width="100"/><Column ss:Width="110"/><Column ss:Width="200"/>
+<Row><Cell ss:StyleID="t"><Data ss:Type="String">PEDIDO DE ORÇAMENTO${c.numero ? ' Nº ' + esc(c.numero) : ''}</Data></Cell></Row>
+<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">${esc(e.nome || '')} ${e.cnpj ? '· CNPJ ' + esc(e.cnpj) : ''} · ${esc(e.contato || '')} ${esc(e.email || '')}</Data></Cell></Row>
+<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">Data: ${new Date().toLocaleDateString('pt-BR')}${c.prazo ? ' · Entrega até ' + new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : ''}${c.obs ? ' · ' + esc(c.obs) : ''}</Data></Cell></Row>
+<Row><Cell><Data ss:Type="String">Fornecedor:</Data></Cell><Cell><Data ss:Type="String">${esc(c.fornecedor)}</Data></Cell></Row>
+<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">Preencha a coluna amarela (preço unitário). O total calcula sozinho.</Data></Cell></Row>
+<Row/>
+<Row>${['#', 'Item', 'Qtd', 'Un', 'Preço unit.', 'Total', 'Obs.'].map(h => `<Cell ss:StyleID="h"><Data ss:Type="String">${h}</Data></Cell>`).join('')}</Row>
+${linhas.map((x, n) => `<Row><Cell><Data ss:Type="Number">${n + 1}</Data></Cell><Cell><Data ss:Type="String">${esc(x.i.nome)}</Data></Cell><Cell><Data ss:Type="Number">${Number(x.qtd)}</Data></Cell><Cell><Data ss:Type="String">${esc(unidade(x.i))}</Data></Cell><Cell ss:StyleID="p"/><Cell ss:StyleID="m" ss:Formula="=RC[-3]*RC[-1]"><Data ss:Type="Number">0</Data></Cell><Cell><Data ss:Type="String">${esc(x.obs || '')}</Data></Cell></Row>`).join('')}
+<Row><Cell/><Cell ss:StyleID="h"><Data ss:Type="String">TOTAL</Data></Cell><Cell/><Cell/><Cell/><Cell ss:StyleID="m" ss:Formula="=SUM(R${ini}C:R${ini + linhas.length - 1}C)"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row/>${['Prazo de entrega:', 'Condição de pagamento:', 'Validade da proposta:', 'Frete:'].map(t => `<Row><Cell/><Cell><Data ss:Type="String">${t}</Data></Cell><Cell ss:StyleID="p" ss:MergeAcross="2"/></Row>`).join('')}
+</Table></Worksheet></Workbook>`;
+    baixarArquivo(nomeArquivo(c, 'xls'), xml, 'application/vnd.ms-excel');
+    aviso('Planilha baixada. O fornecedor preenche a coluna amarela e devolve.', true);
+    salvarHistorico('planilha');
+};
+
 window.pcWhatsApp = function() {
     if (!validar()) return;
     const tel = (dadosCabecalho().contato.match(/\d/g) || []).join('');
@@ -187,8 +299,10 @@ function instalar() {
         <div id="pcLista" class="pc-lista"></div>
         <p id="pcAviso" class="pc-aviso" role="status" aria-live="polite"></p>
         <div class="pc-enviar">
-          <button type="button" class="btn-primary" onclick="window.pcWhatsApp()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar por WhatsApp</button>
-          <button type="button" class="btn-primary" onclick="window.pcEmail()"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Enviar por e-mail</button>
+          <button type="button" class="btn-primary" onclick="window.pcBaixarFormulario()" title="Arquivo que o fornecedor abre, preenche os preços e responde pelo WhatsApp"><i class="fa-solid fa-file-pen" aria-hidden="true"></i> Formulário para o fornecedor preencher</button>
+          <button type="button" class="btn-secondary" onclick="window.pcBaixarPlanilha()"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Planilha Excel</button>
+          <button type="button" class="btn-secondary" onclick="window.pcWhatsApp()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar texto por WhatsApp</button>
+          <button type="button" class="btn-secondary" onclick="window.pcEmail()"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Enviar por e-mail</button>
           <button type="button" class="btn-secondary" onclick="window.pcImprimir()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir / PDF</button>
           <button type="button" class="btn-secondary" onclick="window.pcCopiar()"><i class="fa-solid fa-copy" aria-hidden="true"></i> Copiar texto</button>
         </div>
