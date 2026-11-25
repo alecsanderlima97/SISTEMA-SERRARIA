@@ -263,6 +263,17 @@ function renderDashboardView(view) {
     dashboardViewAtual = view || 'madeira';
     marcarKpiAtivo(dashboardViewAtual);
     window.renderAnaliseMadeiraDashboard?.(dashboardViewAtual === 'madeira' ? dadosPeriodo('romaneios') : null, dashboardData.romaneios, getPeriodoLabel());
+    window.renderAnaliseDashboardExtra?.(dashboardViewAtual, {
+        periodo: getDashboardPeriodoSelecionado(),
+        periodoLabel: getPeriodoLabel(),
+        entradas: dadosPeriodo('entradas'),
+        subprodutos: dadosPeriodo('subprodutos'),
+        subprodutosTodos: dashboardData.subprodutos,
+        romaneios: dadosPeriodo('romaneios'),
+        despesas: ['despesas', 'financeiro'].includes(dashboardViewAtual) ? calcularDespesasDetalhadasPeriodo() : null,
+        estoque: dashboardViewAtual === 'estoque' ? (dashboardData.estoque.length ? dashboardData.estoque : JSON.parse(localStorage.getItem('orquestra_estoque') || '[]')) : [],
+        itensAcabando: dashboardViewAtual === 'estoque' ? getItensAlmoxarifadoAcabando() : []
+    });
     if (view === 'subprodutos') {
         renderLineChart('Cavaco/Po por dia', agruparSubprodutosPorDia(), 'm3');
         renderBarChart('Volume por tipo de subproduto', agruparSubprodutosPorTipo(), 'm3');
@@ -294,7 +305,7 @@ function renderDashboardView(view) {
     if (view === 'despesas') {
         const detalhes = calcularDespesasDetalhadasPeriodo();
         renderBarChart('Despesas por origem', detalhes.porOrigem, 'brl');
-        renderLineChart('Despesas por origem no periodo', detalhes.porOrigem, 'brl');
+        renderLineChart('Despesas por dia', agruparDespesasPorMes(), 'brl');
         renderResumoDespesasDashboard(detalhes);
         return;
     }
@@ -302,7 +313,7 @@ function renderDashboardView(view) {
     if (view === 'estoque') {
         const itens = getItensAlmoxarifadoAcabando();
         renderBarChart('Itens acabando no estoque', agruparItensAcabando(itens), 'num');
-        renderLineChart('Itens abaixo do minimo', agruparItensAcabando(itens), 'num');
+        renderLineChart('Itens abaixo do mínimo por categoria', itens.reduce((acc, i) => addGroup(acc, i.categoria || 'Sem categoria', 1), {}), 'num');
         renderResumoEstoqueAcabando(itens);
         return;
     }
@@ -728,7 +739,8 @@ function obterFontesDespesasFinanceiras(inicio, fim) {
             data: normalizarDataISO(item, ['vencimento', 'dataCompetencia', 'dataEmissao', 'data', 'criadoEm']),
             valor: Number(item.valor || 0),
             origem: 'financeiro',
-            origemId: item.id || item.chave || ''
+            origemId: item.id || item.chave || '',
+            descricao: item.descricao || item.tipo || 'Lançamento'
         });
     });
 
@@ -741,7 +753,8 @@ function obterFontesDespesasFinanceiras(inicio, fim) {
             categoria: 'Pagamento funcionarios',
             data: inicio || fim || '',
             valor: folha,
-            origem: 'funcionarios'
+            origem: 'funcionarios',
+            descricao: 'Salários dos funcionários ativos no mês'
         });
     }
 
@@ -755,7 +768,8 @@ function obterFontesDespesasFinanceiras(inicio, fim) {
                 data,
                 valor: calcularValorHoraExtra(funcionario, horaExtra),
                 origem: 'funcionarios',
-                origemId: horaExtra.id || ''
+                origemId: horaExtra.id || '',
+                descricao: `Hora extra · ${funcionario.nome || ''}`
             });
         });
     });
@@ -774,7 +788,8 @@ function obterFontesDespesasFinanceiras(inicio, fim) {
                 data,
                 valor: totalEmpreiteiro,
                 origem: 'entradas',
-                origemId: entradaId
+                origemId: entradaId,
+                descricao: `Tora · ${entrada.empreiteiroNome || entrada.fornecedor || ''}`
             });
         }
 
@@ -786,7 +801,8 @@ function obterFontesDespesasFinanceiras(inicio, fim) {
                 data,
                 valor: totalDescarga,
                 origem: 'entradas',
-                origemId: entradaId
+                origemId: entradaId,
+                descricao: `Descarregamento · ${entrada.empreiteiroNome || entrada.fornecedor || ''}`
             });
         }
     });
@@ -840,13 +856,13 @@ function agruparFaturamentoRealPorMes() {
 }
 
 function renderResumoFinanceiroDashboard() {
-    const resumo = getResumoFinanceiroLocal();
+    const despesas = calcularDespesasDetalhadasPeriodo().total;
     const faturamento = dadosPeriodo('romaneios').reduce((acc, r) => acc + (Number(r.financeiro?.totalGeral) || 0), 0)
         + dadosPeriodo('subprodutos').reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     setResumo(
         `Faturamento: ${formatBRL(faturamento)}`,
-        `Despesas gerais: ${formatBRL(resumo.despesas)}`,
-        `Comparativo: ${formatBRL(faturamento - resumo.despesas)}`
+        `Despesas: ${formatBRL(despesas)}`,
+        `Resultado: ${formatBRL(faturamento - despesas)}`
     );
 }
 
@@ -936,7 +952,19 @@ function topList(obj, formatter) {
     return items.length ? items.map(([k, v]) => `${k}: ${formatter(v)}`).join(' | ') : '-';
 }
 
+const ROTULOS_RESUMO = {
+    madeira: ['Maior carga', 'Dia mais vendido', 'Mais vendidas'],
+    toras: ['Maior carga de tora', 'Dia com mais entrada', 'Empreiteiros que mais entregaram'],
+    subprodutos: ['Maior venda', 'Por mês', 'Mais vendidos'],
+    rendimento: ['Rendimento madeira', 'Rendimento subproduto', 'Base de cálculo'],
+    financeiro: ['Faturamento', 'Despesas', 'Resultado'],
+    despesas: ['Total de despesas', 'Maiores origens', 'Demais origens'],
+    estoque: ['Itens abaixo do mínimo', 'Mais críticos', 'O que fazer']
+};
+
 function setResumo(maiorCarga, melhorDia, madeiras) {
+    const rotulos = ROTULOS_RESUMO[dashboardViewAtual] || ROTULOS_RESUMO.madeira;
+    document.querySelectorAll('#dashboardResumoAnalitico > div > small').forEach((el, i) => { if (rotulos[i]) el.textContent = rotulos[i]; });
     setText('dash-resumo-maior-carga', maiorCarga);
     setText('dash-resumo-melhor-dia', melhorDia);
     setText('dash-resumo-madeiras', madeiras);
