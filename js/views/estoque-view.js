@@ -185,8 +185,8 @@
                             </div>
                             
                             <div style="display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 16px; align-items: end; margin: 8px 0;">
-                                <div style="display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: stretch;">
-                                    <div style="height: 190px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 2px 0;">
+                                <div class="tq-diesel" aria-hidden="true">
+                                    <div class="tq-escala">
                                         <span id="dieselScaleMax">5000</span>
                                         <span id="dieselScale80">4000</span>
                                         <span id="dieselScale60">3000</span>
@@ -194,11 +194,15 @@
                                         <span id="dieselScale20">1000</span>
                                         <span>0</span>
                                     </div>
-                                    <div style="height: 190px; border-left: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(to top, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px); position: relative;">
-                                        <div id="dieselLiquidLevel" style="position: absolute; bottom: 0; left: 26%; width: 56%; height: 0%; min-height: 2px; background: repeating-linear-gradient(to top, #f97316 0 2px, #fff7ed 2px 3px, #fb923c 3px 5px); border: 1px solid rgba(249,115,22,0.95); box-shadow: 0 0 16px rgba(249,115,22,0.45); transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden;">
-                                            <div style="position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); animation: waveAnim 2.2s infinite linear;"></div>
+                                    <div class="tq-corpo">
+                                        <div class="tq-bocal"></div>
+                                        <div class="tq-cilindro">
+                                            <div class="tq-faixas"></div>
+                                            <div id="dieselLiquidLevel" class="tq-liquido" style="height:0%;"><div class="tq-onda"></div></div>
+                                            <div id="dieselLevelNumber" class="tq-nivel" style="bottom:0%;">0</div>
+                                            <span class="tq-rotulo">DIESEL</span>
                                         </div>
-                                        <div id="dieselLevelNumber" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0%; color: #16a34a; font-size: 0.78rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.45); transition: bottom 1s cubic-bezier(0.4, 0, 0.2, 1);">0</div>
+                                        <div class="tq-base"><i></i><i></i></div>
                                     </div>
                                 </div>
 
@@ -244,6 +248,10 @@
                             <button type="button" class="btn-primary" onclick="window.abrirModalReabastecerTanqueEstoque()" style="width:100%; padding:12px 16px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:800;">
                                 <i class="fa-solid fa-gas-pump"></i> Reabastecer Tanque
                             </button>
+                            <div class="tq-historico">
+                                <h4><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Histórico de abastecimento do tanque</h4>
+                                <div id="dieselHistoricoAbastecimento" class="tq-hist-lista"><p class="tq-vazio">Nenhum abastecimento registrado.</p></div>
+                            </div>
                         </div>
 
                         <!-- SIMULADORES DE LUBRIFICANTES (CONVERSÃO DE BALDES 20L) -->
@@ -254,7 +262,8 @@
                                 </h3>
                             </div>
                             
-                            <div style="display: flex; flex-direction: column; gap: 15px;" id="containerLubrificantesTanques">
+                            <input type="search" id="buscaLubrificantesTanques" class="tq-lub-busca" placeholder="Buscar lubrificante..." aria-label="Buscar lubrificante" oninput="window.renderSimuladores && window.renderSimuladores()">
+                            <div class="tq-lub-lista" id="containerLubrificantesTanques">
                                 <!-- Gerado dinamicamente via JS -->
                             </div>
 

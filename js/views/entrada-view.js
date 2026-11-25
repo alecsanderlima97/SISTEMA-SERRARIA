@@ -409,6 +409,7 @@
                                             </select>
                                             <input type="text" id="buscaFechamentoExtracao" placeholder="Buscar pasta..." style="height:34px; width:170px; border-radius:7px; padding:0 10px;">
                                             <button type="button" id="btnAtualizarFechamentosExtracao" class="btn-secondary" style="height:34px; padding:0 12px;"><i class="fa-solid fa-rotate"></i></button>
+                                            <button type="button" class="btn-primary" onclick="window.quitarTodosFechamentosExtracaoPix && window.quitarTodosFechamentosExtracaoPix()" style="height:34px; padding:0 12px;" title="Registra o pagamento do saldo de todos os fechamentos em aberto como PIX"><i class="fa-brands fa-pix" aria-hidden="true"></i> Quitar todos (PIX)</button>
                                         </div>
                                     </div>
                                     <div id="listaFechamentosSalvosExtracao" class="fechamentos-salvos-lista">

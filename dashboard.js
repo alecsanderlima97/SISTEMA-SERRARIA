@@ -262,6 +262,7 @@ function bindKpiClicks() {
 function renderDashboardView(view) {
     dashboardViewAtual = view || 'madeira';
     marcarKpiAtivo(dashboardViewAtual);
+    window.renderAnaliseMadeiraDashboard?.(dashboardViewAtual === 'madeira' ? dadosPeriodo('romaneios') : null, dashboardData.romaneios, getPeriodoLabel());
     if (view === 'subprodutos') {
         renderLineChart('Cavaco/Po por dia', agruparSubprodutosPorDia(), 'm3');
         renderBarChart('Volume por tipo de subproduto', agruparSubprodutosPorTipo(), 'm3');
