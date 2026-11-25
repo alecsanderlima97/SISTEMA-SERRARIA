@@ -1623,3 +1623,4 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 .pc-hist { border: 1px solid #e5dccb; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; background: #fffdf7; color: #1f2937; font-size: .85rem; }
 .pc-hist ul { margin: 6px 0 0 18px; padding: 0; }
 @media (max-width: 700px) { .pc-item { grid-template-columns: 28px minmax(0, 1fr) 80px 30px; } .pc-obs { grid-column: 2 / -1; } }
+.pc-mini { height: 36px; padding: 0 12px; font-size: .84rem; }
