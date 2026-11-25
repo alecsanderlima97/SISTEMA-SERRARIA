@@ -240,14 +240,30 @@ window.pcLimpar = function() {
 };
 window.pcSugerirBaixos = function() { sugerirBaixos(); renderLista(); };
 
+function itensFiltrados() {
+    const b = st.busca.toUpperCase();
+    return itens()
+        .filter(i => st.categoria === 'TODAS' || i.categoria === st.categoria)
+        .filter(i => !b || String(i.nome).toUpperCase().includes(b) || String(i.codigoProduto || '').toUpperCase().includes(b))
+        .filter(i => !st.soBaixos || baixo(i));
+}
+const qtdSugerida = i => Math.max(Math.ceil(minimo(i) - Number(i?.quantidade || 0)), 1);
+
+// Marca todos os itens que estão aparecendo (respeita busca, categoria e "só no mínimo").
+window.pcMarcarTodos = function() {
+    itensFiltrados().forEach(i => { if (!st.sel.has(i.id)) st.sel.set(i.id, { qtd: qtdSugerida(i), obs: '' }); });
+    renderLista();
+};
+window.pcDesmarcarTodos = function() {
+    const visiveis = new Set(itensFiltrados().map(i => i.id));
+    [...st.sel.keys()].forEach(id => { if (visiveis.has(id)) st.sel.delete(id); });
+    renderLista();
+};
+
 function renderLista() {
     const box = document.getElementById('pcLista');
     if (!box) return;
-    const b = st.busca.toUpperCase();
-    const lista = itens()
-        .filter(i => st.categoria === 'TODAS' || i.categoria === st.categoria)
-        .filter(i => !b || String(i.nome).toUpperCase().includes(b) || String(i.codigoProduto || '').toUpperCase().includes(b))
-        .filter(i => !st.soBaixos || baixo(i))
+    const lista = itensFiltrados()
         .sort((x, y) => Number(st.sel.has(y.id)) - Number(st.sel.has(x.id)) || Number(baixo(y)) - Number(baixo(x)) || String(x.nome).localeCompare(String(y.nome), 'pt-BR'));
     box.innerHTML = lista.length ? lista.map(i => {
         const s = st.sel.get(i.id);
@@ -294,6 +310,8 @@ function instalar() {
           <input type="search" id="pcBusca" placeholder="Buscar item..." aria-label="Buscar item">
           <select id="pcCategoria" aria-label="Categoria"><option value="TODAS">Todas as categorias</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select>
           <label class="pc-so-baixos"><input type="checkbox" id="pcSoBaixos"> Só itens no mínimo</label>
+          <button type="button" class="btn-secondary pc-mini" onclick="window.pcMarcarTodos()"><i class="fa-solid fa-square-check" aria-hidden="true"></i> Marcar todos</button>
+          <button type="button" class="btn-secondary pc-mini" onclick="window.pcDesmarcarTodos()"><i class="fa-regular fa-square" aria-hidden="true"></i> Desmarcar todos</button>
           <strong id="pcContagem"></strong>
         </div>
         <div id="pcLista" class="pc-lista"></div>
