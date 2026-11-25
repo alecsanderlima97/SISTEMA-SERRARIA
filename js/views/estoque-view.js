@@ -26,7 +26,13 @@
                     <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('nota-fiscal')" id="btnTabEstoqueNotaFiscal" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                         <i class="fa-solid fa-file-invoice"></i> Importar NF
                     </button>
+                    <button type="button" class="btn-tab-estoque" onclick="window.switchTabEstoque('compras')" id="btnTabEstoqueCompras" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fa-solid fa-cart-shopping"></i> Pedido de Compra
+                    </button>
                 </div>
+
+                <!-- SUB-VIEW: PEDIDO DE COMPRA -->
+                <div id="subview-estoque-compras" class="subview-estoque-section" style="display: none;"></div>
 
                 <!-- SUB-VIEW: IMPORTAÇÃO DE NOTA FISCAL -->
                 <div id="subview-estoque-nota-fiscal" class="subview-estoque-section" style="display: none;">
