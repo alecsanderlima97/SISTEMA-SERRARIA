@@ -1582,3 +1582,14 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 .dm-sem { color: #94a3b8; }
 .dm-btn { margin-top: 10px; }
 .dm-aviso { margin: 0 0 8px; padding: 6px 9px; border-radius: 6px; background: #fff7ed; color: #9a3412; font-size: .8rem; }
+.dm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.dm-kpis > div { background: #fffdf7; border: 1px solid #e5dccb; border-radius: 10px; padding: 10px 12px; color: #1f2937; }
+.dm-kpis small { display: block; color: #64748b; font-size: .74rem; }
+.dm-kpis b { font-size: .98rem; }
+.dm-sub { margin: 16px 0 8px; font-size: .92rem; }
+.dm-pill { display: inline-block; margin: 0 6px 4px 0; padding: 3px 8px; border-radius: 99px; background: #f1ece1; font-size: .76rem; white-space: nowrap; }
+.dm-pill .dm-dif { display: inline; margin-left: 4px; }
+.dm-alerta { color: #b91c1c !important; font-weight: 700; }
+.dm-ok { color: #15803d; }
+.dm-tabela tfoot td, .dm-linha-total td { border-top: 2px solid #e5dccb; background: #faf6ec; }
+#dashboardAnaliseExtra .dm-tabela-wrap { background: #fffdf7; border: 1px solid #e5dccb; border-radius: 10px; }
