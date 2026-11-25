@@ -9,7 +9,7 @@ const fmtR = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', cu
 const lerJSON = (k, pad) => { try { return JSON.parse(localStorage.getItem(k) || '') ?? pad; } catch (_) { return pad; } };
 const gravarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* sem armazenamento */ } };
 
-const st = { sel: new Map(), busca: '', categoria: 'TODAS', soBaixos: false, iniciado: false };
+const st = { avulsos: [], sel: new Map(), busca: '', categoria: 'TODAS', soBaixos: false, iniciado: false };
 
 function itens() {
     return lerJSON('orquestra_estoque', []).filter(i => i && i.ativo !== false && i.nome);
@@ -28,7 +28,28 @@ function sugerirBaixos() {
 
 function linhasPedido() {
     const mapa = new Map(itens().map(i => [i.id, i]));
-    return [...st.sel.entries()].map(([id, s]) => ({ i: mapa.get(id), ...s })).filter(x => x.i && Number(x.qtd) > 0);
+    const doEstoque = [...st.sel.entries()].map(([id, s]) => ({ i: mapa.get(id), ...s })).filter(x => x.i && Number(x.qtd) > 0);
+    const avulsos = st.avulsos.map(a => ({ i: { id: a.id, nome: a.nome, unidadeCompra: a.un, categoria: 'NOVO' }, qtd: a.qtd, obs: a.obs }));
+    return [...doEstoque, ...avulsos];
+}
+
+// Itens que ainda não temos no estoque, só para pedir preço.
+window.pcAdicionarAvulso = function() {
+    const v = id => (document.getElementById(id)?.value || '').trim();
+    const nome = v('pcAvNome').toUpperCase(), qtd = Number(String(v('pcAvQtd')).replace(',', '.'));
+    if (!nome) { aviso('Informe o nome do item novo.'); document.getElementById('pcAvNome')?.focus(); return; }
+    if (!(qtd > 0)) { aviso('Informe a quantidade do item novo.'); document.getElementById('pcAvQtd')?.focus(); return; }
+    st.avulsos.push({ id: `novo_${Date.now()}`, nome, qtd, un: (v('pcAvUn') || 'UN').toUpperCase(), obs: v('pcAvObs') });
+    ['pcAvNome', 'pcAvQtd', 'pcAvObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    aviso('');
+    renderAvulsos(); renderLista();
+    document.getElementById('pcAvNome')?.focus();
+};
+window.pcRemoverAvulso = function(id) { st.avulsos = st.avulsos.filter(a => a.id !== id); renderAvulsos(); renderLista(); };
+function renderAvulsos() {
+    const el = document.getElementById('pcAvLista');
+    if (!el) return;
+    el.innerHTML = st.avulsos.map(a => `<div class="pc-item marcado pc-av"><span class="pc-tag">NOVO</span><div class="pc-nome"><b>${esc(a.nome)}</b><small>${a.obs ? esc(a.obs) : 'item fora do estoque'}</small></div><span class="pc-un">${fmtN(a.qtd)} ${esc(a.un)}</span><button type="button" class="pc-x" onclick="window.pcRemoverAvulso('${esc(a.id)}')" aria-label="Remover ${esc(a.nome)}">×</button></div>`).join('');
 }
 
 function dadosCabecalho() {
@@ -242,6 +263,8 @@ window.pcCopiar = async function() {
 
 window.pcLimpar = function() {
     st.sel.clear();
+    st.avulsos = [];
+    renderAvulsos();
     st.ref = '';
     ['pcFornecedor', 'pcContato', 'pcPrazo', 'pcObs', 'pcNumero'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     aviso('');
@@ -323,6 +346,18 @@ function instalar() {
           <button type="button" class="btn-secondary pc-mini" onclick="window.pcDesmarcarTodos()"><i class="fa-regular fa-square" aria-hidden="true"></i> Desmarcar todos</button>
           <strong id="pcContagem"></strong>
         </div>
+        <details class="pc-avulso" open>
+          <summary><i class="fa-solid fa-plus" aria-hidden="true"></i> Item que não temos no estoque (só para cotar)</summary>
+          <div class="pc-av-form">
+            <input id="pcAvNome" class="text-uppercase-input" placeholder="Nome do item (ex.: CORRENTE 3/4)" aria-label="Nome do item novo">
+            <input id="pcAvQtd" type="number" min="0" step="any" inputmode="decimal" placeholder="Qtd" aria-label="Quantidade">
+            <input id="pcAvUn" list="pcUnidades" placeholder="UN" aria-label="Unidade" value="UN">
+            <datalist id="pcUnidades"><option>UN</option><option>PC</option><option>CX</option><option>L</option><option>KG</option><option>M</option><option>GALÃO</option><option>BALDE</option><option>JOGO</option></datalist>
+            <input id="pcAvObs" placeholder="Marca, medida, modelo..." aria-label="Observação">
+            <button type="button" class="btn-primary" onclick="window.pcAdicionarAvulso()"><i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar</button>
+          </div>
+          <div id="pcAvLista" class="pc-lista"></div>
+        </details>
         <div id="pcLista" class="pc-lista"></div>
         <p id="pcAviso" class="pc-aviso" role="status" aria-live="polite"></p>
         <div class="pc-enviar">
@@ -342,6 +377,7 @@ function instalar() {
         <div id="pcComparativo" class="pc-comparativo"></div>
       </div>
       <div class="glass-panel pc-painel"><h4 class="dm-sub" style="margin-top:0">Pedidos enviados (neste computador)</h4><div id="pcHistorico"></div></div>`;
+    box.querySelector('.pc-av-form').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.pcAdicionarAvulso(); } });
     box.querySelector('#pcBusca').addEventListener('input', e => { st.busca = e.target.value.trim(); renderLista(); });
     box.querySelector('#pcCategoria').addEventListener('change', e => { st.categoria = e.target.value; renderLista(); });
     box.querySelector('#pcSoBaixos').addEventListener('change', e => { st.soBaixos = e.target.checked; renderLista(); });
