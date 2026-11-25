@@ -120,6 +120,13 @@
                             <p>Conferência de Carga de Tora</p>
                         </div>
                     </div>
+                    <div class="kpi-card glass-panel" data-dashboard-view="financeiro" title="Madeira serrada + cavaco/pó de serra no período">
+                        <div class="kpi-icon" style="color:#0f766e;"><i class="fa-solid fa-sack-dollar"></i></div>
+                        <div class="kpi-data">
+                            <h3 id="dash-faturamento-geral">R\$ 0,00</h3>
+                            <p>Faturamento Geral</p>
+                        </div>
+                    </div>
                     <div class="kpi-card glass-panel" data-dashboard-view="madeira">
                         <div class="kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
                         <div class="kpi-data">

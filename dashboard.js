@@ -165,6 +165,7 @@ function atualizarKpisDashboard(totalClientes = null) {
     setText('dash-entrada-toras', formatM3(volumeToras));
     setText('dash-faturamento-madeira', formatBRL(faturamentoMadeira));
     setText('dash-faturamento-sub', formatBRL(faturamentoSub));
+    setText('dash-faturamento-geral', formatBRL(faturamentoMadeira + faturamentoSub));
     setText('dash-despesas-mes', formatBRL(resumoFinanceiro.despesas));
     setText('dash-comparativo-financeiro', formatBRL(comparativoFinanceiro));
     setText('dash-volume-sub', formatM3(volumeSub));
