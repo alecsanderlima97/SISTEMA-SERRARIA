@@ -1624,3 +1624,17 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 .pc-hist ul { margin: 6px 0 0 18px; padding: 0; }
 @media (max-width: 700px) { .pc-item { grid-template-columns: 28px minmax(0, 1fr) 80px 30px; } .pc-obs { grid-column: 2 / -1; } }
 .pc-mini { height: 36px; padding: 0 12px; font-size: .84rem; }
+.pc-item.sem-qtd .pc-qtd { border: 2px solid #dc2626 !important; background: #fef2f2 !important; }
+.pc-h3 { margin: 0 0 6px; font-size: 1.02rem; }
+.pc-resposta { width: 100%; padding: 10px; border-radius: 8px; font: inherit; resize: vertical; }
+.pc-resp-aviso { font-weight: 600; color: #15803d; align-self: center; }
+.pc-comparativo { margin-top: 14px; }
+.pc-comp-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.pc-comp-topo select { height: 34px; border-radius: 8px; margin-left: 6px; }
+.pc-comp th small { display: block; font-weight: 400; text-transform: none; }
+.pc-comp td.pc-melhor { background: #dcfce7; color: #14532d !important; font-weight: 800; }
+.pc-x { border: 0; background: none; color: #b91c1c; font-weight: 800; cursor: pointer; padding: 0 4px; }
+.pc-melhor-comb { margin: 10px 0 0; padding: 8px 10px; background: #ecfdf5; border-radius: 8px; color: #14532d; }
+.pc-comparativo .dm-tabela-wrap { background: #fffdf7; border: 1px solid #e5dccb; border-radius: 10px; }
+.pc-comp tbody tr, .pc-comp thead tr { background: #fffdf7 !important; }
+.pc-comp-topo select { color: #1f2937; background: #fff; }

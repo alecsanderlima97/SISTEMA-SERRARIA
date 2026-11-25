@@ -54,7 +54,15 @@ function textoPedido() {
     ].filter((l, idx, arr) => l !== '' || (arr[idx - 1] !== '' && idx > 0)).join('\n');
 }
 
+// Código que liga a resposta do fornecedor a este pedido (para o comparativo).
+function refPedido() {
+    if (!st.ref) { const d = new Date(); st.ref = `PC-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`; }
+    return st.ref;
+}
+
 function validar() {
+    const semQtd = [...st.sel.values()].filter(x => !(Number(x.qtd) > 0)).length;
+    if (semQtd) { aviso(`${semQtd} item(ns) marcado(s) sem quantidade. Informe a quantidade (campo em vermelho) ou desmarque.`); return false; }
     if (!linhasPedido().length) { aviso('Marque pelo menos um item com quantidade.'); return false; }
     return true;
 }
@@ -115,7 +123,7 @@ window.pcBaixarFormulario = function() {
     const zap = (String(e.contato || '').match(/\d/g) || []).join('');
     const zapNum = zap.length >= 10 ? (zap.startsWith('55') ? zap : '55' + zap) : '';
     const dados = { empresa: e.nome || e.nomeFantasia || '', fantasia: e.nomeFantasia || '', cnpj: e.cnpj || '', end: [e.logradouro, e.numero].filter(Boolean).join(', ') + (e.cidade ? ' · ' + e.cidade : ''), contato: e.contato || '', email: e.email || '', zap: zapNum,
-        numero: c.numero, fornecedor: c.fornecedor, prazo: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '', obs: c.obs, data: new Date().toLocaleDateString('pt-BR'), itens: itensJs };
+        ref: refPedido(), numero: c.numero, fornecedor: c.fornecedor, prazo: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '', obs: c.obs, data: new Date().toLocaleDateString('pt-BR'), itens: itensJs };
     const json = JSON.stringify(dados).replace(/</g, '\\u003c');
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Orçamento - ${esc(dados.fantasia || dados.empresa)}</title>
@@ -172,7 +180,7 @@ document.getElementById('btnZap').onclick=()=>{
  if(!precos.some(p=>p>0)){document.getElementById('aviso').textContent='Informe o preço de pelo menos um item.';return}
  const g=calc();
  const linhas=D.itens.map((it,i)=>(i+1)+'. '+it.nome+' — '+it.qtd.toLocaleString('pt-BR')+' '+it.un+' × '+(precos[i]?fmt(precos[i]):'sem preço')+(precos[i]?' = '+fmt(precos[i]*it.qtd):''));
- const txt=['*ORÇAMENTO'+(D.numero?' – Pedido nº '+D.numero:'')+'*','Fornecedor: '+(v('forn')||'-')+(v('vend')?' ('+v('vend')+')':''),'',...linhas,'','*Total: '+fmt(g)+'*','Prazo de entrega: '+(v('prazo')||'-'),'Pagamento: '+(v('pagto')||'-'),'Validade: '+(v('valid')||'-'),'Frete: '+(v('frete')||'-'),v('obsf')?'Obs.: '+v('obsf'):''].filter(l=>l!==null).join('\\n');
+ const txt=['*ORÇAMENTO'+(D.numero?' – Pedido nº '+D.numero:'')+'*','Ref: '+D.ref,'Fornecedor: '+(v('forn')||'-')+(v('vend')?' ('+v('vend')+')':''),'',...linhas,'','*Total: '+fmt(g)+'*','Prazo de entrega: '+(v('prazo')||'-'),'Pagamento: '+(v('pagto')||'-'),'Validade: '+(v('valid')||'-'),'Frete: '+(v('frete')||'-'),v('obsf')?'Obs.: '+v('obsf'):''].filter(l=>l!==null).join('\\n');
  window.open('https://wa.me/'+D.zap+'?text='+encodeURIComponent(txt),'_blank');
 };
 </script></body></html>`;
@@ -234,6 +242,7 @@ window.pcCopiar = async function() {
 
 window.pcLimpar = function() {
     st.sel.clear();
+    st.ref = '';
     ['pcFornecedor', 'pcContato', 'pcPrazo', 'pcObs', 'pcNumero'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     aviso('');
     renderLista();
@@ -247,7 +256,7 @@ function itensFiltrados() {
         .filter(i => !b || String(i.nome).toUpperCase().includes(b) || String(i.codigoProduto || '').toUpperCase().includes(b))
         .filter(i => !st.soBaixos || baixo(i));
 }
-const qtdSugerida = i => Math.max(Math.ceil(minimo(i) - Number(i?.quantidade || 0)), 1);
+const qtdSugerida = i => (i && baixo(i)) ? Math.max(Math.ceil(minimo(i) - Number(i.quantidade || 0)), 1) : '';
 
 // Marca todos os itens que estão aparecendo (respeita busca, categoria e "só no mínimo").
 window.pcMarcarTodos = function() {
@@ -267,7 +276,7 @@ function renderLista() {
         .sort((x, y) => Number(st.sel.has(y.id)) - Number(st.sel.has(x.id)) || Number(baixo(y)) - Number(baixo(x)) || String(x.nome).localeCompare(String(y.nome), 'pt-BR'));
     box.innerHTML = lista.length ? lista.map(i => {
         const s = st.sel.get(i.id);
-        return `<div class="pc-item${s ? ' marcado' : ''}${baixo(i) ? ' baixo' : ''}" data-id="${esc(i.id)}">
+        return `<div class="pc-item${s ? ' marcado' : ''}${s && !(Number(s.qtd) > 0) ? ' sem-qtd' : ''}${baixo(i) ? ' baixo' : ''}" data-id="${esc(i.id)}">
           <label class="pc-check"><input type="checkbox" ${s ? 'checked' : ''} data-acao="marcar" aria-label="Incluir ${esc(i.nome)}"></label>
           <div class="pc-nome"><b>${esc(i.nome)}</b><small>${esc(i.categoria || '-')} · saldo ${fmtN(i.quantidade)} ${esc(unidade(i))} · mín. ${fmtN(minimo(i))}${i.unitario ? ` · último ${fmtR(i.unitario)}` : ''}</small></div>
           <input type="number" min="0" step="any" inputmode="decimal" class="pc-qtd" data-acao="qtd" value="${s ? esc(s.qtd) : ''}" placeholder="Qtd" aria-label="Quantidade de ${esc(i.nome)}">
@@ -325,6 +334,13 @@ function instalar() {
           <button type="button" class="btn-secondary" onclick="window.pcCopiar()"><i class="fa-solid fa-copy" aria-hidden="true"></i> Copiar texto</button>
         </div>
       </div>
+      <div class="glass-panel pc-painel">
+        <h3 class="pc-h3"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Respostas dos fornecedores e comparativo de preços</h3>
+        <p class="dm-dica">Quando o fornecedor responder pelo WhatsApp, copie a mensagem inteira e cole aqui. Repita para cada fornecedor do mesmo pedido.</p>
+        <textarea id="pcRespostaTexto" rows="4" class="pc-resposta" placeholder="Cole aqui a mensagem do fornecedor (começa com *ORÇAMENTO*)"></textarea>
+        <div class="pc-enviar"><button type="button" class="btn-primary" onclick="window.pcRegistrarResposta()"><i class="fa-solid fa-paste" aria-hidden="true"></i> Registrar resposta</button><span id="pcRespostaAviso" role="status" class="pc-resp-aviso"></span></div>
+        <div id="pcComparativo" class="pc-comparativo"></div>
+      </div>
       <div class="glass-panel pc-painel"><h4 class="dm-sub" style="margin-top:0">Pedidos enviados (neste computador)</h4><div id="pcHistorico"></div></div>`;
     box.querySelector('#pcBusca').addEventListener('input', e => { st.busca = e.target.value.trim(); renderLista(); });
     box.querySelector('#pcCategoria').addEventListener('change', e => { st.categoria = e.target.value; renderLista(); });
@@ -334,7 +350,7 @@ function instalar() {
         const row = e.target.closest('.pc-item'); if (!row) return;
         const id = row.dataset.id, acao = e.target.dataset.acao;
         if (acao === 'marcar') {
-            if (e.target.checked) { const it = itens().find(i => i.id === id); st.sel.set(id, { qtd: Math.max(Math.ceil(minimo(it) - Number(it?.quantidade || 0)), 1), obs: '' }); }
+            if (e.target.checked) { const it = itens().find(i => i.id === id); st.sel.set(id, { qtd: qtdSugerida(it), obs: '' }); }
             else st.sel.delete(id);
             renderLista();
         }
@@ -345,11 +361,112 @@ function instalar() {
         if (acao !== 'qtd' && acao !== 'obs') return;
         const atual = st.sel.get(id) || { qtd: '', obs: '' };
         atual[acao] = acao === 'qtd' ? e.target.value : e.target.value;
-        if (acao === 'qtd' && !(Number(e.target.value) > 0) && !atual.obs) st.sel.delete(id); else st.sel.set(id, atual);
+        st.sel.set(id, atual);
+        row.classList.toggle('sem-qtd', !(Number(atual.qtd) > 0));
         row.classList.toggle('marcado', st.sel.has(id));
         const ck = row.querySelector('[data-acao="marcar"]'); if (ck) ck.checked = st.sel.has(id);
         const cont = document.getElementById('pcContagem'); if (cont) cont.textContent = `${linhasPedido().length} item(ns) no pedido`;
     });
+}
+
+// ---------- Respostas dos fornecedores e comparativo ----------
+const COT_KEY = 'orquestra_cotacoes_v1';
+let cotacoes = lerJSON(COT_KEY, []);
+const numBR = s => { s = String(s || '').replace(/[^0-9,.-]/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); return Number(s) || 0; };
+const normNome = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+
+// Lê a mensagem que o formulário manda pelo WhatsApp (também aceita texto parecido digitado à mão).
+export function lerRespostaFornecedor(texto) {
+    const linhas = String(texto || '').replace(/\r/g, '').split('\n').map(l => l.replace(/\*/g, '').trim()).filter(Boolean);
+    const campo = rot => { const l = linhas.find(x => new RegExp('^' + rot + '\\s*:', 'i').test(x)); return l ? l.replace(/^[^:]*:\s*/, '').trim() : ''; };
+    const itensR = [];
+    linhas.forEach(l => {
+        const m = l.match(/^\d+[.)-]\s*(.+?)\s+[—–-]\s+([\d.,]+)\s*([A-Za-zÀ-ú]*)\s*[×xX*]\s*(?:R\$\s*)?([\d.,]+|sem preço)/);
+        if (m) itensR.push({ nome: m[1].trim(), qtd: numBR(m[2]), un: m[3] || '', preco: /sem/i.test(m[4]) ? 0 : numBR(m[4]) });
+    });
+    let fornecedor = campo('Fornecedor'), vendedor = '';
+    const mv = fornecedor.match(/^(.*?)\s*\((.*)\)\s*$/); if (mv) { fornecedor = mv[1]; vendedor = mv[2]; }
+    return { ref: campo('Ref'), fornecedor: fornecedor.replace(/^-$/, ''), vendedor, prazo: campo('Prazo de entrega'), pagamento: campo('Pagamento'), validade: campo('Validade'), frete: campo('Frete'), obs: campo('Obs\\.?'), itens: itensR };
+}
+
+async function salvarCotacao(c) {
+    cotacoes = [c, ...cotacoes.filter(x => x.id !== c.id)];
+    gravarJSON(COT_KEY, cotacoes);
+    try { await window.FS?.setDoc('estoque_config', c.id, { ...c, tipo: 'COTACAO_FORNECEDOR' }); } catch (err) { console.warn('Cotação salva só neste computador:', err); }
+}
+async function carregarCotacoesNuvem() {
+    try {
+        const nuvem = (await window.FS.getCollection('estoque_config')).filter(x => x.tipo === 'COTACAO_FORNECEDOR');
+        const mapa = new Map(cotacoes.map(c => [c.id, c]));
+        nuvem.forEach(c => mapa.set(c.id, c));
+        cotacoes = [...mapa.values()].sort((a, b) => String(b.recebidaEm).localeCompare(String(a.recebidaEm)));
+        gravarJSON(COT_KEY, cotacoes);
+    } catch (_) { /* fica com o que tem no computador */ }
+}
+
+window.pcRegistrarResposta = async function() {
+    const ta = document.getElementById('pcRespostaTexto');
+    const r = lerRespostaFornecedor(ta?.value);
+    const msg = document.getElementById('pcRespostaAviso');
+    if (!r.itens.length) { if (msg) msg.textContent = 'Não encontrei itens com preço. Cole a mensagem inteira que o fornecedor mandou.'; return; }
+    if (!r.fornecedor) r.fornecedor = (prompt('Qual o nome do fornecedor?') || '').trim().toUpperCase();
+    if (!r.fornecedor) return;
+    const c = { id: `cotacao_${Date.now()}`, ...r, ref: r.ref || st.ref || 'SEM-REF', fornecedor: r.fornecedor.toUpperCase(), recebidaEm: new Date().toISOString(),
+        total: r.itens.reduce((s, i) => s + i.qtd * i.preco, 0) };
+    await salvarCotacao(c);
+    if (ta) ta.value = '';
+    if (msg) msg.textContent = `Cotação de ${c.fornecedor} registrada (${c.itens.filter(i => i.preco > 0).length} item(ns) com preço).`;
+    st.refComparar = c.ref;
+    renderComparativo();
+};
+window.pcExcluirCotacao = async function(id) {
+    if (!confirm('Excluir esta cotação do comparativo?')) return;
+    cotacoes = cotacoes.filter(c => c.id !== id);
+    gravarJSON(COT_KEY, cotacoes);
+    try { await window.FS?.deleteDoc('estoque_config', id); } catch (_) { /* sem permissão de exclusão: some só daqui */ }
+    renderComparativo();
+};
+
+function renderComparativo() {
+    const el = document.getElementById('pcComparativo');
+    if (!el) return;
+    const refs = [...new Set(cotacoes.map(c => c.ref))];
+    if (!refs.length) { el.innerHTML = '<p class="dm-vazio">Nenhuma resposta registrada ainda. Quando o fornecedor responder pelo WhatsApp, copie a mensagem e cole acima.</p>'; return; }
+    if (!refs.includes(st.refComparar)) st.refComparar = refs[0];
+    // última cotação de cada fornecedor para o pedido escolhido
+    const doPedido = cotacoes.filter(c => c.ref === st.refComparar);
+    const porForn = new Map();
+    doPedido.forEach(c => { if (!porForn.has(c.fornecedor)) porForn.set(c.fornecedor, c); });
+    const forn = [...porForn.values()];
+    const nomes = new Map();
+    forn.forEach(c => c.itens.forEach(i => { const k = normNome(i.nome); if (!nomes.has(k)) nomes.set(k, { nome: i.nome, qtd: i.qtd, un: i.un }); }));
+    const preco = (c, k) => { const it = c.itens.find(i => normNome(i.nome) === k); return it && it.preco > 0 ? it.preco : null; };
+    let melhorTotal = 0;
+    const linhasHtml = [...nomes.entries()].map(([k, it]) => {
+        const precos = forn.map(c => preco(c, k));
+        const validos = precos.filter(p => p != null);
+        const min = validos.length ? Math.min(...validos) : null;
+        if (min != null) melhorTotal += min * it.qtd;
+        return `<tr><td><b>${esc(it.nome)}</b><small>${fmtN(it.qtd)} ${esc(it.un)}</small></td>${precos.map(p => `<td class="num ${p != null && p === min && validos.length > 1 ? 'pc-melhor' : ''}">${p != null ? fmtR(p) : '<span class="dm-sem">—</span>'}</td>`).join('')}</tr>`;
+    }).join('');
+    const totais = forn.map(c => c.itens.reduce((s, i) => s + (i.preco > 0 ? i.preco * i.qtd : 0), 0));
+    const cotados = forn.map(c => c.itens.filter(i => i.preco > 0).length);
+    const menorTotal = Math.min(...totais.filter((t, i) => cotados[i] === nomes.size).concat([Infinity]));
+    el.innerHTML = `
+      <div class="pc-comp-topo"><label>Pedido <select id="pcRefComparar">${refs.map(r => `<option ${r === st.refComparar ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
+        <small>${forn.length} fornecedor(es) responderam · verde = menor preço do item</small></div>
+      <div class="dm-tabela-wrap"><table class="dm-tabela pc-comp" data-no-column-resize="true">
+        <thead><tr><th>Item</th>${forn.map(c => `<th class="num">${esc(c.fornecedor)}<small>${new Date(c.recebidaEm).toLocaleDateString('pt-BR')} <button type="button" class="pc-x" title="Excluir esta cotação" onclick="window.pcExcluirCotacao('${esc(c.id)}')">×</button></small></th>`).join('')}</tr></thead>
+        <tbody>${linhasHtml}</tbody>
+        <tfoot>
+          <tr><td><b>Total</b></td>${forn.map((c, i) => `<td class="num ${totais[i] === menorTotal ? 'pc-melhor' : ''}"><b>${fmtR(totais[i])}</b>${cotados[i] < nomes.size ? `<small class="dm-alerta">${nomes.size - cotados[i]} item(ns) sem preço</small>` : ''}</td>`).join('')}</tr>
+          <tr><td>Prazo</td>${forn.map(c => `<td class="num"><small>${esc(c.prazo || '-')}</small></td>`).join('')}</tr>
+          <tr><td>Pagamento</td>${forn.map(c => `<td class="num"><small>${esc(c.pagamento || '-')}</small></td>`).join('')}</tr>
+          <tr><td>Frete</td>${forn.map(c => `<td class="num"><small>${esc(c.frete || '-')}</small></td>`).join('')}</tr>
+          <tr><td>Validade</td>${forn.map(c => `<td class="num"><small>${esc(c.validade || '-')}</small></td>`).join('')}</tr>
+        </tfoot></table></div>
+      ${forn.length > 1 ? `<p class="pc-melhor-comb">Comprando cada item no fornecedor mais barato: <b>${fmtR(melhorTotal)}</b>${isFinite(menorTotal) ? ` · economia de ${fmtR(menorTotal - melhorTotal)} sobre o menor orçamento completo` : ''}</p>` : ''}`;
+    el.querySelector('#pcRefComparar')?.addEventListener('change', e => { st.refComparar = e.target.value; renderComparativo(); });
 }
 
 window.renderPedidoCompraEstoque = function() {
@@ -357,4 +474,6 @@ window.renderPedidoCompraEstoque = function() {
     if (!st.iniciado) { sugerirBaixos(); st.iniciado = true; }
     renderLista();
     renderHistorico();
+    renderComparativo();
+    carregarCotacoesNuvem().then(renderComparativo);
 };
