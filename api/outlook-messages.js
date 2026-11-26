@@ -8,10 +8,11 @@ const {
 } = require('./_outlook-utils');
 
 const CATEGORIA_SISTEMA = 'Categoria Roxa';
+const CATEGORIA_FINAL = 'Categoria Verde';
 const ehCategoriaFinal = (nome) => /verde|green/i.test(String(nome || ''));
 const ehCategoriaSistema = (nome) => /roxa|purple/i.test(String(nome || ''));
 
-// POST { messageId }: marca o e-mail com a categoria roxa ("ja foi para o sistema").
+// POST { messageId, acao? }: acao 'impresso' poe a categoria verde (tira a roxa); sem acao, marca roxa ("ja foi para o sistema").
 // Nao mexe se o e-mail ja estiver verde (impresso) ou roxo. Mantem as outras categorias.
 async function marcarMensagem(req, res) {
     try {
@@ -35,13 +36,19 @@ async function marcarMensagem(req, res) {
         if (!atual.ok) {
             return res.status(atual.status === 404 ? 404 : 502).json({ error: 'Nao foi possivel ler o e-mail.' });
         }
-        const categorias = Array.isArray(atualData.categories) ? atualData.categories : [];
+        let categorias = Array.isArray(atualData.categories) ? atualData.categories : [];
         let marcado = false;
-        if (!categorias.some(ehCategoriaFinal) && !categorias.some(ehCategoriaSistema)) {
+        const impresso = body.acao === 'impresso';
+        const precisaMudar = impresso ? !categorias.some(ehCategoriaFinal) : (!categorias.some(ehCategoriaFinal) && !categorias.some(ehCategoriaSistema));
+        if (precisaMudar) {
+            // impresso: troca a roxa pela verde; lançado: acrescenta a roxa
+            const novas = impresso
+                ? [...categorias.filter(c => !ehCategoriaSistema(c)), CATEGORIA_FINAL]
+                : [...categorias, CATEGORIA_SISTEMA];
             const patch = await fetch(url, {
                 method: 'PATCH',
                 headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ categories: [...categorias, CATEGORIA_SISTEMA] })
+                body: JSON.stringify({ categories: novas })
             });
             if (!patch.ok) {
                 const precisaPermissao = patch.status === 403 || patch.status === 401;
@@ -49,7 +56,7 @@ async function marcarMensagem(req, res) {
                     error: precisaPermissao ? 'Reconecte o Outlook para permitir marcar e-mails.' : 'Nao foi possivel marcar o e-mail.'
                 });
             }
-            categorias.push(CATEGORIA_SISTEMA);
+            categorias = novas;
             marcado = true;
         }
         if (tokenData.refresh_token) {

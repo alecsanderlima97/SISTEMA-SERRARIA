@@ -1711,3 +1711,37 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 #outlookMessagesList .outlook-cat { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:6px; font-size:11px; font-weight:600; color:#fff; vertical-align:middle; }
 #outlookMessagesList .outlook-cat-roxo { background:#7e22ce; }
 #outlookMessagesList .outlook-cat-verde { background:#15803d; }
+
+/* ===== Conferência de boletos ===== */
+.fin-conf-modal { position:fixed; inset:0; z-index:9000; background:rgba(15,23,42,.55); display:flex; align-items:flex-start; justify-content:center; padding:24px 16px; overflow:auto; }
+.fin-conf-caixa { background:#fff; color:#0f172a; width:100%; max-width:1100px; border-radius:14px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+.fin-conf-topo { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+.fin-conf-topo h2 { margin:0; font-size:20px; color:#0f172a; }
+.fin-conf-topo p { margin:4px 0 0; color:#475569; font-size:14px; }
+.fin-conf-fechar { background:none; border:0; font-size:28px; line-height:1; cursor:pointer; color:#334155; padding:0 6px; }
+.fin-conf-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+.fin-conf-bloco { border:1px solid #e2e8f0; border-left:4px solid #94a3b8; border-radius:10px; padding:12px; background:#f8fafc; min-width:0; }
+.fin-conf-bloco.alerta { border-left-color:#dc2626; background:#fef2f2; }
+.fin-conf-bloco.ok { border-left-color:#16a34a; }
+.fin-conf-bloco header { display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; font-size:14px; }
+.fin-conf-bloco header span { color:#475569; white-space:nowrap; font-weight:600; }
+.fin-conf-bloco ul { list-style:none; margin:0 0 10px; padding:0; max-height:220px; overflow:auto; }
+.fin-conf-bloco li { display:grid; grid-template-columns:1fr auto auto; gap:8px; padding:5px 0; border-bottom:1px solid #e2e8f0; font-size:13px; align-items:baseline; }
+.fin-conf-bloco li span { overflow-wrap:anywhere; }
+.fin-conf-bloco li small { color:#64748b; white-space:nowrap; }
+.fin-conf-bloco li b { white-space:nowrap; }
+.fin-conf-bloco button { padding:8px 12px; font-size:13px; }
+.fin-conf-vazio { margin:0; color:#475569; font-size:13px; }
+.fin-conf-rodape { margin:14px 0 0; font-size:13px; color:#475569; }
+.fin-conf-rodape .outlook-link-btn { display:inline; width:auto; background:none; border:0; padding:0; color:#2563eb; text-decoration:underline; cursor:pointer; font-size:13px; }
+.fin-conf-modal button:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+@media (max-width:600px) { .fin-conf-caixa { padding:14px; } .fin-conf-bloco li { grid-template-columns:1fr auto; } .fin-conf-bloco li small { grid-column:1; } }
+
+/* ===== Impressão de boletos ===== */
+#finAreaImpressao { display:none; }
+@media print {
+  body.fin-imprimindo > *:not(#finAreaImpressao) { display:none !important; }
+  body.fin-imprimindo #finAreaImpressao { display:block !important; }
+  body.fin-imprimindo #finAreaImpressao img { display:block; width:100%; height:auto; page-break-after:always; break-after:page; }
+  body.fin-imprimindo { background:#fff !important; }
+}
