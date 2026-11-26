@@ -249,7 +249,7 @@ function mostrarListaReceber() {
             <td>${dataBRReceber(item.vencimento)}</td>
             <td>${formatarMoedaReceber(item.valor)}</td>
             <td>${textoVencimentoReceber(item)}</td>
-            <td><button type="button" class="receber-mini-btn" onclick="window.ContasReceber.enviarWhatsApp('${item.chave || item.id}')"><i class="fa-brands fa-whatsapp"></i> Cobrar</button></td>
+            <td><button type="button" class="receber-mini-btn" onclick="window.ContasReceber.enviarWhatsApp('${item.chave || item.id}')"><i class="fa-brands fa-whatsapp"></i> Cobrar</button> <button type="button" class="receber-mini-btn" onclick="window.ContasReceber.enviarEmail('${item.chave || item.id}')"><i class="fa-solid fa-envelope"></i> E-mail</button></td>
         </tr>
     `).join('');
     const overlay = document.createElement('div');
@@ -338,6 +338,32 @@ window.ContasReceber = {
     verLista: mostrarListaReceber,
     mostrarLembretes: mostrarLembretesReceber,
     mensagem: montarMensagemCobranca,
+    // Cobrança por e-mail (Outlook conectado). Sempre confirma antes de enviar.
+    async enviarEmail(id) {
+        const item = obterContasReceberLocal().find(cobranca => (cobranca.chave || cobranca.id) === id);
+        if (!item) return alert('Cobranca nao encontrada.');
+        let email = String(item.email || '').trim();
+        if (!email) {
+            try {
+                const clientes = await window.FS.getCollection('clientes');
+                const norm = v => normalizarTextoReceber(v || '');
+                const c = clientes.find(x => item.clienteId && x.id === item.clienteId) || clientes.find(x => norm(x.nome) === norm(item.cliente));
+                email = String(c?.email || '').trim();
+            } catch (_) { /* segue com o campo vazio */ }
+        }
+        email = (prompt(`E-mail de ${item.cliente || 'cliente'} para a cobrança:`, email) || '').trim();
+        if (!email) return;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert('E-mail inválido.');
+        if (!confirm(`Enviar a cobrança de ${formatarMoedaReceber(item.valor)} (venc. ${dataBRReceber(item.vencimento)}) para ${email}?`)) return;
+        try {
+            const r = await fetch('/api/romaneio-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destinatario: email, assunto: `Lembrete de pagamento${item.codigo ? ` - carga ${item.codigo}` : ''} - ${(window.dadosSerrariaEmitente || {}).nomeFantasia || 'Serraria'}`, mensagem: montarMensagemCobranca(item), semAnexo: true }) });
+            const d = await r.json().catch(() => ({}));
+            if (r.status === 401) return alert('Conecte o Outlook em Configurações > Integração de e-mail para enviar.');
+            if (!r.ok || !d.ok) throw new Error(d.error || 'Não foi possível enviar.');
+            alert(`Cobrança enviada para ${email}.`);
+        } catch (err) { alert(err.message || 'Não foi possível enviar o e-mail.'); }
+    },
     enviarWhatsApp(id) {
         const item = obterContasReceberLocal().find(cobranca => (cobranca.chave || cobranca.id) === id);
         if (!item) return alert('Cobranca nao encontrada.');

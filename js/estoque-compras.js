@@ -136,8 +136,7 @@ const nomeArquivo = (c, ext) => `pedido-compra${c.numero ? '-' + c.numero : ''}$
 
 // Formulário que o fornecedor abre no celular/computador, preenche os preços (o total soma sozinho)
 // e devolve pelo WhatsApp ou salva em PDF. Arquivo único, funciona sem internet.
-window.pcBaixarFormulario = function() {
-    if (!validar()) return;
+function gerarFormularioFornecedor() {
     const e = window.dadosSerrariaEmitente || {};
     const c = dadosCabecalho();
     const itensJs = linhasPedido().map(x => ({ nome: x.i.nome, cod: x.i.codigoProduto || '', qtd: Number(x.qtd), un: unidade(x.i), obs: x.obs || '' }));
@@ -205,7 +204,13 @@ document.getElementById('btnZap').onclick=()=>{
  window.open('https://wa.me/'+D.zap+'?text='+encodeURIComponent(txt),'_blank');
 };
 </script></body></html>`;
-    baixarArquivo(nomeArquivo(c, 'html'), html, 'text/html;charset=utf-8');
+    return { html, nome: nomeArquivo(c, 'html'), c };
+}
+
+window.pcBaixarFormulario = function() {
+    if (!validar()) return;
+    const { html, nome } = gerarFormularioFornecedor();
+    baixarArquivo(nome, html, 'text/html;charset=utf-8');
     aviso('Formulário baixado. Envie esse arquivo ao fornecedor (WhatsApp ou e-mail): ele abre, preenche os preços e responde.', true);
     salvarHistorico('formulário');
 };
@@ -236,6 +241,32 @@ ${linhas.map((x, n) => `<Row><Cell><Data ss:Type="Number">${n + 1}</Data></Cell>
     baixarArquivo(nomeArquivo(c, 'xls'), xml, 'application/vnd.ms-excel');
     aviso('Planilha baixada. O fornecedor preenche a coluna amarela e devolve.', true);
     salvarHistorico('planilha');
+};
+
+// Envia o formulário direto para o e-mail do fornecedor pelo Outlook conectado.
+window.pcEnviarEmail = async function() {
+    if (!validar()) return;
+    const { html, nome, c } = gerarFormularioFornecedor();
+    let email = (c.contato.match(/\S+@\S+\.\S+/) || [''])[0];
+    email = (prompt('E-mail do fornecedor:', email) || '').trim();
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { aviso('E-mail inválido.'); return; }
+    if (!confirm(`Enviar o pedido de orçamento para ${email}?`)) return;
+    aviso('Enviando…', true);
+    try {
+        const b64 = btoa(unescape(encodeURIComponent(html)));
+        const emp = window.dadosSerrariaEmitente || {};
+        const r = await fetch('/api/romaneio-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+            destinatario: email,
+            assunto: `Pedido de orçamento${c.numero ? ' nº ' + c.numero : ''} - ${emp.nomeFantasia || emp.nome || ''}`,
+            mensagem: `Olá${c.fornecedor ? ', ' + c.fornecedor : ''}!\n\nSegue nosso pedido de orçamento em anexo. Abra o arquivo, preencha os preços (o total soma sozinho) e responda pelo botão "Enviar resposta pelo WhatsApp" — ou responda este e-mail.\n\n${textoPedido().replace(/\*/g, '')}`,
+            arquivoNome: nome, arquivoBase64: b64 }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 401) { aviso('Conecte o Outlook em Configurações > Integração de e-mail para enviar direto.'); return; }
+        if (!r.ok || !d.ok) throw new Error(d.error || 'Não foi possível enviar.');
+        aviso(`Pedido enviado para ${email}.`, true);
+        salvarHistorico('e-mail (Outlook)');
+    } catch (err) { aviso(err.message || 'Não foi possível enviar o e-mail.'); }
 };
 
 window.pcWhatsApp = function() {
@@ -364,7 +395,8 @@ function instalar() {
           <button type="button" class="btn-primary" onclick="window.pcBaixarFormulario()" title="Arquivo que o fornecedor abre, preenche os preços e responde pelo WhatsApp"><i class="fa-solid fa-file-pen" aria-hidden="true"></i> Formulário para o fornecedor preencher</button>
           <button type="button" class="btn-secondary" onclick="window.pcBaixarPlanilha()"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Planilha Excel</button>
           <button type="button" class="btn-secondary" onclick="window.pcWhatsApp()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar texto por WhatsApp</button>
-          <button type="button" class="btn-secondary" onclick="window.pcEmail()"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Enviar por e-mail</button>
+          <button type="button" class="btn-primary" onclick="window.pcEnviarEmail()" title="Envia o formulário pelo e-mail conectado (Outlook)"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar por e-mail</button>
+          <button type="button" class="btn-secondary" onclick="window.pcEmail()"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Abrir no meu e-mail</button>
           <button type="button" class="btn-secondary" onclick="window.pcImprimir()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir / PDF</button>
           <button type="button" class="btn-secondary" onclick="window.pcCopiar()"><i class="fa-solid fa-copy" aria-hidden="true"></i> Copiar texto</button>
         </div>
