@@ -6,6 +6,17 @@ const {
     getOutlookConfig
 } = require('./_outlook-utils');
 
+// Lê as claims do id_token recebido diretamente do endpoint de token da Microsoft (canal TLS confiável).
+function lerIdToken(idToken) {
+    try {
+        const payload = String(idToken || '').split('.')[1];
+        if (!payload) return {};
+        return JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')) || {};
+    } catch (_) {
+        return {};
+    }
+}
+
 function responderHtml(res, html, status = 200, cookies = []) {
     if (cookies.length) {
         res.setHeader('Set-Cookie', cookies);
@@ -58,7 +69,7 @@ module.exports = async function handler(req, res) {
                 code: String(code),
                 redirect_uri: redirectUri,
                 grant_type: 'authorization_code',
-                scope: 'offline_access openid profile email Mail.Read Mail.Send'
+                scope: 'offline_access openid profile email User.Read Mail.Read Mail.Send'
             })
         });
 
@@ -70,12 +81,17 @@ module.exports = async function handler(req, res) {
         const meResponse = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName', {
             headers: { Authorization: `Bearer ${tokenData.access_token}` }
         });
-        const meData = await meResponse.json();
-        if (!meResponse.ok) {
-            throw new Error(meData.error?.message || 'Falha ao validar a conta conectada.');
+        const meData = await meResponse.json().catch(() => ({}));
+        const idClaims = lerIdToken(tokenData.id_token);
+        if (!meResponse.ok && !idClaims.email && !idClaims.preferred_username) {
+            throw new Error('Falha ao validar a conta conectada.');
         }
 
-        const connectedEmail = String(meData.mail || meData.userPrincipalName || '').trim().toLowerCase();
+        const connectedEmail = String(
+            (meResponse.ok && (meData.mail || meData.userPrincipalName)) ||
+            idClaims.email || idClaims.preferred_username || ''
+        ).trim().toLowerCase();
+        if (!meResponse.ok) meData.displayName = idClaims.name || '';
         if (!connectedEmail) {
             throw new Error('A Microsoft nao retornou o e-mail da conta conectada.');
         }
