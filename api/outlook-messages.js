@@ -7,9 +7,68 @@ const {
     refreshOutlookAccessToken
 } = require('./_outlook-utils');
 
+const CATEGORIA_SISTEMA = 'Categoria Roxa';
+const ehCategoriaFinal = (nome) => /verde|green/i.test(String(nome || ''));
+const ehCategoriaSistema = (nome) => /roxa|purple/i.test(String(nome || ''));
+
+// POST { messageId }: marca o e-mail com a categoria roxa ("ja foi para o sistema").
+// Nao mexe se o e-mail ja estiver verde (impresso) ou roxo. Mantem as outras categorias.
+async function marcarMensagem(req, res) {
+    try {
+        const cookies = parseCookies(req);
+        const refreshToken = cookies[REFRESH_COOKIE];
+        const meta = decodeMeta(cookies[META_COOKIE]);
+        if (!refreshToken || !meta?.email) {
+            return res.status(401).json({ error: 'Outlook nao conectado.' });
+        }
+        const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        const messageId = String(body.messageId || '');
+        if (!messageId || messageId.length > 400 || !/^[A-Za-z0-9_\-=+/]+$/.test(messageId)) {
+            return res.status(400).json({ error: 'Mensagem invalida.' });
+        }
+
+        const tokenData = await refreshOutlookAccessToken(refreshToken);
+        const accessToken = tokenData.access_token;
+        const url = `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(messageId)}`;
+        const atual = await fetch(`${url}?$select=categories`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const atualData = await atual.json().catch(() => ({}));
+        if (!atual.ok) {
+            return res.status(atual.status === 404 ? 404 : 502).json({ error: 'Nao foi possivel ler o e-mail.' });
+        }
+        const categorias = Array.isArray(atualData.categories) ? atualData.categories : [];
+        let marcado = false;
+        if (!categorias.some(ehCategoriaFinal) && !categorias.some(ehCategoriaSistema)) {
+            const patch = await fetch(url, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ categories: [...categorias, CATEGORIA_SISTEMA] })
+            });
+            if (!patch.ok) {
+                const precisaPermissao = patch.status === 403 || patch.status === 401;
+                return res.status(precisaPermissao ? 403 : 502).json({
+                    error: precisaPermissao ? 'Reconecte o Outlook para permitir marcar e-mails.' : 'Nao foi possivel marcar o e-mail.'
+                });
+            }
+            categorias.push(CATEGORIA_SISTEMA);
+            marcado = true;
+        }
+        if (tokenData.refresh_token) {
+            res.setHeader('Set-Cookie', serializeCookie(REFRESH_COOKIE, tokenData.refresh_token, {
+                path: '/', httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 60 * 60 * 24 * 30
+            }));
+        }
+        return res.status(200).json({ ok: true, marcado, categorias });
+    } catch (error) {
+        return res.status(500).json({ error: 'Falha ao marcar o e-mail.' });
+    }
+}
+
 module.exports = async function handler(req, res) {
-    if (req.method !== 'GET') {
+    if (req.method !== 'GET' && req.method !== 'POST') {
         return res.status(405).json({ error: 'Metodo nao permitido.' });
+    }
+    if (req.method === 'POST') {
+        return marcarMensagem(req, res);
     }
 
     try {
@@ -28,7 +87,7 @@ module.exports = async function handler(req, res) {
         const graphUrl = new URL('https://graph.microsoft.com/v1.0/me/messages');
         graphUrl.searchParams.set('$top', String(Math.min(Math.max(Number(req.query?.limite || 12), 1), 40)));
         graphUrl.searchParams.set('$orderby', 'receivedDateTime desc');
-        graphUrl.searchParams.set('$select', 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview');
+        graphUrl.searchParams.set('$select', 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview,categories');
 
         const messagesResponse = await fetch(graphUrl.toString(), {
             headers: { Authorization: `Bearer ${accessToken}` }
@@ -64,6 +123,7 @@ module.exports = async function handler(req, res) {
                 recebidoEm: message.receivedDateTime || null,
                 possuiAnexos: !!message.hasAttachments,
                 resumo: message.bodyPreview || '',
+                categorias: Array.isArray(message.categories) ? message.categories : [],
                 anexos: attachments.filter((item) => !item.inline)
             };
         }));

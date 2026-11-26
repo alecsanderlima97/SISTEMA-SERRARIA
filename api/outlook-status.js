@@ -27,6 +27,6 @@ module.exports = async function handler(req, res) {
         connectedEmail: meta?.email || null,
         connectedName: meta?.nome || null,
         connectedAt: meta?.conectadoEm || null,
-        scopes: ['offline_access', 'openid', 'profile', 'email', 'User.Read', 'Mail.Read', 'Mail.Send']
+        scopes: ['offline_access', 'openid', 'profile', 'email', 'User.Read', 'Mail.ReadWrite', 'Mail.Send']
     });
 };

@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
                 code: String(code),
                 redirect_uri: redirectUri,
                 grant_type: 'authorization_code',
-                scope: 'offline_access openid profile email User.Read Mail.Read Mail.Send'
+                scope: 'offline_access openid profile email User.Read Mail.ReadWrite Mail.Send'
             })
         });
 

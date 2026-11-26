@@ -58,7 +58,7 @@ async function refreshOutlookAccessToken(refreshToken) {
             client_secret: clientSecret,
             refresh_token: refreshToken,
             grant_type: 'refresh_token',
-            scope: 'offline_access openid profile email User.Read Mail.Read Mail.Send'
+            scope: 'offline_access openid profile email User.Read Mail.ReadWrite Mail.Send'
         })
     });
 
