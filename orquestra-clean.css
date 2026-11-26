@@ -1708,3 +1708,6 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 .fin-aviso-email { display:flex; align-items:center; gap:10px; padding:12px 14px; margin-bottom:14px; border-radius:10px; background:#ecfdf5; border:1px solid #6ee7b7; color:#065f46; font-size:14px; }
 .fin-aviso-email span { flex:1; }
 .fin-aviso-email-fechar { background:none; border:0; font-size:20px; line-height:1; color:inherit; cursor:pointer; padding:0 4px; }
+#outlookMessagesList .outlook-cat { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:6px; font-size:11px; font-weight:600; color:#fff; vertical-align:middle; }
+#outlookMessagesList .outlook-cat-roxo { background:#7e22ce; }
+#outlookMessagesList .outlook-cat-verde { background:#15803d; }

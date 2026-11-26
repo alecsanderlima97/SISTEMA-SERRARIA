@@ -108,6 +108,7 @@ module.exports = async function handler(req, res) {
                 'Para nota fiscal, extraia fornecedor/emitente, cnpj, numeroDocumento, chaveNfe, valorTotal e produtos quando existirem.',
                 'Para boleto, extraia linhaDigitavel, codigoBarras, banco e nossoNumero somente quando estiverem legiveis. Nunca invente identificadores.',
                 'Comprovante de pagamento (PIX, TED, pagamento de boleto, autenticacao bancaria) e tipo COMPROVANTE: use a data do pagamento em emissao e o valor pago; vencimento vazio.',
+                'ATENCAO: boleto em aberto costuma ter impresso "Comprovante de Entrega", "Recibo do Pagador" e "Autenticacao mecanica" — isso NAO e comprovante de pagamento. So use COMPROVANTE se houver prova de pagamento feito (valor pago, data do pagamento, pagamento efetuado/realizado, PIX/transferencia enviada). Boleto com vencimento e valor do documento e tipo BOLETO.',
                 'Se o texto vier vazio ou ruim, leia a imagem do documento.',
                 'Documento com BENEFICIARIO, NOSSO NUMERO, LOCAL DE PAGAMENTO ou VALOR DO DOCUMENTO e boleto (tipo BOLETO), mesmo que o numero do documento cite a nota (ex.: NFE019456-3/3); nesse caso coloque o numero da nota em numeroDocumento.'
             ].join(' '),

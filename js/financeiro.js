@@ -343,6 +343,7 @@ function detectarCategoriaDocumentoFinanceiro(anexo = {}, dados = {}) {
     if (nome.endsWith('.XML') || tipo.includes('XML') || texto.includes('NF-E') || texto.includes('NFE')) return 'xml';
     if (/(?:^|[^A-Z0-9])(?:NOTA FISCAL|DANFE|NF-?E|NFS-?E)(?![A-Z])/.test(`${nome} ${texto}`)) return 'nota_fiscal';
     const nomeBase = nome.replace(/^.*[\\/]/, '');
+    if (/^BOLETO/.test(texto.trim()) || (/BOLETO/.test(nomeBase) && !/COMPROVANTE (DE )?PAGAMENTO|PAGAMENTO (REALIZADO|EFETUADO)/.test(`${nome} ${texto}`))) return 'boleto';
     if (/COMPROVANTE|PAGAMENTO REALIZADO|PAGAMENTO EFETUADO|AUTENTICA[CÇ][AÃ]O MEC/.test(`${nome} ${texto}`) || FIN_REGEX_COMPROVANTE_NOME.test(nomeBase)) return 'comprovante';
     if (/BOLETO|BLOQUETO|FICHA DE COMPENSACAO|FICHA DE COMPENSAÇÃO|LINHA DIGITAVEL|PAGAVEL|PAGÁVEL|SICREDI|NOSSO NUMERO|NOSSO NÚMERO/.test(`${nome} ${texto}`)) return 'boleto';
     if (/COMPROVANTE|PAGAMENTO REALIZADO|PIX|TRANSFERENCIA|TRANSFERÊNCIA/.test(`${nome} ${texto}`)) return 'comprovante';
@@ -2041,7 +2042,29 @@ function aplicarLinhaDigitavelFinanceiro(dados, texto) {
 
 // Comprovante de pagamento (Sicredi, PIX, TED, pagamento de boleto): para quem foi pago, valor pago,
 // data do pagamento e o codigo do boleto pago (liga com o boleto com certeza).
+// Boleto em aberto traz "COMPROVANTE DE ENTREGA", "RECIBO DO PAGADOR" e até "AUTENTICACAO MECANICA"
+// impressos no próprio papel. Isso NÃO é comprovante de pagamento: só é pago se houver marca forte de pagamento.
+const FIN_REGEX_MARCAS_BOLETO = /LOCAL DE PAGAMENTO|NOSSO NUMERO|RECIBO DO PAGADOR|FICHA DE COMPENSACAO|COMPROVANTE DE ENTREGA|PAGAVEL (EM|PREFERENCIALMENTE)|CEDENTE|(?:\(=\)\s*)?VALOR DO DOCUMENTO|\b\d{5}[. ]?\d{5}\s+\d{5}[. ]?\d{6}\s+\d{5}[. ]?\d{6}\s+\d\s+\d{14}\b/;
+const FIN_REGEX_PAGAMENTO_FEITO = /COMPROVANTE (DE )?(PAGAMENTO|PIX|TRANSFERENCIA|TED|DOC|OPERACAO)|VALOR PAGO|DATA (DO|DE) PAGAMENTO|PAGAMENTO (REALIZADO|EFETUADO)|PIX ENVIADO|TRANSFERENCIA (REALIZADA|EFETUADA|ENVIADA)|TRANSACAO EFETUADA|DATA DA TRANSACAO/;
+function boletoEmAbertoFinanceiro(texto) {
+    const t = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    return FIN_REGEX_MARCAS_BOLETO.test(t) && !FIN_REGEX_PAGAMENTO_FEITO.test(t);
+}
+// Se a leitura (IA ou local) chamou de comprovante um papel que é boleto em aberto, volta para BOLETO.
+function corrigirBoletoLidoComoComprovanteFinanceiro(dados, texto) {
+    if (!dados || !/COMPROVANTE/i.test(dados.tipo || '') || !boletoEmAbertoFinanceiro(texto)) return dados;
+    const descricaoRuim = !dados.descricao || /^COMPROVANTE/i.test(String(dados.descricao));
+    return {
+        ...dados,
+        tipo: 'BOLETO',
+        descricao: descricaoRuim ? (dados.fornecedor || dados.descricao || 'BOLETO') : dados.descricao,
+        precisaConferencia: true,
+        observacao: [dados.observacao, 'Corrigido para BOLETO: o papel é boleto em aberto (não há marca de pagamento).'].filter(Boolean).join(' ')
+    };
+}
+
 function textoEhComprovanteFinanceiro(textoBusca) {
+    if (boletoEmAbertoFinanceiro(textoBusca)) return false;
     return /COMPROVANTE (DE )?(PAGAMENTO|PIX|TRANSFERENCIA|TED|DOC|AGENDAMENTO|OPERACAO)|PIX ENVIADO|TRANSFERENCIA (REALIZADA|EFETUADA|ENVIADA)|PAGAMENTO (REALIZADO|EFETUADO|AGENDADO)|AUTENTICACAO (MECANICA|ELETRONICA|BANCARIA)|TRANSACAO EFETUADA/.test(textoBusca)
         || (/COMPROVANTE/.test(textoBusca) && /VALOR PAGO|DATA DO PAGAMENTO|DATA DE PAGAMENTO|DATA DA TRANSACAO|FAVORECIDO|RECEBEDOR/.test(textoBusca));
 }
@@ -2208,6 +2231,7 @@ async function extrairDadosFinanceirosDoAnexo(anexo) {
             tipo: 'COMPROVANTE', vencimento: '', analisadoPorIA: Boolean(ia.analisadoPorIA)
         };
     }
+    if (!ehXml) dadosEscolhidos = corrigirBoletoLidoComoComprovanteFinanceiro(dadosEscolhidos, texto);
     if (dadosEscolhidos && !ehXml && !dadosIA) {
         const exato = dadosEscolhidos.fonteVencimento === 'linha digitável' && dadosEscolhidos.valor > 0;
         return {
@@ -3983,8 +4007,8 @@ function lerOutlookImportadosFinanceiro() {
 window.sugerirTipoDocumentoEmail = function(mensagem = {}, anexo = {}) {
     const t = `${anexo.nome || ''} ${mensagem.assunto || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
     if (/\.XML\b/.test(String(anexo.nome || '').toUpperCase()) || /NF-?E|NOTA FISCAL|DANFE|NFS-?E/.test(t)) return 'nota';
+    if (/BOLETO|BLOQUETO|FATURA|COBRANCA|VENCIMENTO|2A VIA|SEGUNDA VIA/.test(t) && !/COMPROVANTE (DE )?PAGAMENTO|PAGAMENTO EFETUADO/.test(t)) return 'boleto';
     if (/COMPROVANTE|PIX|TRANSFERENCIA|RECIBO|PAGAMENTO EFETUADO/.test(t)) return 'comprovante';
-    if (/BOLETO|BLOQUETO|FATURA|COBRANCA|VENCIMENTO|2A VIA|SEGUNDA VIA/.test(t)) return 'boleto';
     return 'outro';
 };
 
@@ -3992,30 +4016,61 @@ window.sugerirTipoDocumentoEmail = function(mensagem = {}, anexo = {}) {
 window.statusImportacaoEmailFinanceiro = function(mensagem = {}) {
     const validos = (mensagem.anexos || []).filter(FIN_EMAIL_ANEXO_VALIDO);
     if (!validos.length) return 'nenhum';
+    if (window.categoriaEmailSistema(mensagem)) return 'todos';
     const vistos = new Set(lerOutlookImportadosFinanceiro());
     const feitos = validos.filter(a => vistos.has(`${mensagem.id}|${a.id}`)).length;
     return feitos === validos.length ? 'todos' : (feitos ? 'parcial' : 'nenhum');
 };
 
+// 'verde' = impresso (marcado pelo usuário no Outlook), 'roxo' = já foi para o sistema, '' = nada.
+window.categoriaEmailSistema = function(mensagem = {}) {
+    const cats = (mensagem.categorias || []).map(c => String(c || '').toLowerCase());
+    if (cats.some(c => /verde|green/.test(c))) return 'verde';
+    if (cats.some(c => /roxa|purple/.test(c))) return 'roxo';
+    return '';
+};
+
+// Marca o e-mail com a Categoria Roxa no Outlook. Falha aqui não impede a importação.
+async function marcarEmailRoxoFinanceiro(mensagem) {
+    try {
+        const r = await fetch('/api/outlook-messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: mensagem.id })
+        });
+        const dados = await r.json().catch(() => ({}));
+        if (r.ok && Array.isArray(dados.categorias)) mensagem.categorias = dados.categorias;
+        if (r.status === 403) window.__outlookPrecisaReconectar = true;
+        return r.ok;
+    } catch (_) {
+        return false;
+    }
+}
+
 async function importarMensagensOutlookFinanceiro(mensagens, opcoes = {}) {
     const vistos = new Set(lerOutlookImportadosFinanceiro());
     const arquivos = [];
     const chavesNovas = [];
+    const paraMarcar = [];
     for (const mensagem of mensagens) {
+        if (!opcoes.forcar && window.categoriaEmailSistema(mensagem)) continue;
+        let baixouAlgum = false;
         for (const anexo of (mensagem.anexos || [])) {
             if (!FIN_EMAIL_ANEXO_VALIDO(anexo)) continue;
             const chave = `${mensagem.id}|${anexo.id}`;
-            if (vistos.has(chave) && !opcoes.forcar) continue;
+            if (vistos.has(chave) && !opcoes.forcar) { baixouAlgum = true; continue; }
             try {
                 const r = await fetch(`/api/outlook-attachment?messageId=${encodeURIComponent(mensagem.id)}&attachmentId=${encodeURIComponent(anexo.id)}`, { cache: 'no-store' });
                 const conteudo = await r.json();
                 if (!r.ok || !conteudo.conteudoBase64) continue;
                 arquivos.push(arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo));
                 chavesNovas.push(chave);
+                baixouAlgum = true;
             } catch (error) {
                 console.warn('Anexo do e-mail não baixado:', anexo.nome, error);
             }
         }
+        if (baixouAlgum) paraMarcar.push(mensagem);
     }
     const resultado = arquivos.length
         ? await window.importarPastaFinanceira(arquivos, { silencioso: true, origem: 'outlook', rotuloOrigem: 'E-MAIL' })
@@ -4023,6 +4078,9 @@ async function importarMensagensOutlookFinanceiro(mensagens, opcoes = {}) {
     if (chavesNovas.length) {
         const atuais = lerOutlookImportadosFinanceiro().filter(c => !chavesNovas.includes(c));
         localStorage.setItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY, JSON.stringify([...chavesNovas, ...atuais].slice(0, 600)));
+    }
+    for (const mensagem of paraMarcar) {
+        if (!window.categoriaEmailSistema(mensagem)) await marcarEmailRoxoFinanceiro(mensagem);
     }
     return resultado;
 }
@@ -4060,7 +4118,12 @@ window.importarMensagemOutlookFinanceiro = async function(mensagem) {
     if (jaFeito && !confirm('Os anexos deste e-mail já foram lançados. Importar de novo? (arquivos idênticos continuam sendo ignorados)')) {
         return { importados: 0 };
     }
+    window.__outlookPrecisaReconectar = false;
     const resultado = await importarMensagensOutlookFinanceiro([mensagem], { forcar: jaFeito });
+    if (window.__outlookPrecisaReconectar) {
+        alert('Documentos lançados, mas o e-mail não foi marcado de roxo: clique em "Conectar Outlook" de novo em Configurações para liberar essa permissão.');
+        return resultado;
+    }
     alert(resultado.importados
         ? `${resultado.importados} documento(s) lançado(s) no Financeiro, na caixa de conferência.`
         : (resultado.duplicados ? 'Esses documentos já estão no Financeiro.' : 'Nenhum boleto, nota ou comprovante encontrado neste e-mail.'));

@@ -1050,6 +1050,10 @@ const App = {
                     return `<span class="outlook-anexo">${tipo ? `<b class="outlook-tipo outlook-tipo-${tipo}">${rotulos[tipo]}</b>` : ''}${esc(anexo.nome)} <small>(${formatarTamanhoArquivo(anexo.tamanho)})</small></span>`;
                 }).join('')
                 : '<span class="outlook-sem-anexo">Sem anexos.</span>';
+            const cat = window.categoriaEmailSistema ? window.categoriaEmailSistema(message) : '';
+            const seloCat = cat === 'verde'
+                ? '<span class="outlook-cat outlook-cat-verde">Impresso</span>'
+                : (cat === 'roxo' ? '<span class="outlook-cat outlook-cat-roxo">No sistema</span>' : '');
             const acao = validos.length
                 ? (status === 'todos'
                     ? `<span class="outlook-status-ok"><i class="fa-solid fa-check" aria-hidden="true"></i> Já lançado</span>
@@ -1061,7 +1065,7 @@ const App = {
                 <div class="outlook-msg">
                     <div class="outlook-msg-topo">
                         <div>
-                            <strong class="outlook-msg-assunto">${esc(message.assunto || '(Sem assunto)')}</strong>
+                            <strong class="outlook-msg-assunto">${esc(message.assunto || '(Sem assunto)')} ${seloCat}</strong>
                             <div class="outlook-msg-meta">${esc(message.remetenteNome || message.remetente || 'Remetente não identificado')} • ${esc(formatarDataHoraCurta(message.recebidoEm))}</div>
                         </div>
                     </div>
