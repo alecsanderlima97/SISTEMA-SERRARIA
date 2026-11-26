@@ -1008,38 +1008,68 @@ const App = {
             }
 
             const messages = Array.isArray(data.messages) ? data.messages : [];
-            infoEl.textContent = `${messages.length} e-mails carregados para ${data.connectedEmail || 'Outlook conectado'}.`;
-
-            if (!messages.length) {
-                listEl.innerHTML = '<div style="padding:12px; border:1px dashed rgba(255,255,255,0.12); border-radius:10px; color:#94a3b8;">Nenhum e-mail encontrado nesta leitura.</div>';
-                return;
-            }
-
-            listEl.innerHTML = messages.map((message) => {
-                const anexos = Array.isArray(message.anexos) ? message.anexos : [];
-                const anexosHtml = anexos.length
-                    ? anexos.map((anexo) => `<span style="display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.18); color:#bfdbfe; font-size:12px;">${anexo.nome} (${formatarTamanhoArquivo(anexo.tamanho)})</span>`).join(' ')
-                    : '<span style="color:#94a3b8; font-size:12px;">Sem anexos nesta mensagem.</span>';
-
-                return `
-                    <div style="padding:14px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:rgba(255,255,255,0.02);">
-                        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px;">
-                            <div>
-                                <strong style="display:block; color:#f8fafc; font-size:14px;">${message.assunto || '(Sem assunto)'}</strong>
-                                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">${message.remetenteNome || message.remetente || 'Remetente nao identificado'} • ${formatarDataHoraCurta(message.recebidoEm)}</div>
-                            </div>
-                            <span style="padding:5px 8px; border-radius:999px; background:${anexos.length ? 'rgba(74,222,128,0.12)' : 'rgba(148,163,184,0.12)'}; color:${anexos.length ? '#86efac' : '#cbd5e1'}; font-size:12px; border:1px solid ${anexos.length ? 'rgba(74,222,128,0.18)' : 'rgba(148,163,184,0.18)'};">${anexos.length ? `${anexos.length} anexo(s)` : 'Sem anexos'}</span>
-                        </div>
-                        <div style="font-size:13px; color:#cbd5e1; line-height:1.55; margin-bottom:10px;">${message.resumo || 'Sem resumo disponivel.'}</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">${anexosHtml}</div>
-                    </div>
-                `;
-            }).join('');
+            this.outlookMensagens = messages;
+            this.renderMensagensOutlook(data.connectedEmail);
         } catch (error) {
             console.error('Erro ao carregar mensagens Outlook:', error);
             infoEl.textContent = 'Nao foi possivel atualizar a caixa Outlook agora.';
             listEl.innerHTML = `<div style="padding:12px; border:1px dashed rgba(248,113,113,0.35); border-radius:10px; color:#fecaca;">${error.message || 'Falha ao listar os e-mails.'}</div>`;
         }
+    },
+
+    renderMensagensOutlook(connectedEmail) {
+        const infoEl = document.getElementById('outlookMessagesInfo');
+        const listEl = document.getElementById('outlookMessagesList');
+        if (!infoEl || !listEl) return;
+        if (connectedEmail) this.outlookConta = connectedEmail;
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const anexoValido = (a) => /\.(pdf|xml|png|jpe?g|webp)$/i.test(a?.nome || '') || /pdf|xml|image\//i.test(a?.tipo || '');
+        const todas = Array.isArray(this.outlookMensagens) ? this.outlookMensagens : [];
+        const comDocs = todas.filter((m) => (m.anexos || []).some(anexoValido));
+        const mostrarTodos = Boolean(this.outlookMostrarTodos);
+        const lista = mostrarTodos ? todas : comDocs;
+        const ocultos = todas.length - comDocs.length;
+
+        infoEl.innerHTML = `${comDocs.length} e-mail(s) com documentos em ${esc(this.outlookConta || 'Outlook conectado')}.`
+            + (ocultos ? ` <button type="button" class="outlook-link-btn" onclick="window.alternarEmailsOutlook()">${mostrarTodos ? 'Mostrar só com documentos' : `Mostrar também os outros ${ocultos}`}</button>` : '');
+
+        if (!lista.length) {
+            listEl.innerHTML = '<div class="outlook-vazio">Nenhum e-mail com boleto, nota ou comprovante nos últimos e-mails.</div>';
+            return;
+        }
+
+        const rotulos = { boleto: 'Boleto', nota: 'Nota fiscal', comprovante: 'Comprovante', outro: 'Documento' };
+        listEl.innerHTML = lista.map((message) => {
+            const idx = todas.indexOf(message);
+            const anexos = (message.anexos || []);
+            const validos = anexos.filter(anexoValido);
+            const status = window.statusImportacaoEmailFinanceiro ? window.statusImportacaoEmailFinanceiro(message) : 'nenhum';
+            const anexosHtml = anexos.length
+                ? anexos.map((anexo) => {
+                    const tipo = anexoValido(anexo) && window.sugerirTipoDocumentoEmail ? window.sugerirTipoDocumentoEmail(message, anexo) : '';
+                    return `<span class="outlook-anexo">${tipo ? `<b class="outlook-tipo outlook-tipo-${tipo}">${rotulos[tipo]}</b>` : ''}${esc(anexo.nome)} <small>(${formatarTamanhoArquivo(anexo.tamanho)})</small></span>`;
+                }).join('')
+                : '<span class="outlook-sem-anexo">Sem anexos.</span>';
+            const acao = validos.length
+                ? (status === 'todos'
+                    ? `<span class="outlook-status-ok"><i class="fa-solid fa-check" aria-hidden="true"></i> Já lançado</span>
+                       <button type="button" class="outlook-btn-sec" onclick="window.lancarEmailOutlookFinanceiro(${idx}, this)">Lançar de novo</button>`
+                    : `<button type="button" class="btn-primary outlook-btn" onclick="window.lancarEmailOutlookFinanceiro(${idx}, this)"><i class="fa-solid fa-file-import" aria-hidden="true"></i> Lançar no Financeiro</button>`
+                        + (status === 'parcial' ? '<span class="outlook-status-parcial">Parcialmente lançado</span>' : ''))
+                : '';
+            return `
+                <div class="outlook-msg">
+                    <div class="outlook-msg-topo">
+                        <div>
+                            <strong class="outlook-msg-assunto">${esc(message.assunto || '(Sem assunto)')}</strong>
+                            <div class="outlook-msg-meta">${esc(message.remetenteNome || message.remetente || 'Remetente não identificado')} • ${esc(formatarDataHoraCurta(message.recebidoEm))}</div>
+                        </div>
+                    </div>
+                    <div class="outlook-msg-resumo">${esc(message.resumo || '')}</div>
+                    <div class="outlook-msg-anexos">${anexosHtml}</div>
+                    ${acao ? `<div class="outlook-msg-acoes">${acao}</div>` : ''}
+                </div>`;
+        }).join('');
     },
 
     async atualizarMinhaPresenca(online = true, registrarAcesso = false) {
@@ -1867,6 +1897,21 @@ window.verificarIntegracaoOutlook = () => App.verificarIntegracaoOutlook();
 window.iniciarConexaoOutlook = () => App.iniciarConexaoOutlook();
 window.desconectarOutlook = () => App.desconectarOutlook();
 window.carregarMensagensOutlook = () => App.carregarMensagensOutlook();
+window.alternarEmailsOutlook = () => { App.outlookMostrarTodos = !App.outlookMostrarTodos; App.renderMensagensOutlook(); };
+window.lancarEmailOutlookFinanceiro = async (idx, btn) => {
+    const mensagem = (App.outlookMensagens || [])[idx];
+    if (!mensagem) return;
+    if (typeof window.importarMensagemOutlookFinanceiro !== 'function') {
+        alert('O módulo Financeiro ainda não carregou. Tente novamente em instantes.');
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Lançando...'; }
+    try {
+        await window.importarMensagemOutlookFinanceiro(mensagem);
+    } finally {
+        App.renderMensagensOutlook();
+    }
+};
 window.hasSectionPermission = (sectionId) => App.canAccessSection(sectionId);
 window.hasSubsectionPermission = (sectionId, subId) => App.canAccessSubsection(sectionId, subId);
 window.isOrquestraDeveloper = () => App.isDeveloper();

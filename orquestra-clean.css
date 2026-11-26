@@ -1682,3 +1682,29 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 .fin-prev-kpis > div.destaque { border-color: #f59e0b; background: #fffbeb; }
 .fin-prev-kpis > div.ok b { color: #15803d; }
 @media (max-width: 900px) { .fin-prev-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ===== Caixa de e-mail (Configurações) e aviso no Financeiro ===== */
+#outlookMessagesList .outlook-msg { padding:14px; border:1px solid rgba(100,116,139,.25); border-radius:12px; background:rgba(148,163,184,.06); color:inherit; }
+#outlookMessagesList .outlook-msg-assunto { display:block; font-size:14px; color:inherit; }
+#outlookMessagesList .outlook-msg-meta { font-size:12px; margin-top:4px; color:var(--text-muted, #64748b); }
+#outlookMessagesList .outlook-msg-resumo { font-size:13px; line-height:1.5; margin:8px 0 10px; color:inherit; opacity:.8; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+#outlookMessagesList .outlook-msg-anexos { display:flex; flex-wrap:wrap; gap:6px; }
+#outlookMessagesList .outlook-anexo { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:999px; background:rgba(37,99,235,.1); border:1px solid rgba(37,99,235,.25); color:inherit; font-size:12px; max-width:100%; overflow-wrap:anywhere; }
+#outlookMessagesList .outlook-anexo small { opacity:.7; }
+#outlookMessagesList .outlook-tipo { font-size:11px; padding:1px 6px; border-radius:6px; color:#fff; }
+#outlookMessagesList .outlook-tipo-boleto { background:#b45309; }
+#outlookMessagesList .outlook-tipo-nota { background:#1d4ed8; }
+#outlookMessagesList .outlook-tipo-comprovante { background:#15803d; }
+#outlookMessagesList .outlook-tipo-outro { background:#475569; }
+#outlookMessagesList .outlook-sem-anexo { font-size:12px; color:var(--text-muted, #64748b); }
+#outlookMessagesList .outlook-msg-acoes { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; }
+#outlookMessagesList .outlook-btn { padding:8px 12px; font-size:13px; }
+#outlookMessagesList .outlook-btn-sec { padding:6px 10px; font-size:12px; background:transparent; color:inherit; border:1px solid rgba(100,116,139,.4); border-radius:8px; cursor:pointer; }
+#outlookMessagesList .outlook-status-ok { color:#15803d; font-weight:600; font-size:13px; }
+#outlookMessagesList .outlook-status-parcial { color:#b45309; font-size:12px; }
+#outlookMessagesList .outlook-vazio { padding:12px; border:1px dashed rgba(100,116,139,.35); border-radius:10px; color:var(--text-muted, #64748b); }
+#outlookMessagesInfo .outlook-link-btn { background:none; border:0; padding:0; color:#2563eb; text-decoration:underline; cursor:pointer; font-size:12px; }
+#outlookMessagesList button:focus-visible, #outlookMessagesInfo button:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+.fin-aviso-email { display:flex; align-items:center; gap:10px; padding:12px 14px; margin-bottom:14px; border-radius:10px; background:#ecfdf5; border:1px solid #6ee7b7; color:#065f46; font-size:14px; }
+.fin-aviso-email span { flex:1; }
+.fin-aviso-email-fechar { background:none; border:0; font-size:20px; line-height:1; color:inherit; cursor:pointer; padding:0 4px; }
