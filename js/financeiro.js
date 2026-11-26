@@ -2775,6 +2775,7 @@ function renderPastasFinanceiras() {
     const lista = obterLancamentosFinanceiros();
     board.innerHTML = Object.entries(FINANCEIRO_PASTAS).map(([key, pasta]) => {
         const itens = key === 'todos' ? lista : lista.filter(item => obterPastaFinanceiraItem(item) === key);
+        if (!itens.length && key !== 'todos' && key !== financeiroAbaAtiva) return '';
         const total = itens.reduce((acc, item) => acc + Number(item.valor || 0), 0);
         const abertos = itens.filter(item => !item.pago).length;
         const subpastas = [...new Set(itens.map(obterSubpastaFinanceiraItem).filter(Boolean))].slice(0, 4);
@@ -3446,6 +3447,11 @@ function renderPrevisaoFinanceiro() {
     const atrasados = abertos.filter(i => i.vencimento < hojeIso);
     const proximos = abertos.filter(i => i.vencimento >= hojeIso && i.vencimento <= fimIso).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
     const soma = l => l.reduce((s, i) => s + Number(i.valor || 0), 0);
+    const pagoMes = obterLancamentosFinanceiros().filter(i => {
+        if (!i.pago || !i.pagoEm) return false;
+        const d = new Date(i.pagoEm);
+        return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
+    }).reduce((s, i) => s + Number(i.valor || 0), 0);
     const totalProx = soma(proximos), totalAtr = soma(atrasados);
     // agrupa por semana (ou por dia quando o período é de 7 dias)
     const grupos = new Map();
@@ -3462,9 +3468,10 @@ function renderPrevisaoFinanceiro() {
     const diasAte = v => Math.round((new Date(v + 'T12:00:00') - hoje) / 86400000);
     corpo.innerHTML = `
       <div class="fin-prev-kpis">
-        <div><small>A pagar nos próximos ${financeiroPrevisaoDias} dias</small><b>${formatarMoeda(totalProx)}</b><small>${proximos.length} conta(s)</small></div>
-        <div class="${totalAtr > 0 ? 'atrasado' : ''}"><small>Já atrasado</small><b>${formatarMoeda(totalAtr)}</b><small>${atrasados.length} conta(s)</small></div>
-        <div><small>Total a desembolsar (atrasado + período)</small><b>${formatarMoeda(totalProx + totalAtr)}</b></div>
+        <div class="${totalAtr > 0 ? 'atrasado' : ''}"><small>Atrasado</small><b>${formatarMoeda(totalAtr)}</b><small>${atrasados.length} conta(s)</small></div>
+        <div class="destaque"><small>Vence nos próximos ${financeiroPrevisaoDias} dias</small><b>${formatarMoeda(totalProx)}</b><small>${proximos.length} conta(s)</small></div>
+        <div><small>Em aberto (todas)</small><b>${formatarMoeda(soma(abertos))}</b><small>${abertos.length} conta(s)</small></div>
+        <div class="ok"><small>Pago neste mês</small><b>${formatarMoeda(pagoMes)}</b></div>
       </div>
       ${grupos.size ? `<div class="fin-prev-barras">${[...grupos.values()].map(g => `<div class="fin-prev-barra"><span>${esc(g.rotulo)}</span><div><i style="width:${Math.max(3, g.total / maxG * 100).toFixed(1)}%"></i></div><b>${formatarMoeda(g.total)}</b><small>${g.qtd}</small></div>`).join('')}</div>` : ''}
       ${proximos.length ? `<div class="fin-prev-lista"><table data-no-column-resize="true"><thead><tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th></tr></thead><tbody>
@@ -4501,11 +4508,11 @@ function injetarEstilosFinanceiro() {
     const style = document.createElement('style');
     style.textContent = `
         #view-financeiro { --fin-page:#ece8dc; --fin-card:#fffdf7; --fin-card-soft:#f4efe4; --fin-field:#fbf8f0; --fin-field-focus:#ffffff; --fin-border:#d7ccb9; --fin-line:#e2d7c7; --fin-muted:#64748b; --fin-text:#111827; --fin-heading:#0f172a; --fin-primary:#111827; --fin-primary-hover:#0f172a; --fin-accent:#0f8fa6; --fin-gold:#b9852f; --fin-warn:#b45309; --fin-danger:#b91c1c; --fin-success:#047857; --fin-info:#475569; color:var(--fin-text); background:linear-gradient(180deg,#eee9dd 0%,#e4ddcf 100%); border-radius:12px; padding:18px; min-height:calc(100vh - 42px); animation:financeiroViewIn .24s ease-out both; }
-        #view-financeiro .main-header { max-width:1120px; margin:0 auto 14px; text-align:left; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:1px solid var(--fin-border); padding-bottom:14px; animation:financeiroRise .28s ease-out both; }
+        #view-financeiro .main-header { max-width:100%; margin:0 auto 14px; text-align:left; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:1px solid var(--fin-border); padding-bottom:14px; animation:financeiroRise .28s ease-out both; }
         #view-financeiro .main-header h1 { font-size:1.45rem; letter-spacing:0; color:var(--fin-heading); background:none; -webkit-text-fill-color:currentColor; display:flex; align-items:center; gap:9px; margin:0; }
         #view-financeiro .main-header h1 i { color:var(--fin-gold); font-size:1.05rem; }
         #view-financeiro .main-header p { color:var(--fin-muted); font-size:.84rem; font-weight:600; letter-spacing:0; text-transform:none; margin:.2rem 0 0; }
-        .financeiro-view-tools { max-width:1120px; margin:0 auto 12px; display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; align-items:center; padding:8px; border:1px solid var(--fin-border); border-radius:10px; background:#fffdf7; box-shadow:0 8px 22px rgba(15,23,42,.06); }
+        .financeiro-view-tools { max-width:100%; margin:0 auto 12px; display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; align-items:center; padding:8px; border:1px solid var(--fin-border); border-radius:10px; background:#fffdf7; box-shadow:0 8px 22px rgba(15,23,42,.06); }
         .financeiro-view-tools::before { content:'Organização da tela'; margin-right:auto; color:#6f6b62; font-size:.72rem; font-weight:850; text-transform:uppercase; letter-spacing:.02em; }
         .financeiro-toggle-btn, .financeiro-collapse-icon { min-height:32px; border:1px solid #c9bba7; background:#fbf8f0; color:#334155; border-radius:8px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:850; font-size:.76rem; cursor:pointer; white-space:nowrap; box-shadow:0 1px 2px rgba(15,23,42,.06); transition:transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease, color .16s ease; }
         .financeiro-toggle-btn:hover, .financeiro-collapse-icon:hover { border-color:#0f8fa6; color:#0f172a; background:#ffffff; transform:translateY(-1px); box-shadow:0 6px 14px rgba(15,23,42,.08); }
@@ -4519,7 +4526,7 @@ function injetarEstilosFinanceiro() {
         .financeiro-collapse-icon { width:34px; padding:0; }
         .financeiro-collapsible { transition:opacity .16s ease, max-height .2s ease, margin .16s ease; }
         .financeiro-collapsible.is-collapsed { display:none !important; }
-        .financeiro-kpis { grid-template-columns:repeat(auto-fit, minmax(178px, 1fr)); gap:10px !important; max-width:1120px; margin-left:auto; margin-right:auto; }
+        .financeiro-kpis { grid-template-columns:repeat(auto-fit, minmax(178px, 1fr)); gap:10px !important; max-width:100%; margin-left:auto; margin-right:auto; }
         #view-financeiro .financeiro-kpis .kpi-card { position:relative; min-height:78px; padding:12px 14px 12px 17px; border:1px solid var(--fin-border); border-radius:9px; background:linear-gradient(180deg,#fffdf7 0%,#fbf8f0 100%); box-shadow:0 8px 20px rgba(15,23,42,.06); cursor:default; transform:none !important; animation:financeiroRise .24s ease-out both; }
         #view-financeiro .financeiro-kpis .kpi-card:nth-child(2) { animation-delay:.03s; }
         #view-financeiro .financeiro-kpis .kpi-card:nth-child(3) { animation-delay:.06s; }
@@ -4541,7 +4548,7 @@ function injetarEstilosFinanceiro() {
         #view-financeiro .financeiro-kpis .kpi-card:nth-child(5) .kpi-icon { background:#fff1e8 !important; }
         #view-financeiro .financeiro-kpis .kpi-data h3 { font-size:1.08rem; color:var(--fin-heading); }
         #view-financeiro .financeiro-kpis .kpi-data p { font-size:.72rem; color:var(--fin-muted); font-weight:650; }
-        .financeiro-folder-board { display:grid; grid-template-columns:repeat(auto-fit, minmax(176px, 1fr)); gap:10px; margin:0 auto 14px; max-width:1120px; width:100%; overflow:visible; align-items:stretch; }
+        .financeiro-folder-board { display:grid; grid-template-columns:repeat(auto-fit, minmax(176px, 1fr)); gap:10px; margin:0 auto 14px; max-width:100%; width:100%; overflow:visible; align-items:stretch; }
         .financeiro-folder-card { --folder-color:#64748b; text-align:left; border:1px solid #d7ccb9; border-radius:8px; padding:11px 12px 11px 15px; min-height:98px; background:linear-gradient(180deg,#fffdf7 0%,#f8f4ea 100%); color:var(--fin-text); cursor:pointer; display:grid; grid-template-columns:30px minmax(0, 1fr); grid-template-areas:"icon title" "icon total" "meta meta" "subs subs"; column-gap:10px; row-gap:3px; box-shadow:0 5px 14px rgba(15,23,42,.05); transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease; animation:financeiroRise .24s ease-out both; position:relative; overflow:visible; }
         .financeiro-folder-card::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:999px; background:var(--folder-color); opacity:.9; }
         .financeiro-folder-card i { grid-area:icon; width:26px; height:26px; border-radius:7px; display:grid; place-items:center; color:var(--folder-color); background:color-mix(in srgb, var(--folder-color) 12%, #ffffff); font-size:.9rem; margin-top:1px; filter:saturate(1.12); }
@@ -4562,7 +4569,7 @@ function injetarEstilosFinanceiro() {
         .financeiro-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--panel-border); padding-bottom:12px; }
         .btn-tab-financeiro { min-height:34px; background:rgba(255,255,255,0.03); border:1px solid var(--panel-border); color:var(--text-muted); border-radius:7px; padding:8px 12px; font-weight:800; cursor:pointer; display:flex; gap:7px; align-items:center; white-space:nowrap; }
         .btn-tab-financeiro.active { color:var(--accent-color); border-color:var(--accent-color); background:rgba(107,142,35,0.12); }
-        .financeiro-form-card, .financeiro-list-card, .financeiro-relatorio-card { padding:16px; margin-bottom:14px; max-width:1120px; margin-left:auto; margin-right:auto; border:1px solid var(--fin-border) !important; border-radius:10px !important; background:var(--fin-card) !important; box-shadow:0 12px 28px rgba(15,23,42,.08) !important; color:var(--fin-text); backdrop-filter:none !important; animation:financeiroRise .28s ease-out both; }
+        .financeiro-form-card, .financeiro-list-card, .financeiro-relatorio-card { padding:16px; margin-bottom:14px; max-width:100%; margin-left:auto; margin-right:auto; border:1px solid var(--fin-border) !important; border-radius:10px !important; background:var(--fin-card) !important; box-shadow:0 12px 28px rgba(15,23,42,.08) !important; color:var(--fin-text); backdrop-filter:none !important; animation:financeiroRise .28s ease-out both; }
         #view-financeiro h3 { color:var(--fin-heading); font-size:1rem; font-weight:850; letter-spacing:0; }
         #view-financeiro small { color:var(--fin-muted) !important; }
         #view-financeiro .btn-primary { background:var(--fin-primary); color:#fff; border:1px solid var(--fin-primary); border-radius:8px; box-shadow:0 1px 2px rgba(15,23,42,.16); transition:transform .16s ease, background .16s ease, box-shadow .16s ease; }
