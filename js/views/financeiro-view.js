@@ -89,6 +89,7 @@
                             <button type="button" class="btn-secondary" onclick="window.sincronizarSigeWinFinanceiro?.()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar SIGEWIN</button>
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroFilaInput')?.click()"><i class="fa-solid fa-list-check"></i> Importar fila</button>
                             <button type="button" class="btn-secondary" onclick="window.limparDuplicadosFinanceiros()"><i class="fa-solid fa-copy"></i> Limpar duplicados</button>
+                            <button type="button" class="btn-secondary" onclick="window.revisarComprovantesFinanceiro()"><i class="fa-solid fa-magnifying-glass-dollar"></i> Revisar comprovantes</button>
                             <button type="button" class="btn-secondary" onclick="window.recalcularSugestoesVinculoFinanceiro()"><i class="fa-solid fa-link"></i> Encontrar vínculos</button>
                             <button type="button" class="btn-secondary" onclick="window.conciliarNfeComRomaneios()"><i class="fa-solid fa-file-circle-check"></i> Conciliar NF-e / romaneios</button>
                             </div>

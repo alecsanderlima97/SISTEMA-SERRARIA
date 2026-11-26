@@ -4147,6 +4147,79 @@ function avisarDocumentosEmailFinanceiro(qtd) {
         <button type="button" class="fin-aviso-email-fechar" aria-label="Fechar aviso" onclick="this.parentElement.remove()">&times;</button>`;
 }
 
+// Revisa os lançamentos marcados como COMPROVANTE: relê o PDF e aponta os que são boletos em aberto
+// (ex.: boleto com "Comprovante de Entrega"). Com confirmação, volta para BOLETO a pagar e desfaz baixas
+// que esse falso comprovante tenha dado automaticamente em outro boleto.
+window.revisarComprovantesFinanceiro = async function() {
+    const lista = obterLancamentosFinanceiros();
+    const comprovantes = lista.filter(item => classeDocumentoFinanceiro(item) === 'comprovante');
+    if (!comprovantes.length) { alert('Nenhum comprovante no Financeiro para revisar.'); return; }
+    const suspeitos = [];
+    let semArquivo = 0;
+    let semTexto = 0;
+    for (const item of comprovantes) {
+        const anexo = await hidratarAnexoFinanceiro(item.documento || normalizarDocumentosVinculadosFinanceiro(item)[0]);
+        if (!anexo?.dados) { semArquivo++; continue; }
+        const ehPdf = /\.pdf$/i.test(anexo.nome || '') || /pdf/i.test(anexo.tipo || '');
+        if (!ehPdf) { semTexto++; continue; }
+        let texto = '';
+        try { texto = await extrairTextoPdfFinanceiro(anexo); } catch (_) { texto = ''; }
+        if (!texto || texto.length < 20) { semTexto++; continue; }
+        if (boletoEmAbertoFinanceiro(texto)) suspeitos.push(item);
+    }
+    const rodape = [
+        semArquivo ? `${semArquivo} sem o arquivo neste computador (abra o sistema no computador que importou)` : '',
+        semTexto ? `${semTexto} são imagem/digitalizados (confira manualmente)` : ''
+    ].filter(Boolean).join('\n');
+    if (!suspeitos.length) {
+        alert(`Revisados ${comprovantes.length} comprovante(s): nenhum boleto disfarçado encontrado.${rodape ? `\n\n${rodape}` : ''}`);
+        return;
+    }
+    const resumo = suspeitos.slice(0, 15).map(item => `• ${item.descricao || 'Sem descrição'} — ${formatarMoeda(Number(item.valor || 0))}`).join('\n');
+    const ok = confirm(`${suspeitos.length} lançamento(s) estão como COMPROVANTE mas o PDF é BOLETO EM ABERTO:\n\n${resumo}${suspeitos.length > 15 ? '\n…' : ''}\n\nCorrigir para BOLETO a pagar e desfazer baixas automáticas que eles causaram?${rodape ? `\n\n${rodape}` : ''}`);
+    if (!ok) return;
+    const agora = new Date().toISOString();
+    const alterados = new Map();
+    let baixasDesfeitas = 0;
+    for (const falso of suspeitos) {
+        const item = lista.find(reg => reg.id === falso.id);
+        if (!item) continue;
+        if (item.processoVinculoId) {
+            const membros = lista.filter(reg => reg.processoVinculoId === item.processoVinculoId);
+            membros.forEach(reg => {
+                if (reg.id !== item.id && reg.pago && /^Comprovante:/.test(reg.pagoOrigem || '')) {
+                    reg.pago = false; delete reg.pagoEm; delete reg.pagoOrigem; baixasDesfeitas++;
+                }
+                delete reg.processoVinculoId; delete reg.processoVinculoStatus; delete reg.processoVinculoMembros; delete reg.processoVinculoConfirmadoEm;
+                reg.atualizadoEm = agora;
+                alterados.set(reg.id, reg);
+            });
+        }
+        const corrigirDoc = doc => (doc && doc.categoria === 'comprovante' ? { ...doc, categoria: 'boleto' } : doc);
+        item.documento = corrigirDoc(item.documento);
+        if (Array.isArray(item.documentosVinculados)) item.documentosVinculados = item.documentosVinculados.map(corrigirDoc);
+        item.tipo = 'BOLETO';
+        if (/^COMPROVANTE/i.test(item.descricao || '') && item.ia?.fornecedor) item.descricao = normalizarTexto(item.ia.fornecedor);
+        item.pastaFinanceira = 'boletos';
+        item.subpastaFinanceira = 'FORNECEDORES';
+        item.situacaoDocumento = 'A_PAGAR';
+        item.geraCobranca = true;
+        item.conferenciaStatus = 'pendente';
+        if (item.pago && !item.pagoOrigem) { item.pago = false; delete item.pagoEm; }
+        item.observacao = [item.observacao, 'Revisado: era boleto em aberto lido como comprovante.'].filter(Boolean).join(' ');
+        item.atualizadoEm = agora;
+        alterados.set(item.id, item);
+    }
+    salvarLancamentosFinanceiros(lista);
+    await Promise.all([...alterados.values()].map(reg => salvarFinanceiroNuvem(reg).catch(() => false)));
+    // relê vencimento/valor com a regra corrigida (sem apagar duplicados automaticamente)
+    for (const falso of suspeitos) {
+        await window.analisarFinanceiroDocumento(falso.id, true, true).catch(() => false);
+    }
+    renderFinanceiro();
+    alert(`${suspeitos.length} lançamento(s) corrigido(s) para BOLETO a pagar${baixasDesfeitas ? ` e ${baixasDesfeitas} baixa(s) indevida(s) desfeita(s)` : ''}. Eles estão na caixa de conferência para você confirmar valor e vencimento.`);
+};
+
 window.toggleFinanceiroLinha = function(id, event) {
     const alvo = event?.target;
     if (alvo?.closest?.('button, a, input, label, select, textarea')) return;
@@ -4251,7 +4324,7 @@ window.analisarFinanceiroDocumento = async function(id, silencioso = false, semE
         const ehNota = financeiroEhNotaFiscal(dados);
         const atualizado = {
             ...item,
-            tipo: ehNota ? 'NOTA FISCAL' : ((classeDocumentoFinanceiro(item) === 'comprovante' || /COMPROVANTE/i.test(dados.tipo || '')) ? 'COMPROVANTE' : normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO')),
+            tipo: ehNota ? 'NOTA FISCAL' : ((/COMPROVANTE/i.test(dados.tipo || '') || (classeDocumentoFinanceiro(item) === 'comprovante' && !/BOLETO/i.test(dados.tipo || ''))) ? 'COMPROVANTE' : normalizarTexto(dados.tipo || item.tipo || 'DOCUMENTO')),
             descricao: normalizarTexto(dados.descricao || item.descricao || 'PENDENTE DE CONFERENCIA'),
             vencimento: ehNota ? '' : (dados.vencimento || item.vencimento || ''),
             dataEmissao: ehNota ? (dados.dataEmissao || dados.emissao || item.dataEmissao || '') : (item.dataEmissao || ''),
