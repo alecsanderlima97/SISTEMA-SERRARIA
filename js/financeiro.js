@@ -3973,6 +3973,60 @@ function arquivoDeBase64Financeiro(base64, nome, tipo) {
     return new File([bytes], nome, { type: tipo || 'application/octet-stream' });
 }
 
+const FIN_EMAIL_ANEXO_VALIDO = anexo => /\.(pdf|xml|png|jpe?g|webp)$/i.test(anexo?.nome || '') || /pdf|xml|image\//i.test(anexo?.tipo || '');
+
+function lerOutlookImportadosFinanceiro() {
+    try { return JSON.parse(localStorage.getItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY) || '[]'); } catch (_) { return []; }
+}
+
+// Sugere o tipo do documento pelo nome do anexo e assunto do e-mail (só para exibição).
+window.sugerirTipoDocumentoEmail = function(mensagem = {}, anexo = {}) {
+    const t = `${anexo.nome || ''} ${mensagem.assunto || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (/\.XML\b/.test(String(anexo.nome || '').toUpperCase()) || /NF-?E|NOTA FISCAL|DANFE|NFS-?E/.test(t)) return 'nota';
+    if (/COMPROVANTE|PIX|TRANSFERENCIA|RECIBO|PAGAMENTO EFETUADO/.test(t)) return 'comprovante';
+    if (/BOLETO|BLOQUETO|FATURA|COBRANCA|VENCIMENTO|2A VIA|SEGUNDA VIA/.test(t)) return 'boleto';
+    return 'outro';
+};
+
+// Status de importação de uma mensagem: 'todos' | 'parcial' | 'nenhum'.
+window.statusImportacaoEmailFinanceiro = function(mensagem = {}) {
+    const validos = (mensagem.anexos || []).filter(FIN_EMAIL_ANEXO_VALIDO);
+    if (!validos.length) return 'nenhum';
+    const vistos = new Set(lerOutlookImportadosFinanceiro());
+    const feitos = validos.filter(a => vistos.has(`${mensagem.id}|${a.id}`)).length;
+    return feitos === validos.length ? 'todos' : (feitos ? 'parcial' : 'nenhum');
+};
+
+async function importarMensagensOutlookFinanceiro(mensagens, opcoes = {}) {
+    const vistos = new Set(lerOutlookImportadosFinanceiro());
+    const arquivos = [];
+    const chavesNovas = [];
+    for (const mensagem of mensagens) {
+        for (const anexo of (mensagem.anexos || [])) {
+            if (!FIN_EMAIL_ANEXO_VALIDO(anexo)) continue;
+            const chave = `${mensagem.id}|${anexo.id}`;
+            if (vistos.has(chave) && !opcoes.forcar) continue;
+            try {
+                const r = await fetch(`/api/outlook-attachment?messageId=${encodeURIComponent(mensagem.id)}&attachmentId=${encodeURIComponent(anexo.id)}`, { cache: 'no-store' });
+                const conteudo = await r.json();
+                if (!r.ok || !conteudo.conteudoBase64) continue;
+                arquivos.push(arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo));
+                chavesNovas.push(chave);
+            } catch (error) {
+                console.warn('Anexo do e-mail não baixado:', anexo.nome, error);
+            }
+        }
+    }
+    const resultado = arquivos.length
+        ? await window.importarPastaFinanceira(arquivos, { silencioso: true, origem: 'outlook', rotuloOrigem: 'E-MAIL' })
+        : { importados: 0, duplicados: 0 };
+    if (chavesNovas.length) {
+        const atuais = lerOutlookImportadosFinanceiro().filter(c => !chavesNovas.includes(c));
+        localStorage.setItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY, JSON.stringify([...chavesNovas, ...atuais].slice(0, 600)));
+    }
+    return resultado;
+}
+
 // Busca boletos, notas e comprovantes anexados nos e-mails do Outlook conectado e importa
 // para a caixa de conferencia (arquivos repetidos sao ignorados pela assinatura do arquivo).
 window.importarAnexosOutlookFinanceiro = async function(opcoes = {}) {
@@ -3990,31 +4044,7 @@ window.importarAnexosOutlookFinanceiro = async function(opcoes = {}) {
         if (!silencioso) alert(`Não foi possível ler o e-mail agora: ${error.message}`);
         return { importados: 0, erro: true };
     }
-    let jaImportados = [];
-    try { jaImportados = JSON.parse(localStorage.getItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY) || '[]'); } catch (_) {}
-    const vistos = new Set(jaImportados);
-    const arquivos = [];
-    const chavesNovas = [];
-    for (const mensagem of (Array.isArray(dados.messages) ? dados.messages : [])) {
-        for (const anexo of (mensagem.anexos || [])) {
-            if (!/\.(pdf|xml|png|jpe?g|webp)$/i.test(anexo.nome || '') && !/pdf|xml|image\//i.test(anexo.tipo || '')) continue;
-            const chave = `${mensagem.id}|${anexo.id}`;
-            if (vistos.has(chave)) continue;
-            try {
-                const r = await fetch(`/api/outlook-attachment?messageId=${encodeURIComponent(mensagem.id)}&attachmentId=${encodeURIComponent(anexo.id)}`, { cache: 'no-store' });
-                const conteudo = await r.json();
-                if (!r.ok || !conteudo.conteudoBase64) continue;
-                arquivos.push(arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo));
-                chavesNovas.push(chave);
-            } catch (error) {
-                console.warn('Anexo do e-mail não baixado:', anexo.nome, error);
-            }
-        }
-    }
-    const resultado = arquivos.length
-        ? await window.importarPastaFinanceira(arquivos, { silencioso: true, origem: 'outlook', rotuloOrigem: 'E-MAIL' })
-        : { importados: 0, duplicados: 0 };
-    localStorage.setItem(FINANCEIRO_OUTLOOK_IMPORTADOS_KEY, JSON.stringify([...chavesNovas, ...jaImportados].slice(0, 600)));
+    const resultado = await importarMensagensOutlookFinanceiro(Array.isArray(dados.messages) ? dados.messages : []);
     if (!silencioso) {
         alert(resultado.importados
             ? `${resultado.importados} documento(s) do e-mail importado(s). Eles aparecem na caixa de conferência conforme forem lidos.`
@@ -4022,6 +4052,37 @@ window.importarAnexosOutlookFinanceiro = async function(opcoes = {}) {
     }
     return resultado;
 };
+
+// Lança no Financeiro os anexos de um e-mail específico (botão na lista de e-mails).
+window.importarMensagemOutlookFinanceiro = async function(mensagem) {
+    if (!mensagem?.id) return { importados: 0 };
+    const jaFeito = window.statusImportacaoEmailFinanceiro(mensagem) === 'todos';
+    if (jaFeito && !confirm('Os anexos deste e-mail já foram lançados. Importar de novo? (arquivos idênticos continuam sendo ignorados)')) {
+        return { importados: 0 };
+    }
+    const resultado = await importarMensagensOutlookFinanceiro([mensagem], { forcar: jaFeito });
+    alert(resultado.importados
+        ? `${resultado.importados} documento(s) lançado(s) no Financeiro, na caixa de conferência.`
+        : (resultado.duplicados ? 'Esses documentos já estão no Financeiro.' : 'Nenhum boleto, nota ou comprovante encontrado neste e-mail.'));
+    return resultado;
+};
+
+function avisarDocumentosEmailFinanceiro(qtd) {
+    if (!qtd) return;
+    const view = document.getElementById('view-financeiro');
+    if (!view) return;
+    let aviso = document.getElementById('financeiroAvisoEmail');
+    if (!aviso) {
+        aviso = document.createElement('div');
+        aviso.id = 'financeiroAvisoEmail';
+        aviso.className = 'fin-aviso-email';
+        aviso.setAttribute('role', 'status');
+        view.prepend(aviso);
+    }
+    aviso.innerHTML = `<i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i>
+        <span><strong>${qtd} documento(s) novo(s) chegaram por e-mail</strong> e foram para a caixa de conferência.</span>
+        <button type="button" class="fin-aviso-email-fechar" aria-label="Fechar aviso" onclick="this.parentElement.remove()">&times;</button>`;
+}
 
 window.toggleFinanceiroLinha = function(id, event) {
     const alvo = event?.target;
@@ -5031,7 +5092,10 @@ async function carregarFinanceiroComAutomacao() {
     window.__financeiroEmailVerificadoEm = agora;
     try {
         const status = await fetch('/api/outlook-status', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
-        if (status?.connected) await window.importarAnexosOutlookFinanceiro({ silencioso: true });
+        if (status?.connected) {
+            const r = await window.importarAnexosOutlookFinanceiro({ silencioso: true });
+            avisarDocumentosEmailFinanceiro(Number(r?.importados || 0));
+        }
     } catch (_) {
         // sem e-mail conectado: segue normalmente
     }
