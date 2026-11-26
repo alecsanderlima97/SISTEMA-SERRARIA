@@ -7,7 +7,7 @@
                 </div>
 
                 <div class="financeiro-view-tools hide-on-print">
-                    <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroKpisWrap', this)"><i class="fa-solid fa-chart-simple"></i> Ver indicadores</button>
+                    
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroPastas', this)"><i class="fa-solid fa-folder-tree"></i> Ver pastas</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroFormBody', this)"><i class="fa-solid fa-plus"></i> Novo registro</button>
                     <button type="button" class="financeiro-toggle-btn" onclick="window.toggleFinanceiroBloco('financeiroListaBody', this)"><i class="fa-solid fa-list"></i> Ver lista</button>

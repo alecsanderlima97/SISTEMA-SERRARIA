@@ -1674,3 +1674,11 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
 @media (max-width: 640px) { .fin-prev-barra { grid-template-columns: 1fr 90px; } .fin-prev-barra > div, .fin-prev-barra small { display: none; } }
 .fin-previsao { background: #f8f4ea !important; color: #1f2937 !important; }
 .fin-previsao h3 { color: #1f2937 !important; }
+/* Financeiro: todos os blocos com a mesma largura */
+#view-financeiro > * { max-width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
+/* Financeiro: indicadores ficam só na Previsão (sem cards repetidos) */
+#financeiroKpisWrap { display: none !important; }
+.fin-prev-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fin-prev-kpis > div.destaque { border-color: #f59e0b; background: #fffbeb; }
+.fin-prev-kpis > div.ok b { color: #15803d; }
+@media (max-width: 900px) { .fin-prev-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
