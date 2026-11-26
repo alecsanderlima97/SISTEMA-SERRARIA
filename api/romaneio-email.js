@@ -21,13 +21,19 @@ module.exports = async function handler(req, res) {
         const destinatario = String(body.destinatario || '').trim().toLowerCase();
         const assunto = String(body.assunto || 'Romaneio de carga').trim().slice(0, 180);
         const mensagem = String(body.mensagem || '').trim().slice(0, 4000);
-        const arquivoBase64 = String(body.arquivoBase64 || '').replace(/^data:application\/pdf;base64,/, '');
-        const arquivoNome = String(body.arquivoNome || 'romaneio.pdf').replace(/[^a-zA-Z0-9._-]/g, '-');
+        // Também usado para pedido de compra (formulário .html / planilha .xls) e cobrança (sem anexo).
+        const TIPOS = { pdf: 'application/pdf', html: 'text/html', xls: 'application/vnd.ms-excel' };
+        const semAnexo = body.semAnexo === true;
+        const arquivoBase64 = String(body.arquivoBase64 || '').replace(/^data:[^;]+;base64,/, '');
+        const arquivoNome = String(body.arquivoNome || 'romaneio.pdf').replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 120);
+        const extensao = (arquivoNome.match(/\.(pdf|html|xls)$/i) || [, 'pdf'])[1].toLowerCase();
+        const arquivoTipo = TIPOS[extensao];
 
         if (!emailValido(destinatario)) return responderErro(res, 400, 'Informe um e-mail de destino valido.');
-        if (!arquivoBase64 || arquivoBase64.length > 10 * 1024 * 1024) {
-            return responderErro(res, 400, 'O PDF do romaneio nao foi gerado corretamente ou excede o limite de envio.');
+        if (!semAnexo && (!arquivoBase64 || arquivoBase64.length > 10 * 1024 * 1024)) {
+            return responderErro(res, 400, 'O arquivo nao foi gerado corretamente ou excede o limite de envio.');
         }
+        if (!mensagem && semAnexo) return responderErro(res, 400, 'Mensagem vazia.');
 
         const refreshToken = parseCookies(req)[REFRESH_COOKIE];
         if (!refreshToken) {
@@ -49,10 +55,10 @@ module.exports = async function handler(req, res) {
                         content: `<p>${mensagem.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>`
                     },
                     toRecipients: [{ emailAddress: { address: destinatario } }],
-                    attachments: [{
+                    attachments: semAnexo ? [] : [{
                         '@odata.type': '#microsoft.graph.fileAttachment',
                         name: arquivoNome,
-                        contentType: 'application/pdf',
+                        contentType: arquivoTipo,
                         contentBytes: arquivoBase64
                     }]
                 },
@@ -67,6 +73,6 @@ module.exports = async function handler(req, res) {
 
         return res.status(200).json({ ok: true, enviadoEm: new Date().toISOString() });
     } catch (error) {
-        return responderErro(res, 500, error.message || 'Falha ao enviar o romaneio por e-mail.');
+        return responderErro(res, 500, error.message || 'Falha ao enviar o e-mail.');
     }
 };
