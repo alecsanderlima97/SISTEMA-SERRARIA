@@ -2506,7 +2506,8 @@ window.importarPastaFinanceira = async function(files, opcoes = {}) {
                 documento: documentoVinculado,
                 comprovante: null,
                 atualizadoEm: new Date().toISOString(),
-                criadoEm: new Date().toISOString()
+                criadoEm: new Date().toISOString(),
+                ...(file.__emailOrigem ? { emailOrigem: file.__emailOrigem } : {})
             };
             const duplicadoRegistro = buscarLancamentoDuplicadoFinanceiro(registro);
             if (duplicadoRegistro) {
@@ -4063,7 +4064,9 @@ async function importarMensagensOutlookFinanceiro(mensagens, opcoes = {}) {
                 const r = await fetch(`/api/outlook-attachment?messageId=${encodeURIComponent(mensagem.id)}&attachmentId=${encodeURIComponent(anexo.id)}`, { cache: 'no-store' });
                 const conteudo = await r.json();
                 if (!r.ok || !conteudo.conteudoBase64) continue;
-                arquivos.push(arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo));
+                const arquivoEmail = arquivoDeBase64Financeiro(conteudo.conteudoBase64, conteudo.nome || anexo.nome, conteudo.tipo || anexo.tipo);
+                arquivoEmail.__emailOrigem = { messageId: mensagem.id, assunto: String(mensagem.assunto || '').slice(0, 200), remetente: String(mensagem.remetenteNome || mensagem.remetente || '').slice(0, 120) };
+                arquivos.push(arquivoEmail);
                 chavesNovas.push(chave);
                 baixouAlgum = true;
             } catch (error) {
@@ -4218,6 +4221,183 @@ window.revisarComprovantesFinanceiro = async function() {
     }
     renderFinanceiro();
     alert(`${suspeitos.length} lançamento(s) corrigido(s) para BOLETO a pagar${baixasDesfeitas ? ` e ${baixasDesfeitas} baixa(s) indevida(s) desfeita(s)` : ''}. Eles estão na caixa de conferência para você confirmar valor e vencimento.`);
+};
+
+// ===================== Conferência de boletos (e-mail x sistema) =====================
+function hojeIsoFinanceiro() { return new Date().toISOString().slice(0, 10); }
+function boletoAbertoFinanceiro(item) {
+    return classeDocumentoFinanceiro(item) === 'boleto' && !item.pago;
+}
+function linhaConfFinanceiro(item) {
+    const venc = item.vencimento ? new Date(`${item.vencimento}T12:00:00`).toLocaleDateString('pt-BR') : 'sem vencimento';
+    return `<li><span>${escapeHtmlFinanceiro(item.descricao || 'Sem descrição')}</span><small>${venc}</small><b>${formatarMoeda(Number(item.valor || 0))}</b></li>`;
+}
+function blocoConfFinanceiro(titulo, classe, itens, acaoHtml = '', vazio = 'Nada aqui.') {
+    const total = itens.reduce((t, i) => t + Number(i.valor || 0), 0);
+    return `<section class="fin-conf-bloco ${classe}">
+        <header><strong>${titulo}</strong><span>${itens.length}${itens.length && total ? ` · ${formatarMoeda(total)}` : ''}</span></header>
+        ${itens.length ? `<ul>${itens.slice(0, 30).map(linhaConfFinanceiro).join('')}${itens.length > 30 ? `<li><small>+${itens.length - 30} outros</small></li>` : ''}</ul>${acaoHtml}` : `<p class="fin-conf-vazio">${vazio}</p>`}
+    </section>`;
+}
+
+window.abrirConferenciaBoletosFinanceiro = async function() {
+    let modal = document.getElementById('finConferenciaModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'finConferenciaModal';
+        modal.className = 'fin-conf-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Conferência de boletos');
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML = '<div class="fin-conf-caixa"><p>Conferindo e-mail e boletos…</p></div>';
+
+    const lista = obterLancamentosFinanceiros();
+    const hoje = hojeIsoFinanceiro();
+    const em7 = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+    const abertos = lista.filter(boletoAbertoFinanceiro);
+    const vencidos = abertos.filter(i => i.vencimento && i.vencimento < hoje);
+    const proximos = abertos.filter(i => i.vencimento && i.vencimento >= hoje && i.vencimento <= em7);
+    const semVenc = abertos.filter(i => !i.vencimento || !(Number(i.valor) > 0));
+    const naoImpressos = abertos.filter(i => !i.impressoEm);
+    const idsDup = obterIdsDuplicadosFinanceiro(lista);
+    const duplicados = lista.filter(i => idsDup.has(i.id));
+
+    let emailHtml = '';
+    let pendentesEmail = [];
+    try {
+        const r = await fetch('/api/outlook-messages?limite=40', { cache: 'no-store' });
+        if (r.status === 401) {
+            emailHtml = '<section class="fin-conf-bloco"><header><strong>E-mail</strong></header><p class="fin-conf-vazio">Outlook não conectado (Configurações › Conectar Outlook).</p></section>';
+        } else {
+            const dados = await r.json();
+            const msgs = (dados.messages || []).filter(m => (m.anexos || []).some(FIN_EMAIL_ANEXO_VALIDO));
+            pendentesEmail = msgs.filter(m => window.statusImportacaoEmailFinanceiro(m) !== 'todos');
+            window.__finConfPendentesEmail = pendentesEmail;
+            emailHtml = `<section class="fin-conf-bloco ${pendentesEmail.length ? 'alerta' : 'ok'}">
+                <header><strong>E-mails com documento ainda fora do sistema</strong><span>${pendentesEmail.length} de ${msgs.length}</span></header>
+                ${pendentesEmail.length
+                    ? `<ul>${pendentesEmail.slice(0, 20).map(m => `<li><span>${escapeHtmlFinanceiro(m.assunto || '(sem assunto)')}</span><small>${escapeHtmlFinanceiro(m.remetenteNome || m.remetente || '')}</small></li>`).join('')}</ul>
+                       <button type="button" class="btn-primary" onclick="window.lancarPendentesEmailFinanceiro(this)"><i class="fa-solid fa-file-import" aria-hidden="true"></i> Lançar todos no sistema</button>`
+                    : '<p class="fin-conf-vazio">Todos os e-mails com boleto/nota já estão no sistema.</p>'}
+            </section>`;
+        }
+    } catch (_) {
+        emailHtml = '<section class="fin-conf-bloco"><header><strong>E-mail</strong></header><p class="fin-conf-vazio">Não foi possível ler o e-mail agora.</p></section>';
+    }
+
+    const totalAberto = abertos.reduce((t, i) => t + Number(i.valor || 0), 0);
+    modal.innerHTML = `<div class="fin-conf-caixa">
+        <div class="fin-conf-topo">
+            <div><h2>Conferência de boletos</h2><p>${abertos.length} boleto(s) a pagar no sistema · ${formatarMoeda(totalAberto)}</p></div>
+            <button type="button" class="fin-conf-fechar" aria-label="Fechar" onclick="document.getElementById('finConferenciaModal').remove()">&times;</button>
+        </div>
+        <div class="fin-conf-grid">
+            ${emailHtml}
+            ${blocoConfFinanceiro('Vencidos e não pagos', vencidos.length ? 'alerta' : 'ok', vencidos, '', 'Nenhum boleto vencido.')}
+            ${blocoConfFinanceiro('Vencem nos próximos 7 dias', '', proximos, '', 'Nenhum vencimento nos próximos 7 dias.')}
+            ${blocoConfFinanceiro('A pagar ainda não impressos', '', naoImpressos,
+                `<button type="button" class="btn-primary" onclick="window.imprimirBoletosFinanceiro()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir e marcar verde</button>`, 'Todos já impressos.')}
+            ${blocoConfFinanceiro('Sem vencimento ou valor (conferir)', semVenc.length ? 'alerta' : 'ok', semVenc, '', 'Todos com vencimento e valor.')}
+            ${blocoConfFinanceiro('Possíveis duplicados', duplicados.length ? 'alerta' : 'ok', duplicados,
+                `<button type="button" class="btn-secondary" onclick="document.getElementById('finConferenciaModal').remove(); window.limparDuplicadosFinanceiros()">Limpar duplicados</button>`, 'Nenhum duplicado.')}
+        </div>
+        <p class="fin-conf-rodape">Boleto lido como comprovante? Use <button type="button" class="outlook-link-btn" onclick="document.getElementById('finConferenciaModal').remove(); window.revisarComprovantesFinanceiro()">Revisar comprovantes</button></p>
+    </div>`;
+    modal.querySelector('.fin-conf-fechar')?.focus();
+};
+
+window.lancarPendentesEmailFinanceiro = async function(btn) {
+    const pendentes = window.__finConfPendentesEmail || [];
+    if (!pendentes.length) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Lançando…'; }
+    const r = await importarMensagensOutlookFinanceiro(pendentes);
+    alert(`${r.importados || 0} documento(s) lançado(s)${r.duplicados ? `, ${r.duplicados} já existiam` : ''}. A leitura de valor e vencimento continua em segundo plano.`);
+    window.abrirConferenciaBoletosFinanceiro();
+};
+
+// ===================== Imprimir boletos e marcar verde no Outlook =====================
+async function paginasPdfComoImagensFinanceiro(anexo) {
+    if (!window.pdfjsLib) return [];
+    const bytes = bytesDeAnexoBase64(anexo);
+    if (!bytes) return [];
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
+    const pdf = await abrirPdfFinanceiro(bytes, anexo.nome);
+    const imgs = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, 6); n++) {
+        const page = await pdf.getPage(n);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport }).promise;
+        imgs.push(canvas.toDataURL('image/jpeg', 0.9));
+    }
+    return imgs;
+}
+
+window.imprimirBoletosFinanceiro = async function(ids) {
+    const lista = obterLancamentosFinanceiros();
+    const selecionados = Array.from(document.querySelectorAll('.financeiro-check:checked')).map(c => c.value);
+    const alvoIds = ids || (selecionados.length ? selecionados : lista.filter(i => boletoAbertoFinanceiro(i) && !i.impressoEm).map(i => i.id));
+    const alvo = lista.filter(i => alvoIds.includes(i.id));
+    if (!alvo.length) { alert('Nenhum boleto para imprimir.'); return; }
+    if (!confirm(`Imprimir ${alvo.length} boleto(s)${selecionados.length && !ids ? ' selecionado(s)' : ' a pagar ainda não impressos'}?`)) return;
+
+    const paginas = [];
+    const semArquivo = [];
+    const impressos = [];
+    for (const item of alvo) {
+        const anexo = await hidratarAnexoFinanceiro(item.documento || normalizarDocumentosVinculadosFinanceiro(item).find(d => d.categoria !== 'comprovante'));
+        if (!anexo?.dados) { semArquivo.push(item); continue; }
+        try {
+            if ((anexo.tipo || '').startsWith('image/')) paginas.push(anexo.dados);
+            else if (/pdf/i.test(anexo.tipo || '') || /\.pdf$/i.test(anexo.nome || '')) paginas.push(...await paginasPdfComoImagensFinanceiro(anexo));
+            else { semArquivo.push(item); continue; }
+            impressos.push(item);
+        } catch (error) {
+            console.warn('Boleto não renderizado:', item.descricao, error);
+            semArquivo.push(item);
+        }
+    }
+    if (!paginas.length) { alert('Nenhum arquivo de boleto disponível neste computador para imprimir.'); return; }
+
+    let area = document.getElementById('finAreaImpressao');
+    if (!area) { area = document.createElement('div'); area.id = 'finAreaImpressao'; document.body.appendChild(area); }
+    area.innerHTML = paginas.map(src => `<img src="${src}" alt="">`).join('');
+    document.body.classList.add('fin-imprimindo');
+    await new Promise(r => setTimeout(r, 300));
+    window.print();
+    document.body.classList.remove('fin-imprimindo');
+    area.innerHTML = '';
+
+    const aviso = semArquivo.length ? `\n\n${semArquivo.length} boleto(s) sem arquivo neste computador não foram impressos.` : '';
+    if (!confirm(`A impressão saiu certa?\n\nOK = marcar ${impressos.length} boleto(s) como impresso(s) (fica verde no Outlook).${aviso}`)) return;
+    const agora = new Date().toISOString();
+    const listaAtual = obterLancamentosFinanceiros();
+    let verdes = 0;
+    for (const item of impressos) {
+        const reg = listaAtual.find(r => r.id === item.id);
+        if (!reg) continue;
+        reg.impressoEm = agora;
+        reg.atualizadoEm = agora;
+        if (reg.emailOrigem?.messageId) {
+            try {
+                const r = await fetch('/api/outlook-messages', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messageId: reg.emailOrigem.messageId, acao: 'impresso' })
+                });
+                if (r.ok) verdes++;
+            } catch (_) { /* segue */ }
+        }
+    }
+    salvarLancamentosFinanceiros(listaAtual);
+    await Promise.all(impressos.map(i => salvarFinanceiroNuvem(listaAtual.find(r => r.id === i.id)).catch(() => false)));
+    renderFinanceiro();
+    alert(`${impressos.length} boleto(s) marcado(s) como impresso(s)${verdes ? `; ${verdes} e-mail(s) ficaram verdes no Outlook` : ''}.`);
+    if (document.getElementById('finConferenciaModal')) window.abrirConferenciaBoletosFinanceiro();
 };
 
 window.toggleFinanceiroLinha = function(id, event) {

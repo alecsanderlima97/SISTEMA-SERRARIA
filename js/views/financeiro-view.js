@@ -81,6 +81,8 @@
                             <input type="file" id="financeiroFilaInput" multiple accept=".json,application/json" style="display:none;">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('financeiroArquivosInput')?.click()"><i class="fa-solid fa-file-arrow-up"></i> Importar documentos</button>
                             <button type="button" class="btn-secondary" onclick="window.importarAnexosOutlookFinanceiro()"><i class="fa-solid fa-envelope-open-text"></i> Buscar no e-mail</button>
+                            <button type="button" class="btn-secondary" onclick="window.abrirConferenciaBoletosFinanceiro()"><i class="fa-solid fa-list-check"></i> Conferir boletos</button>
+                            <button type="button" class="btn-secondary" onclick="window.imprimirBoletosFinanceiro()"><i class="fa-solid fa-print"></i> Imprimir boletos</button>
                             <details class="financeiro-mais-acoes">
                             <summary class="btn-secondary"><i class="fa-solid fa-ellipsis"></i> Mais ações</summary>
                             <div class="financeiro-mais-acoes-menu">
