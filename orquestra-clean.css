@@ -1745,3 +1745,27 @@ table.orq-colunas-redimensionaveis td > * { max-width: 100%; }
   body.fin-imprimindo #finAreaImpressao img { display:block; width:100%; height:auto; page-break-after:always; break-after:page; }
   body.fin-imprimindo { background:#fff !important; }
 }
+
+/* ===== Relatório de custos da frota ===== */
+.frel-barra { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:16px; }
+.frel-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.frel-chip { padding:8px 14px; border-radius:999px; border:1px solid var(--panel-border, #cbd5e1); background:transparent; color:inherit; cursor:pointer; font-weight:600; }
+.frel-chip.ativo { background:var(--accent-color, #b45309); border-color:var(--accent-color, #b45309); color:#fff; }
+.frel-setor { display:flex; align-items:center; gap:8px; font-weight:600; }
+.frel-setor select { padding:8px 10px; border-radius:8px; }
+.frel-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:12px; }
+.frel-kpi { padding:14px 16px; display:flex; flex-direction:column; gap:4px; min-width:0; }
+.frel-kpi span { font-size:13px; opacity:.8; }
+.frel-kpi strong { font-size:22px; }
+.frel-kpi small { font-size:12.5px; overflow-wrap:anywhere; }
+.frel-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:12px; margin-bottom:12px; }
+.frel-card { padding:16px; margin-bottom:12px; min-width:0; }
+.frel-card h3 { margin:0 0 10px; font-size:15px; }
+.frel-tabela-wrap { overflow-x:auto; }
+.frel-tabela { width:100%; border-collapse:collapse; font-size:13px; table-layout:auto; }
+.frel-tabela th, .frel-tabela td { padding:8px 10px; border-bottom:1px solid rgba(148,163,184,.25); text-align:left; white-space:nowrap; }
+.frel-tabela td:nth-child(2) { white-space:normal; min-width:180px; }
+.frel-nota { font-size:12px; opacity:.75; margin:8px 0 0; }
+.frel-vazio { padding:20px; }
+.frel-chip:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+@media (max-width:520px) { .frel-grid { grid-template-columns:1fr; } }

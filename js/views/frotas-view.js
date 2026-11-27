@@ -46,7 +46,12 @@
                     <button type="button" class="btn-tab-frota" onclick="window.switchTabFrotas('form')" id="btnTabFrotaForm" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
                         <i class="fa-solid fa-plus-circle"></i> <span id="lblTabFrotaForm">Novo Veículo / Máquina</span>
                     </button>
+                    <button type="button" class="btn-tab-frota" onclick="window.switchTabFrotas('relatorio')" id="btnTabFrotaRelatorio" style="background: none; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-size: 0.95rem;">
+                        <i class="fa-solid fa-chart-column"></i> Relatório de custos
+                    </button>
                 </div>
+
+                <div id="panelRelatorioFrota" class="frel" style="display:none;"></div>
 
                 <!-- TAB: LISTA (Setor Filtros + Grid) -->
                 <div id="panelListaFrotas" style="width: 100%;">
