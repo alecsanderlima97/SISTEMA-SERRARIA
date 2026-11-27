@@ -43,7 +43,7 @@ function configurarProtecaoVoltarNavegador() {
 
 const ROLE_PERMISSIONS = {
     'gerente': {
-        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-paletes', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-agenda', 'view-configuracoes'],
+        allowedSections: ['view-dashboard', 'view-romaneio-v2', 'view-historico', 'view-clientes', 'view-transportes', 'view-entrada', 'view-mapa', 'view-cavaco', 'view-produtos', 'view-paletes', 'view-estoque', 'view-frotas', 'view-financeiro', 'view-rh', 'view-calculadoras', 'view-calculadora-comercial', 'view-agenda', 'view-configuracoes'],
         readOnly: false
     },
     'patrao': {
@@ -94,6 +94,7 @@ const SECTION_PERMISSIONS = [
     { id: 'view-financeiro', label: 'Financeiro' },
     { id: 'view-rh', label: 'RH Funcionarios' },
     { id: 'view-calculadoras', label: 'Calculadoras' },
+    { id: 'view-calculadora-comercial', label: 'Calculadora Comercial' },
     { id: 'view-agenda', label: 'Agenda / Calendario' },
     { id: 'view-configuracoes', label: 'Configuracoes' }
 ];
@@ -1679,6 +1680,7 @@ const App = {
     },
 
     showSection(id) {
+        if (id === 'view-calculadoras') id = 'view-calculadora-comercial';
         const currentRole = this.userRole || 'PENDENTE';
         const permissions = this.getCurrentPermissions();
 

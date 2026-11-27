@@ -208,6 +208,7 @@
         'view-rh': 'Funcionários e lançamentos mensais',
         'view-mapa': 'Matos, contratos e localização',
         'view-calculadoras': 'Cálculos operacionais',
+        'view-calculadora-comercial': 'Preços, taxas e simulações comerciais',
         'view-agenda': 'Agenda e compromissos',
         'view-configuracoes': 'Preferências e controle do sistema'
     };

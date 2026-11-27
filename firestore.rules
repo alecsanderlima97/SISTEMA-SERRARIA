@@ -105,6 +105,7 @@ service cloud.firestore {
         || ((collection in ['financeiro_lancamentos', 'financeiro_relatorios_mensais', 'contas_receber', 'clientes', 'romaneios', 'funcionarios']) && 'view-financeiro' in sections)
         || ((collection in ['funcionarios']) && 'view-rh' in sections)
         || ((collection in ['agenda']) && 'view-agenda' in sections)
+        || ((collection in ['calculadoras_comerciais']) && 'view-calculadora-comercial' in sections)
         || ((collection in ['patio_relatorios', 'produtos', 'romaneios']) && 'view-dashboard' in sections)
         || ((collection in ['auditoria_logs']) && 'view-configuracoes' in sections)
         || ((collection in ['usuarios']) && 'view-configuracoes' in sections);
@@ -201,7 +202,8 @@ service cloud.firestore {
             'frota_relatos',
         'financeiro_lancamentos',
         'financeiro_relatorios_mensais',
-        'contas_receber'
+        'contas_receber',
+        'calculadoras_comerciais'
       ];
     }
 
@@ -268,7 +270,8 @@ service cloud.firestore {
             'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
-            'contas_receber'
+            'contas_receber',
+            'calculadoras_comerciais'
           ])
         )
       );
@@ -325,7 +328,8 @@ service cloud.firestore {
             'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
-            'contas_receber'
+            'contas_receber',
+            'calculadoras_comerciais'
           ])
         )
       );
@@ -361,7 +365,8 @@ service cloud.firestore {
             'frota_relatos',
             'financeiro_lancamentos',
             'financeiro_relatorios_mensais',
-            'contas_receber'
+            'contas_receber',
+            'calculadoras_comerciais'
           ])
         )
       );
@@ -516,7 +521,8 @@ service cloud.firestore {
             'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
-          'contas_receber'
+          'contas_receber',
+          'calculadoras_comerciais'
         ];
 
       allow create, update: if canWriteCollection(collection)
@@ -547,7 +553,8 @@ service cloud.firestore {
             'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
-          'contas_receber'
+          'contas_receber',
+          'calculadoras_comerciais'
         ];
 
       allow delete: if canDeleteCollection(collection)
@@ -578,7 +585,8 @@ service cloud.firestore {
             'frota_relatos',
           'financeiro_lancamentos',
           'financeiro_relatorios_mensais',
-          'contas_receber'
+          'contas_receber',
+          'calculadoras_comerciais'
         ];
     }
   }
