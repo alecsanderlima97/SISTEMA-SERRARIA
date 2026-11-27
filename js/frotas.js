@@ -288,6 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.SectionLoader?.register('view-frotas', carregarDadosFrotaNuvem);
+// Dados atuais para o relatório de custos (js/frotas-relatorio.js)
+window.obterDadosFrotaRelatorio = () => ({ frota, abastecimentos, manutencoes });
+document.addEventListener('frotaUpdated', () => {
+    const painel = document.getElementById('panelRelatorioFrota');
+    if (painel && painel.style.display !== 'none') window.renderRelatorioFrota?.();
+});
 
 async function carregarDadosFrotaNuvem() {
     frota = await carregarColecaoFrota(FROTA_COLLECTIONS.FROTA, KEYS.FROTA, FROTA_PROPRIA_PADRAO);
@@ -357,6 +363,19 @@ window.switchTabFrotas = function(tabName, isEditing = false) {
     const btnLista = document.getElementById('btnTabFrotaLista');
 
     if (!tabForm || !tabLista || !btnForm || !btnLista) return;
+    const tabRel = document.getElementById('panelRelatorioFrota');
+    const btnRel = document.getElementById('btnTabFrotaRelatorio');
+    if (btnRel) { btnRel.style.color = 'var(--text-muted)'; btnRel.style.borderBottom = 'none'; }
+    if (tabRel) tabRel.style.display = 'none';
+    if (tabName === 'relatorio') {
+        tabForm.style.display = 'none';
+        tabLista.style.display = 'none';
+        if (tabRel) tabRel.style.display = 'block';
+        [btnForm, btnLista].forEach(b => { b.style.color = 'var(--text-muted)'; b.style.borderBottom = 'none'; });
+        if (btnRel) { btnRel.style.color = 'var(--accent-color)'; btnRel.style.borderBottom = '3px solid var(--accent-color)'; }
+        window.renderRelatorioFrota?.();
+        return;
+    }
 
     if (tabName === 'form') {
         tabForm.style.display = 'block';
